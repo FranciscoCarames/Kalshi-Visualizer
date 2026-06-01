@@ -95,10 +95,12 @@ with controls:
     )
     status_choice = st.selectbox(
         "Outcome status", STATUS_GROUPS, index=0,
-        help="Broken = executable inconsistency (child price > parent price, firm quotes, "
-             "positive sizes — potentially profitable). Warning = display prices cross but not "
-             "confirmed executable. Missing data = no usable quote or missing ladder layer. "
-             "Unknown = relationship between the two markets cannot be proved.",
+        help="All = every comparison. Broken = executable inconsistency (child price > parent "
+             "price, firm quotes, positive sizes — potentially profitable). Warning = display "
+             "prices cross but not confirmed executable. Missing data = no usable quote or missing "
+             "ladder layer. Unknown = relationship between the two markets cannot be proved. "
+             "Clean = child price ≤ parent on both firm and display quotes (consistent — no "
+             "inconsistency).",
     )
     quote_choice = st.selectbox(
         "Quote quality", ["All", "Tight/OK only", "Include wide"], index=0,
@@ -130,26 +132,21 @@ with controls:
         chosen_key = None
 
 # ---- Apply filters to the consistency table ------------------------------------------
-def _passes_type(row) -> bool:
-    cc, pc = row["child_category"], row["parent_category"]
-    return (cc in selected_types or cc == "") and (pc in selected_types or pc == "")
-
-
-def _passes_quote(row) -> bool:
-    q = row["comp_quote_quality"]
-    if quote_choice == "All":
-        return True
-    if quote_choice == "Tight/OK only":
-        return q in ("Tight", "OK")
-    return q in ("Tight", "OK", "Wide", "Very wide")  # Include wide
-
-
+# Vectorized boolean masks (not row-wise .apply) so an empty intermediate stays a 0-row frame
+# WITH its columns — .apply(axis=1) on an empty frame returns an empty DataFrame, which would
+# collapse the columns and make the next `view["volume"]` raise KeyError.
 view = checks.copy()
 if not view.empty:
-    view = view[view.apply(_passes_type, axis=1)]
+    view = view[
+        (view["child_category"].isin(selected_types) | view["child_category"].eq(""))
+        & (view["parent_category"].isin(selected_types) | view["parent_category"].eq(""))
+    ]
     if status_choice != "All":
         view = view[view["status_group"] == status_choice]
-    view = view[view.apply(_passes_quote, axis=1)]
+    if quote_choice == "Tight/OK only":
+        view = view[view["comp_quote_quality"].isin(("Tight", "OK"))]
+    elif quote_choice == "Include wide":
+        view = view[view["comp_quote_quality"].isin(("Tight", "OK", "Wide", "Very wide"))]
     view = view[view["volume"].fillna(0) >= min_vol]
     view = view.assign(_sort=view["status_group"].map(GROUP_SORT).fillna(9))
     view = view.sort_values(
