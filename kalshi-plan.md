@@ -61,12 +61,21 @@ Each is independent and unordered; pick up only when justified:
 - Real-time updates (polling/WebSocket); in-app alerts.
 - Trading (paper, then live) — **out of scope** unless the read-only guard is explicitly lifted.
 
-**Deferred audit items (Tier-2, only if a need appears):** surface pagination truncation instead of
-silent partial data (AUDIT-007); deterministic handling of duplicate node/source rows under full scan
-(AUDIT-006); require a tennis/competition signal before the date-window FO fallback, or flag it
-low-confidence (AUDIT-008); a deterministic sample-data mode for offline app smoke tests (AUDIT-009);
-clearer expected-layer semantics for early-round-only players (AUDIT-010); a minimal lint config
-(AUDIT-011, needs a dep decision); plus the broader regression-test matrix from the audit.
+**Deferred audit items (only if a need appears):** a deterministic sample-data mode for offline app
+smoke tests (AUDIT-009); clearer expected-layer semantics for early-round-only players (AUDIT-010); a
+minimal lint config (AUDIT-011, needs a dep decision); plus the broader regression-test matrix.
+
+## v1.2 — Robustness hardening (audit Tier-2)  ✅ DONE
+
+- **Pagination truncation (AUDIT-007):** `get_paginated` now **raises** if the page cap is reached with a
+  cursor still pending (no silent partial data); `MAX_PAGES` raised to 100 so the full `/series` list
+  (~53 pages) loads completely.
+- **Duplicate node/source determinism (AUDIT-006):** `build_player_nodes` picks the representative
+  deterministically (usable price → higher volume → smaller ticker), independent of concurrent fetch
+  order; `duplicate_node_sources` surfaces collisions in the debug expander.
+- **Date-window corroboration (AUDIT-008):** a present-but-non-FO `competition` is disqualifying; the
+  date-window fallback only fires when no competition info exists at all.
+- **JSON safety** (already shipped in v1.1): non-JSON 200 → `KalshiError`.
 
 ## Verification & housekeeping
 

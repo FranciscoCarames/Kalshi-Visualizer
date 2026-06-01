@@ -144,7 +144,13 @@ def is_french_open_event(event: dict[str, Any]) -> bool:
     if _text_has_keyword(event.get("title"), event.get("sub_title"), *market_texts):
         return True
 
-    # Last-resort fallback (only when no keyword anywhere): match time inside FO window.
+    # No French Open keyword anywhere. If the event names a (non-FO) competition, trust that
+    # negative signal — do NOT guess from dates (a concurrent non-FO tennis event in the same
+    # window would otherwise be mis-included). Only date-fallback when competition is absent.
+    if str(competition).strip():
+        return False
+
+    # Last-resort fallback (only when no competition info at all): match time inside FO window.
     return any(
         _within_window(m.get("occurrence_datetime"), m.get("close_time")) for m in markets
     )

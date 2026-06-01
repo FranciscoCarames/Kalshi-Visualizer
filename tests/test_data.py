@@ -1,8 +1,52 @@
 """Unit tests for the pure data layer (no network)."""
 from __future__ import annotations
 
+import pytest
+
 import config
 import data
+import kalshi_client
+
+
+# --- AUDIT-007: pagination cap surfaces truncation instead of silent partial data -----
+def test_pagination_cap_raises_on_remaining_cursor(monkeypatch):
+    # _get always returns a fresh cursor -> never terminates -> cap must raise, not truncate.
+    monkeypatch.setattr(kalshi_client, "_get",
+                        lambda path, params: {"events": [{"i": 1}], "cursor": "more"})
+    with pytest.raises(kalshi_client.KalshiError):
+        kalshi_client.get_paginated("/events", {}, "events")
+
+
+def test_pagination_stops_cleanly_when_cursor_empties(monkeypatch):
+    pages = [{"events": [{"i": 1}], "cursor": "c"}, {"events": [{"i": 2}], "cursor": None}]
+    monkeypatch.setattr(kalshi_client, "_get", lambda path, params: pages.pop(0))
+    assert kalshi_client.get_paginated("/events", {}, "events") == [{"i": 1}, {"i": 2}]
+
+
+# --- AUDIT-008: a present non-FO competition is disqualifying (no date-window guess) ---
+def _evt(competition, occurrence):
+    return {
+        "product_metadata": {"competition": competition},
+        "title": "Some vs Body", "sub_title": "",
+        "markets": [{"title": "Will X win the match?", "rules_primary": "",
+                     "occurrence_datetime": occurrence, "close_time": occurrence}],
+    }
+
+
+def test_non_fo_competition_in_window_is_rejected():
+    # In-window date, but the event names a different tournament -> not French Open.
+    assert data.is_french_open_event(_evt("Stuttgart Open", "2026-06-02T12:00:00Z")) is False
+
+
+def test_fo_competition_is_accepted():
+    assert data.is_french_open_event(_evt("French Open Women Singles", "2026-06-02T12:00:00Z")) is True
+
+
+def test_date_window_fallback_only_when_no_competition():
+    # No competition info at all + in-window -> last-resort fallback still includes it.
+    assert data.is_french_open_event(_evt("", "2026-06-02T12:00:00Z")) is True
+    # No competition + out-of-window -> excluded.
+    assert data.is_french_open_event(_evt("", "2026-09-02T12:00:00Z")) is False
 
 
 # --- AUDIT-004: every configured FO winner ticker maps to the intended tour ----------

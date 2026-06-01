@@ -62,4 +62,6 @@ NAME_ALIASES = {}
 # HTTP behaviour.
 USER_AGENT = "KalshiVisualizer/0.1 (read-only market data)"
 REQUEST_TIMEOUT = 15  # seconds
-MAX_PAGES = 50  # pagination safety cap
+# Pagination safety cap. The full /series list is ~10.5k rows at limit=200 (~53 pages), so the
+# cap must comfortably exceed that; hitting it now signals genuine truncation (surfaced as an error).
+MAX_PAGES = 100
