@@ -111,3 +111,72 @@ def test_expected_nodes_marks_missing_layer():
     assert nodes["Win Tournament"]["source"] == "market"
     assert nodes["Reach Semifinal"]["found"] is False
     assert nodes["Reach Final"]["found"] is False
+
+
+# --- raw stage-ladder spreads (v1) ---------------------------------------------------
+def _node_row(kind, stage, display_pct, display_c):
+    """A minimal contract row as consumed by build_player_nodes / layer_spreads."""
+    return {"kind": kind, "stage": stage, "display_pct": display_pct, "display_c": display_c}
+
+
+def _full_chain(sf=60.0, final=30.0, win=10.0, sf_c=60, final_c=30, win_c=10):
+    return [
+        _node_row("advance", "Semifinal", sf, sf_c),
+        _node_row("advance", "Final", final, final_c),
+        _node_row("winner", "Champion", win, win_c),
+    ]
+
+
+def test_layer_spreads_full_chain():
+    spreads = {(s["from_layer"], s["to_layer"]): s for s in consistency.layer_spreads(_full_chain())}
+    sf_final = spreads[("Reach Semifinal", "Reach Final")]
+    final_win = spreads[("Reach Final", "Win Tournament")]
+    assert sf_final["status"] == "ok"
+    assert sf_final["spread_pct"] == 30.0          # 60 - 30 percentage points
+    assert sf_final["spread_cents"] == 30          # 60c - 30c
+    assert sf_final["inverted"] is False
+    assert final_win["spread_pct"] == 20.0 and final_win["spread_cents"] == 20
+
+
+def test_layer_spreads_missing_layer():
+    rows = [_node_row("advance", "Semifinal", 60.0, 60), _node_row("winner", "Champion", 10.0, 10)]
+    spreads = {(s["from_layer"], s["to_layer"]): s for s in consistency.layer_spreads(rows)}
+    # Reach Final absent -> both adjacent pairs are missing_layer, None, not inverted, no crash.
+    assert spreads[("Reach Semifinal", "Reach Final")]["status"] == "missing_layer"
+    assert spreads[("Reach Final", "Win Tournament")]["status"] == "missing_layer"
+    for s in spreads.values():
+        if s["status"] == "missing_layer":
+            assert s["spread_pct"] is None and s["spread_cents"] is None and s["inverted"] is False
+
+
+def test_layer_spreads_inverted():
+    # Reach Final priced ABOVE Reach Semifinal -> negative spread, inverted True.
+    rows = _full_chain(sf=30.0, final=40.0, sf_c=30, final_c=40)
+    sf_final = next(s for s in consistency.layer_spreads(rows)
+                    if (s["from_layer"], s["to_layer"]) == ("Reach Semifinal", "Reach Final"))
+    assert sf_final["spread_pct"] == -10.0
+    assert sf_final["inverted"] is True
+
+
+def test_layer_spreads_existing_layers_missing_price():
+    # Layers present but a display price is unavailable (e.g. empty book) -> missing_price, not a crash.
+    rows = [
+        _node_row("advance", "Semifinal", None, None),   # present, no usable display price
+        _node_row("advance", "Final", 30.0, 30),
+        _node_row("winner", "Champion", 10.0, 10),
+    ]
+    spreads = {(s["from_layer"], s["to_layer"]): s for s in consistency.layer_spreads(rows)}
+    sf_final = spreads[("Reach Semifinal", "Reach Final")]
+    assert sf_final["status"] == "missing_price"
+    assert sf_final["spread_pct"] is None and sf_final["inverted"] is False
+    # the fully-priced pair below still computes
+    assert spreads[("Reach Final", "Win Tournament")]["status"] == "ok"
+
+
+def test_representative_prefers_market():
+    market_row = {"kind": "advance", "stage": "Final"}
+    match_row = {"kind": "match", "stage": "Final"}
+    assert consistency.representative({"market": market_row, "match": match_row}) is market_row
+    assert consistency.representative({"match": match_row}) is match_row
+    assert consistency.representative(None) is None
+    assert consistency.representative({}) is None
