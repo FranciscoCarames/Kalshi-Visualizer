@@ -36,6 +36,28 @@ STATUS_GROUPS = ["All", "Clean", "Broken", "Warning", "Missing data", "Unknown r
 GROUP_SORT = {"Broken": 0, "Warning": 1, "Missing data": 2, "Unknown relationship": 3, "Clean": 4}
 ALL_CONTRACT_TYPES = ["Tournament winner", "Stage advancement", "Match result"]
 
+# Display-only labels: keep the internal status taxonomy (hard rules, tests, exports) intact while
+# framing what the user sees as market signals rather than software errors. "Edge" = a price
+# inconsistency you could trade on.
+STATUS_GROUP_LABELS = {
+    "All": "All",
+    "Clean": "Consistent (no edge)",
+    "Broken": "Executable edge",
+    "Warning": "Potential edge",
+    "Missing data": "Incomplete data",
+    "Unknown relationship": "Unverifiable",
+}
+STATUS_LABELS = {
+    "CLEAN": "Consistent (no edge)",
+    "EXECUTABLE_VIOLATION": "Executable edge",
+    "DISPLAY_VIOLATION": "Potential edge (display)",
+    "WIDE_QUOTE": "Potential edge (wide quote)",
+    "MISSING_QUOTE": "Missing quote",
+    "MISSING_LAYER": "Missing layer",
+    "QUOTE_SIZE_MISSING": "Size unconfirmed",
+    "UNKNOWN_RELATIONSHIP": "Unverifiable",
+}
+
 
 @st.cache_data(ttl=3600, show_spinner=False)
 def discover() -> list[str]:
@@ -95,12 +117,13 @@ with controls:
     )
     status_choice = st.selectbox(
         "Outcome status", STATUS_GROUPS, index=0,
-        help="All = every comparison. Broken = executable inconsistency (child price > parent "
-             "price, firm quotes, positive sizes — potentially profitable). Warning = display "
-             "prices cross but not confirmed executable. Missing data = no usable quote or missing "
-             "ladder layer. Unknown = relationship between the two markets cannot be proved. "
-             "Clean = child price ≤ parent on both firm and display quotes (consistent — no "
-             "inconsistency).",
+        format_func=lambda g: STATUS_GROUP_LABELS.get(g, g),
+        help="All = every comparison. Executable edge = firm, executable inconsistency (deeper "
+             "price > broader price with firm quotes and positive sizes — the actionable case). "
+             "Potential edge = prices cross on display, or quotes are wide, but not confirmed "
+             "executable. Incomplete data = no usable quote, a missing ladder layer, or unconfirmed "
+             "size. Unverifiable = the relationship between the two markets cannot be proved. "
+             "Consistent (no edge) = deeper price ≤ broader on both firm and display quotes.",
     )
     quote_choice = st.selectbox(
         "Quote quality", ["All", "Tight/OK only", "Include wide"], index=0,
@@ -148,7 +171,10 @@ if not view.empty:
     elif quote_choice == "Include wide":
         view = view[view["comp_quote_quality"].isin(("Tight", "OK", "Wide", "Very wide"))]
     view = view[view["volume"].fillna(0) >= min_vol]
-    view = view.assign(_sort=view["status_group"].map(GROUP_SORT).fillna(9))
+    view = view.assign(
+        _sort=view["status_group"].map(GROUP_SORT).fillna(9),
+        status_label=view["status"].map(STATUS_LABELS).fillna(view["status"]),
+    )
     view = view.sort_values(
         ["_sort", "executable_gap", "display_gap"], ascending=[True, False, False], na_position="last"
     ).drop(columns="_sort")
@@ -164,12 +190,21 @@ with main:
     st.subheader("Layer consistency")
     if view.empty:
         st.info("No comparisons match the current filters.")
+        # Show what IS available for this tournament so an empty result is self-explanatory
+        # (e.g. Clean only exists for Men right now; Executable edge may be absent market-wide).
+        if not checks.empty:
+            avail = checks["status_group"].value_counts()
+            breakdown = " · ".join(
+                f"{STATUS_GROUP_LABELS.get(g, g)} {n}" for g, n in avail.items()
+            )
+            st.caption(f"Available now for {tournament} (before filters): {breakdown}. "
+                       "Try a different Outcome status, tournament, or contract type.")
     else:
         st.dataframe(
             view[[
                 "player", "chain", "child_contract", "parent_contract", "child_display_pct",
                 "parent_display_pct", "child_bid_pct", "parent_ask_pct", "executable_gap",
-                "exec_min_size", "exec_max_profit_dollars", "display_gap", "status", "rule_flag",
+                "exec_min_size", "exec_max_profit_dollars", "display_gap", "status_label", "rule_flag",
                 "reason", "volume", "comp_quote_quality",
                 "child_ticker", "parent_ticker", "child_url", "parent_url",
             ]],
@@ -188,7 +223,7 @@ with main:
                 "exec_min_size": st.column_config.NumberColumn("Max tradable units", format="%.0f", help="min(child bid size, parent ask size) — how many units could fill at the quoted sizes."),
                 "exec_max_profit_dollars": st.column_config.NumberColumn("Gross quoted profit ($)", format="$%.2f", help="Executable gap × max tradable units. Gross, from displayed quotes — before fees, slippage, partial fills."),
                 "display_gap": st.column_config.NumberColumn("Display gap ¢", format="%.0f"),
-                "status": "Status",
+                "status_label": st.column_config.TextColumn("Status", help="Executable edge = firm tradable inconsistency; Potential edge = display-only/wide; Incomplete data = missing quote/layer/size; Unverifiable = relationship unprovable; Consistent = no edge."),
                 "rule_flag": st.column_config.TextColumn("Rule caveat", help="Match-alignment pairs need settlement-rule verification."),
                 "reason": "Reason",
                 "volume": st.column_config.NumberColumn("Volume", format="%.0f"),
@@ -200,9 +235,10 @@ with main:
             },
         )
         st.caption(
-            "Only **EXECUTABLE_VIOLATION** (firm bid/ask cross with size) is *Broken*; display-only "
-            "gaps are *Warnings*. Findings are **executable inconsistencies**, not arbitrage — "
-            "match-alignment rows need their settlement rules verified (see Rule caveat)."
+            "Only an **Executable edge** (firm bid/ask cross with size) is fully actionable; "
+            "display-only or wide-quote gaps are **Potential edge**. Findings are **executable "
+            "inconsistencies**, not arbitrage — match-alignment rows need their settlement rules "
+            "verified (see Rule caveat)."
         )
         st.caption(
             "Gross profit is calculated from displayed bid/ask and quoted size. It does not account "
