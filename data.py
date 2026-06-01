@@ -161,25 +161,27 @@ def _is_empty_book(bid: float | None, ask: float | None) -> bool:
 
 
 def yes_mid(bid: float | None, ask: float | None) -> float | None:
-    """Midpoint of the YES bid/ask, or None when the book is empty/one-sided."""
-    if bid is None or ask is None or _is_empty_book(bid, ask):
+    """Midpoint of the YES bid/ask, or None when the book is empty/one-sided/crossed."""
+    if bid is None or ask is None or _is_empty_book(bid, ask) or ask < bid:
         return None
     return (bid + ask) / 2
 
 
 def spread(bid: float | None, ask: float | None) -> float | None:
-    """YES bid/ask spread in dollars, or None when not a two-sided real book."""
-    if bid is None or ask is None or _is_empty_book(bid, ask):
+    """YES bid/ask spread in dollars, or None when not a two-sided real book (or crossed)."""
+    if bid is None or ask is None or _is_empty_book(bid, ask) or ask < bid:
         return None
     return ask - bid
 
 
 def quote_quality(bid: float | None, ask: float | None) -> str:
-    """Human label for how trustworthy the quote is, flagging wide/empty books."""
+    """Human label for how trustworthy the quote is, flagging wide/empty/malformed books."""
     if (bid is None and ask is None) or _is_empty_book(bid, ask):
         return "No quote"
     if bid is None or ask is None:
         return "One-sided"
+    if ask < bid:
+        return "Crossed"  # malformed/locked book — ask below bid; never trust as a price
     s = ask - bid
     if s <= 0.05:
         return "Tight"
@@ -207,7 +209,7 @@ def display_cents(bid_c: int | None, ask_c: int | None, last_c: int | None) -> i
     Used by the consistency checker so comparisons stay in exact integer cents.
     """
     empty = bid_c == 0 and ask_c == 100
-    if bid_c is not None and ask_c is not None and not empty:
+    if bid_c is not None and ask_c is not None and not empty and ask_c >= bid_c:
         if (ask_c - bid_c) <= int(SPREAD_REASONABLE * 100):
             return round((bid_c + ask_c) / 2)
     if last_c is not None and last_c > 0:
@@ -259,9 +261,19 @@ def classify_kind(series_ticker: str) -> str:
     return "other"
 
 
+# Explicit tour for the French Open winner-ticker variants, because some (e.g.
+# KXFOPENWMENSINGLE = Open Women Singles) split the "W"/"MEN" so substring checks misfire.
+_WOMEN_WINNER_TICKERS = {"KXFOWOMEN", "KXFOWOMENSINGLES", "KXFOPENWMENSINGLE"}
+_MEN_WINNER_TICKERS = {"KXFOMEN", "KXFOMENSINGLES", "KXFOPENMENSINGLE"}
+
+
 def tour_of(series_ticker: str) -> str:
     """Men's (ATP) vs women's (WTA) from the series ticker."""
     t = (series_ticker or "").upper()
+    if t in _WOMEN_WINNER_TICKERS:
+        return "WTA"
+    if t in _MEN_WINNER_TICKERS:
+        return "ATP"
     if t.startswith("KXWTA") or "WOMEN" in t:
         return "WTA"
     return "ATP"

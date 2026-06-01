@@ -1,7 +1,29 @@
 """Unit tests for the pure data layer (no network)."""
 from __future__ import annotations
 
+import config
 import data
+
+
+# --- AUDIT-004: every configured FO winner ticker maps to the intended tour ----------
+def test_winner_ticker_tour_map_all_variants():
+    women = {"KXFOWOMEN", "KXFOWOMENSINGLES", "KXFOPENWMENSINGLE"}
+    for t in config.FO_WINNER_TICKERS:
+        expected = "WTA" if t in women else "ATP"
+        assert data.tour_of(t) == expected, f"{t} -> {data.tour_of(t)}, expected {expected}"
+    # the specific variant that the old substring check misclassified:
+    assert data.tour_of("KXFOPENWMENSINGLE") == "WTA"
+
+
+# --- AUDIT-005: crossed books (ask < bid) are malformed, never Tight or a midpoint ----
+def test_crossed_book_is_rejected():
+    assert data.quote_quality(0.60, 0.40) == "Crossed"      # not "Tight"
+    assert data.yes_mid(0.60, 0.40) is None
+    assert data.spread(0.60, 0.40) is None
+    assert data.display_prob(0.60, 0.40, None) is None       # no midpoint from a crossed book
+    assert data.display_cents(60, 40, None) is None
+    # a normal book is unaffected
+    assert data.quote_quality(0.34, 0.36) == "Tight"
 
 
 # --- parsing -------------------------------------------------------------------------

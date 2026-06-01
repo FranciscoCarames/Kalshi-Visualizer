@@ -9,40 +9,45 @@
 
 ## Repository state
 
-`main` is reconciled and current: PR #6 merged the full iteration-4 code, and PR #4 merged the agent
-guides (`CLAUDE.md`/`AGENTS.md`). The only pending code PR is **PR #7** — mapping-audit hardening + the
-first unit tests — on branch `feat/mapping-audit-hardening` (the canonical latest code). (PR #5, an
-earlier `kalshi-plan.md` rewrite, is superseded by this document.)
+`main` is current and canonical: the full app (multi-contract discovery, transparent pricing, Layer
+Consistency Checker), the mapping-audit hardening + first tests, **v1 raw ladder spreads**, and the
+spread NaN-fix/Quote column are all merged (PRs #6, #7, #9, #11; agent guides via #4). Test suite ~36
+`pytest` cases. (PR #5 superseded by this document.)
 
 ## What exists now
 
 A read-only Streamlit app that discovers French Open per-player contracts across market types (match
 result, stage advancement, tournament winner; opt-in full scan adds set-winner / exact-score), shows a
 transparent price breakdown per contract (Display % + YES mid/last/bid/ask + spread + quote-quality),
-and runs a **Layer Consistency Checker** that flags when a deeper outcome prices above a prerequisite it
-is contained in. PR #7 adds per-contract mapping confidence, an explicit expected-vs-found layer view,
-a per-player export, and `pytest` unit tests. No probability model, signals, alerts, or trading.
+runs a **Layer Consistency Checker** (flags when a deeper outcome prices above a prerequisite it
+contains), and — beneath the per-player ladder — shows **raw stage-ladder spreads** with a Quote column.
+Per-contract mapping confidence, an expected-vs-found layer view, a per-player export, and a `pytest`
+suite are in place. No probability model, signals, alerts, or trading.
 
-## v1 — Calendar spread math (raw spreads)
+## v1 — Calendar spread math (raw spreads)  ✅ DONE / shipped
 
-The simplest useful next step: for each player, the **raw price gap between adjacent contracts** on the
-existing progression ladder `Reach Semifinal → Reach Final → Win Tournament`:
+Per player, the **raw price gap between adjacent contracts** on the ladder
+`Reach Semifinal → Reach Final → Win Tournament` (`spread_pct` in percentage points, `spread_cents` in
+cents; broader − deeper). Pure arithmetic on existing prices — no probabilities, no de-vig, no models.
+Implemented in `consistency.layer_spreads` (reusing `representative`/`build_player_nodes`), rendered
+beneath the ladder with a Quote column; `missing_layer` vs `missing_price` are distinguished and shown
+blank; inverted (negative) spreads cross-reference the consistency table. NaN-safe after the
+DataFrame→records fix.
 
-```
-spread_SF→Final  = price(Reach Semifinal) − price(Reach Final)
-spread_Final→Win = price(Reach Final)     − price(Win Tournament)
-```
+## v1.1 — Correctness hardening (from external audit)  ✅ DONE
 
-- Pure arithmetic on prices the app already has — **no conditional probabilities, no de-vig, no models.**
-- Reuse the per-player nodes already built (`consistency.build_player_nodes` / the chain in `app.py`);
-  use the existing layer price (`display_pct`, and/or cent-exact `display_c`). Show in cents and/or %.
-- A **missing layer → spread shown as N/A** (not zero). A **negative spread** (deeper priced above
-  broader) is exactly what the Layer Consistency Checker already flags — cross-reference it, don't
-  recompute.
-- **Definition of done:** for a selected player, the raw spread between each adjacent *available* layer
-  is displayed; missing layers are explicit; no new network calls; no models introduced.
-- **Test:** a unit test for the spread helper over synthetic chains (incl. a missing layer); headless app
-  shows the spreads in the player-detail view.
+Tier-1 fixes from `audit_report.md` (verified, with regression tests):
+- **Key-based grouping (AUDIT-001):** consistency checks and the player selector group by stable
+  `player_key`, not display name, so two players sharing a name are never merged.
+- **Truthful equivalence reason (AUDIT-003):** the executable-violation reason quotes the actual winning
+  cross direction (forward or reverse).
+- **Winner-ticker tour map (AUDIT-004):** all `FO_WINNER_TICKERS` variants classify to the correct tour
+  (e.g. `KXFOPENWMENSINGLE` → WTA).
+- **Crossed-book guard (AUDIT-005):** `ask < bid` books are "Crossed" quality — no Tight label, no
+  midpoint display price, never fed to the executable test.
+- **JSON safety:** a non-JSON 200 body raises `KalshiError`, not a raw decode error.
+- **AUDIT-002 decision:** *keep* current behavior — a sizeless price-cross that **also** crosses on
+  display is `DISPLAY_VIOLATION` (not `QUOTE_SIZE_MISSING`); docs clarified.
 
 ## Expand later (optional — only if a real need appears)
 
@@ -55,6 +60,13 @@ Each is independent and unordered; pick up only when justified:
 - Confidence & liquidity scoring; quote-freshness/stale flags.
 - Real-time updates (polling/WebSocket); in-app alerts.
 - Trading (paper, then live) — **out of scope** unless the read-only guard is explicitly lifted.
+
+**Deferred audit items (Tier-2, only if a need appears):** surface pagination truncation instead of
+silent partial data (AUDIT-007); deterministic handling of duplicate node/source rows under full scan
+(AUDIT-006); require a tennis/competition signal before the date-window FO fallback, or flag it
+low-confidence (AUDIT-008); a deterministic sample-data mode for offline app smoke tests (AUDIT-009);
+clearer expected-layer semantics for early-round-only players (AUDIT-010); a minimal lint config
+(AUDIT-011, needs a dep decision); plus the broader regression-test matrix from the audit.
 
 ## Verification & housekeeping
 

@@ -52,7 +52,10 @@ def _get(path: str, params: dict[str, Any]) -> dict[str, Any]:
             continue
         if resp.status_code >= 400:
             raise KalshiError(f"HTTP {resp.status_code} from {url}: {resp.text[:200]}")
-        return resp.json()
+        try:
+            return resp.json()
+        except ValueError as exc:  # non-JSON 200 body — surface as KalshiError, not a raw decode error
+            raise KalshiError(f"Invalid JSON from {url}: {exc}") from exc
 
     raise KalshiError(f"Failed to GET {url} after retries: {last_error!r}")
 

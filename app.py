@@ -90,8 +90,19 @@ with controls:
     quote_choice = st.selectbox("Quote quality", ["All", "Tight/OK only", "Include wide"], index=0)
     max_vol = int(df["volume"].fillna(0).max()) if not df.empty else 0
     min_vol = st.slider("Minimum volume", 0, max_vol, 0) if max_vol > 0 else 0
-    players = sorted(df["player"].unique()) if not df.empty else []
-    chosen = st.selectbox("Player", players) if players else None
+    # Select by stable player_key (disambiguate the label only when a display name maps to
+    # more than one key) so two players with the same display name are never conflated.
+    if not df.empty:
+        uniq = df.drop_duplicates("player_key")[["player_key", "player"]]
+        name_counts = uniq["player"].value_counts()
+        label_to_key = {}
+        for _, r in uniq.iterrows():
+            label = r["player"] if name_counts[r["player"]] == 1 else f'{r["player"]} [{str(r["player_key"])[:6]}]'
+            label_to_key[label] = r["player_key"]
+        chosen_label = st.selectbox("Player", sorted(label_to_key))
+        chosen_key = label_to_key[chosen_label]
+    else:
+        chosen_key = None
 
 # ---- Apply filters to the consistency table ------------------------------------------
 def _passes_type(row) -> bool:
@@ -170,10 +181,11 @@ with main:
         )
 
     # ---- Player detail ---------------------------------------------------------------
-    if chosen:
+    if chosen_key is not None:
+        prows = df[df["player_key"] == chosen_key].to_dict("records")
+        chosen = prows[0]["player"] if prows else chosen_label
         st.divider()
         st.subheader(f"Player detail — {chosen}")
-        prows = df[df["player"] == chosen].to_dict("records")
         nodes = build_player_nodes(prows)
 
         # ---- Progression chain / ladder view (kept as the primary visualization) -----
@@ -262,9 +274,9 @@ with main:
             )
 
         st.caption("All contracts for this player:")
-        pdf = df[df["player"] == chosen].copy().sort_values("stage_rank")
+        pdf = df[df["player_key"] == chosen_key].copy().sort_values("stage_rank")
         pdf["time_dt"] = pd.to_datetime(pdf["time_value"], utc=True, errors="coerce")
-        pchecks = checks[checks["player"] == chosen]
+        pchecks = checks[checks["player_key"] == chosen_key] if "player_key" in checks.columns else checks.iloc[0:0]
         st.dataframe(
             pdf[["contract", "category", "stage", "opponent", "display_pct", "quote_quality",
                  "mapping_confidence", "yes_bid_pct", "yes_ask_pct", "spread_cents", "volume",

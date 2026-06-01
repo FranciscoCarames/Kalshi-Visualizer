@@ -37,7 +37,7 @@ ADVANCE_STAGE_TO_NODE = {"Semifinal": "Reach Semifinal", "Final": "Reach Final"}
 # not hold exactly (e.g. walkover / "ball has been played" handling differs).
 _RULE_TOKENS = ["ball has been played", "walkover", "retire", "withdraw", "forfeit", "cancel"]
 
-_QUALITY_RANK = {"Tight": 0, "OK": 1, "Wide": 2, "Very wide": 3, "One-sided": 4, "No quote": 5}
+_QUALITY_RANK = {"Tight": 0, "OK": 1, "Wide": 2, "Very wide": 3, "One-sided": 4, "No quote": 5, "Crossed": 6}
 
 STATUS_GROUP = {
     "CLEAN": "Clean",
@@ -170,9 +170,9 @@ def _pos(size: Any) -> bool:
 def _leg(row: dict[str, Any], side: str) -> tuple[int | None, Any]:
     """Return (cents, size) for a contract's firm bid/ask side.
 
-    An empty 0/1 book ("No quote") has no real order on either side.
+    An empty 0/1 book ("No quote") or a malformed crossed book ("Crossed") has no usable order.
     """
-    if row.get("quote_quality") == "No quote":
+    if row.get("quote_quality") in ("No quote", "Crossed"):
         return None, None
     if side == "bid":
         return _num(row.get("yes_bid_c")), row.get("yes_bid_size")
@@ -204,19 +204,25 @@ def _classify(
     cd, pd_ = _num(child.get("display_c")), _num(parent.get("display_c"))
 
     # --- executable test: firm legs + positive sizes only ---
-    directions: list[tuple[int, bool]] = []
+    # Track each direction's evidence so the reason always quotes the winning direction's legs
+    # (equivalence checks both ways; a reverse cross must not be described as a forward one).
+    candidates: list[dict[str, Any]] = []
     cb, cbs = _leg(child, "bid")
     pa, pas = _leg(parent, "ask")
     if cb is not None and pa is not None:
-        directions.append((cb - pa, _pos(cbs) and _pos(pas)))
+        candidates.append({"gap": cb - pa, "sizes_ok": _pos(cbs) and _pos(pas),
+                           "frag": f"child bid {cb}c > parent ask {pa}c", "sizes": f"{cbs}/{pas}"})
     if equivalence:
         pb, pbs = _leg(parent, "bid")
         ca, cas = _leg(child, "ask")
         if pb is not None and ca is not None:
-            directions.append((pb - ca, _pos(pbs) and _pos(cas)))
+            candidates.append({"gap": pb - ca, "sizes_ok": _pos(pbs) and _pos(cas),
+                               "frag": f"parent bid {pb}c > child ask {ca}c", "sizes": f"{pbs}/{cas}"})
 
-    exec_evaluable = bool(directions)
-    exec_gap, sizes_ok = (max(directions, key=lambda d: d[0]) if directions else (None, False))
+    exec_evaluable = bool(candidates)
+    best = max(candidates, key=lambda c: c["gap"]) if candidates else None
+    exec_gap = best["gap"] if best else None
+    sizes_ok = best["sizes_ok"] if best else False
 
     # --- display test ---
     display_evaluable = cd is not None and pd_ is not None
@@ -229,7 +235,7 @@ def _classify(
     # --- precedence ---
     if exec_evaluable and exec_gap > 0 and sizes_ok:
         status = "EXECUTABLE_VIOLATION"
-        reason = f"child bid {cb}c > parent ask {pa}c → {exec_gap}c executable cross (sizes {cbs}/{pas})"
+        reason = f"{best['frag']} → {exec_gap}c executable cross (sizes {best['sizes']})"
     elif exec_evaluable and exec_gap > 0 and not sizes_ok:
         if display_violation:
             status = "DISPLAY_VIOLATION"
@@ -269,11 +275,12 @@ def _classify(
     }
 
 
-def _row(player: str, chain: str, child: dict | None, parent: dict | None, comp: dict) -> dict:
+def _row(player: str, player_key: str, chain: str, child: dict | None, parent: dict | None, comp: dict) -> dict:
     """Assemble one consistency-table row."""
     vols = [r.get("volume") for r in (child, parent) if r and r.get("volume") is not None]
     return {
         "player": player,
+        "player_key": player_key,
         "chain": chain,
         "child_contract": child.get("contract") if child else "",
         "parent_contract": parent.get("contract") if parent else "",
@@ -301,7 +308,7 @@ def _row(player: str, chain: str, child: dict | None, parent: dict | None, comp:
 def build_checks(df: pd.DataFrame) -> pd.DataFrame:
     """Build the full layer-consistency table from the per-player contract DataFrame."""
     columns = [
-        "player", "chain", "child_contract", "parent_contract", "child_display_pct",
+        "player", "player_key", "chain", "child_contract", "parent_contract", "child_display_pct",
         "parent_display_pct", "child_bid_pct", "parent_ask_pct", "executable_gap",
         "display_gap", "status", "status_group", "rule_flag", "reason", "volume",
         "comp_quote_quality", "child_ticker", "parent_ticker", "child_url", "parent_url",
@@ -311,8 +318,11 @@ def build_checks(df: pd.DataFrame) -> pd.DataFrame:
         return pd.DataFrame(columns=columns)
 
     out: list[dict] = []
-    for player, group in df.groupby("player"):
+    # Group by the STABLE player_key, never the display name: two distinct competitors who
+    # share a display name (or name-fallback collisions) must not be merged into one ladder.
+    for player_key, group in df.groupby("player_key"):
         rows = group.to_dict("records")
+        player = rows[0].get("player", "") if rows else ""  # display label
         nodes = build_player_nodes(rows)
         if not nodes:
             continue
@@ -333,16 +343,16 @@ def build_checks(df: pd.DataFrame) -> pd.DataFrame:
                     "display_gap": None,
                     "quote_quality": "",
                 }
-                out.append(_row(player, chain, child, parent, comp))
+                out.append(_row(player, player_key, chain, child, parent, comp))
             else:
-                out.append(_row(player, chain, child, parent, _classify(child, parent, False)))
+                out.append(_row(player, player_key, chain, child, parent, _classify(child, parent, False)))
 
         # Match-alignment (equivalence) rows where both a market and a confident match exist.
         for node, sources in nodes.items():
             if "market" in sources and "match" in sources:
                 match_row, market_row = sources["match"], sources["market"]
                 chain = f"{match_row.get('stage')} win ≡ {node}"
-                out.append(_row(player, chain, match_row, market_row, _classify(match_row, market_row, True)))
+                out.append(_row(player, player_key, chain, match_row, market_row, _classify(match_row, market_row, True)))
 
         # Surface match contracts whose round does NOT map to a tracked layer (e.g. R16) as
         # UNKNOWN_RELATIONSHIP so they are acknowledged, never silently treated as violations.
@@ -357,6 +367,6 @@ def build_checks(df: pd.DataFrame) -> pd.DataFrame:
                     "display_gap": None,
                     "quote_quality": row.get("quote_quality", ""),
                 }
-                out.append(_row(player, f"{row.get('stage') or '?'} match", row, None, comp))
+                out.append(_row(player, player_key, f"{row.get('stage') or '?'} match", row, None, comp))
 
     return pd.DataFrame(out, columns=columns)
