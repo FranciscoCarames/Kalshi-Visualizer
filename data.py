@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import re
 from datetime import datetime, timezone
+from decimal import Decimal, InvalidOperation
 from typing import Any
 
 from config import (
@@ -74,6 +75,23 @@ def to_float(value: Any) -> float | None:
     try:
         return float(text)
     except ValueError:
+        return None
+
+
+def to_cents(value: Any) -> int | None:
+    """Parse a Kalshi dollar string ("0.3700") into an exact integer of cents (37).
+
+    Uses Decimal so comparison logic is free of binary-float drift. Returns None for
+    missing/empty/unparseable values.
+    """
+    if value is None:
+        return None
+    text = str(value).strip()
+    if text == "":
+        return None
+    try:
+        return int((Decimal(text) * 100).to_integral_value())
+    except (InvalidOperation, ValueError):
         return None
 
 
@@ -183,6 +201,20 @@ def display_prob(bid: float | None, ask: float | None, last: float | None) -> fl
     return None
 
 
+def display_cents(bid_c: int | None, ask_c: int | None, last_c: int | None) -> int | None:
+    """Integer-cent twin of `display_prob`: midpoint when the spread is reasonable, else last.
+
+    Used by the consistency checker so comparisons stay in exact integer cents.
+    """
+    empty = bid_c == 0 and ask_c == 100
+    if bid_c is not None and ask_c is not None and not empty:
+        if (ask_c - bid_c) <= int(SPREAD_REASONABLE * 100):
+            return round((bid_c + ask_c) / 2)
+    if last_c is not None and last_c > 0:
+        return last_c
+    return None
+
+
 def _pct(value: float | None) -> float | None:
     return round(value * 100, 1) if value is not None else None
 
@@ -289,6 +321,13 @@ def build_contracts(series_ticker: str, events: list[dict[str, Any]]) -> list[di
             mid = yes_mid(bid, ask)
             sp = spread(bid, ask)
 
+            # Exact integer-cent prices + order sizes for the consistency checker.
+            bid_c = to_cents(market.get("yes_bid_dollars"))
+            ask_c = to_cents(market.get("yes_ask_dollars"))
+            last_c = to_cents(market.get("last_price_dollars"))
+            bid_size = to_float(market.get("yes_bid_size_fp"))
+            ask_size = to_float(market.get("yes_ask_size_fp"))
+
             # Time label depends on contract type: match-result contracts have a real match
             # time (occurrence); everything else shows when the market closes/expires.
             occurrence = market.get("occurrence_datetime") or ""
@@ -321,6 +360,13 @@ def build_contracts(series_ticker: str, events: list[dict[str, Any]]) -> list[di
                     "yes_ask_pct": _pct(ask),
                     "spread_cents": round(sp * 100, 1) if sp is not None else None,
                     "quote_quality": quote_quality(bid, ask),
+                    # Exact integer-cent prices + sizes for layer-consistency comparisons.
+                    "yes_bid_c": bid_c,
+                    "yes_ask_c": ask_c,
+                    "last_c": last_c,
+                    "display_c": display_cents(bid_c, ask_c, last_c),
+                    "yes_bid_size": bid_size,
+                    "yes_ask_size": ask_size,
                     "volume": to_float(market.get("volume_fp")),
                     "open_interest": to_float(market.get("open_interest_fp")),
                     "status": market.get("status", ""),
@@ -336,6 +382,7 @@ def build_contracts(series_ticker: str, events: list[dict[str, Any]]) -> list[di
                     "raw_yes_bid": market.get("yes_bid_dollars"),
                     "raw_yes_ask": market.get("yes_ask_dollars"),
                     "raw_last": market.get("last_price_dollars"),
+                    "rules_primary": market.get("rules_primary", ""),
                 }
             )
     return rows

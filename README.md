@@ -2,9 +2,28 @@
 
 A small read-only [Streamlit](https://streamlit.io/) app that pulls live
 [Kalshi](https://kalshi.com/) prediction-market data for the **French Open** tennis
-tournament, then lets you pick a player and see **all of their French Open contracts** in one
-table — match results, stage advancement (reach Semifinal/Final), and the tournament-winner
-market — with a clear breakdown of every price component.
+tournament. It surfaces **layer-consistency issues** (a deeper outcome must not price above a
+prerequisite — e.g. *Win Tournament ≤ Reach Final ≤ Reach Semifinal*) and lets you drill into
+any player's full set of contracts with a clear breakdown of every price component.
+
+## Layer Consistency Checker
+
+The main table compares contracts that have a provable logical **containment** relationship and
+flags **executable inconsistencies** (a firm bid/ask cross with order size behind it). It is
+deliberately conservative:
+
+- **Executable test** uses firm YES bid/ask **and positive order sizes**, compared in exact
+  integer cents. A child YES bid above the parent YES ask is `EXECUTABLE_VIOLATION` (the only
+  *Broken* status).
+- **Display test** compares the display %; a breach is `DISPLAY_VIOLATION` (a *Warning*, since it
+  may not be tradable).
+- Wide/empty books, missing sizes, missing layers, and unprovable relationships are surfaced as
+  `WIDE_QUOTE` / `MISSING_QUOTE` / `QUOTE_SIZE_MISSING` / `MISSING_LAYER` / `UNKNOWN_RELATIONSHIP`
+  — **never** mislabelled as violations.
+- **Match-alignment** rows (winning your current match ⇔ reaching the next stage) are included
+  only when the round maps confidently, and always carry a `RULE_CHECK_REQUIRED` /
+  `RULE_MISMATCH` flag: findings are called *executable inconsistencies*, **not arbitrage**,
+  because the two markets' settlement rules are not auto-verified.
 
 ## How it works
 
@@ -42,8 +61,9 @@ market fields) — never silently dropped. Market data is **public** — no API 
 | --- | --- |
 | `config.py` | Base URL, series tickers, FO keywords/date window |
 | `kalshi_client.py` | Read-only HTTP client: paginated GET + retry/backoff |
-| `data.py` | Parsing, French Open filtering, per-player contract index (no Streamlit) |
-| `app.py` | Streamlit UI: player selector, category filter, contract table, debug expander |
+| `data.py` | Parsing, French Open filtering, per-player contract index, cent-exact prices/sizes (no Streamlit) |
+| `consistency.py` | Layer-consistency chains + classifier (no Streamlit) |
+| `app.py` | Streamlit UI: main consistency table + player detail; right-hand controls/filters |
 
 ## Setup & run
 
