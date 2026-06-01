@@ -8,13 +8,20 @@ checkbox enables a full dynamic scan. Data caches for 60s.
 """
 from __future__ import annotations
 
+import json
 from datetime import datetime, timezone
 
 import pandas as pd
 import streamlit as st
 
 from config import DEFAULT_SERIES
-from consistency import MATCH_STAGE_TO_NODE, NODE_ORDER, build_checks, build_player_nodes
+from consistency import (
+    MATCH_STAGE_TO_NODE,
+    NODE_ORDER,
+    build_checks,
+    build_player_nodes,
+    expected_nodes,
+)
 from data import build_contracts
 from kalshi_client import KalshiError, discover_tennis_series, get_events_for_series
 
@@ -186,6 +193,22 @@ with main:
         st.caption("Progression chain (broad → deep):")
         st.dataframe(pd.DataFrame(chain_rows), hide_index=True, width="stretch")
 
+        # ---- Mapping confidence + expected-vs-found layers ---------------------------
+        sample = prows[0] if prows else {}
+        st.caption(
+            f"Mapping: **{sample.get('mapping_confidence', '?')}** confidence "
+            f"(key source: `{sample.get('player_key_source', '?')}`) — {sample.get('mapping_reason', '')}"
+        )
+        exp = expected_nodes(prows)
+        exp_df = pd.DataFrame(exp)
+        exp_df["found"] = exp_df["found"].map({True: "✅ found", False: "❌ MISSING"})
+        st.caption("Expected progression layers (explicit found vs missing):")
+        st.dataframe(
+            exp_df[["layer", "found", "source"]],
+            hide_index=True, width="stretch",
+            column_config={"layer": "Layer", "found": "Status", "source": "Source"},
+        )
+
         # Confident match contracts for this player.
         match_rows = [r for r in prows if r.get("kind") == "match" and r.get("stage") in MATCH_STAGE_TO_NODE]
         if match_rows:
@@ -205,15 +228,17 @@ with main:
         st.caption("All contracts for this player:")
         pdf = df[df["player"] == chosen].copy().sort_values("stage_rank")
         pdf["time_dt"] = pd.to_datetime(pdf["time_value"], utc=True, errors="coerce")
+        pchecks = checks[checks["player"] == chosen]
         st.dataframe(
             pdf[["contract", "category", "stage", "opponent", "display_pct", "quote_quality",
-                 "yes_bid_pct", "yes_ask_pct", "spread_cents", "volume", "status", "time_dt",
-                 "time_kind", "kalshi_url"]],
+                 "mapping_confidence", "yes_bid_pct", "yes_ask_pct", "spread_cents", "volume",
+                 "status", "time_dt", "time_kind", "kalshi_url"]],
             hide_index=True, width="stretch",
             column_config={
                 "contract": "Contract", "category": "Type", "stage": "Stage", "opponent": "Opponent",
                 "display_pct": st.column_config.NumberColumn("Display %", format="%.1f%%"),
                 "quote_quality": "Quote",
+                "mapping_confidence": "Mapping",
                 "yes_bid_pct": st.column_config.NumberColumn("YES bid %", format="%.1f%%"),
                 "yes_ask_pct": st.column_config.NumberColumn("YES ask %", format="%.1f%%"),
                 "spread_cents": st.column_config.NumberColumn("Spread ¢", format="%.1f"),
@@ -223,6 +248,32 @@ with main:
                 "time_kind": "Time basis",
                 "kalshi_url": st.column_config.LinkColumn("Kalshi", display_text="open ↗"),
             },
+        )
+
+        # ---- Exportable per-player debug snapshot ------------------------------------
+        snapshot = {
+            "player": chosen,
+            "fetched_at": fetched_at,
+            "tour": sample.get("tour"),
+            "mapping": {
+                "player_key": sample.get("player_key"),
+                "player_key_source": sample.get("player_key_source"),
+                "mapping_confidence": sample.get("mapping_confidence"),
+                "mapping_reason": sample.get("mapping_reason"),
+            },
+            "expected_layers": exp,
+            "contracts": pdf.drop(columns=["time_dt"]).to_dict("records"),
+            "consistency_comparisons": pchecks.to_dict("records"),
+        }
+        safe = "".join(c if c.isalnum() else "_" for c in chosen) or "player"
+        ec1, ec2 = st.columns(2)
+        ec1.download_button(
+            "⬇ Export snapshot (JSON)", json.dumps(snapshot, indent=2, default=str),
+            file_name=f"{safe}_snapshot.json", mime="application/json",
+        )
+        ec2.download_button(
+            "⬇ Export contracts (CSV)", pdf.drop(columns=["time_dt"]).to_csv(index=False),
+            file_name=f"{safe}_contracts.csv", mime="text/csv",
         )
 
         # ---- Debug expander ----------------------------------------------------------
@@ -236,13 +287,12 @@ with main:
             st.caption("Raw contract fields for this player:")
             st.dataframe(
                 pdf[["series", "event_ticker", "market_ticker", "event_title", "market_title",
-                     "kind", "stage", "player_key", "player_key_source", "raw_yes_bid",
-                     "raw_yes_ask", "raw_last"]],
+                     "kind", "stage", "player_key", "player_key_source", "mapping_confidence",
+                     "mapping_reason", "raw_yes_bid", "raw_yes_ask", "raw_last"]],
                 hide_index=True, width="stretch",
             )
 
             st.caption("Comparison status + reason for this player:")
-            pchecks = checks[checks["player"] == chosen]
             st.dataframe(
                 pchecks[["chain", "status", "status_group", "rule_flag", "executable_gap", "display_gap", "reason"]],
                 hide_index=True, width="stretch",
