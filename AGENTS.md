@@ -7,36 +7,39 @@ Self-contained — everything you need is here.
 
 A small, **read-only** Streamlit app that reads live [Kalshi](https://kalshi.com) prediction-market
 data for the **French Open** tennis tournament. It lets a user pick a player, view all of their French
-Open contracts with a transparent price breakdown, and runs a **Layer Consistency Checker** that flags
-when a deeper outcome prices above a prerequisite that logically contains it.
+Open contracts with a transparent price breakdown, runs a **Layer Consistency Checker** (a deeper
+outcome must not price above a prerequisite that contains it), and — beneath the per-player ladder —
+shows **raw stage-ladder spreads** (price gaps between adjacent layers).
 
 - **Owner / GitHub:** FranciscoCarames. Repo `Kalshi-Visualizer` (private), default branch `main`.
 - **OS:** Windows 11 (PowerShell), Python 3.13.
+- **Roadmap:** simple-first — see `kalshi-plan.md`. v1 is raw spreads; probability models, scenario
+  trees, signals, etc. are an optional "expand later" menu, **not** committed scope.
 - **Out of scope (do not implement unless explicitly requested):** trading, authentication, order
-  placement, historical/time-series storage, alerts, generic multi-sport support.
+  placement, historical/time-series storage, alerts, conditional-probability/de-vig models, generic
+  multi-sport support.
 
-## Setup commands
+## Setup & run
 
 ```bash
-pip install -r requirements.txt    # streamlit, requests, pandas
-streamlit run app.py               # launches the app in a browser
+pip install -r requirements.txt        # runtime: streamlit, requests, pandas
+streamlit run app.py
+pip install -r requirements-dev.txt    # adds pytest (tests only)
 ```
-
-There is no build step and no separate dependency manifest beyond `requirements.txt`.
 
 ## Testing / verification
 
-There is no formal test suite. Verify changes with these checks before committing:
+There **is** a test suite now (added with the mapping-audit work). Before committing:
 
-1. **Compile:** `python -m py_compile config.py kalshi_client.py data.py consistency.py app.py`
-2. **Data + consistency layer** (pure, no UI) — run a one-off script that calls
-   `kalshi_client.get_events_for_series([...])`, `data.build_contracts(...)`, and
-   `consistency.build_checks(df)`, and assert the known live cases below.
-3. **Headless app boot:** `streamlit run app.py --server.headless true --server.port 8765`, then confirm
+1. **Tests:** `pytest -q` — unit tests for the pure layers, no network (`tests/test_data.py`,
+   `tests/test_consistency.py`; `conftest.py` makes the repo root importable). ~22 tests on `main`
+   today; ~27 with the pending ladder-spreads PR.
+2. **Compile:** `python -m py_compile config.py kalshi_client.py data.py consistency.py app.py`
+3. **Headless boot:** `streamlit run app.py --server.headless true --server.port 8765`, then confirm
    `http://localhost:8765/_stcore/health` returns `200` and the logs show no tracebacks.
 
-Network egress may be sandboxed in some environments; live Kalshi calls, `pip`, and `git push` need
-network access enabled. `api.kalshi.com` does not resolve — use `external-api.kalshi.com`.
+Network egress may be sandboxed; live Kalshi calls, `pip`, and `git push` need network access enabled.
+`api.kalshi.com` does not resolve — use `external-api.kalshi.com`.
 
 ## Kalshi API (verified live, 2026)
 
@@ -67,22 +70,25 @@ The women's winner market title is literally "win the KXFOWOMEN-26?" → synthes
 
 ```
 config.py          # BASE_URL, DEFAULT_SERIES, discovery prefixes, FO keywords/window, thresholds
-kalshi_client.py   # read-only HTTP: paginated GET, retry/backoff, sized connection pool,
+kalshi_client.py   # read-only HTTP: paginated GET, retry/backoff, sized pool,
                    #   discover_tennis_series(), get_events_for_series() (concurrent + sequential retry)
-data.py            # NO streamlit: parsing, FO filtering, classify_kind/tour_of, build_contracts();
-                   #   pricing helpers (yes_mid/spread/quote_quality/display_prob), to_cents()
-consistency.py     # NO streamlit: node_of/build_player_nodes/classify/build_checks (the checker)
-app.py             # Streamlit ONLY: main consistency table + player detail; right-hand controls
+data.py            # NO streamlit: parsing, to_cents(), FO filtering, classify_kind/tour_of,
+                   #   pricing helpers (yes_mid/spread/quote_quality/display_prob), build_contracts()
+consistency.py     # NO streamlit: node_of, build_player_nodes, representative, expected_nodes,
+                   #   layer_spreads, build_checks (the checker)
+app.py             # Streamlit ONLY: consistency table + per-player detail; right-hand controls
+tests/             # pytest: test_data.py, test_consistency.py        conftest.py  requirements-dev.txt
 ```
 
 - **Layering rule:** `data.py` and `consistency.py` must not import Streamlit; all UI lives in `app.py`.
 - **Default vs full scan:** default fetches `config.DEFAULT_SERIES` (6 core series, ~2s). A "Scan all tennis
   series" checkbox runs `discover_tennis_series()` (~61 series, ~20s). Series list cached 1h; contracts 60s.
-- **Contract row (build_contracts), partial schema:** `player, player_key, player_key_source, tour, kind,
-  category, contract, stage, stage_rank, opponent, display_pct, yes_mid_pct, last_pct, yes_bid_pct,
-  yes_ask_pct, spread_cents, quote_quality, yes_bid_c, yes_ask_c, last_c, display_c, yes_bid_size,
-  yes_ask_size, volume, open_interest, status, time_value, time_kind, kalshi_url, series, event_ticker,
-  market_ticker, event_title, market_title, raw_yes_bid, raw_yes_ask, raw_last, rules_primary`.
+- **Contract row (build_contracts), partial schema:** `player, player_key, player_key_source,
+  mapping_confidence, mapping_reason, tour, kind, category, contract, stage, stage_rank, opponent,
+  display_pct, yes_mid_pct, last_pct, yes_bid_pct, yes_ask_pct, spread_cents, quote_quality, yes_bid_c,
+  yes_ask_c, last_c, display_c, yes_bid_size, yes_ask_size, volume, open_interest, status, time_value,
+  time_kind, kalshi_url, series, event_ticker, market_ticker, event_title, market_title, raw_yes_bid,
+  raw_yes_ask, raw_last, rules_primary`.
 
 ## Pricing model
 
@@ -114,19 +120,44 @@ included only when the round maps confidently. Anything unprovable → `UNKNOWN_
 `EXECUTABLE_VIOLATION` (~2¢) flagged `RULE_MISMATCH`; Sabalenka Reach Final > Reach Semifinal on display →
 `DISPLAY_VIOLATION`, her early-round match → `UNKNOWN_RELATIONSHIP`; Gauff/Swiatek empty books → `MISSING_QUOTE`.
 
+## Mapping audit & per-player export
+
+- `data.build_contracts` stamps every row with `mapping_confidence` ("high" = keyed to the stable
+  `tennis_competitor` UUID; "low" = name fallback) + a `mapping_reason`. No downstream layer should consume
+  a row lacking `kind` + confidence.
+- `consistency.expected_nodes(player_rows)` returns the **expected-vs-found** progression ladder so a
+  missing layer is explicit, not implied-by-omission.
+- The player-detail view offers a **per-player export** (JSON snapshot + CSV) of the contracts and their
+  consistency comparisons for offline mapping review.
+
+## Raw stage-ladder spreads (v1)  — pending PR #9 (branch `feat/ladder-spreads`)
+
+`consistency.layer_spreads(player_rows)` returns, for each adjacent ladder pair, the **raw price gap**:
+`spread_pct` = percentage-**point** difference, `spread_cents` = cents difference (broader − deeper). These
+are **raw spreads, not a probability model** — no conditional probabilities, no de-vig. Rules:
+
+- Reuse `consistency.representative(node_entry)` (market source else match) — the **single** price-row
+  selector shared by the progression chain and the spreads; do not duplicate source-selection logic.
+- Distinguish **`missing_layer`** (node absent) from **`missing_price`** (node present, no usable display price).
+- `inverted` is None-safe (true only when `spread_pct` is a real number < 0); an inverted spread is the same
+  inconsistency the consistency table flags.
+- In the UI the pp gap is labelled **"pp"** (layer prices stay "%"). The spread table sits **directly beneath**
+  the progression-chain ladder (do not replace the ladder).
+
 ## UI conventions
 
 `st.columns([3, 1])`: main area left, **controls panel right**. Controls: Refresh, Tournament radio
 (Women/Men/Both, default Women), Scan-all checkbox, Contract type (default Tournament winner + Stage
 advancement; enabling Match result adds alignment rows), Outcome status, Quote quality, Min volume, Player.
-Main: consistency table (sorted Broken→Warning→Missing→Unknown→Clean; clean rows filterable, never hidden)
-plus per-player detail (progression chain, all contracts, debug expander with reasons). Use `width="stretch"`
-on `st.dataframe` (`use_container_width` is deprecated).
+Main: consistency table (sorted Broken→Warning→Missing→Unknown→Clean; clean rows filterable, never hidden);
+per-player detail = progression chain → raw ladder spreads → mapping confidence + expected-vs-found → all
+contracts → export buttons → debug expander (raw fields + per-comparison reasons). Tables only, no charts.
+Use `width="stretch"` on `st.dataframe` (`use_container_width` is deprecated).
 
 ## Code style
 
 - Python 3.13, `from __future__ import annotations`; type hints on public functions; module + function docstrings.
-- Standard library + `requests`, `pandas`, `streamlit` only. No new dependencies without owner sign-off.
+- Standard library + `requests`, `pandas`, `streamlit` (+ `pytest` dev) only. No new deps without owner sign-off.
 - Pure logic (`data.py`, `consistency.py`) stays import-free of Streamlit.
 - **Never `float()` a raw price string** — use `data.to_float` (None-safe) or `data.to_cents` (Decimal, exact).
 - **pandas truthiness:** never `row_a or row_b` on DataFrame rows; use explicit `is None` checks.
@@ -135,26 +166,37 @@ on `st.dataframe` (`use_container_width` is deprecated).
 
 ## Commit & PR instructions
 
-- **Never commit or push to `main`.** The owner merges manually. Create a feature branch, commit, push,
-  open a PR. New work stacks on the latest unmerged branch so it includes prior iterations.
-- Before committing: run the verification checks above and ensure `py_compile` passes.
-- Commit messages: imperative subject + a short body explaining the why. Append a `Co-Authored-By:` trailer
-  for the authoring agent.
+- **Never commit or push to `main`.** The owner merges manually. Branch off `main` (now canonical — see
+  below), commit, push, open a PR. **Do not stack on unmerged branches** (a past stack caused a merge mess);
+  one PR per change, based on current `main`.
+- Before committing: run the verification checks above (`pytest -q`, `py_compile`, headless boot).
+- Commit messages: imperative subject + a short body explaining the why; append a `Co-Authored-By:` trailer.
 - For multi-line commit/PR text on Windows, prefer a heredoc or `--body-file` over inline quoting.
-- `.gitignore` covers `.env`, `*.pem`, `.venv`, `__pycache__`. Never commit secrets; market data needs none.
+- `.gitignore` covers `.env`, `*.pem`, `.venv`, `__pycache__`, `.claude/`. Never commit secrets; data needs none.
 
-### Branch / PR history (stacked — merge in order #1 → #2 → #3)
-- `main` — initial commit (basic match viewer).
-- PR #1 `feat/all-player-contracts` → main: all per-player FO contracts via dynamic discovery.
-- PR #2 `feat/contract-display-and-defaults` → #1: price-component columns, default core series, debug.
-- PR #3 `feat/layer-consistency-checker` → #2: the consistency checker (latest code).
+## Repository status
 
-> Note: the latest application code (incl. `consistency.py` and the cent-exact fields) lives on
-> `feat/layer-consistency-checker` until these PRs merge; `main` currently holds only the initial viewer.
+`main` is **canonical and current**: it holds the full app — multi-contract discovery, transparent pricing
++ quote-quality, the Layer Consistency Checker, the mapping-audit hardening, and the `pytest` suite
+(PRs #1, #4, #6, #7 merged; the agent guides too). **Pending PRs:** **#8** simplifies `kalshi-plan.md`
+(docs); **#9** adds the raw stage-ladder spreads (`feat/ladder-spreads`). Older PRs #2/#3/#5 are
+closed/superseded.
+
+## Iteration history (intent)
+1. Per-player French Open match viewer.
+2. All per-player FO contracts via dynamic series discovery.
+3. Transparent pricing (Display % + components + quote quality), default core series, richer debug.
+4. Layer Consistency Checker: containment + match-alignment, executable-vs-display, conservative rule flags.
+5. Mapping-audit hardening (mapping confidence + reasons, expected-vs-found, per-player export) + first tests.
+6. v1 raw stage-ladder spreads beneath the ladder (PR #9).
 
 ## Gotchas
 
 - `api.kalshi.com` does not resolve — always `external-api.kalshi.com`.
+- **Streamlit caches imported modules in the running server.** After editing an imported module
+  (`data.py`/`consistency.py`/…), a browser "Rerun" won't pick it up — **fully stop and restart**
+  `streamlit run app.py`. For a phantom `ImportError`, also clear stale bytecode: `rm -rf __pycache__
+  tests/__pycache__` (PowerShell `Remove-Item -Recurse -Force __pycache__, tests\__pycache__`).
 - The Kalshi web frontend (`kalshi.com`) is bot-throttled (HTTP 429); per-row links point to the series
   page `https://kalshi.com/markets/<series>` as a best-effort link.
 - The French Open date window in `config.py` is year-specific — update for future tournaments.
