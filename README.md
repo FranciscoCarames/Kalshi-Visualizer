@@ -75,6 +75,23 @@ streamlit run app.py
 The app opens in your browser. Use the **Refresh data** button to fetch a fresh snapshot
 (data is otherwise cached for 60 seconds).
 
+## Tests
+
+Pure logic in `data.py` and `consistency.py` is covered by unit tests (no network):
+
+```bash
+pip install -r requirements-dev.txt
+pytest -q
+```
+
+## Mapping audit
+
+Each contract carries a `mapping_confidence` (high when keyed to the stable Kalshi
+`tennis_competitor` UUID; low for a name-only fallback) and a reason. The per-player detail view
+shows an explicit **expected-vs-found** progression ladder (so a missing layer is obvious, not
+implied), and offers a **per-player export** (JSON snapshot + CSV) of the contracts and their
+consistency comparisons for offline mapping review.
+
 ## Notes
 
 - Read-only / on-demand snapshot. No trading, no stored history.

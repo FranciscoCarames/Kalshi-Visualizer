@@ -75,6 +75,28 @@ def build_player_nodes(player_rows: list[dict[str, Any]]) -> dict[str, dict[str,
     return nodes
 
 
+def expected_nodes(player_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Explicit expected-vs-found ladder for a player.
+
+    For any player that appears in the French Open data we expect the full progression ladder
+    (Reach Semifinal, Reach Final, Win Tournament) to be quotable; this makes a missing layer
+    explicit rather than implied-by-omission. `source` is "market" (advance/winner), "match"
+    (a confident match-implied node), or "" when absent.
+    """
+    nodes = build_player_nodes(player_rows)
+    out: list[dict[str, Any]] = []
+    for node in NODE_ORDER:
+        src = nodes.get(node, {})
+        if "market" in src:
+            source, found = "market", True
+        elif "match" in src:
+            source, found = "match", True
+        else:
+            source, found = "", False
+        out.append({"layer": node, "expected": True, "found": found, "source": source})
+    return out
+
+
 def _pos(size: Any) -> bool:
     return size is not None and size > 0
 

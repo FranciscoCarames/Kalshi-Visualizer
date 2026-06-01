@@ -224,6 +224,19 @@ def _kalshi_url(series_ticker: str) -> str:
     return f"{KALSHI_WEB_BASE}/{(series_ticker or '').lower()}"
 
 
+def _mapping_confidence(competitor: Any, name: Any) -> tuple[str, str]:
+    """How confidently this row is keyed to a player: (confidence, reason).
+
+    A stable Kalshi competitor UUID is high confidence; a name-only fallback is low because
+    name spellings can drift or collide across markets.
+    """
+    if competitor:
+        return "high", f"keyed to stable tennis_competitor UUID {competitor}"
+    if name:
+        return "low", "no competitor UUID; keyed to normalized player name (may drift/collide)"
+    return "none", "no competitor UUID and no player name"
+
+
 def classify_kind(series_ticker: str) -> str:
     """Classify a tennis series into a contract kind.
 
@@ -303,6 +316,7 @@ def build_contracts(series_ticker: str, events: list[dict[str, Any]]) -> list[di
             competitor = (market.get("custom_strike") or {}).get("tennis_competitor")
             player_key = competitor or name.casefold()
             player_key_source = "competitor_uuid" if competitor else "name_fallback"
+            mapping_confidence, mapping_reason = _mapping_confidence(competitor, name)
             display = NAME_ALIASES.get(player_key, name) or name
 
             if kind == "match":
@@ -344,6 +358,8 @@ def build_contracts(series_ticker: str, events: list[dict[str, Any]]) -> list[di
                     "player": display,
                     "player_key": player_key,
                     "player_key_source": player_key_source,
+                    "mapping_confidence": mapping_confidence,
+                    "mapping_reason": mapping_reason,
                     "tour": tour,
                     "kind": kind,
                     "category": category,
