@@ -20,6 +20,7 @@ from consistency import (
     NODE_ORDER,
     build_checks,
     build_player_nodes,
+    duplicate_node_sources,
     expected_nodes,
     layer_spreads,
     representative,
@@ -346,3 +347,8 @@ with main:
                 pchecks[["chain", "status", "status_group", "rule_flag", "executable_gap", "display_gap", "reason"]],
                 hide_index=True, width="stretch",
             )
+
+            dups = duplicate_node_sources(prows)
+            if dups:
+                st.caption("Duplicate node/source rows (a representative was chosen deterministically):")
+                st.dataframe(pd.DataFrame(dups), hide_index=True, width="stretch")

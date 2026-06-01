@@ -276,6 +276,22 @@ def test_crossed_leg_is_not_executable():
     assert out["status"] != "EXECUTABLE_VIOLATION"
 
 
+# --- AUDIT-006: duplicate node/source rows resolve deterministically -----------------
+def test_build_player_nodes_duplicate_is_deterministic():
+    # Two winner rows for the same player (e.g. two winner series under a full scan).
+    a = {"kind": "winner", "stage": "Champion", "display_pct": 5.0, "display_c": 5,
+         "volume": 10, "market_ticker": "T-A", "quote_quality": "Tight"}
+    b = {"kind": "winner", "stage": "Champion", "display_pct": 6.0, "display_c": 6,
+         "volume": 99, "market_ticker": "T-B", "quote_quality": "Tight"}
+    pick_ab = consistency.build_player_nodes([a, b])["Win Tournament"]["market"]
+    pick_ba = consistency.build_player_nodes([b, a])["Win Tournament"]["market"]
+    # order-independent, and higher volume wins the tie-break
+    assert pick_ab["market_ticker"] == pick_ba["market_ticker"] == "T-B"
+    assert consistency.duplicate_node_sources([a, b]) == [
+        {"node": "Win Tournament", "source": "market", "count": 2}
+    ]
+
+
 # --- AUDIT-002 (decided: keep current behavior) --------------------------------------
 def test_sizeless_cross_with_display_cross_stays_display_violation():
     """Owner decision: a sizeless price-cross that ALSO crosses on display is DISPLAY_VIOLATION

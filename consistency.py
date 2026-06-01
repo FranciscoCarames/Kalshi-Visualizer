@@ -63,16 +63,49 @@ def node_of(row: dict[str, Any]) -> str | None:
     return None
 
 
+def _representative_key(row: dict[str, Any]) -> tuple:
+    """Deterministic ordering key when several rows map to the same node/source: prefer a row
+    with a usable display price, then higher volume, then the lexically-smallest ticker. This
+    makes the chosen representative independent of (concurrent, non-deterministic) fetch order."""
+    has_price = 0 if row.get("display_pct") is not None else 1   # 0 sorts first
+    vol = row.get("volume") or 0
+    return (has_price, -vol, str(row.get("market_ticker") or ""))
+
+
 def build_player_nodes(player_rows: list[dict[str, Any]]) -> dict[str, dict[str, dict]]:
-    """Group a player's contracts into {node: {"market": row?, "match": row?}}."""
-    nodes: dict[str, dict[str, dict]] = {}
+    """Group a player's contracts into {node: {"market": row?, "match": row?}}.
+
+    If multiple rows map to the same (node, source) — e.g. two winner series under a full scan —
+    the representative is chosen deterministically (see `_representative_key`), not by arrival order.
+    """
+    buckets: dict[tuple[str, str], list[dict]] = {}
     for row in player_rows:
         node = node_of(row)
         if not node:
             continue
         source = "match" if row.get("kind") == "match" else "market"
-        nodes.setdefault(node, {})[source] = row
+        buckets.setdefault((node, source), []).append(row)
+
+    nodes: dict[str, dict[str, dict]] = {}
+    for (node, source), rows in buckets.items():
+        nodes.setdefault(node, {})[source] = min(rows, key=_representative_key)
     return nodes
+
+
+def duplicate_node_sources(player_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Diagnostic: (node, source, count) where more than one row competed for the same slot,
+    so the UI/debug can flag that a representative was chosen among duplicates."""
+    buckets: dict[tuple[str, str], int] = {}
+    for row in player_rows:
+        node = node_of(row)
+        if not node:
+            continue
+        source = "match" if row.get("kind") == "match" else "market"
+        buckets[(node, source)] = buckets.get((node, source), 0) + 1
+    return [
+        {"node": node, "source": source, "count": n}
+        for (node, source), n in buckets.items() if n > 1
+    ]
 
 
 def _isna(x: Any) -> bool:

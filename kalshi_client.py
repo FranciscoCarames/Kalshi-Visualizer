@@ -64,7 +64,9 @@ def get_paginated(path: str, params: dict[str, Any], list_key: str) -> list[dict
     """Follow Kalshi's `cursor` pagination until exhausted, returning all items.
 
     `list_key` is the response field holding each page's items ("events" or "markets").
-    Capped at MAX_PAGES to guard against a malformed/looping cursor.
+    Capped at MAX_PAGES to guard against a malformed/looping cursor. If the cap is reached
+    while a cursor still remains, raise rather than silently return partial data — in an app
+    whose job is to surface missing/failed data accurately, silent truncation is dangerous.
     """
     items: list[dict[str, Any]] = []
     cursor: str | None = None
@@ -76,8 +78,11 @@ def get_paginated(path: str, params: dict[str, Any], list_key: str) -> list[dict
         items.extend(payload.get(list_key, []) or [])
         cursor = payload.get("cursor") or None
         if not cursor:
-            break
-    return items
+            return items
+    raise KalshiError(
+        f"Pagination cap MAX_PAGES={MAX_PAGES} reached for {path} with a cursor still remaining; "
+        f"returning partial data would be silent truncation."
+    )
 
 
 def get_events(series_ticker: str, status: str = "open") -> list[dict[str, Any]]:
