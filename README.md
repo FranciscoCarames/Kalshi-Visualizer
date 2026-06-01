@@ -95,7 +95,9 @@ consistency comparisons for offline mapping review.
 Directly beneath the progression ladder, the detail view also shows **raw stage-ladder spreads** —
 the percentage-point and cents gaps between adjacent layers (`Reach Semifinal → Reach Final → Win
 Tournament`). These are raw price differences only (not a probability model); an inverted spread is
-the same inconsistency the consistency table flags.
+the same inconsistency the consistency table flags. Each row shows the worse of the two layers'
+**Quote** quality — most ladder markets are illiquid, so trust mainly Tight/OK rows; a `missing_price`
+row (a layer with no usable price) is shown blank rather than as a misleading number.
 
 ## Notes
 

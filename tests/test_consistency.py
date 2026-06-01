@@ -180,3 +180,46 @@ def test_representative_prefers_market():
     assert consistency.representative({"match": match_row}) is match_row
     assert consistency.representative(None) is None
     assert consistency.representative({}) is None
+
+
+# --- NaN-safety: the real app path is df.to_dict("records"), where None -> float NaN ----
+def test_layer_spreads_missing_price_via_dataframe_records():
+    """Regression: a missing display price arrives as NaN (not None) through pandas, and must
+    still be classified `missing_price` — never `ok` with a NaN spread."""
+    import math
+    import pandas as pd
+
+    rows = [
+        _node_row("advance", "Semifinal", None, None),  # no usable price
+        _node_row("advance", "Final", 30.0, 30),
+        _node_row("winner", "Champion", 10.0, 10),
+    ]
+    records = pd.DataFrame(rows).to_dict("records")          # <-- None becomes float NaN here
+    assert any(isinstance(r["display_pct"], float) and math.isnan(r["display_pct"]) for r in records)
+
+    spreads = {(s["from_layer"], s["to_layer"]): s for s in consistency.layer_spreads(records)}
+    sf_final = spreads[("Reach Semifinal", "Reach Final")]
+    assert sf_final["status"] == "missing_price"            # not "ok"
+    assert sf_final["spread_pct"] is None                   # not NaN
+    assert sf_final["inverted"] is False
+    assert spreads[("Reach Final", "Win Tournament")]["status"] == "ok"
+
+
+def test_layer_spreads_reports_worst_quote():
+    rows = [
+        {"kind": "advance", "stage": "Semifinal", "display_pct": 60.0, "display_c": 60, "quote_quality": "Wide"},
+        {"kind": "advance", "stage": "Final", "display_pct": 30.0, "display_c": 30, "quote_quality": "Tight"},
+        {"kind": "winner", "stage": "Champion", "display_pct": 10.0, "display_c": 10, "quote_quality": "No quote"},
+    ]
+    spreads = {(s["from_layer"], s["to_layer"]): s for s in consistency.layer_spreads(rows)}
+    assert spreads[("Reach Semifinal", "Reach Final")]["quote"] == "Wide"        # worse of Wide/Tight
+    assert spreads[("Reach Final", "Win Tournament")]["quote"] == "No quote"     # worse of Tight/No quote
+
+
+def test_classify_nan_display_c_behaves_like_missing():
+    """A NaN display_c (from the records path) must not look like a present display price."""
+    child = leg(display_c=float("nan"), bid_c=0, ask_c=100, quality="No quote")
+    parent = leg(display_c=40, bid_c=34, ask_c=35)
+    out = consistency._classify(child, parent, equivalence=False)
+    assert out["status"] == "MISSING_QUOTE"
+    assert out["display_gap"] is None

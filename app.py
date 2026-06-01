@@ -208,7 +208,7 @@ with main:
         st.caption("Raw stage-ladder spreads (adjacent layers) — broader minus deeper:")
         st.dataframe(
             pd.DataFrame(spread_rows)[
-                ["from_layer", "to_layer", "from_pct", "to_pct", "spread_pct", "spread_cents", "status", "inverted"]
+                ["from_layer", "to_layer", "from_pct", "to_pct", "spread_pct", "spread_cents", "quote", "status", "inverted"]
             ],
             hide_index=True, width="stretch",
             column_config={
@@ -217,13 +217,16 @@ with main:
                 "to_pct": st.column_config.NumberColumn("To %", format="%.1f%%"),
                 "spread_pct": st.column_config.NumberColumn("Spread (pp)", format="%.1f pp"),
                 "spread_cents": st.column_config.NumberColumn("Spread (¢)", format="%.1f"),
+                "quote": st.column_config.TextColumn("Quote", help="Worst quote quality of the two layers — most ladder legs are illiquid, so treat wide / No-quote spreads with caution."),
                 "status": "Status",
                 "inverted": st.column_config.CheckboxColumn("Inverted"),
             },
         )
         st.caption(
-            "Raw price gaps only — not a probability model. An **inverted** row (deeper priced above "
-            "broader) is the same inconsistency the Layer consistency table flags above."
+            "Raw price gaps only — not a probability model. **Quote** shows the worse of the two layers' "
+            "book quality; most ladder markets are illiquid, so trust mainly Tight/OK rows. A "
+            "**missing_price** row means a layer exists but has no usable price (shown blank). An "
+            "**inverted** row (deeper priced above broader) is the same inconsistency flagged above."
         )
 
         # ---- Mapping confidence + expected-vs-found layers ---------------------------

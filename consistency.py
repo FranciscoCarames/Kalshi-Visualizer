@@ -75,6 +75,17 @@ def build_player_nodes(player_rows: list[dict[str, Any]]) -> dict[str, dict[str,
     return nodes
 
 
+def _isna(x: Any) -> bool:
+    """True for None or float NaN. Needed because a `None` price round-trips to float NaN
+    through pandas (`DataFrame` → `to_dict("records")`), so a plain `is None` check misses it."""
+    return x is None or (isinstance(x, float) and x != x)
+
+
+def _num(x: Any) -> Any:
+    """Normalize a possibly-NaN numeric to None so downstream `is None` checks work."""
+    return None if _isna(x) else x
+
+
 def representative(node_entry: dict[str, Any] | None) -> dict[str, Any] | None:
     """The single price-carrying contract row for a node: prefer the market source
     (advance/winner), else the match-implied source. Shared by the progression chain and the
@@ -97,10 +108,13 @@ def layer_spreads(player_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     for broader, deeper in zip(NODE_ORDER, NODE_ORDER[1:]):
         b = representative(nodes.get(broader))
         d = representative(nodes.get(deeper))
-        b_pct = b.get("display_pct") if b else None
-        d_pct = d.get("display_pct") if d else None
-        b_c = b.get("display_c") if b else None
-        d_c = d.get("display_c") if d else None
+        # NaN-safe: a missing price arrives as float NaN via the DataFrame→records path.
+        b_pct = _num(b.get("display_pct")) if b else None
+        d_pct = _num(d.get("display_pct")) if d else None
+        b_c = _num(b.get("display_c")) if b else None
+        d_c = _num(d.get("display_c")) if d else None
+        # Worst-of-two quote quality, so a spread built on illiquid books is visible.
+        quote = _worst_quality(b.get("quote_quality") or "", d.get("quote_quality") or "") if (b and d) else ""
 
         if b is None or d is None:
             status, spread_pct, spread_cents = "missing_layer", None, None
@@ -120,6 +134,7 @@ def layer_spreads(player_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "spread_pct": spread_pct,
                 "spread_cents": spread_cents,
                 "status": status,
+                "quote": quote,
                 "inverted": spread_pct is not None and spread_pct < 0,
             }
         )
@@ -160,8 +175,8 @@ def _leg(row: dict[str, Any], side: str) -> tuple[int | None, Any]:
     if row.get("quote_quality") == "No quote":
         return None, None
     if side == "bid":
-        return row.get("yes_bid_c"), row.get("yes_bid_size")
-    return row.get("yes_ask_c"), row.get("yes_ask_size")
+        return _num(row.get("yes_bid_c")), row.get("yes_bid_size")
+    return _num(row.get("yes_ask_c")), row.get("yes_ask_size")
 
 
 def _worst_quality(a: str, b: str) -> str:
@@ -186,7 +201,7 @@ def _classify(
     """Compare a child (deeper) against a parent (broader). Executable and display tests are
     independent: a missing display blocks only the display test; a missing firm bid/ask or
     size blocks only the executable test."""
-    cd, pd_ = child.get("display_c"), parent.get("display_c")
+    cd, pd_ = _num(child.get("display_c")), _num(parent.get("display_c"))
 
     # --- executable test: firm legs + positive sizes only ---
     directions: list[tuple[int, bool]] = []
