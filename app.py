@@ -21,6 +21,8 @@ from consistency import (
     build_checks,
     build_player_nodes,
     expected_nodes,
+    layer_spreads,
+    representative,
 )
 from data import build_contracts
 from kalshi_client import KalshiError, discover_tennis_series, get_events_for_series
@@ -174,10 +176,11 @@ with main:
         prows = df[df["player"] == chosen].to_dict("records")
         nodes = build_player_nodes(prows)
 
+        # ---- Progression chain / ladder view (kept as the primary visualization) -----
         chain_rows = []
         for node in NODE_ORDER:
             src = nodes.get(node, {})
-            primary = src.get("market") or src.get("match")
+            primary = representative(src)
             if primary is None:
                 chain_rows.append({"Layer": node, "Source": "— missing —", "Display %": None,
                                    "Bid %": None, "Ask %": None, "Quote": ""})
@@ -190,8 +193,38 @@ with main:
                     "Ask %": primary.get("yes_ask_pct"),
                     "Quote": primary.get("quote_quality", ""),
                 })
-        st.caption("Progression chain (broad → deep):")
-        st.dataframe(pd.DataFrame(chain_rows), hide_index=True, width="stretch")
+        st.caption("Progression chain (broad → deep) — inspect the ladder prices first:")
+        st.dataframe(
+            pd.DataFrame(chain_rows), hide_index=True, width="stretch",
+            column_config={
+                "Display %": st.column_config.NumberColumn("Display %", format="%.1f%%"),
+                "Bid %": st.column_config.NumberColumn("Bid %", format="%.1f%%"),
+                "Ask %": st.column_config.NumberColumn("Ask %", format="%.1f%%"),
+            },
+        )
+
+        # ---- Raw stage-ladder spreads (directly under the ladder) --------------------
+        spread_rows = layer_spreads(prows)
+        st.caption("Raw stage-ladder spreads (adjacent layers) — broader minus deeper:")
+        st.dataframe(
+            pd.DataFrame(spread_rows)[
+                ["from_layer", "to_layer", "from_pct", "to_pct", "spread_pct", "spread_cents", "status", "inverted"]
+            ],
+            hide_index=True, width="stretch",
+            column_config={
+                "from_layer": "From layer", "to_layer": "To layer",
+                "from_pct": st.column_config.NumberColumn("From %", format="%.1f%%"),
+                "to_pct": st.column_config.NumberColumn("To %", format="%.1f%%"),
+                "spread_pct": st.column_config.NumberColumn("Spread (pp)", format="%.1f pp"),
+                "spread_cents": st.column_config.NumberColumn("Spread (¢)", format="%.1f"),
+                "status": "Status",
+                "inverted": st.column_config.CheckboxColumn("Inverted"),
+            },
+        )
+        st.caption(
+            "Raw price gaps only — not a probability model. An **inverted** row (deeper priced above "
+            "broader) is the same inconsistency the Layer consistency table flags above."
+        )
 
         # ---- Mapping confidence + expected-vs-found layers ---------------------------
         sample = prows[0] if prows else {}
@@ -262,6 +295,7 @@ with main:
                 "mapping_reason": sample.get("mapping_reason"),
             },
             "expected_layers": exp,
+            "ladder_spreads": spread_rows,
             "contracts": pdf.drop(columns=["time_dt"]).to_dict("records"),
             "consistency_comparisons": pchecks.to_dict("records"),
         }

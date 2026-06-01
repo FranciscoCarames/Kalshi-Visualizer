@@ -92,6 +92,11 @@ shows an explicit **expected-vs-found** progression ladder (so a missing layer i
 implied), and offers a **per-player export** (JSON snapshot + CSV) of the contracts and their
 consistency comparisons for offline mapping review.
 
+Directly beneath the progression ladder, the detail view also shows **raw stage-ladder spreads** —
+the percentage-point and cents gaps between adjacent layers (`Reach Semifinal → Reach Final → Win
+Tournament`). These are raw price differences only (not a probability model); an inverted spread is
+the same inconsistency the consistency table flags.
+
 ## Notes
 
 - Read-only / on-demand snapshot. No trading, no stored history.

@@ -75,6 +75,57 @@ def build_player_nodes(player_rows: list[dict[str, Any]]) -> dict[str, dict[str,
     return nodes
 
 
+def representative(node_entry: dict[str, Any] | None) -> dict[str, Any] | None:
+    """The single price-carrying contract row for a node: prefer the market source
+    (advance/winner), else the match-implied source. Shared by the progression chain and the
+    ladder-spread view so source selection lives in exactly one place."""
+    if not node_entry:
+        return None
+    return node_entry.get("market") or node_entry.get("match")
+
+
+def layer_spreads(player_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Raw price gaps between adjacent ladder layers (broad → deep).
+
+    These are RAW stage-ladder spreads, not a probability model: `spread_pct` is a
+    percentage-point difference and `spread_cents` a cents difference between the broader and the
+    deeper layer's display price. A node that is absent gives status "missing_layer"; a node that
+    exists but has no usable display price gives "missing_price"; both yield `spread_* = None`.
+    """
+    nodes = build_player_nodes(player_rows)
+    out: list[dict[str, Any]] = []
+    for broader, deeper in zip(NODE_ORDER, NODE_ORDER[1:]):
+        b = representative(nodes.get(broader))
+        d = representative(nodes.get(deeper))
+        b_pct = b.get("display_pct") if b else None
+        d_pct = d.get("display_pct") if d else None
+        b_c = b.get("display_c") if b else None
+        d_c = d.get("display_c") if d else None
+
+        if b is None or d is None:
+            status, spread_pct, spread_cents = "missing_layer", None, None
+        elif b_pct is None or d_pct is None:
+            status, spread_pct, spread_cents = "missing_price", None, None
+        else:
+            status = "ok"
+            spread_pct = round(b_pct - d_pct, 1)
+            spread_cents = (b_c - d_c) if (b_c is not None and d_c is not None) else None
+
+        out.append(
+            {
+                "from_layer": broader,
+                "to_layer": deeper,
+                "from_pct": b_pct,
+                "to_pct": d_pct,
+                "spread_pct": spread_pct,
+                "spread_cents": spread_cents,
+                "status": status,
+                "inverted": spread_pct is not None and spread_pct < 0,
+            }
+        )
+    return out
+
+
 def expected_nodes(player_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Explicit expected-vs-found ladder for a player.
 
