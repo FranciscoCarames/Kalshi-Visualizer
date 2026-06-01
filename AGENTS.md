@@ -32,8 +32,8 @@ pip install -r requirements-dev.txt    # adds pytest (tests only)
 There **is** a test suite now (added with the mapping-audit work). Before committing:
 
 1. **Tests:** `pytest -q` — unit tests for the pure layers, no network (`tests/test_data.py`,
-   `tests/test_consistency.py`; `conftest.py` makes the repo root importable). ~22 tests on `main`
-   today; ~27 with the pending ladder-spreads PR.
+   `tests/test_consistency.py`; `conftest.py` makes the repo root importable). ~42 tests
+   (covering pricing, the consistency precedence ladder, ladder spreads, and the audit edge cases).
 2. **Compile:** `python -m py_compile config.py kalshi_client.py data.py consistency.py app.py`
 3. **Headless boot:** `streamlit run app.py --server.headless true --server.port 8765`, then confirm
    `http://localhost:8765/_stcore/health` returns `200` and the logs show no tracebacks.
@@ -132,7 +132,7 @@ included only when the round maps confidently. Anything unprovable → `UNKNOWN_
 - The player-detail view offers a **per-player export** (JSON snapshot + CSV) of the contracts and their
   consistency comparisons for offline mapping review.
 
-## Raw stage-ladder spreads (v1)  — pending PR #9 (branch `feat/ladder-spreads`)
+## Raw stage-ladder spreads (v1, shipped)
 
 `consistency.layer_spreads(player_rows)` returns, for each adjacent ladder pair, the **raw price gap**:
 `spread_pct` = percentage-**point** difference, `spread_cents` = cents difference (broader − deeper). These
@@ -140,11 +140,32 @@ are **raw spreads, not a probability model** — no conditional probabilities, n
 
 - Reuse `consistency.representative(node_entry)` (market source else match) — the **single** price-row
   selector shared by the progression chain and the spreads; do not duplicate source-selection logic.
-- Distinguish **`missing_layer`** (node absent) from **`missing_price`** (node present, no usable display price).
+- Distinguish **`missing_layer`** (node absent) from **`missing_price`** (node present, no usable display
+  price). Both checks are **NaN-safe** (a `None` price round-trips to float NaN via `to_dict("records")`).
+- The row carries a `quote` field (worst of the two legs' quality) — most ladder legs are illiquid, so the
+  UI shows a Quote column; trust mainly Tight/OK rows.
 - `inverted` is None-safe (true only when `spread_pct` is a real number < 0); an inverted spread is the same
   inconsistency the consistency table flags.
 - In the UI the pp gap is labelled **"pp"** (layer prices stay "%"). The spread table sits **directly beneath**
   the progression-chain ladder (do not replace the ladder).
+
+## Correctness & robustness invariants (audit hardening — do not regress)
+
+- **Group/select by `player_key`, never display name.** `build_checks` groups on `player_key`; the app's
+  Player selector maps display labels → keys (disambiguating `"Name [key6]"` only on collision). Two
+  competitors who share a display name must never be merged.
+- **Truthful evidence.** The `EXECUTABLE_VIOLATION` reason quotes the *winning* cross direction (equivalence
+  checks both forward and reverse); never describe a reverse cross with forward legs.
+- **Malformed quotes.** `ask < bid` → `quote_quality == "Crossed"`: never Tight, never a midpoint
+  (`yes_mid`/`spread`/`display_*` return None), and `_leg` excludes it from the executable test.
+- **Tour map.** `data.tour_of` classifies every `FO_WINNER_TICKERS` variant explicitly (e.g.
+  `KXFOPENWMENSINGLE` → WTA), not by substring.
+- **No silent truncation.** `get_paginated` raises `KalshiError` if `MAX_PAGES` is hit with a cursor pending
+  (`MAX_PAGES=100` so the full `/series` list paginates). *(PR #13)*
+- **Deterministic duplicates.** When >1 row maps to the same (node, source), `build_player_nodes` picks by a
+  stable rule (usable price → higher volume → smaller ticker); `duplicate_node_sources` surfaces it. *(PR #13)*
+- **FO filter.** A present-but-non-FO `competition` is disqualifying; the date-window fallback only fires when
+  there is no competition info at all. *(PR #13)*
 
 ## UI conventions
 
@@ -178,11 +199,12 @@ Use `width="stretch"` on `st.dataframe` (`use_container_width` is deprecated).
 
 ## Repository status
 
-`main` is **canonical and current**: it holds the full app — multi-contract discovery, transparent pricing
-+ quote-quality, the Layer Consistency Checker, the mapping-audit hardening, and the `pytest` suite
-(PRs #1, #4, #6, #7 merged; the agent guides too). **Pending PRs:** **#8** simplifies `kalshi-plan.md`
-(docs); **#9** adds the raw stage-ladder spreads (`feat/ladder-spreads`). Older PRs #2/#3/#5 are
-closed/superseded.
+`main` is **canonical and current**: the full app — multi-contract discovery, transparent pricing +
+quote-quality, the Layer Consistency Checker, mapping-audit hardening, **v1 raw stage-ladder spreads**, the
+spread NaN-fix + Quote column, and the **audit Tier-1 correctness fixes** — are all merged (PRs #1, #4, #6,
+#7, #8, #9, #11, #12), with the `pytest` suite (~42). **Pending: PR #13** — audit Tier-2 robustness
+(pagination-truncation surfacing, deterministic duplicates, date-window corroboration). Older PRs
+#2/#3/#5 are closed/superseded.
 
 ## Iteration history (intent)
 1. Per-player French Open match viewer.
@@ -190,7 +212,9 @@ closed/superseded.
 3. Transparent pricing (Display % + components + quote quality), default core series, richer debug.
 4. Layer Consistency Checker: containment + match-alignment, executable-vs-display, conservative rule flags.
 5. Mapping-audit hardening (mapping confidence + reasons, expected-vs-found, per-player export) + first tests.
-6. v1 raw stage-ladder spreads beneath the ladder (PR #9).
+6. v1 raw stage-ladder spreads beneath the ladder; NaN-safe + Quote column.
+7. Audit hardening — Tier-1 (key-based grouping, truthful reasons, tour map, crossed-book guard, JSON safety)
+   merged; Tier-2 (pagination/duplicate/date-window) in PR #13.
 
 ## Gotchas
 
