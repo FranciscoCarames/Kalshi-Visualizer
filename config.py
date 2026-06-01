@@ -15,6 +15,24 @@ BASE_URL = "https://external-api.kalshi.com/trade-api/v2"
 # the discovery scan to the tennis universe.
 TENNIS_SERIES_PREFIXES = ("KXATP", "KXWTA")
 
+# Default fast scan: only these French Open per-player series are fetched unless the user
+# opts into a full dynamic scan of every tennis series.
+DEFAULT_SERIES = [
+    "KXATPMATCH",
+    "KXWTAMATCH",
+    "KXATPADVANCE",
+    "KXWTAADVANCE",
+    "KXFOMEN",
+    "KXFOWOMEN",
+]
+
+# A YES bid/ask spread at or below this (in dollars, i.e. 0.20 = 20c) is "reasonable" enough
+# to trust the midpoint as the display price; wider books fall back to the last trade.
+SPREAD_REASONABLE = 0.20
+
+# Kalshi web frontend base for per-series market pages.
+KALSHI_WEB_BASE = "https://kalshi.com/markets"
+
 # Tournament-winner series have non-prefixed tickers, so list them explicitly.
 FO_WINNER_TICKERS = {
     "KXFOMEN",
