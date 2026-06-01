@@ -103,7 +103,8 @@ Anything unprovable → `UNKNOWN_RELATIONSHIP` (never a violation).
 - **Executable and display tests are independent.** Executable needs firm `yes_bid_c`/`yes_ask_c` **and
   positive sizes**; a missing display blocks only the display test.
 - **`EXECUTABLE_VIOLATION` (firm child-bid > parent-ask, sizes > 0) is the ONLY "Broken" status.**
-  `DISPLAY_VIOLATION` is "Warning"; a price cross without size → `QUOTE_SIZE_MISSING`.
+  `DISPLAY_VIOLATION` is "Warning"; a sizeless price-cross → `QUOTE_SIZE_MISSING`, **unless the display
+  prices also cross** (then `DISPLAY_VIOLATION`). Crossed books (`ask < bid`) → "Crossed" quality, never executable.
 - Statuses: `CLEAN, EXECUTABLE_VIOLATION, DISPLAY_VIOLATION, WIDE_QUOTE, MISSING_QUOTE, MISSING_LAYER,
   QUOTE_SIZE_MISSING, UNKNOWN_RELATIONSHIP`. Groups: Broken=EXECUTABLE_VIOLATION; Warning=DISPLAY_VIOLATION/
   WIDE_QUOTE; Missing data=MISSING_QUOTE/MISSING_LAYER/QUOTE_SIZE_MISSING; Unknown relationship=UNKNOWN_RELATIONSHIP.

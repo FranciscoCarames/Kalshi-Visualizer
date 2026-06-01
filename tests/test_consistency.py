@@ -223,3 +223,64 @@ def test_classify_nan_display_c_behaves_like_missing():
     out = consistency._classify(child, parent, equivalence=False)
     assert out["status"] == "MISSING_QUOTE"
     assert out["display_gap"] is None
+
+
+# --- AUDIT-001: consistency groups by stable player_key, never display name ----------
+def _ckey_row(player, key, kind, stage, display_c):
+    return {
+        "player": player, "player_key": key, "kind": kind, "stage": stage,
+        "contract": f"{kind}-{stage}", "display_pct": float(display_c), "display_c": display_c,
+        "yes_bid_c": max(display_c - 1, 0), "yes_ask_c": min(display_c + 1, 100),
+        "yes_bid_pct": float(max(display_c - 1, 0)), "yes_ask_pct": float(min(display_c + 1, 100)),
+        "yes_bid_size": 100, "yes_ask_size": 100, "quote_quality": "Tight", "volume": 10,
+        "market_ticker": f"TICK-{key}-{stage}", "kalshi_url": "x",
+    }
+
+
+def test_build_checks_groups_by_player_key_not_display_name():
+    import pandas as pd
+    # Two DIFFERENT competitors share the display name "Alex Smith".
+    rows = [
+        _ckey_row("Alex Smith", "uuid-one", "advance", "Final", 30),
+        _ckey_row("Alex Smith", "uuid-two", "advance", "Semifinal", 60),
+    ]
+    checks = consistency.build_checks(pd.DataFrame(rows))
+    # No comparison should pair one person's Final with the other person's Semifinal.
+    cross = checks[(checks["child_ticker"] == "TICK-uuid-one-Final")
+                   & (checks["parent_ticker"] == "TICK-uuid-two-Semifinal")]
+    assert cross.empty
+    # Each emitted row carries its player_key, and no row mixes the two keys.
+    assert "player_key" in checks.columns
+    assert set(checks["player_key"]) <= {"uuid-one", "uuid-two"}
+
+
+# --- AUDIT-003: equivalence reason names the actual winning cross direction -----------
+def test_equivalence_reverse_cross_reason_names_correct_legs():
+    # Forward (child bid 19 vs parent ask 40) does not cross; reverse (parent bid 37 vs
+    # child ask 35) crosses by 2c -> reason must describe parent bid / child ask.
+    child = leg(display_c=30, bid_c=19, ask_c=35)
+    parent = leg(display_c=30, bid_c=37, ask_c=40)
+    out = consistency._classify(child, parent, equivalence=True)
+    assert out["status"] == "EXECUTABLE_VIOLATION"
+    assert out["executable_gap"] == 2
+    assert "parent bid 37c > child ask 35c" in out["reason"]
+    assert "child bid 19c" not in out["reason"]
+
+
+# --- AUDIT-005 (consistency side): a Crossed leg never feeds the executable test -------
+def test_crossed_leg_is_not_executable():
+    # Child looks like a huge cross (bid 90 > parent ask 35) but its book is Crossed.
+    child = leg(display_c=50, bid_c=90, ask_c=10, quality="Crossed")
+    parent = leg(display_c=40, bid_c=34, ask_c=35)
+    out = consistency._classify(child, parent, equivalence=False)
+    assert out["status"] != "EXECUTABLE_VIOLATION"
+
+
+# --- AUDIT-002 (decided: keep current behavior) --------------------------------------
+def test_sizeless_cross_with_display_cross_stays_display_violation():
+    """Owner decision: a sizeless price-cross that ALSO crosses on display is DISPLAY_VIOLATION
+    (a Warning), not QUOTE_SIZE_MISSING."""
+    child = leg(display_c=50, bid_c=37, ask_c=38, bid_size=0)   # price cross, no size behind bid
+    parent = leg(display_c=40, bid_c=34, ask_c=35)
+    out = consistency._classify(child, parent, equivalence=False)
+    assert out["status"] == "DISPLAY_VIOLATION"
