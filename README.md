@@ -2,25 +2,31 @@
 
 A small read-only [Streamlit](https://streamlit.io/) app that pulls live
 [Kalshi](https://kalshi.com/) prediction-market data for the **French Open** tennis
-tournament, then lets you pick a player and compare **all of their contracts across the
-different matches (events)** they appear in — sorted by implied odds, match time, or
-volume, with a quick bar chart.
+tournament, then lets you pick a player and compare **all of their French Open contracts**
+— match results, stage advancement (reach Semifinal/Final), the tournament-winner market,
+and more — sorted by implied odds, tournament stage, volume, or match time, with a bar chart.
 
 ## How it works
 
-Kalshi organizes contracts as **Series → Event → Market(outcome)**:
+Kalshi organizes contracts as **Series → Event → Market(outcome)**, and a player's French
+Open contracts are spread across *many* series. The app:
 
-- **Series** — `KXATPMATCH` (men's matches) and `KXWTAMATCH` (women's matches). These are
-  generic across all tournaments, so the app filters them down to the French Open using
-  each event's `product_metadata.competition` (e.g. *"French Open Men Singles"*), with
-  title/rules keywords and a tournament date window as fallbacks.
-- **Event** — one match, e.g. *"Mensik vs Fonseca"*.
-- **Market** — one *"Will &lt;player&gt; win?"* binary per player. The YES mid-price is that
-  player's implied win probability. Players are keyed by their stable Kalshi
-  `tennis_competitor` UUID so the same player links across rounds regardless of name
-  formatting.
+1. **Discovers** all tennis series dynamically (every `KXATP*`/`KXWTA*` series plus the
+   named tournament-winner tickers like `KXFOMEN`/`KXFOWOMEN`).
+2. **Fetches** their open events concurrently and keeps only French Open ones (by each
+   event's `product_metadata.competition`, e.g. *"French Open Women Singles"*).
+3. **Classifies** each per-player market by type — match result (`KX*MATCH`), stage
+   advancement (`KX*ADVANCE`), tournament winner (`KXFOMEN`/`KXFOWOMEN`), set winner,
+   exact score, etc.
+4. **Indexes** every contract by the player's stable `tennis_competitor` UUID, so the same
+   player merges across all series and rounds regardless of name formatting.
 
-Market data is **public** — no API key or authentication is required.
+The YES mid-price of each market is that player's implied probability for that outcome.
+Head-to-head match markets also show the opponent; winner/advancement markets are
+single-sided and have none. Set-winner and exact-score markets are hidden by default.
+
+Any series that fails to load is reported in the in-app **Debug** expander — never silently
+dropped. Market data is **public** — no API key or authentication is required.
 
 ## Project layout
 

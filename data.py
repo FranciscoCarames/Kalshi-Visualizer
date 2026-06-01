@@ -17,7 +17,7 @@ import re
 from datetime import datetime, timezone
 from typing import Any
 
-from config import FO_KEYWORDS, FO_WINDOW, NAME_ALIASES
+from config import FO_KEYWORDS, FO_WINDOW, FO_WINNER_TICKERS, NAME_ALIASES
 
 # Rounds checked most-specific first; \b boundaries stop "final" matching "quarterfinal".
 _ROUND_PATTERNS = [
@@ -29,6 +29,29 @@ _ROUND_PATTERNS = [
     ("Round of 64", r"\bround of 64\b|\bsecond round\b"),
     ("Round of 128", r"\bround of 128\b|\bfirst round\b"),
 ]
+
+# Tournament progression order, used to sort a player's contracts QF -> SF -> Final -> title.
+_STAGE_RANK = {
+    "Round of 128": 1,
+    "Round of 64": 2,
+    "Round of 32": 3,
+    "Round of 16": 4,
+    "Quarterfinal": 5,
+    "Semifinal": 6,
+    "Final": 7,
+    "Champion": 8,
+}
+
+# Map each contract kind to a user-facing category label (shown/filterable in the UI).
+CATEGORY = {
+    "match": "Match result",
+    "advance": "Stage advancement",
+    "winner": "Tournament winner",
+    "set_winner": "Set winner",
+    "exact_score": "Exact score",
+    "grand_slam": "Grand Slam (season)",
+    "other": "Other",
+}
 
 
 def to_float(value: Any) -> float | None:
@@ -108,55 +131,123 @@ def filter_french_open(events: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 def _player_win_prob(market: dict[str, Any]) -> float | None:
-    """Implied win probability for this market's player = YES mid (or last price)."""
+    """Implied win probability for this market's player = YES mid (or last price).
+
+    A 0.00/1.00 quote is an EMPTY order book, not a real 50% market, so it is ignored and we
+    fall back to the last traded price (or None -> shown blank) rather than inventing a mid.
+    """
     bid = to_float(market.get("yes_bid_dollars"))
     ask = to_float(market.get("yes_ask_dollars"))
+    if bid == 0.0 and ask == 1.0:  # full-width book = no liquidity
+        bid = ask = None
     legs = [x for x in (bid, ask) if x is not None]
     if legs:
         return sum(legs) / len(legs)
     return to_float(market.get("last_price_dollars"))
 
 
-def contracts_from_events(
-    events: list[dict[str, Any]], tour: str
-) -> list[dict[str, Any]]:
-    """Flatten events into one contract row per market (i.e. per player per match).
+def classify_kind(series_ticker: str) -> str:
+    """Classify a tennis series into a contract kind.
 
-    The opponent(s) and the match label come from the sibling markets / event metadata,
-    so selecting a player later yields all their contracts across every event they appear in.
+    Order matters: the explicit winner tickers and the EXACTMATCH/SETWINNER checks must run
+    before the generic MATCH check (EXACTMATCH contains the substring "MATCH").
     """
+    t = (series_ticker or "").upper()
+    if t in FO_WINNER_TICKERS:
+        return "winner"
+    if "ADVANCE" in t:
+        return "advance"
+    if "EXACTMATCH" in t or "EXACTSCORE" in t:
+        return "exact_score"
+    if "SETWINNER" in t:
+        return "set_winner"
+    if "GRANDSLAM" in t:
+        return "grand_slam"
+    if "MATCH" in t:
+        return "match"
+    return "other"
+
+
+def tour_of(series_ticker: str) -> str:
+    """Men's (ATP) vs women's (WTA) from the series ticker."""
+    t = (series_ticker or "").upper()
+    if t.startswith("KXWTA") or "WOMEN" in t:
+        return "WTA"
+    return "ATP"
+
+
+def _clean_title(title: Any) -> str:
+    """Turn a verbose Kalshi market title into a compact contract label."""
+    text = str(title or "").strip()
+    text = re.sub(r"^will\s+", "", text, flags=re.IGNORECASE)
+    # Drop the "... at the 2026 French Open ... tennis tournament" boilerplate suffix.
+    text = re.sub(r"\s+at the .*tennis tournament", "", text, flags=re.IGNORECASE)
+    text = text.rstrip("?").strip()
+    return text or "Contract"
+
+
+def _contract_label(kind: str, market: dict[str, Any], opponent: str, stage: str) -> str:
+    """Human-readable description of what a contract pays out on."""
+    if kind == "match":
+        base = f"Beat {opponent}" if opponent else "Win match"
+        return f"{base} — {stage}" if stage else base
+    if kind == "advance":
+        return f"Reach {stage}" if stage else "Reach next stage"
+    if kind == "winner":
+        return "Win the French Open"
+    return _clean_title(market.get("title"))
+
+
+def build_contracts(series_ticker: str, events: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Flatten one series' French Open events into per-player contract rows.
+
+    Each row is one market from a single player's perspective. Players are keyed by their
+    stable `tennis_competitor` UUID so the same player merges across every series/event.
+    Opponent is derived (from sibling markets) ONLY for head-to-head match events; winner /
+    advancement / set / score markets are single-sided and have no opponent.
+    """
+    kind = classify_kind(series_ticker)
+    tour = tour_of(series_ticker)
+    category = CATEGORY.get(kind, "Other")
+
     rows: list[dict[str, Any]] = []
     for event in events or []:
+        if not is_french_open_event(event):
+            continue
         markets = event.get("markets") or []
         competition = (event.get("product_metadata") or {}).get("competition", "")
-        match_label = event.get("sub_title") or event.get("title") or event.get("event_ticker", "")
-
-        # Pre-compute each market's player name to derive opponents within the event.
         names = [((m.get("yes_sub_title") or "").strip()) for m in markets]
 
         for idx, market in enumerate(markets):
             name = names[idx]
             if not name:
-                continue
+                continue  # need a display name for the player selector
             competitor = (market.get("custom_strike") or {}).get("tennis_competitor")
             player_key = competitor or name.casefold()
-            display = NAME_ALIASES.get(player_key, name)
+            display = NAME_ALIASES.get(player_key, name) or name
 
-            opponents = [n for j, n in enumerate(names) if j != idx and n and n != name]
-            opponent = " / ".join(opponents)
+            if kind == "match":
+                opponents = [n for j, n in enumerate(names) if j != idx and n and n != name]
+                opponent = " / ".join(opponents)
+            else:
+                opponent = ""
 
+            stage = "Champion" if kind == "winner" else _extract_round(
+                market.get("title"), market.get("rules_primary")
+            )
             prob = _player_win_prob(market)
             rows.append(
                 {
                     "player": display,
                     "player_key": player_key,
-                    "opponent": opponent,
                     "tour": tour,
+                    "kind": kind,
+                    "category": category,
+                    "contract": _contract_label(kind, market, opponent, stage),
+                    "stage": stage,
+                    "stage_rank": _STAGE_RANK.get(stage, 0),
+                    "opponent": opponent,
                     "competition": competition,
-                    "round": _extract_round(market.get("title"), market.get("rules_primary")),
-                    "match": match_label,
-                    "event_ticker": event.get("event_ticker", ""),
-                    "market_ticker": market.get("ticker", ""),
                     "implied_prob": prob,
                     "implied_pct": round(prob * 100, 1) if prob is not None else None,
                     "yes_bid": to_float(market.get("yes_bid_dollars")),
@@ -167,6 +258,9 @@ def contracts_from_events(
                     "status": market.get("status", ""),
                     "match_time": market.get("occurrence_datetime", ""),
                     "close_time": market.get("close_time", ""),
+                    "series": series_ticker,
+                    "event_ticker": event.get("event_ticker", ""),
+                    "market_ticker": market.get("ticker", ""),
                 }
             )
     return rows
