@@ -30,6 +30,9 @@ DEFAULT_SERIES = [
 # to trust the midpoint as the display price; wider books fall back to the last trade.
 SPREAD_REASONABLE = 0.20
 
+# Layer-consistency: ignore display-price gaps smaller than this many cents (noise).
+DISPLAY_TOL_C = 1
+
 # Kalshi web frontend base for per-series market pages.
 KALSHI_WEB_BASE = "https://kalshi.com/markets"
 
