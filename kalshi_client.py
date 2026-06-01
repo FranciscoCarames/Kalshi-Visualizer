@@ -6,11 +6,20 @@ All network/pagination/retry concerns live here so the rest of the app stays cle
 from __future__ import annotations
 
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 
 import requests
+from requests.adapters import HTTPAdapter
 
-from config import BASE_URL, MAX_PAGES, REQUEST_TIMEOUT, USER_AGENT
+from config import (
+    BASE_URL,
+    FO_WINNER_TICKERS,
+    MAX_PAGES,
+    REQUEST_TIMEOUT,
+    TENNIS_SERIES_PREFIXES,
+    USER_AGENT,
+)
 
 
 class KalshiError(RuntimeError):
@@ -19,29 +28,33 @@ class KalshiError(RuntimeError):
 
 _session = requests.Session()
 _session.headers.update({"User-Agent": USER_AGENT, "Accept": "application/json"})
+# Size the connection pool for our concurrent fan-out so workers don't starve/drop.
+_adapter = HTTPAdapter(pool_connections=16, pool_maxsize=16, max_retries=0)
+_session.mount("https://", _adapter)
+_session.mount("http://", _adapter)
 
 
 def _get(path: str, params: dict[str, Any]) -> dict[str, Any]:
-    """Perform a single GET with light retry/backoff on 429 and 5xx responses."""
+    """Perform a single GET with retry/backoff on transient errors (429, 5xx, network)."""
     url = f"{BASE_URL}{path}"
     last_error: Exception | None = None
-    for attempt in range(3):
+    for attempt in range(4):
         try:
             resp = _session.get(url, params=params, timeout=REQUEST_TIMEOUT)
         except requests.RequestException as exc:
-            last_error = exc
-            time.sleep(1.5 * (attempt + 1))
+            last_error = exc or KalshiError("network error")
+            time.sleep(0.8 * (attempt + 1))
             continue
 
         if resp.status_code == 429 or resp.status_code >= 500:
             last_error = KalshiError(f"HTTP {resp.status_code} from {url}")
-            time.sleep(1.5 * (attempt + 1))
+            time.sleep(0.8 * (attempt + 1))
             continue
         if resp.status_code >= 400:
             raise KalshiError(f"HTTP {resp.status_code} from {url}: {resp.text[:200]}")
         return resp.json()
 
-    raise KalshiError(f"Failed to GET {url} after retries: {last_error}")
+    raise KalshiError(f"Failed to GET {url} after retries: {last_error!r}")
 
 
 def get_paginated(path: str, params: dict[str, Any], list_key: str) -> list[dict[str, Any]]:
@@ -79,3 +92,54 @@ def get_events(series_ticker: str, status: str = "open") -> list[dict[str, Any]]
         },
         list_key="events",
     )
+
+
+def discover_tennis_series() -> list[str]:
+    """Return the tickers of all tennis series worth scanning for French Open contracts.
+
+    The French Open universe spans match/advancement/winner/set/score series; rather than
+    hardcode them we list every series with a tennis prefix (plus the explicitly-named
+    tournament-winner tickers) and let the data layer narrow events to the French Open.
+    """
+    series = get_paginated("/series", {"limit": 200}, list_key="series")
+    tickers = [
+        s["ticker"]
+        for s in series
+        if s.get("ticker")
+        and (
+            s["ticker"].startswith(TENNIS_SERIES_PREFIXES)
+            or s["ticker"] in FO_WINNER_TICKERS
+        )
+    ]
+    return sorted(set(tickers))
+
+
+def get_events_for_series(
+    tickers: list[str], status: str = "open", max_workers: int = 8
+) -> tuple[list[tuple[str, list[dict[str, Any]]]], list[tuple[str, str]]]:
+    """Fetch open events for many series concurrently.
+
+    Returns ``(results, errors)`` where ``results`` is a list of ``(ticker, events)`` for
+    series that loaded, and ``errors`` is a list of ``(ticker, message)`` for series that
+    failed. Failures are returned (never silently dropped) so the UI can surface them.
+    """
+    results: list[tuple[str, list[dict[str, Any]]]] = []
+    failed: list[str] = []
+    with ThreadPoolExecutor(max_workers=max_workers) as pool:
+        futures = {pool.submit(get_events, t, status): t for t in tickers}
+        for future in as_completed(futures):
+            ticker = futures[future]
+            try:
+                results.append((ticker, future.result()))
+            except Exception:  # noqa: BLE001 - retry sequentially below before reporting
+                failed.append(ticker)
+
+    # Sequential retry pass: most failures are transient (rate limit / dropped connection
+    # under load). Anything still failing here is reported to the caller, never dropped.
+    errors: list[tuple[str, str]] = []
+    for ticker in failed:
+        try:
+            results.append((ticker, get_events(ticker, status)))
+        except Exception as exc:  # noqa: BLE001
+            errors.append((ticker, str(exc)))
+    return results, errors

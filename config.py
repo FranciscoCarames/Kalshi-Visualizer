@@ -8,11 +8,21 @@ Kalshi's market-data endpoints (series/events/markets) are public.
 # (the bare `api.kalshi.com` does not resolve).
 BASE_URL = "https://external-api.kalshi.com/trade-api/v2"
 
-# Tennis match series. These are generic across ALL tournaments, so we narrow them down
-# to the French Open ourselves (see data.is_french_open_event).
-SERIES = {
-    "ATP": "KXATPMATCH",  # men's singles matches
-    "WTA": "KXWTAMATCH",  # women's singles matches
+# French Open per-player contracts are spread across many tennis series (match winner,
+# stage advancement, tournament winner, set winner, exact score, ...). Rather than hardcode
+# them, we DISCOVER tennis series dynamically (kalshi_client.discover_tennis_series) and then
+# narrow to French Open events ourselves (data.is_french_open_event). These constants bound
+# the discovery scan to the tennis universe.
+TENNIS_SERIES_PREFIXES = ("KXATP", "KXWTA")
+
+# Tournament-winner series have non-prefixed tickers, so list them explicitly.
+FO_WINNER_TICKERS = {
+    "KXFOMEN",
+    "KXFOWOMEN",
+    "KXFOMENSINGLES",
+    "KXFOWOMENSINGLES",
+    "KXFOPENMENSINGLE",
+    "KXFOPENWMENSINGLE",
 }
 
 # A market belongs to the French Open if its competition / title / rules mention any of
