@@ -119,12 +119,26 @@ her early-round match → `UNKNOWN_RELATIONSHIP`; Gauff/Swiatek empty books → 
   `tennis_competitor` UUID; "low" = name fallback) + `mapping_reason`. No downstream row without `kind` + confidence.
 - **Expected-vs-found:** `consistency.expected_nodes(player_rows)` makes a missing ladder layer explicit.
 - **Per-player export:** the detail view exports a JSON snapshot + CSV (contracts + consistency comparisons).
-- **Raw stage-ladder spreads (v1; pending PR #9, branch `feat/ladder-spreads`):**
-  `consistency.layer_spreads(player_rows)` returns, per adjacent pair, `spread_pct` (percentage **points**)
-  and `spread_cents` (broader − deeper). **Raw spreads, not a probability model.** Reuse
-  `consistency.representative(node_entry)` (market else match) — the single price-row selector shared by
-  the chain and the spreads. Distinguish `missing_layer` from `missing_price`; `inverted` is None-safe;
-  show the pp gap labelled **"pp"**; render the spread table **directly beneath** the ladder (don't replace it).
+- **Raw stage-ladder spreads (v1, shipped):** `consistency.layer_spreads(player_rows)` returns, per
+  adjacent pair, `spread_pct` (percentage **points**) and `spread_cents` (broader − deeper). **Raw spreads,
+  not a probability model.** Reuse `consistency.representative(node_entry)` (market else match) — the single
+  price-row selector shared by the chain and the spreads. Distinguish `missing_layer` from `missing_price`
+  (both **NaN-safe** — `None` round-trips to NaN via `to_dict`); a `quote` field (worst leg) drives a Quote
+  column since most legs are illiquid; `inverted` is None-safe; pp gap labelled **"pp"**; the spread table
+  sits **directly beneath** the ladder (don't replace it).
+
+## Correctness & robustness invariants (audit hardening — do not regress)
+
+- **Group/select by `player_key`, not display name** (`build_checks` groups on key; the Player selector maps
+  labels→keys, disambiguating `"Name [key6]"` only on collision) — two same-named players never merge.
+- **Truthful evidence:** the `EXECUTABLE_VIOLATION` reason quotes the *winning* cross direction (equivalence
+  checks forward and reverse).
+- **Crossed books** (`ask < bid`) → `quote_quality == "Crossed"`: never Tight, never a midpoint, never fed to
+  the executable test.
+- **`tour_of`** classifies every `FO_WINNER_TICKERS` variant explicitly (`KXFOPENWMENSINGLE` → WTA).
+- **No silent truncation:** `get_paginated` raises if `MAX_PAGES` (100) is hit with a cursor pending. *(PR #13)*
+- **Deterministic duplicates:** `build_player_nodes` picks the representative by a stable rule; `duplicate_node_sources` surfaces it. *(PR #13)*
+- **FO filter:** a present non-FO `competition` is disqualifying; date-window fallback only with no competition info. *(PR #13)*
 
 ## UI
 
@@ -142,7 +156,8 @@ confidence + expected-vs-found → all contracts → export → debug expander. 
 - Use `data.to_cents` (Decimal, exact) for any comparison logic — no float drift.
 - **pandas truthiness:** never `row_a or row_b` on DataFrame rows; use explicit `is None` checks.
 - Empty results are valid (between rounds → no open events), not errors — handle gracefully.
-- Always loop the `cursor` for pagination (the client caps pages as a backstop).
+- Always loop the `cursor` for pagination; the client raises if the `MAX_PAGES` cap is hit with a cursor
+  still pending (no silent partial data).
 - **Failed series are surfaced in the Debug expander, never silently dropped** (hard requirement).
 - **Streamlit caches imported modules in the running server.** After editing `data.py`/`consistency.py`/…,
   a browser "Rerun" won't pick it up — **fully stop and restart** `streamlit run app.py`. For a phantom
@@ -171,9 +186,10 @@ confidence + expected-vs-found → all contracts → export → debug expander. 
 ## Repository status
 
 `main` is **canonical and current** — full app (multi-contract discovery, transparent pricing, Layer
-Consistency Checker), the mapping-audit hardening, and the `pytest` suite are all merged (PRs #1, #4, #6,
-#7). **Pending PRs:** **#8** simplifies `kalshi-plan.md`; **#9** adds the raw stage-ladder spreads
-(`feat/ladder-spreads`). Older PRs #2/#3/#5 are closed/superseded.
+Consistency Checker), mapping-audit hardening, **v1 raw ladder spreads** (+ NaN-fix/Quote column), and the
+**audit Tier-1 correctness fixes** are all merged (PRs #1, #4, #6, #7, #8, #9, #11, #12); `pytest` ~42.
+**Pending: PR #13** — audit Tier-2 robustness (pagination-truncation surfacing, deterministic duplicates,
+date-window corroboration). Older PRs #2/#3/#5 are closed/superseded.
 
 ## Iteration history (intent)
 1. Per-player French Open match viewer.
@@ -181,4 +197,6 @@ Consistency Checker), the mapping-audit hardening, and the `pytest` suite are al
 3. Transparent pricing (Display % + components + quote quality), default core series, richer debug.
 4. Layer Consistency Checker: containment + match-alignment, executable-vs-display, conservative rule flags.
 5. Mapping-audit hardening (confidence + reasons, expected-vs-found, per-player export) + first tests.
-6. v1 raw stage-ladder spreads beneath the ladder (PR #9).
+6. v1 raw stage-ladder spreads beneath the ladder; NaN-safe + Quote column.
+7. Audit hardening — Tier-1 (key-based grouping, truthful reasons, tour map, crossed-book guard, JSON
+   safety) merged; Tier-2 (pagination/duplicate/date-window) in PR #13.
