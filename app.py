@@ -1,11 +1,10 @@
-"""Streamlit UI for the French Open Kalshi contract viewer.
+"""Streamlit UI for the French Open Kalshi viewer — Layer Consistency Checker.
 
-Pick a player and see ALL of their French Open contracts — match results, stage
-advancement, the tournament winner market, and more — sorted by implied odds, tournament
-stage, volume, or match time, with a quick bar chart.
+Main area shows the layer-consistency table (a deeper outcome must not price above its
+prerequisite) and a per-player detail view; the right-hand column holds controls/filters.
 
-On-demand snapshot: tennis series are discovered dynamically and their open French Open
-events fetched concurrently. Data is cached for 60s; the Refresh button forces a re-fetch.
+On-demand snapshot: by default only the core French Open series are fetched; an optional
+checkbox enables a full dynamic scan. Data caches for 60s.
 """
 from __future__ import annotations
 
@@ -14,30 +13,27 @@ from datetime import datetime, timezone
 import pandas as pd
 import streamlit as st
 
+from config import DEFAULT_SERIES
+from consistency import MATCH_STAGE_TO_NODE, NODE_ORDER, build_checks, build_player_nodes
 from data import build_contracts
 from kalshi_client import KalshiError, discover_tennis_series, get_events_for_series
 
 st.set_page_config(page_title="French Open Kalshi Viewer", page_icon="🎾", layout="wide")
 
-# Contract categories hidden by default (still selectable) to keep the view uncluttered.
-HIDDEN_BY_DEFAULT = {"Set winner", "Exact score"}
-TOUR_LABEL = {"ATP": "Men (ATP)", "WTA": "Women (WTA)"}
+TOUR_FILTER = {"Women": ["WTA"], "Men": ["ATP"], "Both": ["ATP", "WTA"]}
+STATUS_GROUPS = ["All", "Clean", "Broken", "Warning", "Missing data", "Unknown relationship"]
+GROUP_SORT = {"Broken": 0, "Warning": 1, "Missing data": 2, "Unknown relationship": 3, "Clean": 4}
+ALL_CONTRACT_TYPES = ["Tournament winner", "Stage advancement", "Match result"]
 
 
 @st.cache_data(ttl=3600, show_spinner=False)
 def discover() -> list[str]:
-    """Tennis series tickers to scan (cached longer — the series list rarely changes)."""
     return discover_tennis_series()
 
 
-@st.cache_data(ttl=60, show_spinner="Discovering tennis series and fetching French Open markets…")
-def load_contracts() -> tuple[pd.DataFrame, str, list[tuple[str, str]], int, int]:
-    """Discover -> fetch all series concurrently -> build the per-player contract table.
-
-    Returns (df, fetched_at, errors, n_scanned, n_loaded). `errors` lists every series that
-    failed so the UI can show them rather than silently dropping them.
-    """
-    tickers = discover()
+@st.cache_data(ttl=60, show_spinner="Fetching French Open markets…")
+def load_contracts(full_scan: bool) -> tuple[pd.DataFrame, str, list[tuple[str, str]], int, int]:
+    tickers = discover() if full_scan else DEFAULT_SERIES
     results, errors = get_events_for_series(tickers)
     rows: list[dict] = []
     for ticker, events in results:
@@ -47,129 +43,207 @@ def load_contracts() -> tuple[pd.DataFrame, str, list[tuple[str, str]], int, int
     return df, fetched_at, errors, len(tickers), len(results)
 
 
-st.title("🎾 French Open — Kalshi Contract Viewer")
+st.title("🎾 French Open — Layer Consistency Checker")
 
-if st.button("🔄 Refresh data"):
-    discover.clear()
-    load_contracts.clear()
-    st.rerun()
+main, controls = st.columns([3, 1])
+
+# ---- Right-hand controls panel (part 1: drives the data load) ------------------------
+with controls:
+    st.header("Controls")
+    if st.button("🔄 Refresh data"):
+        discover.clear()
+        load_contracts.clear()
+        st.rerun()
+    tournament = st.radio("Tournament", ["Women", "Men", "Both"], index=0)
+    full_scan = st.checkbox(
+        "Scan all tennis series (slower)", value=False,
+        help="Default fetches 6 core French Open series. Enable to discover every tennis series (~20s).",
+    )
 
 try:
-    df, fetched_at, errors, n_scanned, n_loaded = load_contracts()
+    df_all, fetched_at, errors, n_scanned, n_loaded = load_contracts(full_scan)
 except KalshiError as exc:
-    st.error(f"Couldn't load Kalshi data: {exc}")
+    with main:
+        st.error(f"Couldn't load Kalshi data: {exc}")
     st.stop()
 
-st.caption(f"Last refreshed: {fetched_at}  ·  {len(df)} contracts from {n_loaded}/{n_scanned} tennis series")
+df = df_all[df_all["tour"].isin(TOUR_FILTER[tournament])] if not df_all.empty else df_all
+checks = build_checks(df)
 
-# ---- Debug: surface failed series (never silently skipped) ---------------------------
-with st.expander(f"🔧 Debug — {n_loaded}/{n_scanned} series loaded, {len(errors)} failed"):
-    if errors:
-        st.warning("These series failed to load and were NOT included:")
+# ---- Right-hand controls panel (part 2: filters) -------------------------------------
+with controls:
+    selected_types = st.multiselect(
+        "Contract type", ALL_CONTRACT_TYPES,
+        default=["Tournament winner", "Stage advancement"],
+        help="Match result enables the match↔advancement alignment checks.",
+    )
+    status_choice = st.selectbox("Outcome status", STATUS_GROUPS, index=0)
+    quote_choice = st.selectbox("Quote quality", ["All", "Tight/OK only", "Include wide"], index=0)
+    max_vol = int(df["volume"].fillna(0).max()) if not df.empty else 0
+    min_vol = st.slider("Minimum volume", 0, max_vol, 0) if max_vol > 0 else 0
+    players = sorted(df["player"].unique()) if not df.empty else []
+    chosen = st.selectbox("Player", players) if players else None
+
+# ---- Apply filters to the consistency table ------------------------------------------
+def _passes_type(row) -> bool:
+    cc, pc = row["child_category"], row["parent_category"]
+    return (cc in selected_types or cc == "") and (pc in selected_types or pc == "")
+
+
+def _passes_quote(row) -> bool:
+    q = row["comp_quote_quality"]
+    if quote_choice == "All":
+        return True
+    if quote_choice == "Tight/OK only":
+        return q in ("Tight", "OK")
+    return q in ("Tight", "OK", "Wide", "Very wide")  # Include wide
+
+
+view = checks.copy()
+if not view.empty:
+    view = view[view.apply(_passes_type, axis=1)]
+    if status_choice != "All":
+        view = view[view["status_group"] == status_choice]
+    view = view[view.apply(_passes_quote, axis=1)]
+    view = view[view["volume"].fillna(0) >= min_vol]
+    view = view.assign(_sort=view["status_group"].map(GROUP_SORT).fillna(9))
+    view = view.sort_values(
+        ["_sort", "executable_gap", "display_gap"], ascending=[True, False, False], na_position="last"
+    ).drop(columns="_sort")
+
+# ---- Main area -----------------------------------------------------------------------
+with main:
+    scan_note = " (full scan)" if full_scan else ""
+    st.caption(
+        f"Last refreshed: {fetched_at}  ·  {tournament}  ·  {len(df)} contracts, "
+        f"{len(checks)} comparisons ({len(view)} shown){scan_note}"
+    )
+
+    st.subheader("Layer consistency")
+    if view.empty:
+        st.info("No comparisons match the current filters.")
+    else:
         st.dataframe(
-            pd.DataFrame(errors, columns=["series", "error"]),
+            view[[
+                "player", "chain", "child_contract", "parent_contract", "child_display_pct",
+                "parent_display_pct", "child_bid_pct", "parent_ask_pct", "executable_gap",
+                "display_gap", "status", "rule_flag", "reason", "volume", "comp_quote_quality",
+                "child_ticker", "parent_ticker", "child_url", "parent_url",
+            ]],
             hide_index=True,
             width="stretch",
+            column_config={
+                "player": "Player",
+                "chain": "Chain",
+                "child_contract": "Child contract",
+                "parent_contract": "Parent contract",
+                "child_display_pct": st.column_config.NumberColumn("Child %", format="%.1f%%"),
+                "parent_display_pct": st.column_config.NumberColumn("Parent %", format="%.1f%%"),
+                "child_bid_pct": st.column_config.NumberColumn("Child bid", format="%.1f%%"),
+                "parent_ask_pct": st.column_config.NumberColumn("Parent ask", format="%.1f%%"),
+                "executable_gap": st.column_config.NumberColumn("Exec gap ¢", format="%.0f", help="child bid − parent ask, in cents; >0 = executable inconsistency."),
+                "display_gap": st.column_config.NumberColumn("Display gap ¢", format="%.0f"),
+                "status": "Status",
+                "rule_flag": st.column_config.TextColumn("Rule check", help="Match-alignment pairs need settlement-rule verification."),
+                "reason": "Reason",
+                "volume": st.column_config.NumberColumn("Volume", format="%.0f"),
+                "comp_quote_quality": "Quote",
+                "child_ticker": "Child ticker",
+                "parent_ticker": "Parent ticker",
+                "child_url": st.column_config.LinkColumn("Child link", display_text="open ↗"),
+                "parent_url": st.column_config.LinkColumn("Parent link", display_text="open ↗"),
+            },
         )
-    else:
-        st.success("All scanned series loaded successfully.")
-    if not df.empty:
-        st.caption("French Open contracts contributed per series:")
-        contrib = (
-            df.groupby(["series", "category"]).size().reset_index(name="contracts")
-            .sort_values("contracts", ascending=False)
+        st.caption(
+            "Only **EXECUTABLE_VIOLATION** (firm bid/ask cross with size) is *Broken*; display-only "
+            "gaps are *Warnings*. Findings are **executable inconsistencies**, not arbitrage — "
+            "match-alignment rows need their settlement rules verified (see Rule check)."
         )
-        st.dataframe(contrib, hide_index=True, width="stretch")
 
-if df.empty:
-    st.info(
-        "No open French Open contracts right now — markets may be between rounds or not yet "
-        "listed. Try refreshing closer to match time."
-    )
-    st.stop()
+    # ---- Player detail ---------------------------------------------------------------
+    if chosen:
+        st.divider()
+        st.subheader(f"Player detail — {chosen}")
+        prows = df[df["player"] == chosen].to_dict("records")
+        nodes = build_player_nodes(prows)
 
-# ---- Filters -------------------------------------------------------------------------
-with st.sidebar:
-    st.header("Filters")
-    tours = sorted(df["tour"].unique())
-    selected_tours = st.multiselect(
-        "Tour", tours, default=tours, format_func=lambda t: TOUR_LABEL.get(t, t)
-    )
+        chain_rows = []
+        for node in NODE_ORDER:
+            src = nodes.get(node, {})
+            primary = src.get("market") or src.get("match")
+            if primary is None:
+                chain_rows.append({"Layer": node, "Source": "— missing —", "Display %": None,
+                                   "Bid %": None, "Ask %": None, "Quote": ""})
+            else:
+                chain_rows.append({
+                    "Layer": node,
+                    "Source": "advance/winner" if "market" in src else "match-implied",
+                    "Display %": primary.get("display_pct"),
+                    "Bid %": primary.get("yes_bid_pct"),
+                    "Ask %": primary.get("yes_ask_pct"),
+                    "Quote": primary.get("quote_quality", ""),
+                })
+        st.caption("Progression chain (broad → deep):")
+        st.dataframe(pd.DataFrame(chain_rows), hide_index=True, width="stretch")
 
-    all_categories = sorted(df["category"].unique())
-    default_categories = [c for c in all_categories if c not in HIDDEN_BY_DEFAULT]
-    selected_categories = st.multiselect(
-        "Contract type", all_categories, default=default_categories,
-        help="Set-winner and exact-score markets are hidden by default; add them here.",
-    )
+        # Confident match contracts for this player.
+        match_rows = [r for r in prows if r.get("kind") == "match" and r.get("stage") in MATCH_STAGE_TO_NODE]
+        if match_rows:
+            st.caption("Match contracts with a confident stage mapping:")
+            st.dataframe(
+                pd.DataFrame(match_rows)[["contract", "stage", "opponent", "display_pct", "yes_bid_pct", "yes_ask_pct", "quote_quality"]],
+                hide_index=True, width="stretch",
+                column_config={
+                    "contract": "Contract", "stage": "Stage", "opponent": "Opponent",
+                    "display_pct": st.column_config.NumberColumn("Display %", format="%.1f%%"),
+                    "yes_bid_pct": st.column_config.NumberColumn("Bid", format="%.1f%%"),
+                    "yes_ask_pct": st.column_config.NumberColumn("Ask", format="%.1f%%"),
+                    "quote_quality": "Quote",
+                },
+            )
 
-    vol_series = df["volume"].fillna(0)
-    max_vol = int(vol_series.max()) if len(vol_series) else 0
-    min_vol = st.slider("Minimum volume", 0, max_vol, 0) if max_vol > 0 else 0
+        st.caption("All contracts for this player:")
+        pdf = df[df["player"] == chosen].copy().sort_values("stage_rank")
+        pdf["time_dt"] = pd.to_datetime(pdf["time_value"], utc=True, errors="coerce")
+        st.dataframe(
+            pdf[["contract", "category", "stage", "opponent", "display_pct", "quote_quality",
+                 "yes_bid_pct", "yes_ask_pct", "spread_cents", "volume", "status", "time_dt",
+                 "time_kind", "kalshi_url"]],
+            hide_index=True, width="stretch",
+            column_config={
+                "contract": "Contract", "category": "Type", "stage": "Stage", "opponent": "Opponent",
+                "display_pct": st.column_config.NumberColumn("Display %", format="%.1f%%"),
+                "quote_quality": "Quote",
+                "yes_bid_pct": st.column_config.NumberColumn("YES bid %", format="%.1f%%"),
+                "yes_ask_pct": st.column_config.NumberColumn("YES ask %", format="%.1f%%"),
+                "spread_cents": st.column_config.NumberColumn("Spread ¢", format="%.1f"),
+                "volume": st.column_config.NumberColumn("Volume", format="%.0f"),
+                "status": "Status",
+                "time_dt": st.column_config.DatetimeColumn("Time", format="YYYY-MM-DD HH:mm"),
+                "time_kind": "Time basis",
+                "kalshi_url": st.column_config.LinkColumn("Kalshi", display_text="open ↗"),
+            },
+        )
 
-view = df[
-    df["tour"].isin(selected_tours)
-    & df["category"].isin(selected_categories)
-    & (df["volume"].fillna(0) >= min_vol)
-]
+        # ---- Debug expander ----------------------------------------------------------
+        with st.expander(f"🔧 Debug — {n_loaded}/{n_scanned} series loaded, {len(errors)} failed"):
+            if errors:
+                st.warning("Series that failed to load (NOT silently skipped):")
+                st.dataframe(pd.DataFrame(errors, columns=["series", "error"]), hide_index=True, width="stretch")
+            else:
+                st.success("All scanned series loaded successfully.")
 
-if view.empty:
-    st.info("No contracts match the current filters.")
-    st.stop()
+            st.caption("Raw contract fields for this player:")
+            st.dataframe(
+                pdf[["series", "event_ticker", "market_ticker", "event_title", "market_title",
+                     "kind", "stage", "player_key", "player_key_source", "raw_yes_bid",
+                     "raw_yes_ask", "raw_last"]],
+                hide_index=True, width="stretch",
+            )
 
-# ---- Player selection ----------------------------------------------------------------
-player_names = sorted(view["player"].unique())
-chosen = st.selectbox("Player", player_names)
-player_df = view[view["player"] == chosen].copy()
-
-# ---- Sorting -------------------------------------------------------------------------
-sort_options = {
-    "Implied odds": "implied_pct",
-    "Tournament stage": "stage_rank",
-    "Volume": "volume",
-    "Match time": "match_time",
-}
-c1, c2 = st.columns(2)
-sort_by = c1.selectbox("Sort by", list(sort_options))
-# Sensible default direction per sort key (stage/time ascending, odds/volume descending).
-ascending = c2.toggle("Ascending", value=sort_by in ("Tournament stage", "Match time"))
-player_df = player_df.sort_values(
-    sort_options[sort_by], ascending=ascending, na_position="last"
-)
-
-st.subheader(f"{chosen} — {len(player_df)} French Open contract(s)")
-
-# ---- Table ---------------------------------------------------------------------------
-table_cols = [
-    "category", "contract", "stage", "opponent", "implied_pct", "yes_bid", "yes_ask",
-    "last_price", "volume", "open_interest", "status", "match_time", "series", "market_ticker",
-]
-st.dataframe(
-    player_df[table_cols],
-    hide_index=True,
-    width="stretch",
-    column_config={
-        "category": "Type",
-        "contract": "Contract",
-        "stage": "Stage",
-        "opponent": "Opponent",
-        "implied_pct": st.column_config.NumberColumn("Implied %", format="%.1f%%"),
-        "yes_bid": st.column_config.NumberColumn("Yes bid", format="$%.2f"),
-        "yes_ask": st.column_config.NumberColumn("Yes ask", format="$%.2f"),
-        "last_price": st.column_config.NumberColumn("Last", format="$%.2f"),
-        "volume": st.column_config.NumberColumn("Volume", format="%.0f"),
-        "open_interest": st.column_config.NumberColumn("Open int.", format="%.0f"),
-        "status": "Status",
-        "match_time": "Match time",
-        "series": "Series",
-        "market_ticker": "Ticker",
-    },
-)
-
-# ---- Chart ---------------------------------------------------------------------------
-chart_df = player_df.dropna(subset=["implied_pct"]).copy()
-if not chart_df.empty:
-    chart_df = chart_df.assign(label=chart_df["contract"]).set_index("label")
-    st.bar_chart(chart_df["implied_pct"], y_label="Implied win %")
-else:
-    st.info("No priced contracts to chart for this player yet.")
+            st.caption("Comparison status + reason for this player:")
+            pchecks = checks[checks["player"] == chosen]
+            st.dataframe(
+                pchecks[["chain", "status", "status_group", "rule_flag", "executable_gap", "display_gap", "reason"]],
+                hide_index=True, width="stretch",
+            )

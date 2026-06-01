@@ -15,9 +15,17 @@ from __future__ import annotations
 
 import re
 from datetime import datetime, timezone
+from decimal import Decimal, InvalidOperation
 from typing import Any
 
-from config import FO_KEYWORDS, FO_WINDOW, FO_WINNER_TICKERS, NAME_ALIASES
+from config import (
+    FO_KEYWORDS,
+    FO_WINDOW,
+    FO_WINNER_TICKERS,
+    KALSHI_WEB_BASE,
+    NAME_ALIASES,
+    SPREAD_REASONABLE,
+)
 
 # Rounds checked most-specific first; \b boundaries stop "final" matching "quarterfinal".
 _ROUND_PATTERNS = [
@@ -67,6 +75,23 @@ def to_float(value: Any) -> float | None:
     try:
         return float(text)
     except ValueError:
+        return None
+
+
+def to_cents(value: Any) -> int | None:
+    """Parse a Kalshi dollar string ("0.3700") into an exact integer of cents (37).
+
+    Uses Decimal so comparison logic is free of binary-float drift. Returns None for
+    missing/empty/unparseable values.
+    """
+    if value is None:
+        return None
+    text = str(value).strip()
+    if text == "":
+        return None
+    try:
+        return int((Decimal(text) * 100).to_integral_value())
+    except (InvalidOperation, ValueError):
         return None
 
 
@@ -130,20 +155,73 @@ def filter_french_open(events: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return [e for e in (events or []) if is_french_open_event(e)]
 
 
-def _player_win_prob(market: dict[str, Any]) -> float | None:
-    """Implied win probability for this market's player = YES mid (or last price).
+def _is_empty_book(bid: float | None, ask: float | None) -> bool:
+    """A 0.00/1.00 quote means there are no real orders, not a genuine market."""
+    return bid == 0.0 and ask == 1.0
 
-    A 0.00/1.00 quote is an EMPTY order book, not a real 50% market, so it is ignored and we
-    fall back to the last traded price (or None -> shown blank) rather than inventing a mid.
+
+def yes_mid(bid: float | None, ask: float | None) -> float | None:
+    """Midpoint of the YES bid/ask, or None when the book is empty/one-sided."""
+    if bid is None or ask is None or _is_empty_book(bid, ask):
+        return None
+    return (bid + ask) / 2
+
+
+def spread(bid: float | None, ask: float | None) -> float | None:
+    """YES bid/ask spread in dollars, or None when not a two-sided real book."""
+    if bid is None or ask is None or _is_empty_book(bid, ask):
+        return None
+    return ask - bid
+
+
+def quote_quality(bid: float | None, ask: float | None) -> str:
+    """Human label for how trustworthy the quote is, flagging wide/empty books."""
+    if (bid is None and ask is None) or _is_empty_book(bid, ask):
+        return "No quote"
+    if bid is None or ask is None:
+        return "One-sided"
+    s = ask - bid
+    if s <= 0.05:
+        return "Tight"
+    if s <= 0.15:
+        return "OK"
+    if s <= 0.30:
+        return "Wide"
+    return "Very wide"
+
+
+def display_prob(bid: float | None, ask: float | None, last: float | None) -> float | None:
+    """Best single price to show: midpoint if the spread is reasonable, else last, else blank."""
+    mid = yes_mid(bid, ask)
+    sp = spread(bid, ask)
+    if mid is not None and sp is not None and sp <= SPREAD_REASONABLE:
+        return mid
+    if last is not None and last > 0:
+        return last
+    return None
+
+
+def display_cents(bid_c: int | None, ask_c: int | None, last_c: int | None) -> int | None:
+    """Integer-cent twin of `display_prob`: midpoint when the spread is reasonable, else last.
+
+    Used by the consistency checker so comparisons stay in exact integer cents.
     """
-    bid = to_float(market.get("yes_bid_dollars"))
-    ask = to_float(market.get("yes_ask_dollars"))
-    if bid == 0.0 and ask == 1.0:  # full-width book = no liquidity
-        bid = ask = None
-    legs = [x for x in (bid, ask) if x is not None]
-    if legs:
-        return sum(legs) / len(legs)
-    return to_float(market.get("last_price_dollars"))
+    empty = bid_c == 0 and ask_c == 100
+    if bid_c is not None and ask_c is not None and not empty:
+        if (ask_c - bid_c) <= int(SPREAD_REASONABLE * 100):
+            return round((bid_c + ask_c) / 2)
+    if last_c is not None and last_c > 0:
+        return last_c
+    return None
+
+
+def _pct(value: float | None) -> float | None:
+    return round(value * 100, 1) if value is not None else None
+
+
+def _kalshi_url(series_ticker: str) -> str:
+    """Best-effort link to the contract's Kalshi page (the series page)."""
+    return f"{KALSHI_WEB_BASE}/{(series_ticker or '').lower()}"
 
 
 def classify_kind(series_ticker: str) -> str:
@@ -224,6 +302,7 @@ def build_contracts(series_ticker: str, events: list[dict[str, Any]]) -> list[di
                 continue  # need a display name for the player selector
             competitor = (market.get("custom_strike") or {}).get("tennis_competitor")
             player_key = competitor or name.casefold()
+            player_key_source = "competitor_uuid" if competitor else "name_fallback"
             display = NAME_ALIASES.get(player_key, name) or name
 
             if kind == "match":
@@ -235,11 +314,36 @@ def build_contracts(series_ticker: str, events: list[dict[str, Any]]) -> list[di
             stage = "Champion" if kind == "winner" else _extract_round(
                 market.get("title"), market.get("rules_primary")
             )
-            prob = _player_win_prob(market)
+
+            bid = to_float(market.get("yes_bid_dollars"))
+            ask = to_float(market.get("yes_ask_dollars"))
+            last = to_float(market.get("last_price_dollars"))
+            mid = yes_mid(bid, ask)
+            sp = spread(bid, ask)
+
+            # Exact integer-cent prices + order sizes for the consistency checker.
+            bid_c = to_cents(market.get("yes_bid_dollars"))
+            ask_c = to_cents(market.get("yes_ask_dollars"))
+            last_c = to_cents(market.get("last_price_dollars"))
+            bid_size = to_float(market.get("yes_bid_size_fp"))
+            ask_size = to_float(market.get("yes_ask_size_fp"))
+
+            # Time label depends on contract type: match-result contracts have a real match
+            # time (occurrence); everything else shows when the market closes/expires.
+            occurrence = market.get("occurrence_datetime") or ""
+            close_t = market.get("close_time") or ""
+            expiration_t = market.get("expiration_time") or ""
+            if kind == "match" and occurrence:
+                time_value, time_kind = occurrence, "Match time"
+            else:
+                time_value = close_t or expiration_t
+                time_kind = "Close time" if close_t else "Expiration"
+
             rows.append(
                 {
                     "player": display,
                     "player_key": player_key,
+                    "player_key_source": player_key_source,
                     "tour": tour,
                     "kind": kind,
                     "category": category,
@@ -248,19 +352,37 @@ def build_contracts(series_ticker: str, events: list[dict[str, Any]]) -> list[di
                     "stage_rank": _STAGE_RANK.get(stage, 0),
                     "opponent": opponent,
                     "competition": competition,
-                    "implied_prob": prob,
-                    "implied_pct": round(prob * 100, 1) if prob is not None else None,
-                    "yes_bid": to_float(market.get("yes_bid_dollars")),
-                    "yes_ask": to_float(market.get("yes_ask_dollars")),
-                    "last_price": to_float(market.get("last_price_dollars")),
+                    # Pricing — display price plus every component, clearly named.
+                    "display_pct": _pct(display_prob(bid, ask, last)),
+                    "yes_mid_pct": _pct(mid),
+                    "last_pct": _pct(last),
+                    "yes_bid_pct": _pct(bid),
+                    "yes_ask_pct": _pct(ask),
+                    "spread_cents": round(sp * 100, 1) if sp is not None else None,
+                    "quote_quality": quote_quality(bid, ask),
+                    # Exact integer-cent prices + sizes for layer-consistency comparisons.
+                    "yes_bid_c": bid_c,
+                    "yes_ask_c": ask_c,
+                    "last_c": last_c,
+                    "display_c": display_cents(bid_c, ask_c, last_c),
+                    "yes_bid_size": bid_size,
+                    "yes_ask_size": ask_size,
                     "volume": to_float(market.get("volume_fp")),
                     "open_interest": to_float(market.get("open_interest_fp")),
                     "status": market.get("status", ""),
-                    "match_time": market.get("occurrence_datetime", ""),
-                    "close_time": market.get("close_time", ""),
+                    "time_value": time_value,
+                    "time_kind": time_kind,
+                    "kalshi_url": _kalshi_url(series_ticker),
+                    # Identifiers + raw fields for the debug expander.
                     "series": series_ticker,
                     "event_ticker": event.get("event_ticker", ""),
                     "market_ticker": market.get("ticker", ""),
+                    "event_title": event.get("title", ""),
+                    "market_title": market.get("title", ""),
+                    "raw_yes_bid": market.get("yes_bid_dollars"),
+                    "raw_yes_ask": market.get("yes_ask_dollars"),
+                    "raw_last": market.get("last_price_dollars"),
+                    "rules_primary": market.get("rules_primary", ""),
                 }
             )
     return rows
