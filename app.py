@@ -24,6 +24,7 @@ from consistency import (
     expected_nodes,
     layer_spreads,
     representative,
+    spread_certainty_label,
 )
 from data import build_contracts
 from kalshi_client import KalshiError, discover_tennis_series, get_events_for_series
@@ -64,10 +65,13 @@ with controls:
         discover.clear()
         load_contracts.clear()
         st.rerun()
-    tournament = st.radio("Tournament", ["Women", "Men", "Both"], index=0)
+    tournament = st.radio(
+        "Tournament", ["Women", "Men", "Both"], index=0,
+        help="Filter contracts by tour. Women = WTA markets, Men = ATP markets.",
+    )
     full_scan = st.checkbox(
         "Scan all tennis series (slower)", value=False,
-        help="Default fetches 6 core French Open series. Enable to discover every tennis series (~20s).",
+        help="Fetches all ~61 tennis series (~20 s). Default fetches only the 6 core series (~2 s).",
     )
 
 try:
@@ -85,12 +89,28 @@ with controls:
     selected_types = st.multiselect(
         "Contract type", ALL_CONTRACT_TYPES,
         default=["Tournament winner", "Stage advancement"],
-        help="Match result enables the match↔advancement alignment checks.",
+        help="Tournament winner: win-the-tournament markets. Stage advancement: reach-a-round "
+             "markets. Match result: head-to-head match winner markets (adds match-alignment "
+             "rows to the consistency check).",
     )
-    status_choice = st.selectbox("Outcome status", STATUS_GROUPS, index=0)
-    quote_choice = st.selectbox("Quote quality", ["All", "Tight/OK only", "Include wide"], index=0)
+    status_choice = st.selectbox(
+        "Outcome status", STATUS_GROUPS, index=0,
+        help="Broken = executable inconsistency (child price > parent price, firm quotes, "
+             "positive sizes — potentially profitable). Warning = display prices cross but not "
+             "confirmed executable. Missing data = no usable quote or missing ladder layer. "
+             "Unknown = relationship between the two markets cannot be proved.",
+    )
+    quote_choice = st.selectbox(
+        "Quote quality", ["All", "Tight/OK only", "Include wide"], index=0,
+        help="Tight/OK only: bid-ask spread ≤ 15¢. Include wide: any real spread. All: includes "
+             "markets with no active order book.",
+    )
     max_vol = int(df["volume"].fillna(0).max()) if not df.empty else 0
-    min_vol = st.slider("Minimum volume", 0, max_vol, 0) if max_vol > 0 else 0
+    min_vol = st.slider(
+        "Minimum volume", 0, max_vol, 0,
+        help="Show only contracts with at least this many contracts traded. Filters out "
+             "illiquid markets.",
+    ) if max_vol > 0 else 0
     # Select by stable player_key (disambiguate the label only when a display name maps to
     # more than one key) so two players with the same display name are never conflated.
     if not df.empty:
@@ -100,7 +120,11 @@ with controls:
         for _, r in uniq.iterrows():
             label = r["player"] if name_counts[r["player"]] == 1 else f'{r["player"]} [{str(r["player_key"])[:6]}]'
             label_to_key[label] = r["player_key"]
-        chosen_label = st.selectbox("Player", sorted(label_to_key))
+        chosen_label = st.selectbox(
+            "Player", sorted(label_to_key),
+            help="Select a player to view their progression chain, layer spreads, and all "
+                 "contracts below the summary table.",
+        )
         chosen_key = label_to_key[chosen_label]
     else:
         chosen_key = None
@@ -148,7 +172,8 @@ with main:
             view[[
                 "player", "chain", "child_contract", "parent_contract", "child_display_pct",
                 "parent_display_pct", "child_bid_pct", "parent_ask_pct", "executable_gap",
-                "display_gap", "status", "rule_flag", "reason", "volume", "comp_quote_quality",
+                "exec_min_size", "exec_max_profit_dollars", "display_gap", "status", "rule_flag",
+                "reason", "volume", "comp_quote_quality",
                 "child_ticker", "parent_ticker", "child_url", "parent_url",
             ]],
             hide_index=True,
@@ -162,13 +187,15 @@ with main:
                 "parent_display_pct": st.column_config.NumberColumn("Parent %", format="%.1f%%"),
                 "child_bid_pct": st.column_config.NumberColumn("Child bid", format="%.1f%%"),
                 "parent_ask_pct": st.column_config.NumberColumn("Parent ask", format="%.1f%%"),
-                "executable_gap": st.column_config.NumberColumn("Exec gap ¢", format="%.0f", help="child bid − parent ask, in cents; >0 = executable inconsistency."),
+                "executable_gap": st.column_config.NumberColumn("Executable gap (¢)", format="%.0f", help="child bid − parent ask, in cents; >0 = executable inconsistency."),
+                "exec_min_size": st.column_config.NumberColumn("Max tradable units", format="%.0f", help="min(child bid size, parent ask size) — how many units could fill at the quoted sizes."),
+                "exec_max_profit_dollars": st.column_config.NumberColumn("Gross quoted profit ($)", format="$%.2f", help="Executable gap × max tradable units. Gross, from displayed quotes — before fees, slippage, partial fills."),
                 "display_gap": st.column_config.NumberColumn("Display gap ¢", format="%.0f"),
                 "status": "Status",
-                "rule_flag": st.column_config.TextColumn("Rule check", help="Match-alignment pairs need settlement-rule verification."),
+                "rule_flag": st.column_config.TextColumn("Rule caveat", help="Match-alignment pairs need settlement-rule verification."),
                 "reason": "Reason",
                 "volume": st.column_config.NumberColumn("Volume", format="%.0f"),
-                "comp_quote_quality": "Quote",
+                "comp_quote_quality": "Quote quality",
                 "child_ticker": "Child ticker",
                 "parent_ticker": "Parent ticker",
                 "child_url": st.column_config.LinkColumn("Child link", display_text="open ↗"),
@@ -178,7 +205,11 @@ with main:
         st.caption(
             "Only **EXECUTABLE_VIOLATION** (firm bid/ask cross with size) is *Broken*; display-only "
             "gaps are *Warnings*. Findings are **executable inconsistencies**, not arbitrage — "
-            "match-alignment rows need their settlement rules verified (see Rule check)."
+            "match-alignment rows need their settlement rules verified (see Rule caveat)."
+        )
+        st.caption(
+            "Gross profit is calculated from displayed bid/ask and quoted size. It does not account "
+            "for fees, partial fills, quote movement, settlement-rule ambiguity, or execution latency."
         )
 
     # ---- Player detail ---------------------------------------------------------------
@@ -216,12 +247,32 @@ with main:
             },
         )
 
+        # ---- This player's firm executable inconsistencies (shared by the spread column
+        #      and the trade-construction block below). Chain is "deeper ≤ broader".
+        pviol = (
+            checks[(checks["player_key"] == chosen_key) & (checks["status"] == "EXECUTABLE_VIOLATION")]
+            if "player_key" in checks.columns else checks.iloc[0:0]
+        )
+        ev_gap_by_chain = {r["chain"]: r["exec_gap_c"] for _, r in pviol.iterrows()}
+
         # ---- Raw stage-ladder spreads (directly under the ladder) --------------------
         spread_rows = layer_spreads(prows)
+        spread_df = pd.DataFrame(spread_rows)
+
+        def _profit_per_unit(r) -> str:
+            # A spread pair is (broader=from, deeper=to); its containment check chain is
+            # "deeper ≤ broader". Only inverted rows can have an exploitable gap.
+            if not r["inverted"]:
+                return ""
+            gap = ev_gap_by_chain.get(f"{r['to_layer']} ≤ {r['from_layer']}")
+            return f"{int(gap)}¢" if gap is not None else "Display only"
+
+        spread_df["profit_per_unit"] = spread_df.apply(_profit_per_unit, axis=1)
         st.caption("Raw stage-ladder spreads (adjacent layers) — broader minus deeper:")
         st.dataframe(
-            pd.DataFrame(spread_rows)[
-                ["from_layer", "to_layer", "from_pct", "to_pct", "spread_pct", "spread_cents", "quote", "status", "inverted"]
+            spread_df[
+                ["from_layer", "to_layer", "from_pct", "to_pct", "spread_pct", "spread_cents",
+                 "quote", "status", "inverted", "profit_per_unit"]
             ],
             hide_index=True, width="stretch",
             column_config={
@@ -233,6 +284,7 @@ with main:
                 "quote": st.column_config.TextColumn("Quote", help="Worst quote quality of the two layers — most ladder legs are illiquid, so treat wide / No-quote spreads with caution."),
                 "status": "Status",
                 "inverted": st.column_config.CheckboxColumn("Inverted"),
+                "profit_per_unit": st.column_config.TextColumn("Profit/unit", help="On an inverted row: the firm executable gap (¢) if backed by an EXECUTABLE_VIOLATION, else 'Display only'."),
             },
         )
         st.caption(
@@ -241,6 +293,30 @@ with main:
             "**missing_price** row means a layer exists but has no usable price (shown blank). An "
             "**inverted** row (deeper priced above broader) is the same inconsistency flagged above."
         )
+
+        # ---- Trade construction for firm executable inconsistencies ------------------
+        if not pviol.empty:
+            st.caption("Executable inconsistencies — trade construction (long one leg, short the other):")
+            for _, r in pviol.iterrows():
+                long_contract = r["parent_contract"] if r["exec_long_side"] == "parent" else r["child_contract"]
+                short_contract = r["parent_contract"] if r["exec_short_side"] == "parent" else r["child_contract"]
+                short_no_c = 100 - int(r["exec_short_bid_c"]) if r["exec_short_bid_c"] is not None else None
+                units = r["exec_min_size"]
+                profit = r["exec_max_profit_dollars"]
+                lines = [
+                    f"**Trade construction — {r['exec_direction_label']}**  ·  _{r['chain']}_",
+                    f"- Long (buy YES): _{long_contract}_ @ {int(r['exec_long_ask_c'])}¢",
+                    f"- Short (buy NO): _{short_contract}_ @ {short_no_c}¢",
+                    f"- Executable gap {int(r['exec_gap_c'])}¢/unit · Max tradable units "
+                    f"{units:g} · Gross quoted profit ${profit:.2f}",
+                    f"- **{spread_certainty_label(r['rule_flag'])}**",
+                ]
+                if r["rule_flag"]:
+                    lines.append(
+                        f"- ⚠ Rule caveat: settlement rules not auto-verified (`{r['rule_flag']}`) — "
+                        "confirm before trading."
+                    )
+                st.markdown("\n".join(lines))
 
         # ---- Mapping confidence + expected-vs-found layers ---------------------------
         sample = prows[0] if prows else {}
@@ -337,7 +413,8 @@ with main:
             st.caption("Raw contract fields for this player:")
             st.dataframe(
                 pdf[["series", "event_ticker", "market_ticker", "event_title", "market_title",
-                     "kind", "stage", "player_key", "player_key_source", "mapping_confidence",
+                     "kind", "stage", "player_key", "player_key_source", "player_name_raw",
+                     "player_name_normalized", "competitor_uuid", "mapping_confidence",
                      "mapping_reason", "raw_yes_bid", "raw_yes_ask", "raw_last"]],
                 hide_index=True, width="stretch",
             )

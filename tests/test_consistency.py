@@ -27,6 +27,51 @@ def test_executable_violation_requires_cross_and_size():
     assert out["executable_gap"] == 2
 
 
+# --- v1.2: executable-inconsistency profit / trade-construction context --------------
+def test_forward_violation_exposes_profit_and_long_broad_short_deep():
+    # child bid 37 > parent ask 35 -> long the broader (parent), short the deeper (child).
+    child = leg(display_c=37, bid_c=37, ask_c=38, bid_size=80)
+    parent = leg(display_c=35, bid_c=34, ask_c=35, ask_size=120)
+    out = consistency._classify(child, parent, equivalence=False)
+    assert out["status"] == "EXECUTABLE_VIOLATION"
+    assert out["exec_gap_c"] == 2                       # 37 − 35
+    assert out["exec_min_size"] == 80                   # min(child bid 80, parent ask 120)
+    assert out["exec_max_profit_dollars"] == round(2 * 80 / 100, 2)  # 1.6
+    assert out["exec_direction_label"] == "Long broader / short deeper"
+    assert out["exec_long_side"] == "parent" and out["exec_long_ask_c"] == 35
+    assert out["exec_short_side"] == "child" and out["exec_short_bid_c"] == 37
+
+
+def test_reverse_equivalence_violation_is_long_deep_short_broad():
+    # No forward cross (child bid 19 vs parent ask 40); reverse crosses (parent bid 37 vs
+    # child ask 35) -> long the deeper (child), short the broader (parent).
+    child = leg(display_c=30, bid_c=19, ask_c=35, ask_size=50)
+    parent = leg(display_c=30, bid_c=37, ask_c=40, bid_size=90)
+    out = consistency._classify(child, parent, equivalence=True)
+    assert out["status"] == "EXECUTABLE_VIOLATION"
+    assert out["exec_gap_c"] == 2                       # 37 − 35
+    assert out["exec_min_size"] == 50                   # min(parent bid 90, child ask 50)
+    assert out["exec_direction_label"] == "Long deeper / short broader"
+    assert out["exec_long_side"] == "child" and out["exec_long_ask_c"] == 35
+    assert out["exec_short_side"] == "parent" and out["exec_short_bid_c"] == 37
+
+
+def test_profit_fields_blank_for_clean_row():
+    child = leg(display_c=20, bid_c=10, ask_c=12)
+    parent = leg(display_c=50, bid_c=58, ask_c=60)
+    out = consistency._classify(child, parent, equivalence=False)
+    assert out["status"] == "CLEAN"
+    for k in ("exec_gap_c", "exec_min_size", "exec_max_profit_dollars", "exec_direction_label",
+              "exec_long_side", "exec_long_ask_c", "exec_short_side", "exec_short_bid_c"):
+        assert out[k] is None
+
+
+def test_spread_certainty_label():
+    assert consistency.spread_certainty_label("") == "Locked gross spread"
+    assert consistency.spread_certainty_label("RULE_MISMATCH") == "Rule-dependent gross spread"
+    assert consistency.spread_certainty_label("RULE_CHECK_REQUIRED") == "Rule-dependent gross spread"
+
+
 def test_cross_without_size_downgrades_to_quote_size_missing():
     child = leg(display_c=30, bid_c=37, ask_c=38, bid_size=0)   # no firm size behind the bid
     parent = leg(display_c=40, bid_c=34, ask_c=35)

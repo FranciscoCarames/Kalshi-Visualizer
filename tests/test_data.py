@@ -200,6 +200,35 @@ def test_build_contracts_typing_and_mapping():
     assert cir["display_pct"] == 37.5                     # midpoint of 0.37/0.38
 
 
+# --- v1.2: clean, user-facing display names ------------------------------------------
+def test_display_name_prefers_source_verbatim():
+    # A clean source name (accents, real casing, lowercase particles) is shown as-is.
+    row = {"player_key": "uuid-x", "player_name_raw": "Stéphane de Robert"}
+    assert data.display_player_name(row) == "Stéphane de Robert"
+
+
+def test_display_name_alias_overrides_source(monkeypatch):
+    monkeypatch.setattr(data, "NAME_ALIASES", {"uuid-x": "Official Name"})
+    row = {"player_key": "uuid-x", "player_name_raw": "drifted source name"}
+    assert data.display_player_name(row) == "Official Name"
+
+
+def test_display_name_titleizes_bare_key():
+    row = {"player_key": "aryna_sabalenka", "player_name_raw": "aryna_sabalenka"}
+    assert data.display_player_name(row) == "Aryna Sabalenka"
+
+
+def test_build_contracts_exposes_internal_identifiers():
+    rows = data.build_contracts("KXWTAMATCH", [_fo_match_event()])
+    cir = next(r for r in rows if r["player"] == "Sorana Cirstea")
+    assert cir["player"] == "Sorana Cirstea"              # clean user-facing name
+    assert cir["player_key"] == "uuid-cir"
+    assert cir["player_key_source"] == "competitor_uuid"
+    assert cir["player_name_raw"] == "Sorana Cirstea"     # raw source name kept for debug
+    assert cir["player_name_normalized"] == "sorana cirstea"
+    assert cir["competitor_uuid"] == "uuid-cir"
+
+
 def test_build_contracts_drops_non_french_open():
     ev = _fo_match_event()
     ev["product_metadata"]["competition"] = "Wimbledon Women Singles"

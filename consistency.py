@@ -200,6 +200,23 @@ def _pos(size: Any) -> bool:
     return size is not None and size > 0
 
 
+def _min_size(a: Any, b: Any) -> Any:
+    """Tradable units behind a two-legged fill: the smaller of the two firm sizes, or None
+    if either side has no usable size."""
+    if a is None or b is None:
+        return None
+    return min(a, b)
+
+
+def spread_certainty_label(rule_flag: str) -> str:
+    """Honest certainty wording for an executable inconsistency. Strict containment pairs
+    (no rule flag) lock a gross spread; match-alignment pairs depend on settlement rules
+    matching, which we never confirm — so they are only ever 'rule-dependent'."""
+    if rule_flag in ("RULE_CHECK_REQUIRED", "RULE_MISMATCH"):
+        return "Rule-dependent gross spread"
+    return "Locked gross spread"
+
+
 def _leg(row: dict[str, Any], side: str) -> tuple[int | None, Any]:
     """Return (cents, size) for a contract's firm bid/ask side.
 
@@ -239,18 +256,33 @@ def _classify(
     # --- executable test: firm legs + positive sizes only ---
     # Track each direction's evidence so the reason always quotes the winning direction's legs
     # (equivalence checks both ways; a reverse cross must not be described as a forward one).
+    # Each candidate also carries how to ACT on it: the forward cross is exploited by going
+    # long the broader leg / short the deeper leg; the reverse (equivalence-only) cross is the
+    # mirror. The trade construction is derived from whichever candidate wins — never hardcoded.
     candidates: list[dict[str, Any]] = []
     cb, cbs = _leg(child, "bid")
     pa, pas = _leg(parent, "ask")
     if cb is not None and pa is not None:
-        candidates.append({"gap": cb - pa, "sizes_ok": _pos(cbs) and _pos(pas),
-                           "frag": f"child bid {cb}c > parent ask {pa}c", "sizes": f"{cbs}/{pas}"})
+        candidates.append({
+            "gap": cb - pa, "sizes_ok": _pos(cbs) and _pos(pas),
+            "frag": f"child bid {cb}c > parent ask {pa}c", "sizes": f"{cbs}/{pas}",
+            "min_size": _min_size(cbs, pas),
+            "direction_label": "Long broader / short deeper",
+            "long_side": "parent", "long_ask_c": pa,    # buy YES on the broader leg @ its ask
+            "short_side": "child", "short_bid_c": cb,   # short (buy NO) the deeper leg vs its bid
+        })
     if equivalence:
         pb, pbs = _leg(parent, "bid")
         ca, cas = _leg(child, "ask")
         if pb is not None and ca is not None:
-            candidates.append({"gap": pb - ca, "sizes_ok": _pos(pbs) and _pos(cas),
-                               "frag": f"parent bid {pb}c > child ask {ca}c", "sizes": f"{pbs}/{cas}"})
+            candidates.append({
+                "gap": pb - ca, "sizes_ok": _pos(pbs) and _pos(cas),
+                "frag": f"parent bid {pb}c > child ask {ca}c", "sizes": f"{pbs}/{cas}",
+                "min_size": _min_size(pbs, cas),
+                "direction_label": "Long deeper / short broader",
+                "long_side": "child", "long_ask_c": ca,   # buy YES on the deeper leg @ its ask
+                "short_side": "parent", "short_bid_c": pb, # short (buy NO) the broader leg vs its bid
+            })
 
     exec_evaluable = bool(candidates)
     best = max(candidates, key=lambda c: c["gap"]) if candidates else None
@@ -297,6 +329,26 @@ def _classify(
         rule_flag, rule_note = _rule_flag(child, parent)
         reason = f"{reason}; {rule_note}"
 
+    # Profit / trade-construction context for the ONE actionable status. All None otherwise so
+    # the table columns stay blank and the per-player trade block renders nothing.
+    exec_fields: dict[str, Any] = {
+        "exec_gap_c": None, "exec_min_size": None, "exec_max_profit_dollars": None,
+        "exec_direction_label": None, "exec_long_side": None, "exec_long_ask_c": None,
+        "exec_short_side": None, "exec_short_bid_c": None,
+    }
+    if status == "EXECUTABLE_VIOLATION" and best is not None:
+        gap_c, min_size = best["gap"], best.get("min_size")
+        exec_fields = {
+            "exec_gap_c": gap_c,
+            "exec_min_size": min_size,
+            "exec_max_profit_dollars": round(gap_c * min_size / 100, 2) if min_size is not None else None,
+            "exec_direction_label": best["direction_label"],
+            "exec_long_side": best["long_side"],
+            "exec_long_ask_c": best["long_ask_c"],
+            "exec_short_side": best["short_side"],
+            "exec_short_bid_c": best["short_bid_c"],
+        }
+
     return {
         "status": status,
         "status_group": STATUS_GROUP[status],
@@ -305,6 +357,7 @@ def _classify(
         "executable_gap": exec_gap if exec_evaluable else None,
         "display_gap": display_gap,
         "quote_quality": worst,
+        **exec_fields,
     }
 
 
@@ -329,6 +382,15 @@ def _row(player: str, player_key: str, chain: str, child: dict | None, parent: d
         "reason": comp["reason"],
         "volume": min(vols) if vols else None,
         "comp_quote_quality": comp.get("quote_quality", ""),
+        # Profit / trade-construction context (populated only for EXECUTABLE_VIOLATION).
+        "exec_gap_c": comp.get("exec_gap_c"),
+        "exec_min_size": comp.get("exec_min_size"),
+        "exec_max_profit_dollars": comp.get("exec_max_profit_dollars"),
+        "exec_direction_label": comp.get("exec_direction_label"),
+        "exec_long_side": comp.get("exec_long_side"),
+        "exec_long_ask_c": comp.get("exec_long_ask_c"),
+        "exec_short_side": comp.get("exec_short_side"),
+        "exec_short_bid_c": comp.get("exec_short_bid_c"),
         "child_ticker": child.get("market_ticker") if child else "",
         "parent_ticker": parent.get("market_ticker") if parent else "",
         "child_url": child.get("kalshi_url") if child else "",
@@ -344,7 +406,9 @@ def build_checks(df: pd.DataFrame) -> pd.DataFrame:
         "player", "player_key", "chain", "child_contract", "parent_contract", "child_display_pct",
         "parent_display_pct", "child_bid_pct", "parent_ask_pct", "executable_gap",
         "display_gap", "status", "status_group", "rule_flag", "reason", "volume",
-        "comp_quote_quality", "child_ticker", "parent_ticker", "child_url", "parent_url",
+        "comp_quote_quality", "exec_gap_c", "exec_min_size", "exec_max_profit_dollars",
+        "exec_direction_label", "exec_long_side", "exec_long_ask_c", "exec_short_side",
+        "exec_short_bid_c", "child_ticker", "parent_ticker", "child_url", "parent_url",
         "child_category", "parent_category",
     ]
     if df is None or df.empty:
