@@ -18,8 +18,14 @@ from typing import Any
 
 import pandas as pd
 
-from config import DISPLAY_TOL_C
+from config import DISPLAY_TOL_C, NEAR_EDGE_MIN_C
 from data import CATEGORY
+from glossary import BLOCKERS, WATCHLIST_NOTE
+
+# Statuses that represent an actual price inconsistency with a buy direction (get a Buy YES / Buy NO
+# action plan). WIDE_QUOTE is deliberately excluded: ordering is consistent there, so it's
+# watchlist-only, not an opportunity to act on.
+ACTION_STATUSES = {"EXECUTABLE_VIOLATION", "DISPLAY_VIOLATION", "QUOTE_SIZE_MISSING"}
 
 # Canonical containment ladder, broad -> deep. A deeper node is a subset of the broader one.
 NODE_ORDER = ["Reach Semifinal", "Reach Final", "Win Tournament"]
@@ -233,6 +239,23 @@ def _worst_quality(a: str, b: str) -> str:
     return a if _QUALITY_RANK.get(a, 0) >= _QUALITY_RANK.get(b, 0) else b
 
 
+def _buy_no_c(row: dict[str, Any]) -> int | None:
+    """Cents to BUY NO on this leg — the literal "Buy NO" price.
+
+    Prefer Kalshi's reported `no_ask_c`; fall back to the structural identity `100 - yes_bid_c`
+    when the NO field is absent (on Kalshi's unified book the two are equal by construction)."""
+    api = _num(row.get("no_ask_c"))
+    if api is not None:
+        return api
+    yb = _num(row.get("yes_bid_c"))
+    return (100 - yb) if yb is not None else None
+
+
+def _is_active(row: dict[str, Any]) -> bool:
+    """Whether a leg's market is currently open for trading (Kalshi `status` == 'active')."""
+    return str(row.get("status") or "") == "active"
+
+
 def _rule_flag(child: dict[str, Any], parent: dict[str, Any]) -> tuple[str, str]:
     """Rule compatibility for an equivalence pair: (flag, note)."""
     cr = str(child.get("rules_primary") or "").lower()
@@ -349,6 +372,57 @@ def _classify(
             "exec_short_bid_c": best["short_bid_c"],
         }
 
+    # --- Buy-only action plan (Buy YES on one leg, Buy NO on the other) ----------------
+    # Every actionable inconsistency is expressed as two BUYS — never "sell"/"long"/"short".
+    # Direction follows the winning firm cross when one exists (gap > 0); otherwise it defaults to
+    # the forward containment direction (Buy YES the broader/parent, Buy NO the deeper/child), which
+    # is what a display-only inconsistency implies.
+    firm_cross = exec_evaluable and exec_gap is not None and exec_gap > 0
+    action_fields = {
+        "action_1_side": None, "action_1_leg": None, "action_1_price_c": None,
+        "action_2_side": None, "action_2_leg": None, "action_2_price_c": None,
+    }
+    if status in ACTION_STATUSES:
+        if firm_cross and best is not None:
+            long_leg, short_leg = best["long_side"], best["short_side"]
+        else:
+            long_leg, short_leg = "parent", "child"
+        long_row = parent if long_leg == "parent" else child
+        short_row = child if short_leg == "child" else parent
+        action_fields = {
+            "action_1_side": "buy_yes", "action_1_leg": long_leg,
+            "action_1_price_c": _num(long_row.get("yes_ask_c")),
+            "action_2_side": "buy_no", "action_2_leg": short_leg,
+            "action_2_price_c": _buy_no_c(short_row),
+        }
+
+    # --- Tradable now? + plain-English blockers ---------------------------------------
+    both_active = _is_active(child) and _is_active(parent)
+    if status == "EXECUTABLE_VIOLATION" and both_active:
+        tradable_now = "Yes — rule-dependent" if rule_flag else "Yes"
+    else:
+        tradable_now = "No"
+
+    blockers: list[str] = []
+    if status in ACTION_STATUSES:
+        if status == "QUOTE_SIZE_MISSING" or (firm_cross and not sizes_ok):
+            blockers.append(BLOCKERS["size_missing"])
+        elif status == "DISPLAY_VIOLATION":
+            blockers.append(BLOCKERS["display_only"])
+        for leg_label, row in (("broader", parent), ("deeper", child)):
+            q = row.get("quote_quality")
+            if q in ("No quote", "One-sided"):
+                blockers.append(BLOCKERS["no_quote"].format(leg=leg_label))
+            elif q == "Crossed":
+                blockers.append(BLOCKERS["crossed"].format(leg=leg_label))
+            s = str(row.get("status") or "")
+            if s and s != "active":
+                blockers.append(BLOCKERS["inactive"].format(leg=leg_label, status=s))
+        if rule_flag:
+            blockers.append(BLOCKERS["rule"])
+
+    watchlist_note = WATCHLIST_NOTE if status == "WIDE_QUOTE" else ""
+
     return {
         "status": status,
         "status_group": STATUS_GROUP[status],
@@ -357,19 +431,37 @@ def _classify(
         "executable_gap": exec_gap if exec_evaluable else None,
         "display_gap": display_gap,
         "quote_quality": worst,
+        "tradable_now": tradable_now,
+        "blockers": "; ".join(blockers),
+        "watchlist_note": watchlist_note,
         **exec_fields,
+        **action_fields,
     }
+
+
+def _buy_text(side: str | None, leg: str | None, price_c: Any,
+              child_contract: str, parent_contract: str) -> str:
+    """Compose the buy-only action line, e.g. 'Buy YES — Reach Final @ 46¢'. '' when no action."""
+    if side is None or leg is None:
+        return ""
+    word = "Buy YES" if side == "buy_yes" else "Buy NO"
+    contract = parent_contract if leg == "parent" else child_contract
+    price = f"{int(price_c)}¢" if price_c is not None else "—"
+    return f"{word} — {contract} @ {price}"
 
 
 def _row(player: str, player_key: str, chain: str, child: dict | None, parent: dict | None, comp: dict) -> dict:
     """Assemble one consistency-table row."""
     vols = [r.get("volume") for r in (child, parent) if r and r.get("volume") is not None]
+    child_contract = child.get("contract") if child else ""
+    parent_contract = parent.get("contract") if parent else ""
+    a1_leg, a2_leg = comp.get("action_1_leg"), comp.get("action_2_leg")
     return {
         "player": player,
         "player_key": player_key,
         "chain": chain,
-        "child_contract": child.get("contract") if child else "",
-        "parent_contract": parent.get("contract") if parent else "",
+        "child_contract": child_contract,
+        "parent_contract": parent_contract,
         "child_display_pct": child.get("display_pct") if child else None,
         "parent_display_pct": parent.get("display_pct") if parent else None,
         "child_bid_pct": child.get("yes_bid_pct") if child else None,
@@ -382,6 +474,24 @@ def _row(player: str, player_key: str, chain: str, child: dict | None, parent: d
         "reason": comp["reason"],
         "volume": min(vols) if vols else None,
         "comp_quote_quality": comp.get("quote_quality", ""),
+        "child_status": child.get("status") if child else "",
+        "parent_status": parent.get("status") if parent else "",
+        # Buy-only action plan + tradability (populated for inconsistency statuses).
+        "tradable_now": comp.get("tradable_now", "No"),
+        "blockers": comp.get("blockers", ""),
+        "watchlist_note": comp.get("watchlist_note", ""),
+        "action_1_side": comp.get("action_1_side"),
+        "action_1_leg": a1_leg,
+        "action_1_price_c": comp.get("action_1_price_c"),
+        "action_1_contract": (parent_contract if a1_leg == "parent" else child_contract) if a1_leg else "",
+        "action_1_text": _buy_text(comp.get("action_1_side"), a1_leg, comp.get("action_1_price_c"),
+                                   child_contract, parent_contract),
+        "action_2_side": comp.get("action_2_side"),
+        "action_2_leg": a2_leg,
+        "action_2_price_c": comp.get("action_2_price_c"),
+        "action_2_contract": (parent_contract if a2_leg == "parent" else child_contract) if a2_leg else "",
+        "action_2_text": _buy_text(comp.get("action_2_side"), a2_leg, comp.get("action_2_price_c"),
+                                   child_contract, parent_contract),
         # Profit / trade-construction context (populated only for EXECUTABLE_VIOLATION).
         "exec_gap_c": comp.get("exec_gap_c"),
         "exec_min_size": comp.get("exec_min_size"),
@@ -406,7 +516,11 @@ def build_checks(df: pd.DataFrame) -> pd.DataFrame:
         "player", "player_key", "chain", "child_contract", "parent_contract", "child_display_pct",
         "parent_display_pct", "child_bid_pct", "parent_ask_pct", "executable_gap",
         "display_gap", "status", "status_group", "rule_flag", "reason", "volume",
-        "comp_quote_quality", "exec_gap_c", "exec_min_size", "exec_max_profit_dollars",
+        "comp_quote_quality", "child_status", "parent_status",
+        "tradable_now", "blockers", "watchlist_note",
+        "action_1_side", "action_1_leg", "action_1_price_c", "action_1_contract", "action_1_text",
+        "action_2_side", "action_2_leg", "action_2_price_c", "action_2_contract", "action_2_text",
+        "exec_gap_c", "exec_min_size", "exec_max_profit_dollars",
         "exec_direction_label", "exec_long_side", "exec_long_ask_c", "exec_short_side",
         "exec_short_bid_c", "child_ticker", "parent_ticker", "child_url", "parent_url",
         "child_category", "parent_category",
@@ -467,3 +581,40 @@ def build_checks(df: pd.DataFrame) -> pd.DataFrame:
                 out.append(_row(player, player_key, f"{row.get('stage') or '?'} match", row, None, comp))
 
     return pd.DataFrame(out, columns=columns)
+
+
+# Trader-dashboard buckets. Pure mapping from one consistency-check row to the dashboard section it
+# belongs in — reads only fields already produced by build_checks; no math, no side effects.
+DASHBOARD_BUCKETS = (
+    "actionable", "blocked", "near_edge", "display_signal", "wide_signal", "data_quality", "clean",
+)
+
+
+def bucket_of(check_row: dict[str, Any]) -> str:
+    """Classify a check row into a dashboard bucket (see DASHBOARD_BUCKETS).
+
+    - actionable     : firm executable cross that is tradable now (incl. rule-dependent, shown with a caveat)
+    - blocked        : a real/firm cross that cannot be traded now (no size, or an inactive/finalized leg)
+    - near_edge      : consistent but within NEAR_EDGE_MIN_C cents of crossing, on Tight/OK quotes
+    - display_signal : display-only inconsistency (DISPLAY_VIOLATION)
+    - wide_signal    : ordering consistent but the quote is wide (WIDE_QUOTE)
+    - data_quality   : missing firm quote / missing layer / unverifiable relationship
+    - clean          : consistent and not near the edge
+    """
+    status = check_row.get("status")
+    if status == "EXECUTABLE_VIOLATION":
+        return "actionable" if str(check_row.get("tradable_now") or "").startswith("Yes") else "blocked"
+    if status == "QUOTE_SIZE_MISSING":
+        return "blocked"
+    if status == "DISPLAY_VIOLATION":
+        return "display_signal"
+    if status == "WIDE_QUOTE":
+        return "wide_signal"
+    if status in ("MISSING_QUOTE", "MISSING_LAYER", "UNKNOWN_RELATIONSHIP"):
+        return "data_quality"
+    if status == "CLEAN":
+        gap = _num(check_row.get("executable_gap"))
+        if gap is not None and NEAR_EDGE_MIN_C <= gap <= 0 and check_row.get("comp_quote_quality") in ("Tight", "OK"):
+            return "near_edge"
+        return "clean"
+    return "data_quality"

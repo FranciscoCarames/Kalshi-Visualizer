@@ -122,6 +122,31 @@ def discover_tennis_series() -> list[str]:
     return sorted(set(tickers))
 
 
+def get_series_titles(tickers: list[str], max_workers: int = 8) -> dict[str, str]:
+    """Fetch the human title for each series (used to build slugged Kalshi web URLs).
+
+    Returns ``{ticker: title}``. A series whose metadata can't be fetched degrades to an empty
+    string (the URL builder then falls back to the series page) — this never raises, because a
+    missing title must not break the data load.
+    """
+    titles: dict[str, str] = {}
+
+    def _title(ticker: str) -> str:
+        payload = _get(f"/series/{ticker}", {})
+        series = payload.get("series") or payload
+        return str(series.get("title") or "")
+
+    with ThreadPoolExecutor(max_workers=max_workers) as pool:
+        futures = {pool.submit(_title, t): t for t in tickers}
+        for future in as_completed(futures):
+            ticker = futures[future]
+            try:
+                titles[ticker] = future.result()
+            except Exception:  # noqa: BLE001 - a missing title is non-fatal (URL falls back)
+                titles[ticker] = ""
+    return titles
+
+
 def get_events_for_series(
     tickers: list[str], status: str = "open", max_workers: int = 8
 ) -> tuple[list[tuple[str, list[dict[str, Any]]]], list[tuple[str, str]]]:

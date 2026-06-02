@@ -227,9 +227,54 @@ def _pct(value: float | None) -> float | None:
     return round(value * 100, 1) if value is not None else None
 
 
-def _kalshi_url(series_ticker: str) -> str:
-    """Best-effort link to the contract's Kalshi page (the series page)."""
-    return f"{KALSHI_WEB_BASE}/{(series_ticker or '').lower()}"
+def _slugify(text: Any) -> str:
+    """Slug used in Kalshi web URLs, derived from the SERIES title.
+
+    e.g. "French Open Women's" -> "french-open-womens" (matches the live
+    kalshi.com/markets/<series>/<slug>/<event> path). Apostrophes are dropped (not turned into a
+    hyphen) so "Women's" -> "womens", then any other non-alphanumeric run becomes a single hyphen.
+    """
+    t = str(text or "").lower().replace("'", "").replace("’", "")
+    t = re.sub(r"[^a-z0-9]+", "-", t).strip("-")
+    return t
+
+
+def kalshi_market_url(series_ticker: str, series_title: Any, event_ticker: str) -> str:
+    """Deep link to the specific market's Kalshi page, with a guaranteed-resolving fallback.
+
+    Verified live format: ``https://kalshi.com/markets/<series_lower>/<slug>/<event_lower>`` where
+    ``slug = _slugify(series_title)`` (the event page lists that contract's player markets). When the
+    series title or event ticker is missing we cannot build the slugged deep link, so we fall back to
+    the always-resolving series page ``https://kalshi.com/markets/<series_lower>`` rather than emit a
+    URL that would 404.
+    """
+    series_lower = (series_ticker or "").lower()
+    slug = _slugify(series_title)
+    event_lower = (event_ticker or "").lower()
+    if series_lower and slug and event_lower:
+        return f"{KALSHI_WEB_BASE}/{series_lower}/{slug}/{event_lower}"
+    return f"{KALSHI_WEB_BASE}/{series_lower}"
+
+
+def link_audit(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """For each unique contract URL, the identifiers it should encode — the deterministic
+    "links go to the correct page" check.
+
+    Returns one record per distinct `kalshi_url` with the `series`, `event_ticker`, and how many
+    contracts share it, so a test (or the Debug panel) can confirm the URL matches the contract's
+    identifiers without hitting the (bot-throttled) Kalshi website.
+    """
+    seen: dict[str, dict[str, Any]] = {}
+    for r in rows or []:
+        url = r.get("kalshi_url")
+        if not url:
+            continue
+        entry = seen.setdefault(
+            url, {"url": url, "series": r.get("series", ""),
+                  "event_ticker": r.get("event_ticker", ""), "contracts": 0}
+        )
+        entry["contracts"] += 1
+    return sorted(seen.values(), key=lambda d: d["url"])
 
 
 def _mapping_confidence(competitor: Any, name: Any) -> tuple[str, str]:
@@ -338,13 +383,18 @@ def display_player_name(row: dict[str, Any]) -> str:
     return _titleize_fallback(raw or key) or raw
 
 
-def build_contracts(series_ticker: str, events: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def build_contracts(
+    series_ticker: str, events: list[dict[str, Any]], series_title: Any = ""
+) -> list[dict[str, Any]]:
     """Flatten one series' French Open events into per-player contract rows.
 
     Each row is one market from a single player's perspective. Players are keyed by their
     stable `tennis_competitor` UUID so the same player merges across every series/event.
     Opponent is derived (from sibling markets) ONLY for head-to-head match events; winner /
     advancement / set / score markets are single-sided and have no opponent.
+
+    `series_title` (from /series/<ticker>) is used to build the slugged Kalshi deep link to each
+    event's page; when absent, links fall back to the series page (see `kalshi_market_url`).
     """
     kind = classify_kind(series_ticker)
     tour = tour_of(series_ticker)
@@ -357,6 +407,8 @@ def build_contracts(series_ticker: str, events: list[dict[str, Any]]) -> list[di
         markets = event.get("markets") or []
         competition = (event.get("product_metadata") or {}).get("competition", "")
         names = [((m.get("yes_sub_title") or "").strip()) for m in markets]
+        # Deep link to THIS event's page (lists the player markets) — built once per event.
+        event_url = kalshi_market_url(series_ticker, series_title, event.get("event_ticker", ""))
 
         for idx, market in enumerate(markets):
             name = names[idx]
@@ -392,6 +444,15 @@ def build_contracts(series_ticker: str, events: list[dict[str, Any]]) -> list[di
             last_c = to_cents(market.get("last_price_dollars"))
             bid_size = to_float(market.get("yes_bid_size_fp"))
             ask_size = to_float(market.get("yes_ask_size_fp"))
+
+            # NO-side prices (Kalshi reports these directly). On Kalshi's unified book
+            # no_ask == 1 - yes_bid exactly, but we read the real fields so the displayed "Buy NO"
+            # price is literal. There are NO NO-side size fields: buying NO matches resting YES bids,
+            # so the tradable size of a Buy-NO leg is `yes_bid_size`.
+            no_bid = to_float(market.get("no_bid_dollars"))
+            no_ask = to_float(market.get("no_ask_dollars"))
+            no_bid_c = to_cents(market.get("no_bid_dollars"))
+            no_ask_c = to_cents(market.get("no_ask_dollars"))
 
             # Time label depends on contract type: match-result contracts have a real match
             # time (occurrence); everything else shows when the market closes/expires.
@@ -437,12 +498,17 @@ def build_contracts(series_ticker: str, events: list[dict[str, Any]]) -> list[di
                     "display_c": display_cents(bid_c, ask_c, last_c),
                     "yes_bid_size": bid_size,
                     "yes_ask_size": ask_size,
+                    # NO-side prices (real, from the API). No NO sizes exist on Kalshi.
+                    "no_bid_pct": _pct(no_bid),
+                    "no_ask_pct": _pct(no_ask),
+                    "no_bid_c": no_bid_c,
+                    "no_ask_c": no_ask_c,
                     "volume": to_float(market.get("volume_fp")),
                     "open_interest": to_float(market.get("open_interest_fp")),
                     "status": market.get("status", ""),
                     "time_value": time_value,
                     "time_kind": time_kind,
-                    "kalshi_url": _kalshi_url(series_ticker),
+                    "kalshi_url": event_url,
                     # Identifiers + raw fields for the debug expander.
                     "series": series_ticker,
                     "event_ticker": event.get("event_ticker", ""),
@@ -451,6 +517,8 @@ def build_contracts(series_ticker: str, events: list[dict[str, Any]]) -> list[di
                     "market_title": market.get("title", ""),
                     "raw_yes_bid": market.get("yes_bid_dollars"),
                     "raw_yes_ask": market.get("yes_ask_dollars"),
+                    "raw_no_bid": market.get("no_bid_dollars"),
+                    "raw_no_ask": market.get("no_ask_dollars"),
                     "raw_last": market.get("last_price_dollars"),
                     "rules_primary": market.get("rules_primary", ""),
                 }

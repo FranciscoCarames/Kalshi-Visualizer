@@ -39,6 +39,16 @@ environment require running the Bash tool with the sandbox disabled (network is 
 - **Prices are fixed-point dollar STRINGS** (since Mar 2026): `yes_bid_dollars`, `yes_ask_dollars`,
   `last_price_dollars` (e.g. `"0.6500"`); sizes `yes_bid_size_fp`/`yes_ask_size_fp`; volume `volume_fp`,
   `open_interest_fp`. An **empty order book is `0.00/1.00`** — never a real 50%.
+- **NO-side prices exist** (`no_bid_dollars`, `no_ask_dollars`) and are read directly (the "Buy NO"
+  price). On Kalshi's unified book `no_ask == 1 − yes_bid` exactly (verified live). There are **no
+  NO-side size fields** — buying NO matches resting YES bids, so a Buy-NO leg's tradable size is
+  `yes_bid_size`. `data._buy_no_c`-equivalent fallback is `100 − yes_bid_c` when `no_ask_c` is absent.
+- **Market `status`** (`active`, `finalized`, `settled`, …) is the "tradable right now" signal — only
+  `active` markets are open for trading; consistency uses it to set `tradable_now`.
+- **Web URL format (verified live):** `https://kalshi.com/markets/<series_lower>/<slug>/<event_lower>`
+  where `slug = data._slugify(series.title)` (e.g. `KXFOWOMEN` + "French Open Women's" →
+  `…/kxfowomen/french-open-womens/kxfowomen-26`). Series titles come from `/series/<ticker>`
+  (`kalshi_client.get_series_titles`); when a title is missing the link falls back to the series page.
 - **Player identity:** `custom_strike.tennis_competitor` (stable UUID) is the join key across all series;
   `yes_sub_title` is the display name.
 - **French Open filter:** event belongs to the FO when `product_metadata.competition` contains
@@ -65,9 +75,13 @@ kalshi_client.py   # read-only HTTP: paginated GET, retry/backoff, sized pool,
 data.py            # NO streamlit: parsing, to_cents(), FO filtering, classify_kind/tour_of,
                    #   pricing helpers (yes_mid/spread/quote_quality/display_prob), build_contracts()
 consistency.py     # NO streamlit: node_of, build_player_nodes, representative, expected_nodes,
-                   #   layer_spreads, build_checks (the checker)
+                   #   layer_spreads, build_checks; buy-only action plan + tradable_now + blockers
+glossary.py        # NO streamlit: GLOSSARY{term:{short,long}}, BLOCKERS, WATCHLIST_NOTE, help_for
+                   #   — single source for in-app tooltips/expander, blocker text, and the docs
 app.py             # Streamlit ONLY: consistency table + per-player detail; right-hand controls
-tests/             # pytest: test_data.py, test_consistency.py    (conftest.py, requirements-dev.txt)
+scripts/           # check_links.py (local link reachability), export_glossary.py (-> docs/GLOSSARY.md)
+docs/GLOSSARY.md   # generated in-depth glossary (also published as a Google Doc)
+tests/             # pytest: test_data.py, test_consistency.py, test_glossary.py
 ```
 
 `data.py` and `consistency.py` MUST stay free of Streamlit imports (independently testable).
@@ -78,9 +92,9 @@ tests/             # pytest: test_data.py, test_consistency.py    (conftest.py, 
 - **Contract row (build_contracts), partial schema:** `player, player_key, player_key_source,
   mapping_confidence, mapping_reason, tour, kind, category, contract, stage, stage_rank, opponent,
   display_pct, yes_mid_pct, last_pct, yes_bid_pct, yes_ask_pct, spread_cents, quote_quality, yes_bid_c,
-  yes_ask_c, last_c, display_c, yes_bid_size, yes_ask_size, volume, open_interest, status, time_value,
-  time_kind, kalshi_url, series, event_ticker, market_ticker, event_title, market_title, raw_yes_bid,
-  raw_yes_ask, raw_last, rules_primary`.
+  yes_ask_c, last_c, display_c, yes_bid_size, yes_ask_size, no_bid_pct, no_ask_pct, no_bid_c, no_ask_c,
+  volume, open_interest, status, time_value, time_kind, kalshi_url, series, event_ticker, market_ticker,
+  event_title, market_title, raw_yes_bid, raw_yes_ask, raw_no_bid, raw_no_ask, raw_last, rules_primary`.
 
 ## Pricing model
 
@@ -99,6 +113,14 @@ Anything unprovable → `UNKNOWN_RELATIONSHIP` (never a violation).
 - **Call findings "executable inconsistencies", NEVER "arbitrage."** True arbitrage also needs the two
   markets' settlement rules to match, which we don't auto-verify → match-alignment rows always carry
   `RULE_CHECK_REQUIRED` (→ `RULE_MISMATCH` if a light `rules_primary` token compare differs).
+- **Buy-only action language (do not regress):** the UI must express every opportunity as two BUYS —
+  **Buy YES** on the broader/parent leg, **Buy NO** on the deeper/child leg — never "sell"/"long"/
+  "short". `_classify` emits `action_1_*`/`action_2_*` (+ `tradable_now`, `blockers`, `watchlist_note`)
+  for `EXECUTABLE_VIOLATION`/`DISPLAY_VIOLATION`/`QUOTE_SIZE_MISSING`; the Buy-NO price is the real
+  `no_ask_c` (fallback `100 − yes_bid_c`). `tradable_now` is "Yes" only when `EXECUTABLE_VIOLATION` +
+  both legs `active` + no rule flag ("Yes — rule-dependent" for equivalence). **`WIDE_QUOTE` gets no
+  action (watchlist-only).** `blockers`/glossary text is single-sourced from `glossary.py`. The
+  executable-gap/profit math is unchanged.
 - **All comparison logic in exact integer cents** (`data.to_cents`, Decimal); floats are display-only.
 - **Executable and display tests are independent.** Executable needs firm `yes_bid_c`/`yes_ask_c` **and
   positive sizes**; a missing display blocks only the display test.
@@ -140,15 +162,37 @@ her early-round match → `UNKNOWN_RELATIONSHIP`; Gauff/Swiatek empty books → 
 - **Deterministic duplicates:** `build_player_nodes` picks the representative by a stable rule; `duplicate_node_sources` surfaces it. *(PR #13)*
 - **FO filter:** a present non-FO `competition` is disqualifying; date-window fallback only with no competition info. *(PR #13)*
 
-## UI
+## UI — trader-first dashboard (do not regress the section order)
 
-`st.columns([3, 1])`: main area left, **controls panel right**. Controls: Refresh, Tournament radio
-(Women/Men/Both, **default Women**), Scan-all checkbox, Contract type (**default Tournament winner +
-Stage advancement**; enabling Match result adds alignment rows), Outcome status, Quote quality, Min
-volume, Player. Main: consistency table (sorted Broken→Warning→Missing→Unknown→Clean; clean rows
-filterable, never hidden); per-player detail = progression chain → raw ladder spreads → mapping
-confidence + expected-vs-found → all contracts → export → debug expander. Tables only, no charts. Use
-`width="stretch"` (the `use_container_width` arg is deprecated).
+**Controls live in `st.sidebar`; the main page is full width.** Sidebar (top→bottom): Refresh,
+Tournament radio (**default Women**), Contract type (**default Tournament winner + Stage advancement**;
+enabling Match result adds alignment rows), `Advanced — data scope` expander (Scan-all, Show
+explanations toggle — both read **before** the data load), Minimum volume, `Advanced filters` expander
+(Outcome status, Quote quality, Player selector).
+
+**Filter split (critical):** dashboard sections read `dash_base` = checks filtered by **basic only**
+(contract type + min volume); **Outcome status / Quote quality apply ONLY to Full diagnostics** so the
+Actionable-now table is never hidden by diagnostic filters. `consistency.bucket_of(row)` (pure) maps
+each check row to a section: actionable / blocked / near_edge / display_signal / wide_signal /
+data_quality / clean.
+
+**Main area, top→bottom:** (1) header + refresh caption; (2) six summary `st.metric` cards —
+Actionable now, Gross quoted profit (Σ over actionable), Blocked, Near-edge, Data-quality issues, Last
+refreshed; (3) **Actionable now** (first real table, always visible; only firm executable crosses that
+are tradable now incl. rule-dependent-with-caveat; empty → "No actionable gross edges right now.");
+(4) **Blocked opportunities** (firm cross blocked by no-size/inactive/finalized; buys marked
+indicative; "Why blocked"); (5) **Near-edge watchlist** (firm gap in `[NEAR_EDGE_MIN_C, 0]`¢ Tight/OK;
+no buy instructions); then collapsed expanders: (6) **Watchlist signals** (display inconsistencies +
+wide quotes — monitoring, not trades); (7) **Selected player detail** (chain → ladder spreads → Buy
+YES/Buy NO action cards → mapping → expected-vs-found → all contracts incl. NO bid/ask → export);
+(8) **Full diagnostics: all comparisons** (the complete table, advanced filters applied here);
+(9) **Debug** (failed series + per-player raw fields + link audit). Tables only, no charts; use
+`width="stretch"`.
+
+**Status display labels (no "Potential edge"; "edge" only for a positive executable gap):**
+`EXECUTABLE_VIOLATION`→"Actionable gross edge", `DISPLAY_VIOLATION`→"Display inconsistency",
+`WIDE_QUOTE`→"Wide quote / watchlist", `MISSING_QUOTE`→"Missing firm quote",
+`QUOTE_SIZE_MISSING`→"Blocked: no size", `CLEAN`→"Consistent". Internal status strings are unchanged.
 
 ## Conventions & gotchas
 
@@ -163,8 +207,11 @@ confidence + expected-vs-found → all contracts → export → debug expander. 
   a browser "Rerun" won't pick it up — **fully stop and restart** `streamlit run app.py`. For a phantom
   `ImportError`, clear stale bytecode too: `rm -rf __pycache__ tests/__pycache__`. (This already cost time once.)
 - The FO date window in `config.py` is year-specific — update for future tournaments.
-- The Kalshi **web** site (`kalshi.com`) is bot-throttled (HTTP 429); row links point to the series page
-  `https://kalshi.com/markets/<series>` as best effort.
+- The Kalshi **web** site (`kalshi.com`) is bot-throttled (HTTP 429), so automated link-reachability
+  checks from this environment are unreliable (everything 429s — not a broken link). Links now point at
+  the specific market via the verified deep-link format (see API section); `data.link_audit` proves
+  link *correctness* (URL ↔ contract identifiers) deterministically, and `scripts/check_links.py` does a
+  best-effort live reachability check meant to be run from your own (unthrottled) network.
 - Windows LF→CRLF warnings on commit are harmless.
 
 ## Claude Code specifics
@@ -200,3 +247,8 @@ date-window corroboration). Older PRs #2/#3/#5 are closed/superseded.
 6. v1 raw stage-ladder spreads beneath the ladder; NaN-safe + Quote column.
 7. Audit hardening — Tier-1 (key-based grouping, truthful reasons, tour map, crossed-book guard, JSON
    safety) merged; Tier-2 (pagination/duplicate/date-window) in PR #13.
+8. Buy-only action plan: real Kalshi NO prices, verified deep links, `tradable_now` + plain-English
+   blockers, single-sourced glossary (`glossary.py` + Google Doc).
+9. Trader-first dashboard: sidebar controls, full-width summary cards + Actionable now / Blocked /
+   Near-edge on top, diagnostics + player detail + debug collapsed below; `consistency.bucket_of`
+   routes rows; "Potential edge" wording removed.

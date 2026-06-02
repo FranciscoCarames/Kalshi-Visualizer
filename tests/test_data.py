@@ -229,6 +229,74 @@ def test_build_contracts_exposes_internal_identifiers():
     assert cir["competitor_uuid"] == "uuid-cir"
 
 
+# --- v1.3: real deep links + NO-side prices ------------------------------------------
+def test_slugify_matches_kalshi_series_slug():
+    assert data._slugify("French Open Women's") == "french-open-womens"
+    assert data._slugify("French Open Men's") == "french-open-mens"
+    assert data._slugify("ATP Stage Qualifiers") == "atp-stage-qualifiers"
+    assert data._slugify("") == ""
+
+
+def test_kalshi_market_url_deep_link_and_fallback():
+    # Verified live format: /markets/<series_lower>/<slug>/<event_lower>
+    assert data.kalshi_market_url("KXFOWOMEN", "French Open Women's", "KXFOWOMEN-26") == \
+        "https://kalshi.com/markets/kxfowomen/french-open-womens/kxfowomen-26"
+    # No title -> can't build the slug -> fall back to the always-resolving series page.
+    assert data.kalshi_market_url("KXFOWOMEN", "", "KXFOWOMEN-26") == \
+        "https://kalshi.com/markets/kxfowomen"
+    # No event ticker -> series page too.
+    assert data.kalshi_market_url("KXFOWOMEN", "French Open Women's", "") == \
+        "https://kalshi.com/markets/kxfowomen"
+
+
+def _fo_winner_event_with_no_prices():
+    return {
+        "event_ticker": "KXFOWOMEN-26",
+        "title": "Women's French Open Winner",
+        "product_metadata": {"competition": "French Open Women Singles"},
+        "markets": [{
+            "ticker": "KXFOWOMEN-26-SAB", "yes_sub_title": "Aryna Sabalenka",
+            "custom_strike": {"tennis_competitor": "uuid-sab"},
+            "yes_bid_dollars": "0.34", "yes_ask_dollars": "0.36", "last_price_dollars": "0.35",
+            "no_bid_dollars": "0.64", "no_ask_dollars": "0.66",
+            "yes_bid_size_fp": "100", "yes_ask_size_fp": "100",
+            "volume_fp": "10", "open_interest_fp": "5", "status": "active",
+            "title": "Will Aryna Sabalenka win the KXFOWOMEN-26?",
+            "close_time": "2026-06-08T09:00:00Z",
+        }],
+    }
+
+
+def test_build_contracts_parses_no_side_prices_and_deep_link():
+    rows = data.build_contracts("KXFOWOMEN", [_fo_winner_event_with_no_prices()],
+                                series_title="French Open Women's")
+    assert len(rows) == 1
+    r = rows[0]
+    # NO-side prices are read from the API (no_ask = 1 - yes_bid on Kalshi).
+    assert r["no_bid_c"] == 64 and r["no_ask_c"] == 66
+    assert r["no_bid_pct"] == 64.0 and r["no_ask_pct"] == 66.0
+    assert r["raw_no_ask"] == "0.66"
+    # Deep link built from the series title + event ticker.
+    assert r["kalshi_url"] == "https://kalshi.com/markets/kxfowomen/french-open-womens/kxfowomen-26"
+
+
+def test_build_contracts_url_falls_back_without_title():
+    rows = data.build_contracts("KXFOWOMEN", [_fo_winner_event_with_no_prices()])  # no series_title
+    assert rows[0]["kalshi_url"] == "https://kalshi.com/markets/kxfowomen"
+
+
+def test_link_audit_maps_url_to_identifiers():
+    rows = data.build_contracts("KXFOWOMEN", [_fo_winner_event_with_no_prices()],
+                                series_title="French Open Women's")
+    audit = data.link_audit(rows)
+    assert len(audit) == 1
+    entry = audit[0]
+    assert entry["series"] == "KXFOWOMEN"
+    assert entry["event_ticker"] == "KXFOWOMEN-26"
+    assert entry["contracts"] == 1
+    assert "kxfowomen-26" in entry["url"]
+
+
 def test_build_contracts_drops_non_french_open():
     ev = _fo_match_event()
     ev["product_metadata"]["competition"] = "Wimbledon Women Singles"

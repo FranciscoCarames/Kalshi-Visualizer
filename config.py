@@ -33,6 +33,11 @@ SPREAD_REASONABLE = 0.20
 # Layer-consistency: ignore display-price gaps smaller than this many cents (noise).
 DISPLAY_TOL_C = 1
 
+# Near-edge watchlist (trader dashboard): a CLEAN row whose firm executable gap (child bid − parent
+# ask, in cents) is within this many cents BELOW zero is "close to actionable" and surfaced on the
+# near-edge watchlist (e.g. -5 → gaps in [-5, 0]). Tight/OK quotes only; never a buy instruction.
+NEAR_EDGE_MIN_C = -5
+
 # Kalshi web frontend base for per-series market pages.
 KALSHI_WEB_BASE = "https://kalshi.com/markets"
 
