@@ -480,3 +480,20 @@ def test_bucket_covers_all_returns_are_known():
     for s in ("CLEAN", "EXECUTABLE_VIOLATION", "DISPLAY_VIOLATION", "WIDE_QUOTE",
               "MISSING_QUOTE", "MISSING_LAYER", "QUOTE_SIZE_MISSING", "UNKNOWN_RELATIONSHIP"):
         assert consistency.bucket_of(crow(s, tradable_now="Yes")) in consistency.DASHBOARD_BUCKETS
+
+
+# --- v1.4: containment ladders grouped by (player_key, tournament) --------------------
+def test_build_checks_groups_by_player_and_tournament():
+    import pandas as pd
+    # Same competitor (uuid-x) in two tournaments. FO has Reach Final + Win Tournament (a real pair);
+    # Wimbledon has only Reach Semifinal. The FO ladder must NOT be completed from Wimbledon rows.
+    fo_final = _ckey_row("Player X", "uuid-x", "advance", "Final", 30); fo_final["tournament"] = "French Open"
+    fo_champ = _ckey_row("Player X", "uuid-x", "winner", "Champion", 20); fo_champ["tournament"] = "French Open"
+    wim_sf = _ckey_row("Player X", "uuid-x", "advance", "Semifinal", 60); wim_sf["tournament"] = "Wimbledon"
+    checks = consistency.build_checks(pd.DataFrame([fo_final, fo_champ, wim_sf]))
+    assert set(checks["tournament"]) <= {"French Open", "Wimbledon"}
+    # FO formed a real (non-missing) comparison; Wimbledon (only SF) is all missing-layer — no cross-fill.
+    fo = checks[checks["tournament"] == "French Open"]
+    wim = checks[checks["tournament"] == "Wimbledon"]
+    assert (fo["status"] != "MISSING_LAYER").any()
+    assert (wim["status"] == "MISSING_LAYER").all()

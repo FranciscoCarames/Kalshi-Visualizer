@@ -22,14 +22,17 @@ STATUS_MODES = ["Any", "Active only"]
 def apply_membership(
     df: pd.DataFrame,
     *,
-    competitions: Iterable[str] | None = None,
+    tournaments: Iterable[str] | None = None,
     categories: Iterable[str] | None = None,
     layers: Iterable[str] | None = None,
-    event_query: str = "",
-    player_query: str = "",
+    events: Iterable[str] | None = None,
+    players: Iterable[str] | None = None,
     min_volume: float = 0,
 ) -> pd.DataFrame:
-    """Narrow the *universe* of comparisons. Applied to every section, including Actionable now."""
+    """Narrow the *universe* of comparisons. Applied to every section, including Actionable now.
+
+    Membership selections come from sidebar dropdowns; an empty/None selection means "no filter".
+    These are client-side only — they do NOT change which series are fetched (that's `families`)."""
     if df is None or df.empty:
         return df
     out = df
@@ -40,19 +43,16 @@ def apply_membership(
             (out["child_category"].isin(cats) | out["child_category"].eq(""))
             & (out["parent_category"].isin(cats) | out["parent_category"].eq(""))
         ]
-    if competitions:
-        out = out[out["competition"].isin(set(competitions))]
+    if tournaments:
+        out = out[out["tournament"].isin(set(tournaments))]
     if layers:
         sel = set(layers)
         out = out[out["layers"].apply(lambda L: bool(sel & set(L)) if isinstance(L, (set, tuple, list)) else False)]
-    if event_query:
-        q = event_query.strip().lower()
-        ce = out["child_event_ticker"].fillna("").str.lower()
-        pe = out["parent_event_ticker"].fillna("").str.lower()
-        out = out[ce.str.contains(q, regex=False) | pe.str.contains(q, regex=False)]
-    if player_query:
-        q = player_query.strip().lower()
-        out = out[out["player"].fillna("").str.lower().str.contains(q, regex=False)]
+    if events:
+        evset = set(events)
+        out = out[out["child_event_ticker"].isin(evset) | out["parent_event_ticker"].isin(evset)]
+    if players:
+        out = out[out["player_key"].isin(set(players))]
     if min_volume:
         out = out[out["volume"].fillna(0) >= min_volume]
     return out

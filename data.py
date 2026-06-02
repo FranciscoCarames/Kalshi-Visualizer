@@ -383,10 +383,70 @@ def display_player_name(row: dict[str, Any]) -> str:
     return _titleize_fallback(raw or key) or raw
 
 
+# Tokens stripped from a competition string to get a tournament-level label (gender/discipline are
+# carried by player_key + tour, so they must not split one tournament's ladder).
+_TOURNAMENT_STRIP = {"men", "mens", "men's", "women", "womens", "women's", "mixed",
+                     "singles", "single", "doubles", "double"}
+# Known tournament keywords (extend as the app generalizes), checked against event/series titles.
+_TOURNAMENT_KEYWORDS = [
+    ("French Open", ["french open", "roland garros", "roland-garros"]),
+    ("Wimbledon", ["wimbledon"]),
+    ("US Open", ["us open", "u.s. open"]),
+    ("Australian Open", ["australian open"]),
+]
+
+
+def _clean_tournament(competition: Any) -> str:
+    """Tournament-level label from a competition string, dropping gender/discipline tokens.
+
+    "French Open Men Singles" / "French Open Women Singles" -> "French Open". Returns "" when there is
+    no competition to clean (the caller then falls back to other signals)."""
+    text = str(competition or "").strip()
+    if not text:
+        return ""
+    kept = [w for w in re.split(r"\s+", text) if w.casefold() not in _TOURNAMENT_STRIP]
+    cleaned = " ".join(kept).strip()
+    return cleaned or text   # if everything was a strip-token, keep the original rather than ""
+
+
+def _tournament_from_title(*texts: Any) -> str:
+    blob = " ".join(str(t) for t in texts if t).casefold()
+    for label, kws in _TOURNAMENT_KEYWORDS:
+        if any(k in blob for k in kws):
+            return label
+    return ""
+
+
+def tournament_of(competition: Any, series_ticker: Any, event_ticker: Any,
+                  event_title: Any) -> tuple[str, str]:
+    """Return ``(tournament_key, source)`` — the grouping key for containment ladders, plus where it
+    came from (debug). The key is NEVER empty for a real row, and prefers tournament-level identifiers
+    so a single tournament's rounds are never split:
+
+      1. cleaned `competition`        -> source "competition"
+      2. known winner ticker          -> "French Open" (winner events often lack competition)  "winner_ticker"
+      3. tournament keyword in title  -> source "title_keyword"
+      4. last-resort stable fallback  -> source "fallback"  (label "Unknown · <id>")
+
+    The fallback can only *fail to form* a ladder (under-group), never MIX two unrelated ladders.
+    """
+    cleaned = _clean_tournament(competition)
+    if cleaned:
+        return cleaned, "competition"
+    if str(series_ticker or "").upper() in FO_WINNER_TICKERS:
+        return "French Open", "winner_ticker"
+    kw = _tournament_from_title(event_title)
+    if kw:
+        return kw, "title_keyword"
+    fallback = (str(competition or "").strip() or str(event_ticker or "").strip()
+                or str(event_title or "").strip() or str(series_ticker or "").strip() or "unknown")
+    return f"Unknown · {fallback}", "fallback"
+
+
 def build_contracts(
     series_ticker: str, events: list[dict[str, Any]], series_title: Any = ""
 ) -> list[dict[str, Any]]:
-    """Flatten one series' French Open events into per-player contract rows.
+    """Flatten one tennis series' events into per-player contract rows.
 
     Each row is one market from a single player's perspective. Players are keyed by their
     stable `tennis_competitor` UUID so the same player merges across every series/event.
@@ -402,13 +462,18 @@ def build_contracts(
 
     rows: list[dict[str, Any]] = []
     for event in events or []:
-        if not is_french_open_event(event):
-            continue
+        # NOTE: no French-Open gate here — all (tennis) events are included and stamped with a
+        # `tournament` grouping key. The hardcoded FO restriction was removed to generalize; narrowing
+        # to a tournament is now a client-side filter (is_french_open_event is kept as a helper).
         markets = event.get("markets") or []
         competition = (event.get("product_metadata") or {}).get("competition", "")
+        event_ticker = event.get("event_ticker", "")
+        tournament, tournament_source = tournament_of(
+            competition, series_ticker, event_ticker, event.get("title", "")
+        )
         names = [((m.get("yes_sub_title") or "").strip()) for m in markets]
         # Deep link to THIS event's page (lists the player markets) — built once per event.
-        event_url = kalshi_market_url(series_ticker, series_title, event.get("event_ticker", ""))
+        event_url = kalshi_market_url(series_ticker, series_title, event_ticker)
 
         for idx, market in enumerate(markets):
             name = names[idx]
@@ -483,6 +548,8 @@ def build_contracts(
                     "stage_rank": _STAGE_RANK.get(stage, 0),
                     "opponent": opponent,
                     "competition": competition,
+                    "tournament": tournament,
+                    "tournament_source": tournament_source,
                     # Pricing — display price plus every component, clearly named.
                     "display_pct": _pct(display_prob(bid, ask, last)),
                     "yes_mid_pct": _pct(mid),
@@ -524,3 +591,14 @@ def build_contracts(
                 }
             )
     return rows
+
+
+def series_for_families(series_tickers: list[str], families: Any) -> list[str]:
+    """Subset of `series_tickers` whose contract family (CATEGORY of classify_kind) is enabled.
+
+    This is what makes contract-family filters REDUCE FETCHING: only series for the selected families
+    are requested from Kalshi. (Tournament / event / participant filters are client-side and do NOT
+    change which series are fetched.)
+    """
+    fams = set(families or [])
+    return [s for s in (series_tickers or []) if CATEGORY.get(classify_kind(s), "Other") in fams]
