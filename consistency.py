@@ -1,4 +1,4 @@
-"""Layer-consistency checker for French Open per-player contracts.
+"""Layer-consistency checker for Kalshi tennis per-player contracts.
 
 A deeper/more-restrictive outcome must not price higher than the prerequisite that contains
 it. We only compare pairs whose logical containment we can prove; uncertain relationships are
@@ -183,11 +183,14 @@ def layer_spreads(player_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
 def expected_nodes(player_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Explicit expected-vs-found ladder for a player.
 
-    For any player that appears in the French Open data we expect the full progression ladder
-    (Reach Semifinal, Reach Final, Win Tournament) to be quotable; this makes a missing layer
-    explicit rather than implied-by-omission. `source` is "market" (advance/winner), "match"
-    (a confident match-implied node), or "" when absent.
+    Only produces output when the player has at least one `advance` or `winner` contract — those
+    are the kinds that populate the containment ladder. Players with only match/set/score data have
+    no applicable ladder, so an empty list is returned (avoiding spurious MISSING_LAYER noise).
+
+    `source` is "market" (advance/winner), "match" (a confident match-implied node), or "" when absent.
     """
+    if not any(r.get("kind") in ("advance", "winner") for r in player_rows):
+        return []
     nodes = build_player_nodes(player_rows)
     out: list[dict[str, Any]] = []
     for node in NODE_ORDER:
@@ -325,6 +328,9 @@ def _classify(
         status = "EXECUTABLE_VIOLATION"
         reason = f"{best['frag']} → {exec_gap}c executable cross (sizes {best['sizes']})"
     elif exec_evaluable and exec_gap > 0 and not sizes_ok:
+        # Product decision (AUDIT-002): when display prices also cross, DISPLAY_VIOLATION takes
+        # precedence over QUOTE_SIZE_MISSING — a display cross is the more informative signal
+        # (tells the user prices look wrong AND you can't execute, not just "no size").
         if display_violation:
             status = "DISPLAY_VIOLATION"
             reason = f"prices cross {exec_gap}c but size missing/zero; display child {cd}c > parent {pd_}c"

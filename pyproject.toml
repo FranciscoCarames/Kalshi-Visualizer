@@ -1,0 +1,9 @@
+[tool.ruff]
+line-length = 120
+target-version = "py313"
+
+[tool.ruff.lint]
+# E/W: pycodestyle errors/warnings  F: pyflakes  I: isort
+select = ["E", "F", "W", "I"]
+# E501: line-length — many Streamlit/dataframe lines intentionally exceed 120
+ignore = ["E501"]
