@@ -25,8 +25,9 @@ and debug. Auto-refreshes on a timer under a process-wide rate throttle.
 ```bash
 pip install -r requirements.txt          # runtime: streamlit, requests, pandas
 streamlit run app.py
-pip install -r requirements-dev.txt      # adds pytest
+pip install -r requirements-dev.txt      # adds pytest + ruff
 pytest -q                                # unit tests for the pure layers (no network)
+ruff check .                             # lint
 ```
 
 To verify without a browser: `pytest -q`; `python -c "import app"`; and a headless boot —
@@ -54,9 +55,11 @@ environment require running the Bash tool with the sandbox disabled (network is 
   (`kalshi_client.get_series_titles`); when a title is missing the link falls back to the series page.
 - **Player identity:** `custom_strike.tennis_competitor` (stable UUID) is the join key across all series;
   `yes_sub_title` is the display name.
-- **French Open filter:** event belongs to the FO when `product_metadata.competition` contains
-  "french open" (fallbacks: title/rules keywords, then a date window). Match events are head-to-head
-  (2 markets, `mutually_exclusive`); winner/advancement/set/score markets are single-sided (no opponent).
+- **Tournament (not a filter gate anymore):** all tennis events are included; each is stamped with a
+  never-empty `tournament` key via `data.tournament_of` (cleaned `competition` → winner-ticker → title
+  keyword → `Unknown · <id>`). `is_french_open_event` still exists as a helper but no longer gates
+  `build_contracts`. Match events are head-to-head (2 markets, `mutually_exclusive`); winner/advancement/
+  set/score markets are single-sided (no opponent).
 
 ### Relevant per-player series
 | Series | Meaning | kind | category |
@@ -72,13 +75,13 @@ The women's winner title is the ugly "win the KXFOWOMEN-26?" → synthesize "Win
 ## Architecture
 
 ```
-config.py          # BASE_URL, DEFAULT_SERIES, discovery prefixes, FO keywords/window, thresholds
-kalshi_client.py   # read-only HTTP: paginated GET, retry/backoff, sized pool,
-                   #   discover_tennis_series(), get_events_for_series() (concurrent + retry pass)
-data.py            # NO streamlit: parsing, to_cents(), FO filtering, classify_kind/tour_of,
-                   #   pricing helpers (yes_mid/spread/quote_quality/display_prob), build_contracts()
-data.py            # (+ tournament_of -> (tournament key, source); series_for_families; build_contracts
-                   #   includes ALL tennis events — no FO gate — stamping tournament/tournament_source)
+config.py          # BASE_URL, DEFAULT_SERIES, discovery prefixes, thresholds, rate-limit
+                   #   (MAX_RPS/CONCURRENCY/BACKOFF_*) + refresh (REFRESH_TTL/OPTIONS/NEAR_EDGE_MIN_C) knobs
+kalshi_client.py   # read-only HTTP: paginated GET, Retry-After/exponential backoff, process-wide
+                   #   throttle (MAX_RPS), discover_tennis_series(), get_series_titles(), get_events_for_series()
+data.py            # NO streamlit/pandas: parsing, to_cents(), classify_kind/tour_of, pricing helpers,
+                   #   tournament_of()->(key,source), series_for_families(), kalshi_market_url(),
+                   #   build_contracts() (ALL tennis events — no FO gate — stamps tournament/tournament_source)
 consistency.py     # NO streamlit: node_of, build_player_nodes, representative, expected_nodes,
                    #   layer_spreads, build_checks (groups by [player_key, tournament]); buy-only action
                    #   plan + tradable_now + blockers; bucket_of (dashboard routing)
@@ -147,14 +150,17 @@ Anything unprovable → `UNKNOWN_RELATIONSHIP` (never a violation).
   positive sizes**; a missing display blocks only the display test.
 - **`EXECUTABLE_VIOLATION` (firm child-bid > parent-ask, sizes > 0) is the ONLY "Broken" status.**
   `DISPLAY_VIOLATION` is "Warning"; a sizeless price-cross → `QUOTE_SIZE_MISSING`, **unless the display
-  prices also cross** (then `DISPLAY_VIOLATION`). Crossed books (`ask < bid`) → "Crossed" quality, never executable.
+  prices also cross** (then `DISPLAY_VIOLATION` — AUDIT-002 product decision: the display cross is the
+  more informative signal when size is absent; see `consistency.py` for the inline comment). Crossed books
+  (`ask < bid`) → "Crossed" quality, never executable.
 - Statuses: `CLEAN, EXECUTABLE_VIOLATION, DISPLAY_VIOLATION, WIDE_QUOTE, MISSING_QUOTE, MISSING_LAYER,
   QUOTE_SIZE_MISSING, UNKNOWN_RELATIONSHIP`. Groups: Broken=EXECUTABLE_VIOLATION; Warning=DISPLAY_VIOLATION/
   WIDE_QUOTE; Missing data=MISSING_QUOTE/MISSING_LAYER/QUOTE_SIZE_MISSING; Unknown relationship=UNKNOWN_RELATIONSHIP.
 
-**Known live test cases (women's draw):** Cirstea `Quarterfinal win ≡ Reach Semifinal` → `EXECUTABLE_VIOLATION`
-(~2¢) flagged `RULE_MISMATCH`; Sabalenka Reach Final > Reach Semifinal on display → `DISPLAY_VIOLATION`,
-her early-round match → `UNKNOWN_RELATIONSHIP`; Gauff/Swiatek empty books → `MISSING_QUOTE`.
+**Historical illustration (French Open 2026 women's draw — captured live then; not reproducible now the
+draw has settled):** Cirstea `Quarterfinal win ≡ Reach Semifinal` → `EXECUTABLE_VIOLATION` (~2¢) flagged
+`RULE_MISMATCH`; Sabalenka Reach Final > Reach Semifinal on display → `DISPLAY_VIOLATION`; Gauff/Swiatek
+empty books → `MISSING_QUOTE`. (For repeatable assertions use the unit tests, not live data.)
 
 ## Mapping audit & raw ladder spreads
 
@@ -172,8 +178,9 @@ her early-round match → `UNKNOWN_RELATIONSHIP`; Gauff/Swiatek empty books → 
 
 ## Correctness & robustness invariants (audit hardening — do not regress)
 
-- **Group/select by `player_key`, not display name** (`build_checks` groups on key; the Player selector maps
-  labels→keys, disambiguating `"Name [key6]"` only on collision) — two same-named players never merge.
+- **Group/select by `player_key`, not display name** (`build_checks` groups on `(player_key, tournament)`;
+  the Participant selector maps labels→keys, disambiguating `"Name [key6]"` only on collision) — two
+  same-named players never merge, and one player's tournaments never merge.
 - **Truthful evidence:** the `EXECUTABLE_VIOLATION` reason quotes the *winning* cross direction (equivalence
   checks forward and reverse).
 - **Crossed books** (`ask < bid`) → `quote_quality == "Crossed"`: never Tight, never a midpoint, never fed to
@@ -206,7 +213,10 @@ tournament/contract-family/stage-layer/event/participant/min-volume are membersh
 now and every section**; `thresholded = apply_thresholds(universe, …)` (min size, quote, **market
 status**) feeds **every section EXCEPT Actionable now**. **Full diagnostics is built from `universe`
 (NOT `thresholded`) + the Outcome-status select**, so **finalized markets stay visible there** even with
-Active-only as the default elsewhere. Membership runs on comparison rows so it never breaks pairing.
+Active-only as the default elsewhere. (Scope: "finalized" here means markets with `status=finalized`
+within events the API still returns as `status=open`. Fully closed events are excluded at the API
+level — `kalshi_client.get_events` passes `status="open"` to Kalshi, so settled past events are not
+in the universe.) Membership runs on comparison rows so it never breaks pairing.
 
 **Main area:** (1) header; (2) six `st.metric` cards + **⬇ Export** expander (Comparisons `universe`
 CSV, Raw contracts CSV); (3) **Actionable now** — always visible, **sorted by gross edge ↓** (no
@@ -259,11 +269,11 @@ now (the ranking bar); use `width="stretch"` on dataframes and `st.altair_chart`
 
 ## Repository status
 
-`main` is **canonical and current** — full app (multi-contract discovery, transparent pricing, Layer
-Consistency Checker), mapping-audit hardening, **v1 raw ladder spreads** (+ NaN-fix/Quote column), and the
-**audit Tier-1 correctness fixes** are all merged (PRs #1, #4, #6, #7, #8, #9, #11, #12); `pytest` ~42.
-**Pending: PR #13** — audit Tier-2 robustness (pagination-truncation surfacing, deterministic duplicates,
-date-window corroboration). Older PRs #2/#3/#5 are closed/superseded.
+`main` is **canonical and current** through the trader dashboard, auto-refresh + throttle, and
+market-universe filters (merged up to **PR #18**). The **all-tennis generalization + sidebar cleanup +
+opportunity-ranking chart** (iteration 12) is open as **PR #19** (branch
+`feat/generalize-tennis-and-charts`), not yet merged — the owner merges manually. `pytest` ~94
+(`test_data`, `test_consistency`, `test_glossary`, `test_client`, `test_filters`, `test_viz`).
 
 ## Iteration history (intent)
 1. Per-player French Open match viewer.

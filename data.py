@@ -1,4 +1,4 @@
-"""Pure data logic: parsing, French Open filtering, and the per-player contract index.
+"""Pure data logic: parsing, contract filtering, and the per-player contract index for Kalshi tennis markets.
 
 Deliberately free of any Streamlit (or pandas) imports so it can be unit-tested and
 reused on its own. Functions accept the raw JSON dicts returned by kalshi_client.
@@ -348,7 +348,7 @@ def _contract_label(kind: str, market: dict[str, Any], opponent: str, stage: str
     if kind == "advance":
         return f"Reach {stage}" if stage else "Reach next stage"
     if kind == "winner":
-        return "Win the French Open"
+        return "Win the tournament"
     return _clean_title(market.get("title"))
 
 
@@ -444,7 +444,8 @@ def tournament_of(competition: Any, series_ticker: Any, event_ticker: Any,
 
 
 def build_contracts(
-    series_ticker: str, events: list[dict[str, Any]], series_title: Any = ""
+    series_ticker: str, events: list[dict[str, Any]], series_title: Any = "",
+    _diag: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     """Flatten one tennis series' events into per-player contract rows.
 
@@ -478,6 +479,8 @@ def build_contracts(
         for idx, market in enumerate(markets):
             name = names[idx]
             if not name:
+                if _diag is not None:
+                    _diag["skipped_no_name"] = _diag.get("skipped_no_name", 0) + 1
                 continue  # need a display name for the player selector
             competitor = (market.get("custom_strike") or {}).get("tennis_competitor")
             player_key = competitor or name.casefold()

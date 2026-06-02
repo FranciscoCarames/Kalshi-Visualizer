@@ -1,4 +1,4 @@
-"""Configuration constants for the French Open Kalshi viewer.
+"""Configuration constants for the Kalshi tennis viewer.
 
 Everything here is read-only market-data configuration. No credentials are needed:
 Kalshi's market-data endpoints (series/events/markets) are public.

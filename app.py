@@ -1,4 +1,4 @@
-"""Streamlit UI for the Kalshi tennis viewer — trader-first arbitrage dashboard.
+"""Streamlit UI for the Kalshi tennis viewer — trader-first executable-inconsistency dashboard.
 
 Default view: what's actionable now, what's blocked and why, what's near the edge. Diagnostics,
 per-player detail, and debug are collapsed below. Controls live in the left sidebar.
@@ -34,7 +34,6 @@ from config import (
 )
 from consistency import (
     ACTION_STATUSES,
-    MATCH_STAGE_TO_NODE,
     NODE_ORDER,
     bucket_of,
     build_checks,
@@ -44,9 +43,8 @@ from consistency import (
     layer_spreads,
     representative,
 )
-from data import CATEGORY, build_contracts, link_audit, series_for_families
+from data import CATEGORY, build_contracts, classify_kind, link_audit, series_for_families
 from filters import QUOTE_MODES, STATUS_MODES, apply_membership, apply_thresholds
-from viz import opportunity_ranking
 from glossary import help_for
 from kalshi_client import (
     KalshiError,
@@ -54,6 +52,7 @@ from kalshi_client import (
     get_events_for_series,
     get_series_titles,
 )
+from viz import opportunity_ranking
 
 st.set_page_config(page_title="Kalshi Tennis Dashboard", page_icon="🎾", layout="wide")
 
@@ -94,19 +93,24 @@ def discover() -> list[str]:
 
 
 @st.cache_data(ttl=REFRESH_TTL, show_spinner="Fetching tennis markets…")
-def load_contracts(families: tuple, scan_all: bool) -> tuple[pd.DataFrame, str, list[tuple[str, str]], int, int]:
+def load_contracts(families: tuple, scan_all: bool) -> tuple[pd.DataFrame, str, list[tuple[str, str]], int, int, int, int]:
     # Fetch ONLY the series for the enabled contract families (family toggles reduce API requests).
     # Tournament/event/participant filters are client-side and do NOT change what's fetched.
     all_series = discover() if scan_all else DEFAULT_SERIES
     tickers = series_for_families(all_series, families)
+    # Count discovered series excluded because their kind is unrecognised (never in any family list).
+    n_excluded_unknown = sum(
+        1 for s in all_series if CATEGORY.get(classify_kind(s), "Other") == "Other"
+    )
     results, errors = get_events_for_series(tickers)
     titles = get_series_titles([t for t, _ in results])
     rows: list[dict] = []
+    diag: dict = {}
     for ticker, events in results:
-        rows.extend(build_contracts(ticker, events, series_title=titles.get(ticker, "")))
+        rows.extend(build_contracts(ticker, events, series_title=titles.get(ticker, ""), _diag=diag))
     df = pd.DataFrame(rows)
     fetched_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
-    return df, fetched_at, errors, len(tickers), len(results)
+    return df, fetched_at, errors, len(tickers), len(results), diag.get("skipped_no_name", 0), n_excluded_unknown
 
 
 def _buy_disp(contract: str, price_c) -> str:
@@ -137,7 +141,7 @@ with st.sidebar:
                "participant filters are **client-side** (no extra API requests).")
 
 try:
-    df_all, fetched_at, errors, n_scanned, n_loaded = load_contracts(tuple(selected_types), scan_all)
+    df_all, fetched_at, errors, n_scanned, n_loaded, _skipped, _excl = load_contracts(tuple(selected_types), scan_all)
 except KalshiError as exc:
     st.error(f"Couldn't load Kalshi data: {exc}")
     st.stop()
@@ -184,7 +188,7 @@ with st.sidebar:
                                         "show their detail below. 'All' = no filter.")
         chosen_key = label_to_key.get(participant) if participant != "All" else None
         sel_event_labels = st.multiselect("Event / game", sorted(ev_label_to_tickers), default=[])
-        sel_events = set().union(*[ev_label_to_tickers[l] for l in sel_event_labels]) if sel_event_labels else set()
+        sel_events = set().union(*[ev_label_to_tickers[lbl] for lbl in sel_event_labels]) if sel_event_labels else set()
         sel_layers = st.multiselect("Stage / layer", list(NODE_ORDER) + match_stages, default=[],
                                     help="Containment layers and match rounds.")
 
@@ -207,7 +211,7 @@ with st.sidebar:
     with st.expander("Advanced — data scope"):
         st.toggle("Scan all tennis tournaments", key="scan_all_toggle",
                   help="ON (default): discover & fetch all tennis series for the enabled families. "
-                       "OFF: only the core French-Open series.")
+                       "OFF: only the six default core series (match/advance/winner for ATP + WTA).")
         max_vol = int(df["volume"].fillna(0).max()) if not df.empty else 0
         min_vol = st.slider("Min traded volume (history)", 0, max_vol, 0,
                             help="Historical traded volume — distinct from 'Min available size'.") if max_vol > 0 else 0
@@ -225,13 +229,13 @@ with st.sidebar:
 
 players_filter = [chosen_key] if chosen_key else None
 
-st.title("🎾 Kalshi Tennis — Arbitrage Dashboard")
+st.title("🎾 Kalshi Tennis — Executable Inconsistency Dashboard")
 
 
 @st.fragment(run_every=run_every)
 def render_dashboard() -> None:
     try:
-        df_all, fetched_at, errors, n_scanned, n_loaded = load_contracts(tuple(selected_types), scan_all)
+        df_all, fetched_at, errors, n_scanned, n_loaded, skipped_no_name, n_excluded_unknown = load_contracts(tuple(selected_types), scan_all)
     except KalshiError as exc:
         st.error(f"Couldn't refresh Kalshi data: {exc}")
         return
@@ -307,6 +311,12 @@ def render_dashboard() -> None:
                             file_name="contracts.csv", mime="text/csv", key="dl_contracts")
         st.caption("Full-diagnostics and the selected-player snapshot have their own download buttons "
                    "in those sections.")
+
+    if errors:
+        st.warning(
+            f"⚠ {len(errors)} series failed to load — results may be incomplete. "
+            "See the Debug expander below for details."
+        )
 
     # ================================================================================
     # 3. Actionable now — membership universe only (thresholds spare it)
@@ -531,7 +541,10 @@ def render_dashboard() -> None:
             )
             pedge = pchecks_all[pchecks_all["status"].isin(ACTION_STATUSES | {"WIDE_QUOTE"})]
             if not pedge.empty:
-                st.caption("What to do — every flagged opportunity for this player:")
+                st.caption(
+                    "What to do — ✅ executable rows: place both buys now. "
+                    "⚠ display-only and size-missing rows: monitor only, no real order to execute against."
+                )
                 for _, r in pedge.iterrows():
                     if r["status"] == "WIDE_QUOTE":
                         st.markdown(f"**{r['chain']}** — 👀 {r['watchlist_note']}")
@@ -560,11 +573,14 @@ def render_dashboard() -> None:
                     f"(key source: `{sample.get('player_key_source', '?')}`) — {sample.get('mapping_reason', '')}"
                 )
             exp = expected_nodes(prows)
-            exp_df = pd.DataFrame(exp)
-            exp_df["found"] = exp_df["found"].map({True: "✅ found", False: "❌ MISSING"})
-            st.caption("Expected progression layers (found vs missing):")
-            st.dataframe(exp_df[["layer", "found", "source"]], hide_index=True, width="stretch",
-                         column_config={"layer": "Layer", "found": "Status", "source": "Source"})
+            if exp:
+                exp_df = pd.DataFrame(exp)
+                exp_df["found"] = exp_df["found"].map({True: "✅ found", False: "❌ MISSING"})
+                st.caption("Expected progression layers (found vs missing):")
+                st.dataframe(exp_df[["layer", "found", "source"]], hide_index=True, width="stretch",
+                             column_config={"layer": "Layer", "found": "Status", "source": "Source"})
+            else:
+                st.caption("No advancement/winner contracts — progression ladder not applicable.")
 
             st.caption("All contracts for this player:")
             pdf2 = pdf.copy()
@@ -676,6 +692,10 @@ def render_dashboard() -> None:
             st.dataframe(pd.DataFrame(errors, columns=["series", "error"]), hide_index=True, width="stretch")
         else:
             st.success("All requested series loaded successfully.")
+        if skipped_no_name > 0:
+            st.caption(f"⚠ {skipped_no_name} market(s) skipped — `yes_sub_title` blank (no player name to display).")
+        if n_excluded_unknown > 0:
+            st.caption(f"ℹ {n_excluded_unknown} discovered series excluded — unrecognised contract kind (not in selected families).")
 
         if chosen_key is None:
             st.caption("Pick a Participant to see per-player raw fields, tournament source, and the link audit.")
