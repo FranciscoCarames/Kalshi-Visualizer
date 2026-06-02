@@ -158,11 +158,11 @@ def get_events(series_ticker: str, status: str = "open") -> list[dict[str, Any]]
 
 
 def discover_tennis_series() -> list[str]:
-    """Return the tickers of all tennis series worth scanning for French Open contracts.
+    """Return the tickers of all tennis series worth scanning.
 
-    The French Open universe spans match/advancement/winner/set/score series; rather than
-    hardcode them we list every series with a tennis prefix (plus the explicitly-named
-    tournament-winner tickers) and let the data layer narrow events to the French Open.
+    The universe spans match/advancement/winner/set/score series; rather than hardcode them
+    we list every series with a tennis prefix (plus the explicitly-named tournament-winner
+    tickers) and let the data layer stamp each event with its tournament.
     """
     series = get_paginated("/series", {"limit": 200}, list_key="series")
     tickers = [

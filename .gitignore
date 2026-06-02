@@ -17,3 +17,6 @@ env/
 
 # Local Claude Code session settings
 .claude/
+
+# Local kss planning shell (topics, milestones, codebase snapshots) — keep out of the repo
+.kss/

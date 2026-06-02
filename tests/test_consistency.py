@@ -235,6 +235,7 @@ def test_layer_spreads_missing_price_via_dataframe_records():
     """Regression: a missing display price arrives as NaN (not None) through pandas, and must
     still be classified `missing_price` — never `ok` with a NaN spread."""
     import math
+
     import pandas as pd
 
     rows = [
@@ -487,9 +488,12 @@ def test_build_checks_groups_by_player_and_tournament():
     import pandas as pd
     # Same competitor (uuid-x) in two tournaments. FO has Reach Final + Win Tournament (a real pair);
     # Wimbledon has only Reach Semifinal. The FO ladder must NOT be completed from Wimbledon rows.
-    fo_final = _ckey_row("Player X", "uuid-x", "advance", "Final", 30); fo_final["tournament"] = "French Open"
-    fo_champ = _ckey_row("Player X", "uuid-x", "winner", "Champion", 20); fo_champ["tournament"] = "French Open"
-    wim_sf = _ckey_row("Player X", "uuid-x", "advance", "Semifinal", 60); wim_sf["tournament"] = "Wimbledon"
+    fo_final = _ckey_row("Player X", "uuid-x", "advance", "Final", 30)
+    fo_final["tournament"] = "French Open"
+    fo_champ = _ckey_row("Player X", "uuid-x", "winner", "Champion", 20)
+    fo_champ["tournament"] = "French Open"
+    wim_sf = _ckey_row("Player X", "uuid-x", "advance", "Semifinal", 60)
+    wim_sf["tournament"] = "Wimbledon"
     checks = consistency.build_checks(pd.DataFrame([fo_final, fo_champ, wim_sf]))
     assert set(checks["tournament"]) <= {"French Open", "Wimbledon"}
     # FO formed a real (non-missing) comparison; Wimbledon (only SF) is all missing-layer — no cross-fill.
