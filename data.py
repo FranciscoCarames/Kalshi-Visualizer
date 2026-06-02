@@ -307,6 +307,37 @@ def _contract_label(kind: str, market: dict[str, Any], opponent: str, stage: str
     return _clean_title(market.get("title"))
 
 
+def _titleize_fallback(text: Any) -> str:
+    """Turn a normalized key like 'aryna_sabalenka' into 'Aryna Sabalenka'. Words that already
+    carry uppercase are left untouched so real names ('de Minaur', 'McEnroe') aren't mangled."""
+    cleaned = re.sub(r"\s+", " ", re.sub(r"[_\-]+", " ", str(text or ""))).strip()
+    if not cleaned:
+        return ""
+    words = [(w[:1].upper() + w[1:]) if w == w.lower() else w for w in cleaned.split(" ")]
+    return " ".join(words)
+
+
+def display_player_name(row: dict[str, Any]) -> str:
+    """Clean, user-facing player name. Priority (owner decision — alias overrides source):
+      1. NAME_ALIASES override, keyed by the player's competitor UUID / player_key (its
+         documented purpose is to correct drifted source names).
+      2. The explicit source display name (yes_sub_title), preserved verbatim so accents,
+         punctuation and real casing survive.
+      3. A title-cased fallback from a bare normalized token (e.g. 'aryna_sabalenka').
+    Reads NAME_ALIASES at call time so it stays patchable/configurable.
+    """
+    key = row.get("player_key")
+    alias = NAME_ALIASES.get(key) if key is not None else None
+    if alias:
+        return alias
+    raw = str(row.get("player_name_raw") or "").strip()
+    # A clean source name (any uppercase or a space) is shown as-is; only a bare lowercase
+    # token like 'aryna_sabalenka' is title-cased.
+    if raw and (raw != raw.lower() or " " in raw):
+        return raw
+    return _titleize_fallback(raw or key) or raw
+
+
 def build_contracts(series_ticker: str, events: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Flatten one series' French Open events into per-player contract rows.
 
@@ -335,7 +366,9 @@ def build_contracts(series_ticker: str, events: list[dict[str, Any]]) -> list[di
             player_key = competitor or name.casefold()
             player_key_source = "competitor_uuid" if competitor else "name_fallback"
             mapping_confidence, mapping_reason = _mapping_confidence(competitor, name)
-            display = NAME_ALIASES.get(player_key, name) or name
+            # Clean, user-facing name via the single shared helper (alias > source > titleized
+            # fallback). Internal identifiers are kept as separate fields for debug/export.
+            display = display_player_name({"player_key": player_key, "player_name_raw": name})
 
             if kind == "match":
                 opponents = [n for j, n in enumerate(names) if j != idx and n and n != name]
@@ -376,6 +409,9 @@ def build_contracts(series_ticker: str, events: list[dict[str, Any]]) -> list[di
                     "player": display,
                     "player_key": player_key,
                     "player_key_source": player_key_source,
+                    "player_name_raw": name,
+                    "player_name_normalized": name.casefold(),
+                    "competitor_uuid": competitor or "",
                     "mapping_confidence": mapping_confidence,
                     "mapping_reason": mapping_reason,
                     "tour": tour,
