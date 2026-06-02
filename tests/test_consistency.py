@@ -5,7 +5,7 @@ import consistency
 
 
 def leg(display_c=None, bid_c=None, ask_c=None, bid_size=100, ask_size=100,
-        quality="Tight", rules=""):
+        quality="Tight", rules="", status="active", no_ask_c=None, contract="C"):
     """Build a minimal contract row as consumed by consistency._classify/_leg."""
     return {
         "display_c": display_c,
@@ -15,6 +15,9 @@ def leg(display_c=None, bid_c=None, ask_c=None, bid_size=100, ask_size=100,
         "yes_ask_size": ask_size,
         "quote_quality": quality,
         "rules_primary": rules,
+        "status": status,
+        "no_ask_c": no_ask_c,
+        "contract": contract,
     }
 
 
@@ -337,6 +340,86 @@ def test_build_player_nodes_duplicate_is_deterministic():
     ]
 
 
+# --- v1.3: buy-only action plan + "tradable now" + blockers --------------------------
+def test_executable_containment_is_buy_yes_parent_buy_no_child():
+    # child bid 37 > parent ask 35 -> Buy YES on the broader (parent), Buy NO on the deeper (child).
+    child = leg(display_c=37, bid_c=37, ask_c=38, bid_size=80, no_ask_c=63)
+    parent = leg(display_c=35, bid_c=34, ask_c=35, ask_size=120)
+    out = consistency._classify(child, parent, equivalence=False)
+    assert out["status"] == "EXECUTABLE_VIOLATION"
+    # Two BUYS, in the required order.
+    assert out["action_1_side"] == "buy_yes" and out["action_1_leg"] == "parent"
+    assert out["action_2_side"] == "buy_no" and out["action_2_leg"] == "child"
+    # Buy YES at the parent's ask; Buy NO at the child's real no_ask.
+    assert out["action_1_price_c"] == 35          # parent_yes_ask_c
+    assert out["action_2_price_c"] == 63          # child no_ask_c (real)
+    # Tradable now, gross edge and units unchanged from the executable-gap math.
+    assert out["tradable_now"] == "Yes"
+    assert out["blockers"] == ""
+    assert out["exec_gap_c"] == 2                 # child_yes_bid_c - parent_yes_ask_c
+    assert out["exec_min_size"] == 80             # min(parent ask size 120, child bid size 80)
+    assert out["watchlist_note"] == ""
+
+
+def test_buy_no_price_falls_back_to_100_minus_child_bid():
+    # No real no_ask_c on the child -> Buy NO price = 100 - child_yes_bid_c.
+    child = leg(display_c=37, bid_c=37, ask_c=38, no_ask_c=None)
+    parent = leg(display_c=35, bid_c=34, ask_c=35)
+    out = consistency._classify(child, parent, equivalence=False)
+    assert out["status"] == "EXECUTABLE_VIOLATION"
+    assert out["action_2_price_c"] == 63          # 100 - 37
+
+
+def test_tradable_now_no_when_a_leg_is_inactive():
+    child = leg(display_c=37, bid_c=37, ask_c=38, no_ask_c=63)
+    parent = leg(display_c=35, bid_c=34, ask_c=35, status="finalized")
+    out = consistency._classify(child, parent, equivalence=False)
+    assert out["status"] == "EXECUTABLE_VIOLATION"  # firm cross + size
+    assert out["tradable_now"] == "No"              # but a leg isn't open for trading
+    assert "not open for trading" in out["blockers"]
+
+
+def test_tradable_now_no_when_size_missing():
+    child = leg(display_c=30, bid_c=37, ask_c=38, bid_size=0)  # price cross, no size behind bid
+    parent = leg(display_c=40, bid_c=34, ask_c=35)
+    out = consistency._classify(child, parent, equivalence=False)
+    assert out["status"] == "QUOTE_SIZE_MISSING"
+    assert out["tradable_now"] == "No"
+    assert "0 contracts are available" in out["blockers"]
+    # still expressed as Buy YES parent / Buy NO child (the direction holds; it's just not fillable)
+    assert out["action_1_side"] == "buy_yes" and out["action_1_leg"] == "parent"
+    assert out["action_2_side"] == "buy_no" and out["action_2_leg"] == "child"
+
+
+def test_tradable_now_no_for_display_only_violation():
+    child = leg(display_c=50, bid_c=20, ask_c=22)   # display crosses, firm bid/ask don't
+    parent = leg(display_c=40, bid_c=58, ask_c=60)
+    out = consistency._classify(child, parent, equivalence=False)
+    assert out["status"] == "DISPLAY_VIOLATION"
+    assert out["tradable_now"] == "No"
+    assert "estimated (mid/last) price" in out["blockers"]
+    assert out["action_1_side"] == "buy_yes" and out["action_2_side"] == "buy_no"
+
+
+def test_tradable_now_rule_dependent_for_equivalence_executable():
+    child = leg(display_c=37, bid_c=37, ask_c=38, no_ask_c=63)
+    parent = leg(display_c=35, bid_c=34, ask_c=35)
+    out = consistency._classify(child, parent, equivalence=True)
+    assert out["status"] == "EXECUTABLE_VIOLATION"
+    assert out["tradable_now"] == "Yes — rule-dependent"
+    assert "settlement rules" in out["blockers"]
+
+
+def test_wide_quote_is_watchlist_only_no_action():
+    child = leg(display_c=20, bid_c=10, ask_c=30, quality="Wide")
+    parent = leg(display_c=50, bid_c=40, ask_c=60, quality="Wide")
+    out = consistency._classify(child, parent, equivalence=False)
+    assert out["status"] == "WIDE_QUOTE"
+    assert out["action_1_side"] is None and out["action_2_side"] is None
+    assert out["watchlist_note"]                    # non-empty watchlist note
+    assert out["tradable_now"] == "No"
+
+
 # --- AUDIT-002 (decided: keep current behavior) --------------------------------------
 def test_sizeless_cross_with_display_cross_stays_display_violation():
     """Owner decision: a sizeless price-cross that ALSO crosses on display is DISPLAY_VIOLATION
@@ -345,3 +428,55 @@ def test_sizeless_cross_with_display_cross_stays_display_violation():
     parent = leg(display_c=40, bid_c=34, ask_c=35)
     out = consistency._classify(child, parent, equivalence=False)
     assert out["status"] == "DISPLAY_VIOLATION"
+
+
+# --- v1.4: dashboard bucketing (bucket_of) -------------------------------------------
+def crow(status, tradable_now="No", executable_gap=None, comp_quote_quality="Tight"):
+    """A minimal consistency-check row as consumed by consistency.bucket_of."""
+    return {
+        "status": status,
+        "tradable_now": tradable_now,
+        "executable_gap": executable_gap,
+        "comp_quote_quality": comp_quote_quality,
+    }
+
+
+def test_bucket_executable_actionable_vs_blocked():
+    assert consistency.bucket_of(crow("EXECUTABLE_VIOLATION", tradable_now="Yes")) == "actionable"
+    assert consistency.bucket_of(
+        crow("EXECUTABLE_VIOLATION", tradable_now="Yes — rule-dependent")) == "actionable"
+    assert consistency.bucket_of(crow("EXECUTABLE_VIOLATION", tradable_now="No")) == "blocked"
+
+
+def test_bucket_quote_size_missing_is_blocked():
+    assert consistency.bucket_of(crow("QUOTE_SIZE_MISSING")) == "blocked"
+
+
+def test_bucket_display_and_wide_are_signals_not_blocked():
+    assert consistency.bucket_of(crow("DISPLAY_VIOLATION")) == "display_signal"
+    assert consistency.bucket_of(crow("WIDE_QUOTE")) == "wide_signal"
+
+
+def test_bucket_data_quality_statuses():
+    for s in ("MISSING_QUOTE", "MISSING_LAYER", "UNKNOWN_RELATIONSHIP"):
+        assert consistency.bucket_of(crow(s)) == "data_quality"
+
+
+def test_bucket_near_edge_window_and_quote_gate():
+    # within [-5, 0] on Tight/OK -> near_edge (boundaries inclusive)
+    assert consistency.bucket_of(crow("CLEAN", executable_gap=0, comp_quote_quality="Tight")) == "near_edge"
+    assert consistency.bucket_of(crow("CLEAN", executable_gap=-5, comp_quote_quality="OK")) == "near_edge"
+    assert consistency.bucket_of(crow("CLEAN", executable_gap=-2, comp_quote_quality="Tight")) == "near_edge"
+    # just outside the window -> clean
+    assert consistency.bucket_of(crow("CLEAN", executable_gap=-6, comp_quote_quality="Tight")) == "clean"
+    # wide quote disqualifies near-edge
+    assert consistency.bucket_of(crow("CLEAN", executable_gap=-2, comp_quote_quality="Wide")) == "clean"
+    # no firm gap (None or NaN) -> clean
+    assert consistency.bucket_of(crow("CLEAN", executable_gap=None, comp_quote_quality="Tight")) == "clean"
+    assert consistency.bucket_of(crow("CLEAN", executable_gap=float("nan"), comp_quote_quality="Tight")) == "clean"
+
+
+def test_bucket_covers_all_returns_are_known():
+    for s in ("CLEAN", "EXECUTABLE_VIOLATION", "DISPLAY_VIOLATION", "WIDE_QUOTE",
+              "MISSING_QUOTE", "MISSING_LAYER", "QUOTE_SIZE_MISSING", "UNKNOWN_RELATIONSHIP"):
+        assert consistency.bucket_of(crow(s, tradable_now="Yes")) in consistency.DASHBOARD_BUCKETS
