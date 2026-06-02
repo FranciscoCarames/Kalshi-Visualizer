@@ -450,16 +450,32 @@ def _buy_text(side: str | None, leg: str | None, price_c: Any,
     return f"{word} — {contract} @ {price}"
 
 
-def _row(player: str, player_key: str, chain: str, child: dict | None, parent: dict | None, comp: dict) -> dict:
+def _row(player: str, player_key: str, chain: str, child: dict | None, parent: dict | None, comp: dict,
+         child_node: str = "", parent_node: str = "") -> dict:
     """Assemble one consistency-table row."""
     vols = [r.get("volume") for r in (child, parent) if r and r.get("volume") is not None]
     child_contract = child.get("contract") if child else ""
     parent_contract = parent.get("contract") if parent else ""
     a1_leg, a2_leg = comp.get("action_1_leg"), comp.get("action_2_leg")
+    # Market-universe fields (for dashboard filters). All derived from the contract rows / node names.
+    tour = (child or parent or {}).get("tour", "") if (child or parent) else ""
+    competition = (child or parent or {}).get("competition", "") if (child or parent) else ""
+    # Layers this comparison touches: the containment node names + any match-round stage.
+    layer_tokens = {n for n in (child_node, parent_node) if n}
+    for r in (child, parent):
+        if r and r.get("kind") == "match" and r.get("stage"):
+            layer_tokens.add(r.get("stage"))
     return {
         "player": player,
         "player_key": player_key,
         "chain": chain,
+        "tour": tour,
+        "competition": competition,
+        "child_node": child_node,
+        "parent_node": parent_node,
+        "child_event_ticker": child.get("event_ticker", "") if child else "",
+        "parent_event_ticker": parent.get("event_ticker", "") if parent else "",
+        "layers": tuple(sorted(layer_tokens)),
         "child_contract": child_contract,
         "parent_contract": parent_contract,
         "child_display_pct": child.get("display_pct") if child else None,
@@ -513,7 +529,10 @@ def _row(player: str, player_key: str, chain: str, child: dict | None, parent: d
 def build_checks(df: pd.DataFrame) -> pd.DataFrame:
     """Build the full layer-consistency table from the per-player contract DataFrame."""
     columns = [
-        "player", "player_key", "chain", "child_contract", "parent_contract", "child_display_pct",
+        "player", "player_key", "chain",
+        "tour", "competition", "child_node", "parent_node",
+        "child_event_ticker", "parent_event_ticker", "layers",
+        "child_contract", "parent_contract", "child_display_pct",
         "parent_display_pct", "child_bid_pct", "parent_ask_pct", "executable_gap",
         "display_gap", "status", "status_group", "rule_flag", "reason", "volume",
         "comp_quote_quality", "child_status", "parent_status",
@@ -554,16 +573,20 @@ def build_checks(df: pd.DataFrame) -> pd.DataFrame:
                     "display_gap": None,
                     "quote_quality": "",
                 }
-                out.append(_row(player, player_key, chain, child, parent, comp))
+                out.append(_row(player, player_key, chain, child, parent, comp,
+                                child_node=child_node, parent_node=parent_node))
             else:
-                out.append(_row(player, player_key, chain, child, parent, _classify(child, parent, False)))
+                out.append(_row(player, player_key, chain, child, parent, _classify(child, parent, False),
+                                child_node=child_node, parent_node=parent_node))
 
         # Match-alignment (equivalence) rows where both a market and a confident match exist.
         for node, sources in nodes.items():
             if "market" in sources and "match" in sources:
                 match_row, market_row = sources["match"], sources["market"]
                 chain = f"{match_row.get('stage')} win ≡ {node}"
-                out.append(_row(player, player_key, chain, match_row, market_row, _classify(match_row, market_row, True)))
+                out.append(_row(player, player_key, chain, match_row, market_row,
+                                _classify(match_row, market_row, True),
+                                child_node=node, parent_node=node))
 
         # Surface match contracts whose round does NOT map to a tracked layer (e.g. R16) as
         # UNKNOWN_RELATIONSHIP so they are acknowledged, never silently treated as violations.

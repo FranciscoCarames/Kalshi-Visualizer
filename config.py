@@ -70,3 +70,21 @@ REQUEST_TIMEOUT = 15  # seconds
 # Pagination safety cap. The full /series list is ~10.5k rows at limit=200 (~53 pages), so the
 # cap must comfortably exceed that; hitting it now signals genuine truncation (surfaced as an error).
 MAX_PAGES = 100
+
+# --- Rate limiting (stay safely under Kalshi's Basic/free tier) ----------------------
+# Kalshi Basic tier: read budget 200 tokens/s, a standard GET costs 10 tokens -> ~20 read req/s
+# (verified from docs.kalshi.com/getting_started/rate_limits). We cap at ~25% of that.
+# NOTE: this limiter is PROCESS-WIDE only — it bounds one Python process. If the app runs as several
+# processes / containers / replicas, each has its own limiter and the aggregate rate is
+# MAX_RPS x process_count. A large horizontal scale-out would need a shared/distributed limiter.
+MAX_RPS = 5                 # max requests/second issued by this process (≈25% of the ~20/s ceiling)
+CONCURRENCY = 4             # thread-pool workers for the per-series fan-out (throttle paces them)
+MAX_RETRIES = 5             # attempts per request before raising
+BACKOFF_BASE = 1.0          # seconds; exponential backoff base for 429/5xx/network errors
+BACKOFF_MAX = 30.0          # seconds; cap on a single backoff sleep
+
+# --- Auto-refresh cadence ------------------------------------------------------------
+REFRESH_OPTIONS = [60, 120, 300]   # selectable auto-refresh intervals (seconds)
+REFRESH_DEFAULT_SECONDS = 120      # conservative default (safe even for the heavier full scan)
+FULL_SCAN_MIN_INTERVAL = 120       # full scan is heavy: never auto-refresh faster than this
+REFRESH_TTL = 30                   # load_contracts cache TTL (≤ smallest interval -> each tick refetches)

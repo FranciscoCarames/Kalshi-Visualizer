@@ -78,6 +78,8 @@ consistency.py     # NO streamlit: node_of, build_player_nodes, representative, 
                    #   layer_spreads, build_checks; buy-only action plan + tradable_now + blockers
 glossary.py        # NO streamlit: GLOSSARY{term:{short,long}}, BLOCKERS, WATCHLIST_NOTE, help_for
                    #   — single source for in-app tooltips/expander, blocker text, and the docs
+filters.py         # NO streamlit: apply_membership / apply_thresholds over the checks DataFrame
+                   #   (pure, testable; powers the sidebar market-universe + threshold filters)
 app.py             # Streamlit ONLY: consistency table + per-player detail; right-hand controls
 scripts/           # check_links.py (local link reachability), export_glossary.py (-> docs/GLOSSARY.md)
 docs/GLOSSARY.md   # generated in-depth glossary (also published as a Google Doc)
@@ -87,8 +89,18 @@ tests/             # pytest: test_data.py, test_consistency.py, test_glossary.py
 `data.py` and `consistency.py` MUST stay free of Streamlit imports (independently testable).
 
 - **Default vs full scan:** default fetches `config.DEFAULT_SERIES` (6 core series, ~2s). A "Scan all
-  tennis series" checkbox runs `discover_tennis_series()` (~61 series, ~20s). Series list cached ttl 3600;
-  contracts cached ttl 60.
+  tennis series" checkbox runs `discover_tennis_series()` (~61 series). Series list cached ttl 3600;
+  contracts cached ttl `config.REFRESH_TTL` (30s, ≤ smallest auto-refresh interval so each tick refetches).
+- **Auto-refresh (do not regress):** the dashboard renders inside `@st.fragment(run_every=...)` so it
+  re-fetches on a timer (on by default; interval picker, default `REFRESH_DEFAULT_SECONDS`=120s). The
+  fragment re-calls the cache-gated `load_contracts`. Full scan is heavier (~120+ GETs/tick): a warning
+  is shown and the interval is clamped to ≥ `FULL_SCAN_MIN_INTERVAL` (120s).
+- **Rate limiting (free tier):** Kalshi Basic read ≈ 20 req/s (200 tokens/s ÷ 10/GET; verified at
+  docs.kalshi.com/getting_started/rate_limits). `kalshi_client._throttle` caps issuance at
+  `config.MAX_RPS` (5, ~25%) via a min-interval limiter; `_get` retries with `Retry-After`/exponential
+  backoff (`MAX_RETRIES`/`BACKOFF_*`); fan-out concurrency is `CONCURRENCY` (4). **The throttle is
+  PROCESS-WIDE ONLY** — multiple processes/containers/replicas each have their own limiter (aggregate =
+  `MAX_RPS × process count`); a large scale-out would need a shared limiter.
 - **Contract row (build_contracts), partial schema:** `player, player_key, player_key_source,
   mapping_confidence, mapping_reason, tour, kind, category, contract, stage, stage_rank, opponent,
   display_pct, yes_mid_pct, last_pct, yes_bid_pct, yes_ask_pct, spread_cents, quote_quality, yes_bid_c,
@@ -164,30 +176,35 @@ her early-round match → `UNKNOWN_RELATIONSHIP`; Gauff/Swiatek empty books → 
 
 ## UI — trader-first dashboard (do not regress the section order)
 
-**Controls live in `st.sidebar`; the main page is full width.** Sidebar (top→bottom): Refresh,
-Tournament radio (**default Women**), Contract type (**default Tournament winner + Stage advancement**;
-enabling Match result adds alignment rows), `Advanced — data scope` expander (Scan-all, Show
-explanations toggle — both read **before** the data load), Minimum volume, `Advanced filters` expander
-(Outcome status, Quote quality, Player selector).
+**Controls live in `st.sidebar`; the main page is full width.** Sidebar (top→bottom): Refresh, **Tour**
+radio (Women/Men/Both → WTA/ATP, **default Women**), Contract family (**default Tournament winner +
+Stage advancement**), Auto-refresh + interval, `Advanced — data scope` (Scan-all + Show explanations,
+read **before** the load), Minimum volume, then expanders: **Market universe** (Competition, Stage/layer,
+Event search, Player search), **Thresholds** (Min gross edge, Min tradable size, Quote quality, Market
+status), **Sections** (Show blocked/near/signals/data-quality toggles), **Full-diagnostics filter**
+(Outcome status), **Player detail** (player selector).
 
-**Filter split (critical):** dashboard sections read `dash_base` = checks filtered by **basic only**
-(contract type + min volume); **Outcome status / Quote quality apply ONLY to Full diagnostics** so the
-Actionable-now table is never hidden by diagnostic filters. `consistency.bucket_of(row)` (pure) maps
-each check row to a section: actionable / blocked / near_edge / display_signal / wide_signal /
-data_quality / clean.
+**Filter split (critical — do not regress):** `consistency.bucket_of(row)` maps each check row to a
+section (actionable / blocked / near_edge / display_signal / wide_signal / data_quality / clean). Two
+passes via `filters.py`: `universe = apply_membership(dash_base, …)` (Tour is pre-`build_checks`;
+competition/contract-family/stage-layer/event/player/min-volume are membership) feeds **Actionable now
+and every section**; `thresholded = apply_thresholds(universe, …)` (min edge, min size, quote quality,
+market status) feeds **every section EXCEPT Actionable now** — Actionable always shows every executable
+edge in the membership universe. Full diagnostics = `thresholded` + the Outcome-status select. Membership
+filters run on comparison rows (post-`build_checks`) so they never break ladder pairing.
 
 **Main area, top→bottom:** (1) header + refresh caption; (2) six summary `st.metric` cards —
 Actionable now, Gross quoted profit (Σ over actionable), Blocked, Near-edge, Data-quality issues, Last
-refreshed; (3) **Actionable now** (first real table, always visible; only firm executable crosses that
-are tradable now incl. rule-dependent-with-caveat; empty → "No actionable gross edges right now.");
-(4) **Blocked opportunities** (firm cross blocked by no-size/inactive/finalized; buys marked
-indicative; "Why blocked"); (5) **Near-edge watchlist** (firm gap in `[NEAR_EDGE_MIN_C, 0]`¢ Tight/OK;
-no buy instructions); then collapsed expanders: (6) **Watchlist signals** (display inconsistencies +
-wide quotes — monitoring, not trades); (7) **Selected player detail** (chain → ladder spreads → Buy
-YES/Buy NO action cards → mapping → expected-vs-found → all contracts incl. NO bid/ask → export);
-(8) **Full diagnostics: all comparisons** (the complete table, advanced filters applied here);
-(9) **Debug** (failed series + per-player raw fields + link audit). Tables only, no charts; use
-`width="stretch"`.
+refreshed; an **⬇ Export** expander (Current dashboard = filtered `universe` CSV, Full diagnostics CSV,
+Raw contracts CSV); (3) **Actionable now** (first real table, always visible; only firm executable
+crosses that are tradable now incl. rule-dependent-with-caveat; empty → "No actionable gross edges
+right now."); (4) **Blocked opportunities** (gated by Show toggle; firm cross blocked by
+no-size/inactive/finalized; buys marked indicative); (5) **Near-edge watchlist** (gated; firm gap in
+`[NEAR_EDGE_MIN_C, 0]`¢ Tight/OK; no buy instructions); then collapsed/toggled expanders:
+(6) **Watchlist signals** (display + wide; off by default), (6b) **Data-quality issues** (missing
+quote/layer/unverifiable; off by default), (7) **Selected player detail** (chain → ladder spreads →
+Buy YES/Buy NO action cards → mapping → expected-vs-found → all contracts incl. NO bid/ask → export);
+(8) **Full diagnostics: all comparisons**; (9) **Debug**. Tables only, no charts; use `width="stretch"`.
 
 **Status display labels (no "Potential edge"; "edge" only for a positive executable gap):**
 `EXECUTABLE_VIOLATION`→"Actionable gross edge", `DISPLAY_VIOLATION`→"Display inconsistency",
@@ -252,3 +269,10 @@ date-window corroboration). Older PRs #2/#3/#5 are closed/superseded.
 9. Trader-first dashboard: sidebar controls, full-width summary cards + Actionable now / Blocked /
    Near-edge on top, diagnostics + player detail + debug collapsed below; `consistency.bucket_of`
    routes rows; "Potential edge" wording removed.
+10. Auto-refresh (native `st.fragment(run_every)`, on by default, 120s; full-scan clamp/warn) with a
+    process-wide request throttle + `Retry-After`/exponential backoff, kept safely under the free-tier
+    read limit.
+11. Market-universe sidebar filters (`filters.py`): membership (tour/competition/contract-family/
+    stage-layer/event/player/min-volume) narrows all sections; thresholds (min edge/size, quote, market
+    status) spare Actionable now; Show-section toggles; Data-quality section; dashboard/diagnostics/
+    contracts exports.
