@@ -451,13 +451,14 @@ def _buy_text(side: str | None, leg: str | None, price_c: Any,
 
 
 def _row(player: str, player_key: str, chain: str, child: dict | None, parent: dict | None, comp: dict,
-         child_node: str = "", parent_node: str = "") -> dict:
+         child_node: str = "", parent_node: str = "", tournament: str = "") -> dict:
     """Assemble one consistency-table row."""
     vols = [r.get("volume") for r in (child, parent) if r and r.get("volume") is not None]
     child_contract = child.get("contract") if child else ""
     parent_contract = parent.get("contract") if parent else ""
     a1_leg, a2_leg = comp.get("action_1_leg"), comp.get("action_2_leg")
-    # Market-universe fields (for dashboard filters). All derived from the contract rows / node names.
+    # Market-universe fields (for dashboard filters). `tournament` is the group key (passed in, so it's
+    # correct even when both legs are missing); tour/competition come off whichever leg exists.
     tour = (child or parent or {}).get("tour", "") if (child or parent) else ""
     competition = (child or parent or {}).get("competition", "") if (child or parent) else ""
     # Layers this comparison touches: the containment node names + any match-round stage.
@@ -471,6 +472,7 @@ def _row(player: str, player_key: str, chain: str, child: dict | None, parent: d
         "chain": chain,
         "tour": tour,
         "competition": competition,
+        "tournament": tournament,
         "child_node": child_node,
         "parent_node": parent_node,
         "child_event_ticker": child.get("event_ticker", "") if child else "",
@@ -535,7 +537,7 @@ def build_checks(df: pd.DataFrame) -> pd.DataFrame:
         "child_contract", "parent_contract", "child_display_pct",
         "parent_display_pct", "child_bid_pct", "parent_ask_pct", "executable_gap",
         "display_gap", "status", "status_group", "rule_flag", "reason", "volume",
-        "comp_quote_quality", "child_status", "parent_status",
+        "comp_quote_quality", "child_status", "parent_status", "tournament",
         "tradable_now", "blockers", "watchlist_note",
         "action_1_side", "action_1_leg", "action_1_price_c", "action_1_contract", "action_1_text",
         "action_2_side", "action_2_leg", "action_2_price_c", "action_2_contract", "action_2_text",
@@ -547,10 +549,16 @@ def build_checks(df: pd.DataFrame) -> pd.DataFrame:
     if df is None or df.empty:
         return pd.DataFrame(columns=columns)
 
+    # A competitor can appear in more than one tournament (same UUID across events); group by
+    # (player_key, tournament) so containment ladders never mix across tournaments. `tournament` is a
+    # never-empty key from data.tournament_of; guard for unit-test frames that don't carry it.
+    if "tournament" not in df.columns:
+        df = df.assign(tournament="")
+
     out: list[dict] = []
-    # Group by the STABLE player_key, never the display name: two distinct competitors who
-    # share a display name (or name-fallback collisions) must not be merged into one ladder.
-    for player_key, group in df.groupby("player_key"):
+    # Group by the STABLE player_key (never the display name) AND tournament: two distinct competitors
+    # who share a display name must not merge, and one competitor's two tournaments must not merge.
+    for (player_key, _tournament), group in df.groupby(["player_key", "tournament"]):
         rows = group.to_dict("records")
         player = rows[0].get("player", "") if rows else ""  # display label
         nodes = build_player_nodes(rows)
@@ -574,10 +582,10 @@ def build_checks(df: pd.DataFrame) -> pd.DataFrame:
                     "quote_quality": "",
                 }
                 out.append(_row(player, player_key, chain, child, parent, comp,
-                                child_node=child_node, parent_node=parent_node))
+                                child_node=child_node, parent_node=parent_node, tournament=_tournament))
             else:
                 out.append(_row(player, player_key, chain, child, parent, _classify(child, parent, False),
-                                child_node=child_node, parent_node=parent_node))
+                                child_node=child_node, parent_node=parent_node, tournament=_tournament))
 
         # Match-alignment (equivalence) rows where both a market and a confident match exist.
         for node, sources in nodes.items():
@@ -586,7 +594,7 @@ def build_checks(df: pd.DataFrame) -> pd.DataFrame:
                 chain = f"{match_row.get('stage')} win ≡ {node}"
                 out.append(_row(player, player_key, chain, match_row, market_row,
                                 _classify(match_row, market_row, True),
-                                child_node=node, parent_node=node))
+                                child_node=node, parent_node=node, tournament=_tournament))
 
         # Surface match contracts whose round does NOT map to a tracked layer (e.g. R16) as
         # UNKNOWN_RELATIONSHIP so they are acknowledged, never silently treated as violations.
@@ -601,7 +609,8 @@ def build_checks(df: pd.DataFrame) -> pd.DataFrame:
                     "display_gap": None,
                     "quote_quality": row.get("quote_quality", ""),
                 }
-                out.append(_row(player, player_key, f"{row.get('stage') or '?'} match", row, None, comp))
+                out.append(_row(player, player_key, f"{row.get('stage') or '?'} match", row, None, comp,
+                                tournament=_tournament))
 
     return pd.DataFrame(out, columns=columns)
 

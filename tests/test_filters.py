@@ -7,9 +7,9 @@ import filters
 
 _BASE = dict(
     child_category="Tournament winner", parent_category="Stage advancement",
-    competition="French Open Women Singles", layers=("Reach Final", "Win Tournament"),
+    tournament="French Open", layers=("Reach Final", "Win Tournament"),
     child_event_ticker="KXFOWOMEN-26", parent_event_ticker="KXWTAADVANCE-26AND",
-    player="Aryna Sabalenka", volume=100, executable_gap=3, exec_min_size=50,
+    player="Aryna Sabalenka", player_key="uuid-sab", volume=100, executable_gap=3, exec_min_size=50,
     comp_quote_quality="Tight", child_status="active", parent_status="active", bucket="actionable",
 )
 
@@ -42,17 +42,17 @@ def test_membership_category_keeps_in_scope_and_blank():
     assert "Match result" not in set(out["child_category"])
 
 
-def test_membership_competition_layers_event_player_volume():
+def test_membership_tournament_layers_event_player_volume():
     df = _df(
-        _row(player="Aryna Sabalenka", competition="French Open Women Singles",
+        _row(player="Aryna Sabalenka", player_key="uuid-sab", tournament="French Open",
              layers=("Reach Final", "Win Tournament"), parent_event_ticker="KXWTAADVANCE-26AND", volume=100),
-        _row(player="Carlos Alcaraz", competition="French Open Men Singles",
+        _row(player="Carlos Alcaraz", player_key="uuid-alc", tournament="Wimbledon",
              layers=("Reach Semifinal",), parent_event_ticker="KXATPADVANCE-26Z", volume=5),
     )
-    assert set(filters.apply_membership(df, competitions=["French Open Women Singles"])["player"]) == {"Aryna Sabalenka"}
+    assert set(filters.apply_membership(df, tournaments=["French Open"])["player"]) == {"Aryna Sabalenka"}
     assert set(filters.apply_membership(df, layers=["Reach Semifinal"])["player"]) == {"Carlos Alcaraz"}
-    assert set(filters.apply_membership(df, event_query="and")["player"]) == {"Aryna Sabalenka"}   # ticker substring
-    assert set(filters.apply_membership(df, player_query="alcaraz")["player"]) == {"Carlos Alcaraz"}
+    assert set(filters.apply_membership(df, events=["KXWTAADVANCE-26AND"])["player"]) == {"Aryna Sabalenka"}
+    assert set(filters.apply_membership(df, players=["uuid-alc"])["player"]) == {"Carlos Alcaraz"}
     assert set(filters.apply_membership(df, min_volume=50)["player"]) == {"Aryna Sabalenka"}
 
 

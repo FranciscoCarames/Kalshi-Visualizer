@@ -297,12 +297,48 @@ def test_link_audit_maps_url_to_identifiers():
     assert "kxfowomen-26" in entry["url"]
 
 
-def test_build_contracts_drops_non_french_open():
+def test_build_contracts_includes_all_tennis_and_stamps_tournament():
+    # Generalized: a non-French-Open tennis event is NO LONGER dropped — it's included and stamped
+    # with its own tournament (so its ladder never mixes with another tournament's).
     ev = _fo_match_event()
     ev["product_metadata"]["competition"] = "Wimbledon Women Singles"
     ev["title"] = "Andreeva vs Cirstea"
     for m in ev["markets"]:
-        m["title"] = "Will X win the match?"   # no FO keyword anywhere
-        m["occurrence_datetime"] = "2026-07-01T12:00:00Z"  # outside FO window
-        m["close_time"] = "2026-07-10T12:00:00Z"
-    assert data.build_contracts("KXWTAMATCH", [ev]) == []
+        m["title"] = "Will X win the match?"
+    rows = data.build_contracts("KXWTAMATCH", [ev])
+    assert len(rows) == 2
+    assert all(r["tournament"] == "Wimbledon" for r in rows)
+    assert all(r["tournament_source"] == "competition" for r in rows)
+
+
+# --- v1.4: tournament derivation (generalization grouping key) -----------------------
+def test_tournament_of_sources_and_never_empty():
+    # 1) cleaned competition (gender/discipline stripped)
+    assert data.tournament_of("French Open Men Singles", "KXATPMATCH", "E1", "t") == ("French Open", "competition")
+    assert data.tournament_of("French Open Women Singles", "KXWTAADVANCE", "E2", "t")[0] == "French Open"
+    # 2) winner ticker when competition absent (winner events often lack it)
+    assert data.tournament_of("", "KXFOWOMEN", "KXFOWOMEN-26", "x") == ("French Open", "winner_ticker")
+    # 3) keyword from title
+    assert data.tournament_of("", "KXATPMATCH", "E3", "Wimbledon — R1") == ("Wimbledon", "title_keyword")
+    # 4) fallback is never empty and is stable/unique
+    key, src = data.tournament_of("", "KXATPMATCH", "KXATPMATCH-99XYZ", "")
+    assert src == "fallback" and key and "KXATPMATCH-99XYZ" in key
+    # fully empty inputs still yield a non-empty key
+    assert data.tournament_of("", "", "", "")[0] != ""
+
+
+def test_series_for_families_filters_fetch_list():
+    series = ["KXATPMATCH", "KXWTAMATCH", "KXATPADVANCE", "KXFOMEN", "KXATPSETWINNER", "KXATP1RANK"]
+    # Only the enabled families' series are returned (this is what reduces fetching).
+    assert set(data.series_for_families(series, ["Match result"])) == {"KXATPMATCH", "KXWTAMATCH"}
+    assert set(data.series_for_families(series, ["Tournament winner"])) == {"KXFOMEN"}
+    assert set(data.series_for_families(series, ["Stage advancement", "Set winner"])) == {"KXATPADVANCE", "KXATPSETWINNER"}
+    # "Other" series (rankings) are never fetched for the recognized families; empty selection = none.
+    assert data.series_for_families(series, []) == []
+    assert "KXATP1RANK" not in data.series_for_families(series, ["Match result", "Tournament winner"])
+
+
+def test_clean_tournament_strips_only_gender_discipline():
+    assert data._clean_tournament("French Open Men Singles") == "French Open"
+    assert data._clean_tournament("Wimbledon Mixed Doubles") == "Wimbledon"
+    assert data._clean_tournament("") == ""

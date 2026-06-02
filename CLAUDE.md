@@ -4,18 +4,21 @@ Guidance for **Claude Code** working in this repository. Self-contained — read
 
 ## Project
 
-A small, **read-only** Streamlit app that reads live [Kalshi](https://kalshi.com) prediction-market
-data for the **French Open** tennis tournament. You pick a player, see all of their French Open
-contracts with transparent pricing, a **Layer Consistency Checker** flags when a deeper outcome prices
-above a prerequisite that contains it, and — beneath the per-player ladder — **raw stage-ladder spreads**
-show the price gaps between adjacent layers.
+A small, **read-only** Streamlit **trader dashboard** over live [Kalshi](https://kalshi.com)
+prediction-market data for **tennis** (generalized from the French Open — see below). It surfaces
+**executable inconsistencies** across a participant's related contracts (a deeper outcome must not
+price above a prerequisite that contains it), framed as buy-only opportunities (**Buy YES / Buy NO**),
+split into Actionable / Blocked / Near-edge sections with collapsed diagnostics, per-player detail,
+and debug. Auto-refreshes on a timer under a process-wide rate throttle.
 
 - **Owner / GitHub:** FranciscoCarames (`franciscocarames1@gmail.com`). Repo `Kalshi-Visualizer` (private), default branch `main`.
 - **Platform:** Windows 11, PowerShell, Python 3.13. (The Bash tool is also available.)
-- **Roadmap:** simple-first — see `kalshi-plan.md`. v1 is raw spreads; probability models / scenario
-  trees / signals are an optional "expand later" menu, **not** committed scope.
+- **Generalization (shipped):** no longer French-Open-only. `build_contracts` includes **all tennis
+  events**, each stamped with a never-empty `tournament` grouping key (`data.tournament_of`), and
+  containment ladders group by **(player_key, tournament)**. Tournament is a client-side filter.
 - **Scope guard — do NOT add unless explicitly asked:** trading, authentication, order placement,
-  historical storage, alerts, conditional-probability/de-vig models, or a generic all-sports engine.
+  historical/time-series storage, alerts, conditional-probability/de-vig models, or **non-tennis**
+  sports (tennis generalization is in scope; other sports are not yet).
 
 ## Run & verify
 
@@ -74,23 +77,28 @@ kalshi_client.py   # read-only HTTP: paginated GET, retry/backoff, sized pool,
                    #   discover_tennis_series(), get_events_for_series() (concurrent + retry pass)
 data.py            # NO streamlit: parsing, to_cents(), FO filtering, classify_kind/tour_of,
                    #   pricing helpers (yes_mid/spread/quote_quality/display_prob), build_contracts()
+data.py            # (+ tournament_of -> (tournament key, source); series_for_families; build_contracts
+                   #   includes ALL tennis events — no FO gate — stamping tournament/tournament_source)
 consistency.py     # NO streamlit: node_of, build_player_nodes, representative, expected_nodes,
-                   #   layer_spreads, build_checks; buy-only action plan + tradable_now + blockers
+                   #   layer_spreads, build_checks (groups by [player_key, tournament]); buy-only action
+                   #   plan + tradable_now + blockers; bucket_of (dashboard routing)
 glossary.py        # NO streamlit: GLOSSARY{term:{short,long}}, BLOCKERS, WATCHLIST_NOTE, help_for
-                   #   — single source for in-app tooltips/expander, blocker text, and the docs
-filters.py         # NO streamlit: apply_membership / apply_thresholds over the checks DataFrame
-                   #   (pure, testable; powers the sidebar market-universe + threshold filters)
-app.py             # Streamlit ONLY: consistency table + per-player detail; right-hand controls
+filters.py         # NO streamlit: apply_membership (tournament/family/layer/event/participant/volume)
+                   #   / apply_thresholds (size/quote/market-status) — the two-pass filter split
+viz.py             # NO streamlit: opportunity_ranking (tidy frame for the ranking bar chart)
+app.py             # Streamlit ONLY: sidebar controls, auto-refresh fragment, dashboard sections, chart
 scripts/           # check_links.py (local link reachability), export_glossary.py (-> docs/GLOSSARY.md)
 docs/GLOSSARY.md   # generated in-depth glossary (also published as a Google Doc)
-tests/             # pytest: test_data.py, test_consistency.py, test_glossary.py
+tests/             # pytest: test_data, test_consistency, test_glossary, test_client, test_filters, test_viz
 ```
 
-`data.py` and `consistency.py` MUST stay free of Streamlit imports (independently testable).
+`data.py`, `consistency.py`, `glossary.py`, `filters.py`, `viz.py` MUST stay free of Streamlit imports.
 
-- **Default vs full scan:** default fetches `config.DEFAULT_SERIES` (6 core series, ~2s). A "Scan all
-  tennis series" checkbox runs `discover_tennis_series()` (~61 series). Series list cached ttl 3600;
-  contracts cached ttl `config.REFRESH_TTL` (30s, ≤ smallest auto-refresh interval so each tick refetches).
+- **Fetch by family (do not regress):** `load_contracts(families, scan_all)` fetches ONLY the series
+  whose contract family is enabled (`data.series_for_families`) — **family toggles are the only control
+  that changes what's fetched**. `scan_all` (default ON) widens candidates to all tennis via
+  `discover_tennis_series()`; else `DEFAULT_SERIES`. Tournament/event/participant filters are
+  client-side. Series list cached ttl 3600; contracts cached ttl `config.REFRESH_TTL` (30s).
 - **Auto-refresh (do not regress):** the dashboard renders inside `@st.fragment(run_every=...)` so it
   re-fetches on a timer (on by default; interval picker, default `REFRESH_DEFAULT_SECONDS`=120s). The
   fragment re-calls the cache-gated `load_contracts`. Full scan is heavier (~120+ GETs/tick): a warning
@@ -103,7 +111,8 @@ tests/             # pytest: test_data.py, test_consistency.py, test_glossary.py
   `MAX_RPS × process count`); a large scale-out would need a shared limiter.
 - **Contract row (build_contracts), partial schema:** `player, player_key, player_key_source,
   mapping_confidence, mapping_reason, tour, kind, category, contract, stage, stage_rank, opponent,
-  display_pct, yes_mid_pct, last_pct, yes_bid_pct, yes_ask_pct, spread_cents, quote_quality, yes_bid_c,
+  tournament, tournament_source, display_pct, yes_mid_pct, last_pct, yes_bid_pct, yes_ask_pct,
+  spread_cents, quote_quality, yes_bid_c,
   yes_ask_c, last_c, display_c, yes_bid_size, yes_ask_size, no_bid_pct, no_ask_pct, no_bid_c, no_ask_c,
   volume, open_interest, status, time_value, time_kind, kalshi_url, series, event_ticker, market_ticker,
   event_title, market_title, raw_yes_bid, raw_yes_ask, raw_no_bid, raw_no_ask, raw_last, rules_primary`.
@@ -172,39 +181,40 @@ her early-round match → `UNKNOWN_RELATIONSHIP`; Gauff/Swiatek empty books → 
 - **`tour_of`** classifies every `FO_WINNER_TICKERS` variant explicitly (`KXFOPENWMENSINGLE` → WTA).
 - **No silent truncation:** `get_paginated` raises if `MAX_PAGES` (100) is hit with a cursor pending. *(PR #13)*
 - **Deterministic duplicates:** `build_player_nodes` picks the representative by a stable rule; `duplicate_node_sources` surfaces it. *(PR #13)*
-- **FO filter:** a present non-FO `competition` is disqualifying; date-window fallback only with no competition info. *(PR #13)*
+- **Tournament grouping (generalized; replaces the old FO gate):** `build_contracts` no longer gates on
+  French Open — all tennis events are included. `data.tournament_of` returns a **never-empty** grouping
+  key (cleaned `competition` → winner-ticker → title keyword → `Unknown · <competition|event_ticker|
+  event_title|series_ticker>`, with `tournament_source` recording which). `build_checks` groups by
+  `(player_key, tournament)`, so ladders never mix across tournaments and a fallback never collapses to
+  "". `is_french_open_event` survives as a helper, not a gate.
 
 ## UI — trader-first dashboard (do not regress the section order)
 
-**Controls live in `st.sidebar`; the main page is full width.** Sidebar (top→bottom): Refresh, **Tour**
-radio (Women/Men/Both → WTA/ATP, **default Women**), Contract family (**default Tournament winner +
-Stage advancement**), Auto-refresh + interval, `Advanced — data scope` (Scan-all + Show explanations,
-read **before** the load), Minimum volume, then expanders: **Market universe** (Competition, Stage/layer,
-Event search, Player search), **Thresholds** (Min gross edge, Min tradable size, Quote quality, Market
-status), **Sections** (Show blocked/near/signals/data-quality toggles), **Full-diagnostics filter**
-(Outcome status), **Player detail** (player selector).
+**Controls live in `st.sidebar`; main page full width.** Order: Refresh, **Contract family**
+(**default ALL**, read **before** the fetch — *only this control changes what's fetched*), then after
+the fetch: **Tour** (default **Both**), **Tournament** (multiselect, default all), Auto-refresh +
+interval, **Market universe** (one merged **Participant** selectbox — *All* = no filter; a name filters
+the dashboard AND drives the detail section; **Event/game** + **Stage/layer** multiselects),
+**Thresholds** (Min available size, Quote quality, **Market status = Active only by default**),
+**Sections** toggles, and **Advanced — data scope LAST** (Scan-all **default ON** via a session-state
+read-ahead; **Min traded volume**; Show explanations).
 
-**Filter split (critical — do not regress):** `consistency.bucket_of(row)` maps each check row to a
-section (actionable / blocked / near_edge / display_signal / wide_signal / data_quality / clean). Two
-passes via `filters.py`: `universe = apply_membership(dash_base, …)` (Tour is pre-`build_checks`;
-competition/contract-family/stage-layer/event/player/min-volume are membership) feeds **Actionable now
-and every section**; `thresholded = apply_thresholds(universe, …)` (min edge, min size, quote quality,
-market status) feeds **every section EXCEPT Actionable now** — Actionable always shows every executable
-edge in the membership universe. Full diagnostics = `thresholded` + the Outcome-status select. Membership
-filters run on comparison rows (post-`build_checks`) so they never break ladder pairing.
+**Filter split (critical — do not regress):** `consistency.bucket_of(row)` routes each comparison
+(actionable / blocked / near_edge / display_signal / wide_signal / data_quality / clean). Two passes via
+`filters.py`: `universe = apply_membership(dash_base, …)` (Tour pre-applied to `df`;
+tournament/contract-family/stage-layer/event/participant/min-volume are membership) feeds **Actionable
+now and every section**; `thresholded = apply_thresholds(universe, …)` (min size, quote, **market
+status**) feeds **every section EXCEPT Actionable now**. **Full diagnostics is built from `universe`
+(NOT `thresholded`) + the Outcome-status select**, so **finalized markets stay visible there** even with
+Active-only as the default elsewhere. Membership runs on comparison rows so it never breaks pairing.
 
-**Main area, top→bottom:** (1) header + refresh caption; (2) six summary `st.metric` cards —
-Actionable now, Gross quoted profit (Σ over actionable), Blocked, Near-edge, Data-quality issues, Last
-refreshed; an **⬇ Export** expander (Current dashboard = filtered `universe` CSV, Full diagnostics CSV,
-Raw contracts CSV); (3) **Actionable now** (first real table, always visible; only firm executable
-crosses that are tradable now incl. rule-dependent-with-caveat; empty → "No actionable gross edges
-right now."); (4) **Blocked opportunities** (gated by Show toggle; firm cross blocked by
-no-size/inactive/finalized; buys marked indicative); (5) **Near-edge watchlist** (gated; firm gap in
-`[NEAR_EDGE_MIN_C, 0]`¢ Tight/OK; no buy instructions); then collapsed/toggled expanders:
-(6) **Watchlist signals** (display + wide; off by default), (6b) **Data-quality issues** (missing
-quote/layer/unverifiable; off by default), (7) **Selected player detail** (chain → ladder spreads →
-Buy YES/Buy NO action cards → mapping → expected-vs-found → all contracts incl. NO bid/ask → export);
-(8) **Full diagnostics: all comparisons**; (9) **Debug**. Tables only, no charts; use `width="stretch"`.
+**Main area:** (1) header; (2) six `st.metric` cards + **⬇ Export** expander (Comparisons `universe`
+CSV, Raw contracts CSV); (3) **Actionable now** — always visible, **sorted by gross edge ↓** (no
+min-edge gate; any edge is good), followed by an **opportunity-ranking bar chart** (Altair; Actionable
+green + Near-edge amber); (4) **Blocked** / (5) **Near-edge** (Show-toggled); collapsed: (6) **Watchlist
+signals** + (6b) **Data-quality** (off by default), (7) **Selected player detail**, (8) **Full
+diagnostics** (Outcome-status + own CSV), (9) **Debug** (incl. `tournament_source`). Charts are allowed
+now (the ranking bar); use `width="stretch"` on dataframes and `st.altair_chart`.
 
 **Status display labels (no "Potential edge"; "edge" only for a positive executable gap):**
 `EXECUTABLE_VIOLATION`→"Actionable gross edge", `DISPLAY_VIOLATION`→"Display inconsistency",
@@ -272,7 +282,10 @@ date-window corroboration). Older PRs #2/#3/#5 are closed/superseded.
 10. Auto-refresh (native `st.fragment(run_every)`, on by default, 120s; full-scan clamp/warn) with a
     process-wide request throttle + `Retry-After`/exponential backoff, kept safely under the free-tier
     read limit.
-11. Market-universe sidebar filters (`filters.py`): membership (tour/competition/contract-family/
-    stage-layer/event/player/min-volume) narrows all sections; thresholds (min edge/size, quote, market
-    status) spare Actionable now; Show-section toggles; Data-quality section; dashboard/diagnostics/
-    contracts exports.
+11. Market-universe sidebar filters (`filters.py`): membership (tour/tournament/contract-family/
+    stage-layer/event/participant/min-volume) narrows all sections; thresholds (min size, quote, market
+    status) spare Actionable now; Show-section toggles; Data-quality section; exports.
+12. **Generalized to all tennis** (`tournament_of`, grouping by player+tournament, fetch-by-family),
+    sidebar cleanup (merged participant control, Active-only default with finalized still visible in
+    diagnostics, Advanced last, scan-all + all-families default), **Actionable ranked by edge**, and an
+    **opportunity-ranking chart** (`viz.opportunity_ranking` + Altair). Min-gross-edge control removed.
