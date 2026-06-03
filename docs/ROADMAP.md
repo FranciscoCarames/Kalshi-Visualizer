@@ -52,8 +52,8 @@ current Streamlit stack — while keeping the durable logic migration-ready.
   time, data age, refresh status, stale-data warning, coverage/fetch-failure counts); and **debug + full
   diagnostics moved behind a single Advanced toggle, default OFF**.
   *Implementation note:* the freshness strip is rendered by a dedicated lightweight `st.fragment`
-  (`FRESHNESS_TICK_SECONDS`, default 10s) that recomputes age from the cached fetch, so **Data age climbs
-  live and the stale warning fires even when auto-refresh is off** — without any extra network fetch.
+  (`FRESHNESS_TICK_SECONDS`, default 1s) that recomputes age from the cached fetch, so **Data age ticks
+  every second and the stale warning fires even when auto-refresh is off** — without any extra network fetch.
 
 - **Stage 1 — Opportunity schema + SQLite snapshot store (durable backbone).** *Upcoming.* Give every
   opportunity a stable, deterministic `opportunity_id`; make `blocked_reason` a **required** schema field

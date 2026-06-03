@@ -88,7 +88,7 @@ REFRESH_OPTIONS = [60, 120, 300]   # selectable auto-refresh intervals (seconds)
 REFRESH_DEFAULT_SECONDS = 120      # conservative default (safe even for the heavier full scan)
 FULL_SCAN_MIN_INTERVAL = 120       # full scan is heavy: never auto-refresh faster than this
 REFRESH_TTL = 30                   # load_contracts cache TTL (≤ smallest interval -> each tick refetches)
-FRESHNESS_TICK_SECONDS = 10        # data-age / stale strip re-renders this often (no refetch — cache read)
+FRESHNESS_TICK_SECONDS = 1         # data-age / stale strip re-renders every second (no refetch — cache read)
 
 # --- Display / timezone --------------------------------------------------------------
 # Timestamps are computed in UTC; the dashboard converts to the user's chosen zone for DISPLAY ONLY
