@@ -5,9 +5,12 @@ Scope mirrors the m1 milestone: tennis head-to-head match events only, both dire
 """
 from __future__ import annotations
 
+import pandas as pd
+
 import dutchbook
 
 BLOCKERS_size = "0 contracts are available"  # substring of glossary BLOCKERS["size_missing"]
+NAN = float("nan")
 
 
 def market(player, *, series="KXATPMATCH", event="KXATPMATCH-26JUN03AB", player_key=None,
@@ -214,6 +217,56 @@ def test_ignores_nba_per_game_and_props():
     p = market("Award", series="KXNBAMVP", event="KXNBAMVP-26", player_key="x", yes_ask_c=10)
     p["kind"] = "other"
     assert dutchbook.find_dutch_books([p]) == []
+
+
+# --- Robustness: the production DataFrame->records path (NaN, not None) -------------
+def test_pandas_records_roundtrip_fires():
+    # app.py feeds dutchbook.find_dutch_books(df.to_dict("records")) — exercise that exact path.
+    a = market("A", player_key="a", yes_bid_c=43, yes_ask_c=45)
+    b = market("B", player_key="b", yes_bid_c=46, yes_ask_c=48)
+    rows = pd.DataFrame([a, b]).to_dict("records")
+    out = dutchbook.find_dutch_books(rows)
+    assert len(out) == 1 and out[0]["exec_gap_c"] == 7 and out[0]["tradable_now"] == "Yes"
+
+
+def test_nan_sizes_block_tradability():
+    # Missing sizes arrive as float NaN through pandas; the cross still shows but isn't tradable.
+    a = market("A", player_key="a", yes_bid_c=43, yes_ask_c=45, yes_ask_size=NAN)
+    b = market("B", player_key="b", yes_bid_c=46, yes_ask_c=48, yes_ask_size=NAN)
+    out = dutchbook.find_dutch_books([a, b])
+    assert len(out) == 1
+    assert out[0]["exec_gap_c"] == 7
+    assert out[0]["tradable_now"] == "No" and out[0]["exec_min_size"] is None
+
+
+def test_nan_price_leg_is_not_firm():
+    # A NaN ask (with an otherwise-fine quote) is not a firm price -> no underround on that pair.
+    a = market("A", player_key="a", yes_bid_c=10, yes_ask_c=NAN, no_ask_c=90)
+    b = market("B", player_key="b", yes_bid_c=46, yes_ask_c=48, no_ask_c=54)
+    # underround impossible (A ask NaN); overround no_ask 90+54=144 > 100 -> nothing.
+    assert dutchbook.find_dutch_books([a, b]) == []
+
+
+# --- Robustness: boundary + one-sided book ------------------------------------------
+def test_exact_100_sum_is_not_a_dutch_book():
+    # Sum exactly 100 is fair, not an edge (gap must be strictly > 0).
+    a = market("A", player_key="a", yes_bid_c=49, yes_ask_c=50, no_ask_c=51)
+    b = market("B", player_key="b", yes_bid_c=49, yes_ask_c=50, no_ask_c=51)
+    assert dutchbook.find_dutch_books([a, b]) == []   # ask 50+50=100; no_ask 51+51=102
+
+
+def test_one_sided_book_with_present_ask_can_underround():
+    # 'One-sided' is NOT excluded (only No quote / Crossed are): a present ask is a real, hittable order.
+    a = market("A", player_key="a", yes_bid_c=None, yes_ask_c=45, quality="One-sided")
+    b = market("B", player_key="b", yes_bid_c=46, yes_ask_c=48, quality="Tight")
+    out = dutchbook.find_dutch_books([a, b])
+    assert len(out) == 1 and out[0]["direction"] == "underround" and out[0]["exec_gap_c"] == 7
+
+
+def test_resolve_time_none_when_legs_have_no_time():
+    a = market("A", player_key="a", yes_ask_c=45)
+    b = market("B", player_key="b", yes_ask_c=48)
+    assert dutchbook.find_dutch_books([a, b])[0]["resolve_time"] is None
 
 
 # --- Two events at once: strongest edge first ---------------------------------------
