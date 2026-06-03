@@ -172,6 +172,44 @@ def test_nba_team_without_uuid_is_low_confidence():
     assert r["player_key"] == "mystery team"
 
 
+# --- 3-rung ladder: Reach Playoffs ⊇ Win Conference ⊇ Win Championship ----------------
+def test_nba_reach_playoffs_rung_and_three_rung_ladder():
+    pf = _nba_event("KXNBAPLAYOFF-26", [
+        _nba_market("KXNBAPLAYOFF-26-BOS", "Boston", "uuid-bos", "0.84", "0.86",
+                    "Pro Basketball Playoff Qualifiers Winner?")])
+    conf = _nba_event("KXNBAEAST-26", [
+        _nba_market("KXNBAEAST-26-BOS", "Boston", "uuid-bos", "0.54", "0.56",
+                    "Will the Boston win the Eastern Conference Championship?")])
+    champ = _nba_event("KXNBA-26", [
+        _nba_market("KXNBA-26-BOS", "Boston", "uuid-bos", "0.39", "0.41",
+                    "Will the Boston win the 2026 Pro Basketball Finals?")])
+    rows = (data.build_contracts("KXNBAPLAYOFF", [pf])
+            + data.build_contracts("KXNBAEAST", [conf])
+            + data.build_contracts("KXNBA", [champ]))
+    pf_row = next(r for r in rows if r["series"] == "KXNBAPLAYOFF")
+    assert pf_row["ladder_node"] == "Reach Playoffs" and pf_row["ladder_eligible"] is True
+    checks = consistency.build_checks(pd.DataFrame(rows))
+    chains = {c["chain"] for _, c in checks.iterrows()}
+    assert "Win Championship ≤ Win Conference" in chains
+    assert "Win Conference ≤ Reach Playoffs" in chains          # the new broad rung
+    assert all(c["status"] == "CLEAN" for _, c in checks.iterrows())
+
+
+def test_nba_reach_playoffs_inversion_is_flagged():
+    # Win Conference (deeper) bid ABOVE Reach Playoffs (broader) ask → executable violation on the new rung.
+    pf = _nba_event("KXNBAPLAYOFF-26", [
+        _nba_market("KXNBAPLAYOFF-26-BOS", "Boston", "uuid-bos", "0.50", "0.55",
+                    "Pro Basketball Playoff Qualifiers Winner?")])
+    conf = _nba_event("KXNBAEAST-26", [
+        _nba_market("KXNBAEAST-26-BOS", "Boston", "uuid-bos", "0.60", "0.62",
+                    "Will the Boston win the Eastern Conference Championship?")])
+    rows = data.build_contracts("KXNBAPLAYOFF", [pf]) + data.build_contracts("KXNBAEAST", [conf])
+    checks = consistency.build_checks(pd.DataFrame(rows))
+    row = next(c for _, c in checks.iterrows() if c["chain"] == "Win Conference ≤ Reach Playoffs")
+    assert row["status"] == "EXECUTABLE_VIOLATION"
+    assert row["exec_gap_c"] == 5                                # child bid 60 − parent ask 55
+
+
 # --- tennis preservation (the abstraction didn't change tennis) ----------------------
 def test_tennis_still_resolves_and_classifies():
     assert data.classify_kind("KXATPMATCH") == "match"
