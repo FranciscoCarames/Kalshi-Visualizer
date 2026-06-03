@@ -42,6 +42,7 @@ from consistency import (
     expected_nodes,
     layer_spreads,
     representative,
+    scenario_payoffs,
 )
 from data import CATEGORY, build_contracts, classify_kind, link_audit, series_for_families
 from filters import QUOTE_MODES, STATUS_MODES, apply_membership, apply_thresholds
@@ -52,7 +53,7 @@ from kalshi_client import (
     get_events_for_series,
     get_series_titles,
 )
-from viz import opportunity_ranking
+from viz import ladder_prices, opportunity_ranking, payoff_chart_data
 
 st.set_page_config(page_title="Kalshi Tennis Dashboard", page_icon="🎾", layout="wide")
 
@@ -119,6 +120,81 @@ def _buy_disp(contract: str, price_c) -> str:
         return ""
     price = f"{int(price_c)}¢" if pd.notna(price_c) else "—"
     return f"{contract} @ {price}"
+
+
+def _payoff_block(check_row: dict, units=None) -> None:
+    """Render one opportunity's settlement-scenario payoff table + cost/floor/ROC/capital.
+
+    Pure presentation: all arithmetic lives in consistency.scenario_payoffs. Shows the P&L per
+    single unit (one Buy YES + one Buy NO) in every terminal state, so the edge is concrete and the
+    worst row is visibly the guaranteed floor."""
+    pay = scenario_payoffs(check_row, units=units)
+    if pay is None:
+        return
+    sdf = pd.DataFrame([
+        {
+            "Scenario": s["label"],
+            "Buy YES leg": s["yes_leg_payout_c"],
+            "Buy NO leg": s["no_leg_payout_c"],
+            "Payout/unit": s["payout_c"],
+            "Profit/unit": s["profit_c"],
+        }
+        for s in pay["scenarios"]
+    ])
+    st.dataframe(
+        sdf, hide_index=True, width="stretch",
+        column_config={
+            "Scenario": st.column_config.TextColumn("Scenario"),
+            "Buy YES leg": st.column_config.NumberColumn("Buy YES leg", format="%.0f¢", help="What the Buy YES leg settles to in this state."),
+            "Buy NO leg": st.column_config.NumberColumn("Buy NO leg", format="%.0f¢", help="What the Buy NO leg settles to in this state."),
+            "Payout/unit": st.column_config.NumberColumn("Payout/unit", format="%.0f¢"),
+            "Profit/unit": st.column_config.NumberColumn("Profit/unit", format="%.0f¢", help="Payout − cost. The smallest is the guaranteed floor."),
+        },
+    )
+    bits = []
+    if pay["cost_c"] is not None:
+        bits.append(f"Cost **{pay['cost_c']:.0f}¢/unit**")
+    if pay["worst_case_profit_c"] is not None:
+        roc = pay["roc_pct"]
+        roc_txt = f" ({roc:g}% on capital)" if roc is not None else ""
+        bits.append(f"guaranteed floor **+{pay['worst_case_profit_c']:.0f}¢/unit**{roc_txt}")
+    if pay["capital_c"] is not None:
+        bits.append(
+            f"at {pay['units']:g} units → stake **${pay['capital_c'] / 100:,.2f}**, "
+            f"lock **≥ ${pay['total_floor_profit_c'] / 100:,.2f}**"
+        )
+    if bits:
+        st.caption(" · ".join(bits))
+    if pay["has_rule_risk"]:
+        st.caption("⚠ Equivalence pair: the **rules-diverge** row is a real risk — the two legs may "
+                   "settle differently (walkover/retire nuance). The floor holds only if the rules match.")
+    elif pay["kind"] == "containment":
+        st.caption("The middle row is a **+$1/unit directional bonus**, not the edge — the floor is "
+                   "guaranteed in every state. Gross, before fees/slippage.")
+
+    # Payoff bar chart — the visual twin of the table: payout per state vs the cost line.
+    cdf = payoff_chart_data(pay).dropna(subset=["payout_c"])
+    if not cdf.empty:
+        bars = alt.Chart(cdf).mark_bar().encode(
+            x=alt.X("payout_c:Q", title="Payout / unit (¢)"),
+            y=alt.Y("scenario:N", sort=None, title=None),
+            color=alt.Color("role:N", title="",
+                            scale=alt.Scale(domain=["Floor", "Bonus", "Risk"],
+                                            range=["#2e7d32", "#1565c0", "#9e9e9e"])),
+            tooltip=[alt.Tooltip("scenario:N", title="Scenario"),
+                     alt.Tooltip("payout_c:Q", title="Payout ¢"),
+                     alt.Tooltip("profit_c:Q", title="Profit ¢")],
+        )
+        chart = bars
+        if pay["cost_c"] is not None:
+            rule = (alt.Chart(pd.DataFrame({"cost": [pay["cost_c"]]}))
+                    .mark_rule(color="#c62828", strokeDash=[4, 4])
+                    .encode(x="cost:Q"))
+            chart = bars + rule
+        st.altair_chart(chart, width="stretch")
+        if pay["cost_c"] is not None:
+            st.caption("Bars = payout per unit · dashed line = cost. Every bar clears the line → "
+                       "profit in **every** state.")
 
 
 # scan_all must be known BEFORE the fetch, but its toggle lives in the Advanced expander at the END of
@@ -333,9 +409,12 @@ def render_dashboard() -> None:
         a["buy_yes_disp"] = [_buy_disp(c, p) for c, p in zip(a["action_1_contract"], a["action_1_price_c"])]
         a["buy_no_disp"] = [_buy_disp(c, p) for c, p in zip(a["action_2_contract"], a["action_2_price_c"])]
         a["caveat_disp"] = a["blockers"].replace("", "—").fillna("—")
+        # Time-to-resolution: hours until the soonest leg settles (sortable; "—" when unknown).
+        _now = pd.Timestamp.now(tz="UTC")
+        a["resolve_hrs"] = (pd.to_datetime(a["resolve_time"], utc=True, errors="coerce") - _now).dt.total_seconds() / 3600
         st.dataframe(
             a[["player", "tournament", "chain", "buy_yes_disp", "buy_no_disp", "exec_gap_c", "exec_min_size",
-               "exec_max_profit_dollars", "tradable_disp", "caveat_disp", "child_url", "parent_url"]],
+               "exec_max_profit_dollars", "resolve_hrs", "tradable_disp", "caveat_disp", "child_url", "parent_url"]],
             hide_index=True, width="stretch",
             column_config={
                 "player": "Player",
@@ -346,6 +425,7 @@ def render_dashboard() -> None:
                 "exec_gap_c": st.column_config.NumberColumn("Gross edge (¢)", format="%.0f", help=help_for("Executable gap (¢)")),
                 "exec_min_size": st.column_config.NumberColumn("Max units", format="%.0f"),
                 "exec_max_profit_dollars": st.column_config.NumberColumn("Gross quoted profit ($)", format="$%.2f", help=help_for("Gross quoted profit ($)")),
+                "resolve_hrs": st.column_config.NumberColumn("Resolves in (h)", format="%.0f", help="Hours until the soonest leg settles — how long capital is tied up. Lower = more urgent. Sort by this column."),
                 "tradable_disp": st.column_config.TextColumn("Tradable now", help=help_for("Tradable now")),
                 "caveat_disp": st.column_config.TextColumn("Caveat"),
                 "child_url": st.column_config.LinkColumn("Deeper link", display_text="open ↗"),
@@ -353,6 +433,14 @@ def render_dashboard() -> None:
             },
         )
         st.caption("Gross, before fees, slippage, latency, and partial-fill risk. (Thresholds do not filter this table.)")
+
+        # Per-opportunity payoff detail: the money in every settlement state, with the floor visible.
+        st.caption("Payoff by scenario — expand an opportunity to see the profit in every outcome:")
+        for _, r in a.iterrows():
+            floor = r.get("exec_gap_c")
+            ftxt = f" — floor +{int(floor)}¢/unit" if pd.notna(floor) else ""
+            with st.expander(f"💵 {r['player']} · {r['chain']}{ftxt}"):
+                _payoff_block(r.to_dict(), units=r.get("exec_min_size"))
 
     # ---- Opportunity ranking chart (Actionable + Near-edge by gross edge) ----------
     rank = opportunity_ranking(actionable, near)
@@ -499,6 +587,22 @@ def render_dashboard() -> None:
                 },
             )
 
+            # Price-ladder chart: bars should step DOWN broad→deep; a longer deeper (red) bar is an inversion.
+            lplot = ladder_prices(chain_rows).dropna(subset=["display_pct"])
+            if len(lplot) >= 2:
+                ladder_chart = alt.Chart(lplot).mark_bar().encode(
+                    x=alt.X("display_pct:Q", title="Display probability (%)"),
+                    y=alt.Y("layer:N", sort=list(NODE_ORDER), title=None),
+                    color=alt.Color("inverted:N", title="Inverted",
+                                    scale=alt.Scale(domain=[False, True], range=["#1565c0", "#c62828"])),
+                    tooltip=[alt.Tooltip("layer:N", title="Layer"),
+                             alt.Tooltip("display_pct:Q", title="Display %", format=".1f"),
+                             alt.Tooltip("inverted:N", title="Inverted")],
+                )
+                st.altair_chart(ladder_chart, width="stretch")
+                st.caption("Containment ladder — prices should step **down** broad→deep. A longer **deeper** "
+                           "bar (red) prices above its prerequisite: the visual signature of a violation.")
+
             pviol = (
                 checks[(checks["player_key"] == chosen_key) & (checks["status"] == "EXECUTABLE_VIOLATION")]
                 if "player_key" in checks.columns else checks.iloc[0:0]
@@ -565,6 +669,7 @@ def render_dashboard() -> None:
                     if r["blockers"]:
                         lines.append(f"- **Why not:** {r['blockers']}")
                     st.markdown("\n".join(lines))
+                    _payoff_block(r.to_dict(), units=r.get("exec_min_size"))
 
             sample = prows[0] if prows else {}
             if show_help:
