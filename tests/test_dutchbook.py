@@ -184,6 +184,38 @@ def test_blocked_dutch_book_routes_to_blocked_bucket():
     assert consistency.bucket_of(f) == "blocked"
 
 
+# --- Sport-agnostic: NBA / WNBA head-to-head playoff series (task #5) ----------------
+def test_fires_on_nba_playoff_series():
+    # KXNBASERIES is NBA's head-to-head family (kind 'match'): one team wins the series, no draw.
+    a = market("Celtics", series="KXNBASERIES", event="KXNBASERIES-26BOSIND",
+               player_key="bos", yes_ask_c=47)
+    b = market("Pacers", series="KXNBASERIES", event="KXNBASERIES-26BOSIND",
+               player_key="ind", yes_ask_c=50)
+    out = dutchbook.find_dutch_books([a, b])
+    assert len(out) == 1
+    assert out[0]["direction"] == "underround" and out[0]["exec_gap_c"] == 3
+
+
+def test_fires_on_wnba_playoff_series():
+    a = market("Aces", series="KXWNBASERIES", event="KXWNBASERIES-26LVNY", player_key="lv", yes_ask_c=40)
+    b = market("Liberty", series="KXWNBASERIES", event="KXWNBASERIES-26LVNY", player_key="ny", yes_ask_c=52)
+    out = dutchbook.find_dutch_books([a, b])
+    assert len(out) == 1 and out[0]["exec_gap_c"] == 8
+
+
+def test_ignores_nba_per_game_and_props():
+    # Per-game (kind 'game') is 2-outcome too, but it is NOT the match family -> out of m1 scope.
+    g1 = market("A", series="KXNBAGAME", event="KXNBAGAME-1", player_key="a", yes_ask_c=45)
+    g1["kind"] = "game"
+    g2 = market("B", series="KXNBAGAME", event="KXNBAGAME-1", player_key="b", yes_ask_c=48)
+    g2["kind"] = "game"
+    assert dutchbook.find_dutch_books([g1, g2]) == []
+    # A non-head-to-head prop/other row is ignored regardless of price.
+    p = market("Award", series="KXNBAMVP", event="KXNBAMVP-26", player_key="x", yes_ask_c=10)
+    p["kind"] = "other"
+    assert dutchbook.find_dutch_books([p]) == []
+
+
 # --- Two events at once: strongest edge first ---------------------------------------
 def test_multiple_events_sorted_by_gap_desc():
     e1 = [market("A", event="EV1", player_key="a", yes_ask_c=45),
