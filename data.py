@@ -18,6 +18,7 @@ from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
+import sports
 from config import (
     FO_KEYWORDS,
     FO_WINDOW,
@@ -27,39 +28,13 @@ from config import (
     SPREAD_REASONABLE,
 )
 
-# Rounds checked most-specific first; \b boundaries stop "final" matching "quarterfinal".
-_ROUND_PATTERNS = [
-    ("Final", r"\bfinal\b"),
-    ("Semifinal", r"\bsemi-?final(?:s)?\b"),
-    ("Quarterfinal", r"\bquarter-?final(?:s)?\b"),
-    ("Round of 16", r"\bround of 16\b|\bfourth round\b"),
-    ("Round of 32", r"\bround of 32\b|\bthird round\b"),
-    ("Round of 64", r"\bround of 64\b|\bsecond round\b"),
-    ("Round of 128", r"\bround of 128\b|\bfirst round\b"),
-]
-
-# Tournament progression order, used to sort a player's contracts QF -> SF -> Final -> title.
-_STAGE_RANK = {
-    "Round of 128": 1,
-    "Round of 64": 2,
-    "Round of 32": 3,
-    "Round of 16": 4,
-    "Quarterfinal": 5,
-    "Semifinal": 6,
-    "Final": 7,
-    "Champion": 8,
-}
-
-# Map each contract kind to a user-facing category label (shown/filterable in the UI).
-CATEGORY = {
-    "match": "Match result",
-    "advance": "Stage advancement",
-    "winner": "Tournament winner",
-    "set_winner": "Set winner",
-    "exact_score": "Exact score",
-    "grand_slam": "Grand Slam (season)",
-    "other": "Other",
-}
+# Tennis round patterns, stage ranks, and category labels now live on the tennis SportConfig
+# (sports.py) so the engine is sport-agnostic. Kept here as back-compat aliases that REFERENCE the
+# tennis config (never copies), so existing imports/tests (`data.CATEGORY`, `data._STAGE_RANK`, …)
+# and the tennis-only direct calls below resolve exactly as before.
+_ROUND_PATTERNS = sports.TENNIS.round_patterns
+_STAGE_RANK = sports.TENNIS.stage_rank
+CATEGORY = sports.TENNIS.category_labels
 
 
 def to_float(value: Any) -> float | None:
@@ -120,11 +95,8 @@ def _within_window(*timestamps: Any) -> bool:
 
 
 def _extract_round(*texts: Any) -> str:
-    blob = " ".join(str(t) for t in texts if t)
-    for label, pattern in _ROUND_PATTERNS:
-        if re.search(pattern, blob, re.IGNORECASE):
-            return label
-    return ""
+    """Tennis round label from the joined texts (delegates to the shared, sport-parameterized helper)."""
+    return sports.extract_round(_ROUND_PATTERNS, *texts)
 
 
 def is_french_open_event(event: dict[str, Any]) -> bool:
@@ -291,43 +263,21 @@ def _mapping_confidence(competitor: Any, name: Any) -> tuple[str, str]:
 
 
 def classify_kind(series_ticker: str) -> str:
-    """Classify a tennis series into a contract kind.
+    """Classify a series into a contract family (kind).
 
-    Order matters: the explicit winner tickers and the EXACTMATCH/SETWINNER checks must run
-    before the generic MATCH check (EXACTMATCH contains the substring "MATCH").
+    Delegates to the sport that owns the ticker (`sports.sport_for_series`). An unrecognized series
+    resolves to the UNKNOWN sport and family ``"other"`` (today's behavior for unknown tickers) —
+    never silently treated as tennis.
     """
-    t = (series_ticker or "").upper()
-    if t in FO_WINNER_TICKERS:
-        return "winner"
-    if "ADVANCE" in t:
-        return "advance"
-    if "EXACTMATCH" in t or "EXACTSCORE" in t:
-        return "exact_score"
-    if "SETWINNER" in t:
-        return "set_winner"
-    if "GRANDSLAM" in t:
-        return "grand_slam"
-    if "MATCH" in t:
-        return "match"
-    return "other"
-
-
-# Explicit tour for the French Open winner-ticker variants, because some (e.g.
-# KXFOPENWMENSINGLE = Open Women Singles) split the "W"/"MEN" so substring checks misfire.
-_WOMEN_WINNER_TICKERS = {"KXFOWOMEN", "KXFOWOMENSINGLES", "KXFOPENWMENSINGLE"}
-_MEN_WINNER_TICKERS = {"KXFOMEN", "KXFOMENSINGLES", "KXFOPENMENSINGLE"}
+    return sports.sport_for_series(series_ticker).family_of(series_ticker)
 
 
 def tour_of(series_ticker: str) -> str:
-    """Men's (ATP) vs women's (WTA) from the series ticker."""
-    t = (series_ticker or "").upper()
-    if t in _WOMEN_WINNER_TICKERS:
-        return "WTA"
-    if t in _MEN_WINNER_TICKERS:
-        return "ATP"
-    if t.startswith("KXWTA") or "WOMEN" in t:
-        return "WTA"
-    return "ATP"
+    """Division (tennis: ATP/WTA) from the series ticker, via the resolved sport.
+
+    Sports without a division concept (e.g. NBA) return ``""``.
+    """
+    return sports.sport_for_series(series_ticker).division_of(series_ticker)
 
 
 def _clean_title(title: Any) -> str:
@@ -457,9 +407,8 @@ def build_contracts(
     `series_title` (from /series/<ticker>) is used to build the slugged Kalshi deep link to each
     event's page; when absent, links fall back to the series page (see `kalshi_market_url`).
     """
-    kind = classify_kind(series_ticker)
-    tour = tour_of(series_ticker)
-    category = CATEGORY.get(kind, "Other")
+    cfg = sports.sport_for_series(series_ticker)
+    tour = cfg.division_of(series_ticker)
 
     rows: list[dict[str, Any]] = []
     for event in events or []:
@@ -481,24 +430,31 @@ def build_contracts(
             if not name:
                 if _diag is not None:
                     _diag["skipped_no_name"] = _diag.get("skipped_no_name", 0) + 1
-                continue  # need a display name for the player selector
-            competitor = (market.get("custom_strike") or {}).get("tennis_competitor")
-            player_key = competitor or name.casefold()
-            player_key_source = "competitor_uuid" if competitor else "name_fallback"
-            mapping_confidence, mapping_reason = _mapping_confidence(competitor, name)
+                continue  # need a display name for the participant selector
+
+            # Structured, per-sport participant identity (UUID when available, else name fallback).
+            ident = cfg.identity.resolve(market)
+            player_key = ident.participant_key
+            player_key_source = ident.source_field
+            mapping_confidence = ident.confidence
+            mapping_reason = ident.reason
+            competitor = ident.raw_value if ident.confidence == "high" else ""
             # Clean, user-facing name via the single shared helper (alias > source > titleized
             # fallback). Internal identifiers are kept as separate fields for debug/export.
             display = display_player_name({"player_key": player_key, "player_name_raw": name})
 
-            if kind == "match":
+            # Structured, per-sport market classification: family, stage, ladder node + eligibility.
+            mc = cfg.classify(series_ticker, market)
+            kind = mc.family
+            category = cfg.category_labels.get(kind, "Other")
+            stage = mc.stage
+
+            # Opponent only for the head-to-head family (tennis: "match"; NBA: "series").
+            if cfg.match_family and kind == cfg.match_family:
                 opponents = [n for j, n in enumerate(names) if j != idx and n and n != name]
                 opponent = " / ".join(opponents)
             else:
                 opponent = ""
-
-            stage = "Champion" if kind == "winner" else _extract_round(
-                market.get("title"), market.get("rules_primary")
-            )
 
             bid = to_float(market.get("yes_bid_dollars"))
             ask = to_float(market.get("yes_ask_dollars"))
@@ -548,11 +504,19 @@ def build_contracts(
                     "category": category,
                     "contract": _contract_label(kind, market, opponent, stage),
                     "stage": stage,
-                    "stage_rank": _STAGE_RANK.get(stage, 0),
+                    "stage_rank": mc.stage_rank,
                     "opponent": opponent,
                     "competition": competition,
                     "tournament": tournament,
                     "tournament_source": tournament_source,
+                    # Structured classification: sport-agnostic ladder placement + eligibility.
+                    # Ineligible/unsupported markets (per-game, props, …) never enter ladder checks
+                    # and surface in the unmapped table with `classification_reason`.
+                    "market_family": mc.family,
+                    "ladder_node": mc.ladder_node,
+                    "ladder_eligible": mc.eligible_for_ladder_checks,
+                    "classification_confidence": mc.confidence,
+                    "classification_reason": mc.reason,
                     # Pricing — display price plus every component, clearly named.
                     "display_pct": _pct(display_prob(bid, ask, last)),
                     "yes_mid_pct": _pct(mid),
@@ -591,6 +555,9 @@ def build_contracts(
                     "raw_no_ask": market.get("no_ask_dollars"),
                     "raw_last": market.get("last_price_dollars"),
                     "rules_primary": market.get("rules_primary", ""),
+                    # Raw metadata preserved for debugging / downloads (identity + settlement context).
+                    "raw_custom_strike": market.get("custom_strike"),
+                    "raw_product_metadata": event.get("product_metadata"),
                 }
             )
     return rows
@@ -604,4 +571,9 @@ def series_for_families(series_tickers: list[str], families: Any) -> list[str]:
     change which series are fetched.)
     """
     fams = set(families or [])
-    return [s for s in (series_tickers or []) if CATEGORY.get(classify_kind(s), "Other") in fams]
+    out: list[str] = []
+    for s in series_tickers or []:
+        cfg = sports.sport_for_series(s)
+        if cfg.category_labels.get(cfg.family_of(s), "Other") in fams:
+            out.append(s)
+    return out

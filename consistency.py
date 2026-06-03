@@ -18,6 +18,7 @@ from typing import Any
 
 import pandas as pd
 
+import sports
 from config import DISPLAY_TOL_C, NEAR_EDGE_MIN_C
 from data import CATEGORY
 from glossary import BLOCKERS, WATCHLIST_NOTE
@@ -27,17 +28,30 @@ from glossary import BLOCKERS, WATCHLIST_NOTE
 # watchlist-only, not an opportunity to act on.
 ACTION_STATUSES = {"EXECUTABLE_VIOLATION", "DISPLAY_VIOLATION", "QUOTE_SIZE_MISSING"}
 
-# Canonical containment ladder, broad -> deep. A deeper node is a subset of the broader one.
-NODE_ORDER = ["Reach Semifinal", "Reach Final", "Win Tournament"]
-# Adjacent (child = deeper, parent = broader): child price must be <= parent price.
-ADJACENT_PAIRS = [("Win Tournament", "Reach Final"), ("Reach Final", "Reach Semifinal")]
-# Winning your current match <=> reaching the next stage (only when the round maps confidently).
-MATCH_STAGE_TO_NODE = {
-    "Quarterfinal": "Reach Semifinal",
-    "Semifinal": "Reach Final",
-    "Final": "Win Tournament",
-}
-ADVANCE_STAGE_TO_NODE = {"Semifinal": "Reach Semifinal", "Final": "Reach Final"}
+# The containment ladder is now per-sport (sports.py). These module-level names are back-compat
+# aliases that REFERENCE the tennis ladder (never copies), so `from consistency import NODE_ORDER`
+# (app.py) and the tennis consistency tests resolve exactly as before. Multi-sport code resolves the
+# ladder from each row/group's series via `_sport_for_row(s)` below.
+NODE_ORDER = sports.TENNIS.ladder.node_order
+ADJACENT_PAIRS = sports.TENNIS.ladder.adjacent_pairs
+MATCH_STAGE_TO_NODE = sports.TENNIS.ladder.match_stage_to_node
+ADVANCE_STAGE_TO_NODE = sports.TENNIS.ladder.advance_stage_to_node
+
+
+def _sport_for_row(row: dict[str, Any]):
+    """Resolve the sport that owns a contract row, from its `series`. Falls back to TENNIS for
+    unit-test fixtures that carry no series ticker (Stage-A back-compat; real rows always have one)."""
+    cfg = sports.sport_for_series(row.get("series"))
+    return cfg if cfg.sport_id != "unknown" else sports.TENNIS
+
+
+def _sport_for_rows(rows: list[dict[str, Any]]):
+    """Resolve the sport for a group of one player's rows (all one sport). TENNIS fallback."""
+    for r in rows or []:
+        cfg = sports.sport_for_series(r.get("series"))
+        if cfg.sport_id != "unknown":
+            return cfg
+    return sports.TENNIS
 
 # Settlement-rule nuance tokens; a difference between two markets means the equivalence may
 # not hold exactly (e.g. walkover / "ball has been played" handling differs).
@@ -58,15 +72,18 @@ STATUS_GROUP = {
 
 
 def node_of(row: dict[str, Any]) -> str | None:
-    """Map a contract row to its containment node, or None if it doesn't map confidently."""
-    kind = row.get("kind")
-    if kind == "winner":
-        return "Win Tournament"
-    if kind == "advance":
-        return ADVANCE_STAGE_TO_NODE.get(row.get("stage"))
-    if kind == "match":
-        return MATCH_STAGE_TO_NODE.get(row.get("stage"))
-    return None
+    """Map a contract row to its containment node, or None if it doesn't map confidently.
+
+    Prefers the `ladder_node` stamped by `data.build_contracts` (the sport's classification). Falls
+    back to recomputing from the resolved sport's family/stage maps — this serves unit-test fixtures
+    that carry family/stage but no stamped node. Ineligible/non-laddered markets have node None and
+    are thus excluded from the ladder.
+    """
+    stamped = row.get("ladder_node")
+    if stamped:
+        return stamped
+    cfg = _sport_for_row(row)
+    return cfg.node_fn(cfg, row.get("kind"), row.get("stage"))
 
 
 def _representative_key(row: dict[str, Any]) -> tuple:
@@ -143,8 +160,9 @@ def layer_spreads(player_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     exists but has no usable display price gives "missing_price"; both yield `spread_* = None`.
     """
     nodes = build_player_nodes(player_rows)
+    ladder = _sport_for_rows(player_rows).ladder
     out: list[dict[str, Any]] = []
-    for broader, deeper in zip(NODE_ORDER, NODE_ORDER[1:]):
+    for broader, deeper in zip(ladder.node_order, ladder.node_order[1:]):
         b = representative(nodes.get(broader))
         d = representative(nodes.get(deeper))
         # NaN-safe: a missing price arrives as float NaN via the DataFrame→records path.
@@ -193,7 +211,7 @@ def expected_nodes(player_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
         return []
     nodes = build_player_nodes(player_rows)
     out: list[dict[str, Any]] = []
-    for node in NODE_ORDER:
+    for node in _sport_for_rows(player_rows).ladder.node_order:
         src = nodes.get(node, {})
         if "market" in src:
             source, found = "market", True
@@ -575,9 +593,12 @@ def build_checks(df: pd.DataFrame) -> pd.DataFrame:
         nodes = build_player_nodes(rows)
         if not nodes:
             continue
+        # The containment ladder is per-sport — resolve it from this group's series.
+        cfg = _sport_for_rows(rows)
+        ladder = cfg.ladder
 
         # Adjacent containment pairs (market sources only).
-        for child_node, parent_node in ADJACENT_PAIRS:
+        for child_node, parent_node in ladder.adjacent_pairs:
             child = nodes.get(child_node, {}).get("market")
             parent = nodes.get(parent_node, {}).get("market")
             chain = f"{child_node} ≤ {parent_node}"
@@ -610,7 +631,7 @@ def build_checks(df: pd.DataFrame) -> pd.DataFrame:
         # Surface match contracts whose round does NOT map to a tracked layer (e.g. R16) as
         # UNKNOWN_RELATIONSHIP so they are acknowledged, never silently treated as violations.
         for row in rows:
-            if row.get("kind") == "match" and row.get("stage") not in MATCH_STAGE_TO_NODE:
+            if row.get("kind") == cfg.match_family and row.get("stage") not in ladder.match_stage_to_node:
                 comp = {
                     "status": "UNKNOWN_RELATIONSHIP",
                     "status_group": STATUS_GROUP["UNKNOWN_RELATIONSHIP"],

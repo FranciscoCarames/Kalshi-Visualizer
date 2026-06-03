@@ -19,17 +19,16 @@ from typing import Any
 import requests
 from requests.adapters import HTTPAdapter
 
+import sports
 from config import (
     BACKOFF_BASE,
     BACKOFF_MAX,
     BASE_URL,
     CONCURRENCY,
-    FO_WINNER_TICKERS,
     MAX_PAGES,
     MAX_RETRIES,
     MAX_RPS,
     REQUEST_TIMEOUT,
-    TENNIS_SERIES_PREFIXES,
     USER_AGENT,
 )
 
@@ -157,12 +156,12 @@ def get_events(series_ticker: str, status: str = "open") -> list[dict[str, Any]]
     )
 
 
-def discover_tennis_series() -> list[str]:
-    """Return the tickers of all tennis series worth scanning.
+def discover_series_for_sport(cfg: sports.SportConfig) -> list[str]:
+    """Return the tickers of all series worth scanning for one sport.
 
-    The universe spans match/advancement/winner/set/score series; rather than hardcode them
-    we list every series with a tennis prefix (plus the explicitly-named tournament-winner
-    tickers) and let the data layer stamp each event with its tournament.
+    Lists every series whose ticker carries one of the sport's prefixes (plus its explicitly-named
+    winner tickers) and lets the data layer stamp each event with its tournament. Sport-agnostic:
+    the same scan works for tennis, NBA, or any registered sport.
     """
     series = get_paginated("/series", {"limit": 200}, list_key="series")
     tickers = [
@@ -170,11 +169,16 @@ def discover_tennis_series() -> list[str]:
         for s in series
         if s.get("ticker")
         and (
-            s["ticker"].startswith(TENNIS_SERIES_PREFIXES)
-            or s["ticker"] in FO_WINNER_TICKERS
+            s["ticker"].startswith(cfg.series_prefixes)
+            or s["ticker"] in cfg.winner_tickers
         )
     ]
     return sorted(set(tickers))
+
+
+def discover_tennis_series() -> list[str]:
+    """Tennis series tickers (back-compat wrapper over `discover_series_for_sport`)."""
+    return discover_series_for_sport(sports.TENNIS)
 
 
 def get_series_titles(tickers: list[str], max_workers: int = CONCURRENCY) -> dict[str, str]:
