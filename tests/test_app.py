@@ -82,7 +82,7 @@ def test_app_renders_without_exception():
     tickers = [t for t, _ in results]
     titles = {"KXWTAMATCH": "WTA Match", "KXWTAADVANCE": "WTA Advance", "KXFOWOMEN": "French Open Women's"}
 
-    with patch("kalshi_client.discover_tennis_series", return_value=tickers), \
+    with patch("kalshi_client.discover_series_for_sport", return_value=tickers), \
          patch("kalshi_client.get_events_for_series", return_value=(results, [])), \
          patch("kalshi_client.get_series_titles", return_value=titles):
         at = AppTest.from_file(APP_PATH, default_timeout=60).run()
@@ -92,5 +92,53 @@ def test_app_renders_without_exception():
         # Locate it by its options (robust to sidebar control ordering) rather than by index.
         participant = next(sb for sb in at.selectbox if "Mirra Andreeva" in sb.options)
         participant.set_value("Mirra Andreeva")
+        at.run()
+        assert not at.exception
+
+
+def _nba_market(ticker: str, team: str, uuid: str, bid: str, ask: str, title: str) -> dict:
+    return {
+        "ticker": ticker, "yes_sub_title": team, "custom_strike": {"basketball_team": uuid},
+        "yes_bid_dollars": bid, "yes_ask_dollars": ask, "last_price_dollars": ask,
+        "yes_bid_size_fp": "100", "yes_ask_size_fp": "100",
+        "volume_fp": "1000", "open_interest_fp": "500", "status": "active",
+        "title": title, "close_time": "2026-06-16T09:00:00Z",
+    }
+
+
+def _nba_results() -> list[tuple[str, list[dict]]]:
+    """Championship + conference (a real Win Championship ⊆ Win Conference ladder) + a per-game
+    market (ineligible — must surface in the unmapped table, never in ladder checks)."""
+    comp = {"competition": "Pro Basketball (M)"}
+    champ = {"event_ticker": "KXNBA-26", "title": "Finals", "product_metadata": comp,
+             "markets": [_nba_market("KXNBA-26-BOS", "Boston", "uuid-bos", "0.40", "0.42",
+                                     "Will the Boston win the 2026 Pro Basketball Finals?")]}
+    conf = {"event_ticker": "KXNBAEAST-26", "title": "East", "product_metadata": comp,
+            "markets": [_nba_market("KXNBAEAST-26-BOS", "Boston", "uuid-bos", "0.55", "0.57",
+                                    "Will the Boston win the Eastern Conference Championship?")]}
+    game = {"event_ticker": "KXNBAGAME-26JUN10", "title": "Game 4",
+            "product_metadata": {"competition": "Pro Basketball (M)", "competition_scope": "Game"},
+            "markets": [_nba_market("KXNBAGAME-26JUN10-BOS", "Boston", "uuid-bos", "0.50", "0.52",
+                                    "Game 4 Winner?")]}
+    return [("KXNBA", [champ]), ("KXNBAEAST", [conf]), ("KXNBAGAME", [game])]
+
+
+def test_app_renders_nba_and_unmapped_table():
+    pytest.importorskip("streamlit")
+    from streamlit.testing.v1 import AppTest
+
+    results = _nba_results()
+    tickers = [t for t, _ in results]
+    with patch("kalshi_client.discover_series_for_sport", return_value=tickers), \
+         patch("kalshi_client.get_events_for_series", return_value=(results, [])), \
+         patch("kalshi_client.get_series_titles", return_value={}):
+        at = AppTest.from_file(APP_PATH, default_timeout=60)
+        at.session_state["sport_id"] = "nba"          # select NBA before the first render
+        at.run()
+        assert not at.exception
+
+        # Turn on the non-laddered table → the per-game market must render there.
+        toggle = next(t for t in at.toggle if "non-laddered" in t.label.lower())
+        toggle.set_value(True)
         at.run()
         assert not at.exception
