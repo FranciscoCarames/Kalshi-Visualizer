@@ -5,20 +5,23 @@ Guidance for **Claude Code** working in this repository. Self-contained — read
 ## Project
 
 A small, **read-only** Streamlit **trader dashboard** over live [Kalshi](https://kalshi.com)
-prediction-market data for **tennis** (generalized from the French Open — see below). It surfaces
-**executable inconsistencies** across a participant's related contracts (a deeper outcome must not
-price above a prerequisite that contains it), framed as buy-only opportunities (**Buy YES / Buy NO**),
-split into Actionable / Blocked / Near-edge sections with collapsed diagnostics, per-player detail,
-and debug. Auto-refreshes on a timer under a process-wide rate throttle.
+prediction-market data for **tennis (ATP/WTA), NBA, and WNBA**. It surfaces **executable
+inconsistencies** across a participant's related contracts (a deeper outcome must not price above a
+prerequisite that contains it) and **dutch-book arbitrage** on 2-outcome MECE events, framed as
+buy-only opportunities (**Buy YES / Buy NO**), split into Actionable / Blocked / Near-edge sections
+with collapsed diagnostics, per-player detail, and debug. Auto-refreshes on a timer under a
+process-wide rate throttle.
 
 - **Owner / GitHub:** FranciscoCarames (`franciscocarames1@gmail.com`). Repo `Kalshi-Visualizer` (private), default branch `main`.
 - **Platform:** Windows 11, PowerShell, Python 3.13. (The Bash tool is also available.)
-- **Generalization (shipped):** no longer French-Open-only. `build_contracts` includes **all tennis
-  events**, each stamped with a never-empty `tournament` grouping key (`data.tournament_of`), and
-  containment ladders group by **(player_key, tournament)**. Tournament is a client-side filter.
+- **Multi-sport (shipped):** `sports.py` defines a `SportConfig` abstraction; tennis, NBA, and WNBA
+  are registered sports. Adding a new sport = one `register(SportConfig(...))` call. `build_contracts`
+  includes **all events for all registered sports**; containment ladders group by **(player_key,
+  tournament)** per sport. Tournament is a client-side filter.
 - **Scope guard — do NOT add unless explicitly asked:** trading, authentication, order placement,
-  historical/time-series storage, alerts, conditional-probability/de-vig models, or **non-tennis**
-  sports (tennis generalization is in scope; other sports are not yet).
+  historical/time-series storage, alerts, conditional-probability/de-vig models. Adding a **new sport**
+  is in scope via a `SportConfig` drop-in; non-sport-config work is not. (The approved roadmap will
+  introduce a SQLite snapshot store and alerts in a future stage — do not add those until asked.)
 
 ## Run & verify
 
@@ -61,7 +64,7 @@ environment require running the Bash tool with the sandbox disabled (network is 
   `build_contracts`. Match events are head-to-head (2 markets, `mutually_exclusive`); winner/advancement/
   set/score markets are single-sided (no opponent).
 
-### Relevant per-player series
+### Relevant per-player series (tennis)
 | Series | Meaning | kind | category |
 |---|---|---|---|
 | `KXATPMATCH` / `KXWTAMATCH` | match winner (head-to-head) | `match` | Match result |
@@ -72,22 +75,32 @@ environment require running the Bash tool with the sandbox disabled (network is 
 
 The women's winner title is the ugly "win the KXFOWOMEN-26?" → synthesize "Win the French Open".
 
+**NBA/WNBA series** are fully configured in `sports.py` (`NBA` and `WNBA` `SportConfig` objects).
+Tennis identity: `custom_strike.tennis_competitor` UUID. Basketball identity: `custom_strike.basketball_team` UUID.
+Key NBA series: `KXNBA` (championship winner), `KXNBAEAST`/`KXNBAWEST`/`KXNBAPLAYOFF` (advance), `KXNBASERIES` (playoff series match), `KXNBAGAME` (per-game).
+Key WNBA series: `KXWNBA` (championship), `KXWNBAPLAYOFF`/`KXWNBASEMIFINAL`/`KXWNBAFINAL` (advance), `KXWNBASERIES` (playoff series), `KXWNBAGAME` (per-game).
+
 ## Architecture
 
 ```
 config.py          # BASE_URL, DEFAULT_SERIES, discovery prefixes, thresholds, rate-limit
                    #   (MAX_RPS/CONCURRENCY/BACKOFF_*) + refresh (REFRESH_TTL/OPTIONS/NEAR_EDGE_MIN_C) knobs
+sports.py          # NO streamlit: SportConfig registry — Tennis, NBA, WNBA registered; sport_for_series()
+                   #   resolves a series ticker to its SportConfig (UNKNOWN when unrecognized, never silent
+                   #   tennis default); IdentityResolver, MarketClassification, LadderSpec dataclasses;
+                   #   adding a sport = register(SportConfig(...))
 kalshi_client.py   # read-only HTTP: paginated GET, Retry-After/exponential backoff, process-wide
                    #   throttle (MAX_RPS), discover_tennis_series(), get_series_titles(), get_events_for_series()
 data.py            # NO streamlit/pandas: parsing, to_cents(), classify_kind/tour_of, pricing helpers,
                    #   tournament_of()->(key,source), series_for_families(), kalshi_market_url(),
-                   #   build_contracts() (ALL tennis events — no FO gate — stamps tournament/tournament_source)
+                   #   build_contracts() (ALL events for all registered sports — stamps tournament/tournament_source)
                    #   + fmt_time/data_age_seconds/is_stale (display-only TZ + staleness helpers, Stage 0)
 consistency.py     # NO streamlit: node_of, build_player_nodes, representative, expected_nodes,
                    #   layer_spreads, build_checks (groups by [player_key, tournament]); buy-only action
                    #   plan + tradable_now + blockers; bucket_of (dashboard routing, incl. dutch-book)
 dutchbook.py       # NO streamlit: find_dutch_books() — 2-outcome MECE arbitrage detector (a check family
-                   #   SEPARATE from the containment ladder); status EXECUTABLE_DUTCH_BOOK; see section below
+                   #   SEPARATE from the containment ladder); covers match/series AND per-game (game family);
+                   #   status EXECUTABLE_DUTCH_BOOK; see section below
 glossary.py        # NO streamlit: GLOSSARY{term:{short,long}}, BLOCKERS, WATCHLIST_NOTE, help_for
 filters.py         # NO streamlit: apply_membership (tournament/family/layer/event/participant/volume)
                    #   / apply_thresholds (size/quote/market-status) — the two-pass filter split
@@ -98,10 +111,10 @@ app.py             # Streamlit ONLY: sidebar controls, auto-refresh fragment, da
 scripts/           # check_links.py (local link reachability), export_glossary.py (-> docs/GLOSSARY.md)
 docs/GLOSSARY.md   # generated in-depth glossary (also published as a Google Doc)
 tests/             # pytest: test_data, test_consistency, test_dutchbook, test_glossary, test_client,
-                   #   test_filters, test_viz, test_sports
+                   #   test_filters, test_viz, test_sports, test_app (~158 tests total)
 ```
 
-`data.py`, `consistency.py`, `glossary.py`, `filters.py`, `viz.py` MUST stay free of Streamlit imports.
+`sports.py`, `data.py`, `consistency.py`, `glossary.py`, `filters.py`, `viz.py` MUST stay free of Streamlit imports.
 
 - **Fetch by family (do not regress):** `load_contracts(families, scan_all)` fetches ONLY the series
   whose contract family is enabled (`data.series_for_families`) — **family toggles are the only control
@@ -179,8 +192,10 @@ construction). `find_dutch_books(rows)` groups match-family rows by `event_ticke
 - **Two directions, both pairs of BUYS** (never "sell"): **underround** → Buy YES both (`yes_ask_A +
   yes_ask_B < 100`); **overround** → Buy NO both (`no_ask_A + no_ask_B < 100`, with the `100 − yes_bid`
   fallback). They're mutually exclusive (`bid ≤ ask`) so only one can fire. Exact integer cents only.
-- **Sport-agnostic via `match_family`:** fires on tennis matches + NBA/WNBA playoff **series**; per-game
-  (`KX*GAME`), props, winner, advance are NOT match-family → ignored. Unknown series excluded.
+- **Sport-agnostic via `_is_two_way_row`:** eligible families are the sport's head-to-head family
+  (`cfg.match_family`) **and** the `"game"` family (NBA/WNBA per-game `KX*GAME` markets). This covers
+  tennis matches, NBA/WNBA playoff series, and NBA/WNBA single games. Props, winner, advance are NOT
+  two-way → ignored. Unknown/unrecognized series (`UNKNOWN` sport) are always excluded.
 - **One status `EXECUTABLE_DUTCH_BOOK`** carrying `tradable_now` + `blockers` (covers actionable AND
   blocked). **Routing is the only consistency.py touch:** `bucket_of` has one branch (actionable if
   tradable, else blocked) + a `STATUS_GROUP` entry — detection stays entirely in `dutchbook.py`. The status
@@ -189,8 +204,8 @@ construction). `find_dutch_books(rows)` groups match-family rows by `event_ticke
 - **UI:** `app.py` renders a **dedicated "Dutch-book arbitrage — match books" section** (both legs are the
   *same* side, so it can't reuse the ladder's Buy-YES-broader/Buy-NO-deeper table). Membership-filtered like
   the rest; thresholds spare it (like Actionable now). Glossary term "Dutch book" → "Locked edge (¢)" column.
-- **Out of scope (seeds):** per-game 2-outcome books (S5); n-outcome winner **fields** (need completeness
-  proof + multi-leg) (S6). `find_dutch_books` consumes `df.to_dict("records")` so it is **NaN-safe**.
+- **In scope (built):** per-game 2-outcome books (NBA/WNBA `KX*GAME`) — milestone m1.1, shipped. **Out of
+  scope (seeds):** n-outcome winner **fields** (≥3 outcomes; need completeness proof + multi-leg). `find_dutch_books` consumes `df.to_dict("records")` so it is **NaN-safe**.
 
 ## Mapping audit & raw ladder spreads
 
@@ -250,11 +265,12 @@ in the universe.) Membership runs on comparison rows so it never breaks pairing.
 
 **Main area:** (1) header; (2) six `st.metric` cards + **⬇ Export** expander (Comparisons `universe`
 CSV, Raw contracts CSV); (3) **Actionable now** — always visible, **sorted by gross edge ↓** (no
-min-edge gate; any edge is good), followed by an **opportunity-ranking bar chart** (Altair; Actionable
-green + Near-edge amber); (4) **Blocked** / (5) **Near-edge** (Show-toggled); collapsed: (6) **Watchlist
-signals** + (6b) **Data-quality** (off by default), (7) **Selected player detail**, (8) **Full
-diagnostics** (Outcome-status + own CSV), (9) **Debug** (incl. `tournament_source`). Charts are allowed
-now (the ranking bar); use `width="stretch"` on dataframes and `st.altair_chart`.
+min-edge gate; any edge is good); (4) **Dutch-book arbitrage** section (dedicated, separate from the
+ladder); (5) **Blocked** / (6) **Near-edge** (Show-toggled); collapsed: (7) **Watchlist signals** +
+(7b) **Data-quality** (off by default), (8) **Selected player detail**, (9) **Full diagnostics**
+(Outcome-status + own CSV), (10) **Debug** (incl. `tournament_source`). The opportunity-ranking bar
+chart was **removed** (Stage 0 — misleading; Actionable table is the ranking surface). Use
+`width="stretch"` on dataframes and `st.altair_chart` if adding charts.
 
 **Status display labels (no "Potential edge"; "edge" only for a positive executable gap):**
 `EXECUTABLE_VIOLATION`→"Actionable gross edge", `DISPLAY_VIOLATION`→"Display inconsistency",
@@ -299,11 +315,17 @@ now (the ranking bar); use `width="stretch"` on dataframes and `st.altair_chart`
 
 ## Repository status
 
-`main` is **canonical and current** through the trader dashboard, auto-refresh + throttle, and
-market-universe filters (merged up to **PR #18**). The **all-tennis generalization + sidebar cleanup +
-opportunity-ranking chart** (iteration 12) is open as **PR #19** (branch
-`feat/generalize-tennis-and-charts`), not yet merged — the owner merges manually. `pytest` ~94
-(`test_data`, `test_consistency`, `test_glossary`, `test_client`, `test_filters`, `test_viz`).
+`main` is **feature-complete at PR #35** (merged). Shipped and on main:
+
+- All-tennis generalization (`tournament_of`, grouping by player+tournament, fetch-by-family)
+- Multi-sport abstraction (`sports.py`): Tennis, NBA, WNBA registered via `SportConfig`
+- Dutch-book / MECE detector (`dutchbook.py`): 2-outcome books on match/series AND per-game (`KX*GAME`)
+- Stage 0 dashboard clarity: Lisbon default timezone, per-second data freshness/coverage strip,
+  "Show IDs & codes" toggle, opportunity-ranking graph removed (misleading), debug+diagnostics behind Advanced
+
+`pytest` ~158 tests (`test_data`, `test_consistency`, `test_dutchbook`, `test_glossary`, `test_client`,
+`test_filters`, `test_viz`, `test_sports`, `test_app`). All branches from the earlier development stack
+are merged; there are no open feature PRs blocking current work.
 
 ## Iteration history (intent)
 1. Per-player French Open match viewer.
@@ -329,3 +351,20 @@ opportunity-ranking chart** (iteration 12) is open as **PR #19** (branch
     sidebar cleanup (merged participant control, Active-only default with finalized still visible in
     diagnostics, Advanced last, scan-all + all-families default), **Actionable ranked by edge**, and an
     **opportunity-ranking chart** (`viz.opportunity_ranking` + Altair). Min-gross-edge control removed.
+13. **Multi-sport generalization** (`sports.py`): `SportConfig` abstraction with `IdentityResolver`,
+    `LadderSpec`, `MarketClassification`; Tennis, NBA, and WNBA registered as first-class sports.
+    `sport_for_series()` resolves any series ticker to its sport (explicit `UNKNOWN` when unrecognized —
+    no silent tennis default). Engine (`data.py`, `consistency.py`) reads sport config off the registry;
+    no sport name is hardcoded in the engine. NBA ladder: Reach Playoffs ⊇ Win Conference ⊇ Win
+    Championship; WNBA ladder: Reach Playoffs ⊇ Reach Semifinals ⊇ Reach Finals ⊇ Win Championship.
+14. **Dutch-book / MECE detector** (`dutchbook.py`): `find_dutch_books()` detects executable arbitrage
+    on 2-outcome MECE events — head-to-head matches/series (tennis, NBA/WNBA) AND per-game (`KX*GAME`)
+    markets (milestone m1.1). Both underround (Buy YES both) and overround (Buy NO both) directions;
+    dedicated dashboard section; `EXECUTABLE_DUTCH_BOOK` status. Per-game eligibility is sport-agnostic
+    via the `"game"` family — tennis is unaffected (no game family in its config).
+15. **Stage 0 dashboard clarity**: Lisbon default timezone + per-second freshness/coverage strip so data
+    age is always visible; "Show IDs & codes" toggle collapses internal identifiers by default;
+    opportunity-ranking bar chart removed (misleading; Actionable table is the ranking surface); debug +
+    full diagnostics moved behind the Advanced expander. Forward plan (not yet built): engine-first
+    architecture migrating UI from Streamlit → NiceGUI on FastAPI, with a SQLite snapshot store,
+    cross-sport scanner, lifecycle/alerts, and a REST API (Stages 1–6; detail in `docs/ROADMAP.md`).
