@@ -20,7 +20,7 @@ import pandas as pd
 
 import sports
 from config import DISPLAY_TOL_C, NEAR_EDGE_MIN_C
-from data import CATEGORY
+from data import CATEGORY, opportunity_id
 from glossary import BLOCKERS, WATCHLIST_NOTE
 
 # Statuses that represent an actual price inconsistency with a buy direction (get a Buy YES / Buy NO
@@ -478,8 +478,14 @@ def _buy_text(side: str | None, leg: str | None, price_c: Any,
 
 
 def _row(player: str, player_key: str, chain: str, child: dict | None, parent: dict | None, comp: dict,
-         child_node: str = "", parent_node: str = "", tournament: str = "") -> dict:
-    """Assemble one consistency-table row."""
+         child_node: str = "", parent_node: str = "", tournament: str = "",
+         relationship_type: str = "", opp_id: str = "") -> dict:
+    """Assemble one consistency-table row.
+
+    `relationship_type` (`containment_adjacent` | `match_alignment`) and `opp_id` (a stable
+    `data.opportunity_id`) are stamped by `build_checks`. `bucket` and the REQUIRED `blocked_reason`
+    are derived here from the assembled row: `blocked_reason` is non-empty IFF the row's dashboard
+    bucket is `blocked` (Stage 1 invariant), reusing the plain-English `blockers` text."""
     vols = [r.get("volume") for r in (child, parent) if r and r.get("volume") is not None]
     # Time-to-resolution: the EARLIER of the two legs' times — the soonest the opportunity starts
     # settling (capital frees / the edge expires). ISO-8601 strings sort chronologically.
@@ -497,10 +503,12 @@ def _row(player: str, player_key: str, chain: str, child: dict | None, parent: d
     for r in (child, parent):
         if r and r.get("kind") == "match" and r.get("stage"):
             layer_tokens.add(r.get("stage"))
-    return {
+    result = {
         "player": player,
         "player_key": player_key,
         "chain": chain,
+        "relationship_type": relationship_type,
+        "opportunity_id": opp_id,
         "tour": tour,
         "competition": competition,
         "tournament": tournament,
@@ -558,12 +566,20 @@ def _row(player: str, player_key: str, chain: str, child: dict | None, parent: d
         "child_category": CATEGORY.get(child.get("kind")) if child else "",
         "parent_category": CATEGORY.get(parent.get("kind")) if parent else "",
     }
+    # Dashboard bucket + REQUIRED blocked_reason (Stage 1): blocked_reason is non-empty IFF the row is
+    # bucketed `blocked`. Reuse the plain-English `blockers`; fall back to a generic reason if a blocked
+    # row somehow carries none (keeps the iff-invariant total).
+    bucket = bucket_of(result)
+    result["bucket"] = bucket
+    result["blocked_reason"] = (result.get("blockers") or "not executable now") if bucket == "blocked" else ""
+    return result
 
 
 def build_checks(df: pd.DataFrame) -> pd.DataFrame:
     """Build the full layer-consistency table from the per-player contract DataFrame."""
     columns = [
         "player", "player_key", "chain",
+        "relationship_type", "opportunity_id", "bucket", "blocked_reason",
         "tour", "competition", "child_node", "parent_node",
         "child_event_ticker", "parent_event_ticker", "layers",
         "child_contract", "parent_contract", "child_display_pct",
@@ -600,11 +616,16 @@ def build_checks(df: pd.DataFrame) -> pd.DataFrame:
         cfg = _sport_for_rows(rows)
         ladder = cfg.ladder
 
-        # Adjacent containment pairs (market sources only).
+        # Adjacent containment pairs (market sources only). Id recipe: the relationship type + the
+        # stable (player_key, tournament) group + the node pair — unique per group since each adjacent
+        # pair is checked once, and node-based (not ticker-based) so the id survives a representative
+        # flip between refreshes (same logical opportunity).
         for child_node, parent_node in ladder.adjacent_pairs:
             child = nodes.get(child_node, {}).get("market")
             parent = nodes.get(parent_node, {}).get("market")
             chain = f"{child_node} ≤ {parent_node}"
+            rel = "containment_adjacent"
+            oid = opportunity_id(rel, player_key, _tournament, child_node, parent_node)
             if child is None or parent is None:
                 missing = child_node if child is None else parent_node
                 comp = {
@@ -617,19 +638,26 @@ def build_checks(df: pd.DataFrame) -> pd.DataFrame:
                     "quote_quality": "",
                 }
                 out.append(_row(player, player_key, chain, child, parent, comp,
-                                child_node=child_node, parent_node=parent_node, tournament=_tournament))
+                                child_node=child_node, parent_node=parent_node, tournament=_tournament,
+                                relationship_type=rel, opp_id=oid))
             else:
                 out.append(_row(player, player_key, chain, child, parent, _classify(child, parent, False),
-                                child_node=child_node, parent_node=parent_node, tournament=_tournament))
+                                child_node=child_node, parent_node=parent_node, tournament=_tournament,
+                                relationship_type=rel, opp_id=oid))
 
-        # Match-alignment (equivalence) rows where both a market and a confident match exist.
+        # Match-alignment (equivalence) rows where both a market and a confident match exist. One
+        # equivalence per node (build_player_nodes keeps a single representative per source), so the
+        # node alone disambiguates within the group.
         for node, sources in nodes.items():
             if "market" in sources and "match" in sources:
                 match_row, market_row = sources["match"], sources["market"]
                 chain = f"{match_row.get('stage')} win ≡ {node}"
+                rel = "match_alignment"
+                oid = opportunity_id(rel, player_key, _tournament, node, node)
                 out.append(_row(player, player_key, chain, match_row, market_row,
                                 _classify(match_row, market_row, True),
-                                child_node=node, parent_node=node, tournament=_tournament))
+                                child_node=node, parent_node=node, tournament=_tournament,
+                                relationship_type=rel, opp_id=oid))
 
         # Surface match contracts whose round does NOT map to a tracked layer (e.g. R16) as
         # UNKNOWN_RELATIONSHIP so they are acknowledged, never silently treated as violations.
@@ -644,8 +672,15 @@ def build_checks(df: pd.DataFrame) -> pd.DataFrame:
                     "display_gap": None,
                     "quote_quality": row.get("quote_quality", ""),
                 }
+                # These are match-derived rows with no mapped node, so the node-pair recipe would
+                # collide across several unmapped matches for one player. Disambiguate on the match's
+                # own (stable) event ticker; classify as match_alignment (the relationship we would
+                # have checked had the round mapped).
+                rel = "match_alignment"
+                oid = opportunity_id(rel, player_key, _tournament,
+                                     f"unmapped:{row.get('event_ticker', '')}:{row.get('stage', '')}")
                 out.append(_row(player, player_key, f"{row.get('stage') or '?'} match", row, None, comp,
-                                tournament=_tournament))
+                                tournament=_tournament, relationship_type=rel, opp_id=oid))
 
     return pd.DataFrame(out, columns=columns)
 

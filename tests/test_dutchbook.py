@@ -356,3 +356,35 @@ def test_multiple_events_sorted_by_gap_desc():
     out = dutchbook.find_dutch_books(e1 + e2)
     assert [f["event_ticker"] for f in out] == ["EV2", "EV1"]
     assert [f["exec_gap_c"] for f in out] == [10, 7]
+
+
+# --- Stage 1: opportunity schema (relationship_type / opportunity_id / bucket / blocked_reason) ---
+def test_finding_is_stamped_with_relationship_type_and_stable_order_independent_id():
+    a = market("Alcaraz", yes_bid_c=43, yes_ask_c=45)
+    b = market("Sinner", yes_bid_c=46, yes_ask_c=48)
+    f = dutchbook.find_dutch_books([a, b])[0]
+    assert f["relationship_type"] == "dutch_book"
+    assert isinstance(f["opportunity_id"], str) and len(f["opportunity_id"]) == 16
+    # Deterministic and leg-order-independent (recipe sorts the participant keys).
+    swapped = dutchbook.find_dutch_books([b, a])[0]
+    assert swapped["opportunity_id"] == f["opportunity_id"]
+
+
+def test_actionable_finding_has_actionable_bucket_and_empty_blocked_reason():
+    a = market("Alcaraz", yes_bid_c=43, yes_ask_c=45)
+    b = market("Sinner", yes_bid_c=46, yes_ask_c=48)
+    f = dutchbook.find_dutch_books([a, b])[0]
+    assert f["tradable_now"] == "Yes"
+    assert f["bucket"] == "actionable"
+    assert f["blocked_reason"] == ""             # non-empty IFF blocked
+
+
+def test_blocked_finding_has_blocked_bucket_and_nonempty_blocked_reason():
+    # Zero size -> still a flagged dutch book, but not tradable -> blocked, with a reason.
+    a = market("Alcaraz", yes_bid_c=43, yes_ask_c=45, yes_ask_size=0)
+    b = market("Sinner", yes_bid_c=46, yes_ask_c=48)
+    f = dutchbook.find_dutch_books([a, b])[0]
+    assert f["tradable_now"] == "No"
+    assert f["bucket"] == "blocked"
+    assert f["blocked_reason"]                    # non-empty
+    assert f["blocked_reason"] == f["blockers"]   # sourced from the same plain-English text

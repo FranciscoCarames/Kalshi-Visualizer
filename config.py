@@ -100,3 +100,13 @@ TIMEZONE_OPTIONS = [
 ]
 # Data older than this many seconds is flagged stale in the main-dashboard freshness strip.
 STALE_AFTER_SECONDS = 300
+
+# --- Snapshot store (Stage 1 — opportunity history) ----------------------------------
+# Standalone single-writer SQLite file persisting one snapshot of opportunities per refresh
+# (store.py). A relative path (resolved against the process working dir) keeps config import-free;
+# the file is gitignored. Pass an explicit path in tests.
+SNAPSHOT_DB_PATH = "snapshots.db"
+# Retention: drop snapshots older than this many seconds (relative to the newest stored snapshot, so
+# retention is deterministic/testable). Sized above the largest planned backlog window (24h, Stage 3)
+# plus margin, so the lifecycle/backlog views always have enough history.
+SNAPSHOT_RETENTION_SECONDS = 30 * 60 * 60   # 30 hours

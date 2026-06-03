@@ -368,3 +368,19 @@ def test_data_age_and_is_stale():
     assert data.is_stale(age, 300) is False        # strictly greater-than, not >=
     assert data.is_stale(None, 10) is False         # unknown age is not stale
     assert data.data_age_seconds("garbage") is None
+
+
+# --- Stage 1: opportunity_id shared helper -------------------------------------------
+def test_opportunity_id_is_deterministic_and_stable():
+    a = data.opportunity_id("containment_adjacent", "uuid-x", "French Open", "Reach Final", "Win Tournament")
+    b = data.opportunity_id("containment_adjacent", "uuid-x", "French Open", "Reach Final", "Win Tournament")
+    assert a == b                       # identical inputs -> identical id (no randomness/time)
+    assert isinstance(a, str) and len(a) == 16
+
+
+def test_opportunity_id_distinguishes_different_recipes():
+    base = ("containment_adjacent", "uuid-x", "French Open", "Reach Final", "Win Tournament")
+    assert data.opportunity_id(*base) != data.opportunity_id("match_alignment", *base[1:])
+    assert data.opportunity_id(*base) != data.opportunity_id(*base[:-1], "Reach Semifinal")
+    # A None part is positional (normalizes to "") and does not collide with the empty-token recipe.
+    assert data.opportunity_id("dutch_book", "EVT", None, "k") != data.opportunity_id("dutch_book", "EVT", "k")

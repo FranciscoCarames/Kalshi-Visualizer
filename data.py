@@ -13,6 +13,7 @@ Data model (verified against the live API):
 """
 from __future__ import annotations
 
+import hashlib
 import re
 from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
@@ -36,6 +37,20 @@ from config import (
 _ROUND_PATTERNS = sports.TENNIS.round_patterns
 _STAGE_RANK = sports.TENNIS.stage_rank
 CATEGORY = sports.TENNIS.category_labels
+
+
+def opportunity_id(*parts: Any) -> str:
+    """Deterministic short identity for an opportunity — the sha1 hex prefix of the joined parts.
+
+    Stable across runs AND processes: identical parts always hash to the same id (no randomness, no
+    time input), so a later stage can track one opportunity across refreshes. Each caller passes a
+    recipe that must be UNIQUE within a single snapshot (see ``consistency.build_checks`` and
+    ``dutchbook._detect_pair`` for the recipes); a ``None`` part normalizes to ``""`` so the recipe
+    shape is positional and stable. This is the ONE shared id helper — both the consistency layer and
+    the dutch-book layer import it (``dutchbook`` already imports ``data``, so there is no cycle)."""
+    raw = "|".join("" if p is None else str(p) for p in parts)
+    return hashlib.sha1(raw.encode("utf-8")).hexdigest()[:16]
+
 
 # --- Display-time helpers (timezone formatting; DISPLAY-ONLY — never used in cents/comparison logic) -
 _FETCHED_AT_FMT = "%Y-%m-%d %H:%M:%S UTC"

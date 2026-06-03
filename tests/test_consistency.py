@@ -606,3 +606,52 @@ def test_build_checks_groups_by_player_and_tournament():
     wim = checks[checks["tournament"] == "Wimbledon"]
     assert (fo["status"] != "MISSING_LAYER").any()
     assert (wim["status"] == "MISSING_LAYER").all()
+
+
+# --- Stage 1: opportunity schema (relationship_type / opportunity_id / blocked_reason) ----
+def test_build_checks_stamps_relationship_type_and_stable_unique_id():
+    import pandas as pd
+    rows = [
+        _ckey_row("Player X", "uuid-x", "advance", "Semifinal", 60),
+        _ckey_row("Player X", "uuid-x", "advance", "Final", 40),
+        _ckey_row("Player X", "uuid-x", "winner", "Champion", 20),
+    ]
+    df = pd.DataFrame(rows)
+    checks = consistency.build_checks(df)
+    assert {"relationship_type", "opportunity_id", "bucket", "blocked_reason"} <= set(checks.columns)
+    assert not checks.empty
+    assert set(checks["relationship_type"]) <= {"containment_adjacent", "match_alignment"}
+    assert (checks["opportunity_id"].str.len() == 16).all()
+    assert checks["opportunity_id"].is_unique                      # unique within the snapshot
+    again = consistency.build_checks(df)                           # deterministic across rebuilds
+    assert list(again["opportunity_id"]) == list(checks["opportunity_id"])
+
+
+def test_unmapped_match_rows_get_unique_ids_not_colliding():
+    import pandas as pd
+    # Two early-round matches (R16, R32) map to no ladder node -> UNKNOWN_RELATIONSHIP. Their ids must
+    # NOT collide (the node-only recipe yields empty nodes for both). An `advance` row is included so
+    # the player has at least one mapped node (build_checks skips a player with no laddered nodes).
+    def match_row(stage, event):
+        return {"player": "P", "player_key": "uuid-p", "kind": "match", "stage": stage,
+                "contract": f"match {stage}", "event_ticker": event, "quote_quality": "Tight",
+                "market_ticker": f"T-{event}"}
+    rows = [_ckey_row("P", "uuid-p", "advance", "Final", 40),
+            match_row("Round of 16", "E-R16"), match_row("Round of 32", "E-R32")]
+    checks = consistency.build_checks(pd.DataFrame(rows))
+    unknown = checks[checks["status"] == "UNKNOWN_RELATIONSHIP"]
+    assert len(unknown) == 2
+    assert unknown["opportunity_id"].is_unique
+
+
+def test_blocked_reason_nonempty_iff_bucket_blocked():
+    import pandas as pd
+    # A firm executable cross (child bid > parent ask, sizes > 0) with no "status" field -> the legs
+    # are not "active" -> not tradable now -> EXECUTABLE_VIOLATION routed to bucket "blocked".
+    child = _ckey_row("P", "uuid-p", "winner", "Champion", 40)     # bid 39 / ask 41
+    parent = _ckey_row("P", "uuid-p", "advance", "Final", 35)      # bid 34 / ask 36
+    checks = consistency.build_checks(pd.DataFrame([child, parent]))
+    for r in checks.to_dict("records"):
+        blocked = r["bucket"] == "blocked"
+        assert bool(r["blocked_reason"]) == blocked         # iff invariant, every row
+    assert (checks["bucket"] == "blocked").any()            # the scenario actually produced a blocked row
