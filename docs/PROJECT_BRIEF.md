@@ -2,70 +2,86 @@
 
 ## 1. Project Goal
 
-The Kalshi Structured Market Visualizer is a tool for analyzing **related** prediction-market
-contracts on Kalshi — contracts that describe the same underlying participant or event from different
-angles. The initial focus is tennis, where a single player can appear across several contract types at
-once: match-result contracts, advancement contracts (reaching a given round), and tournament-winner
-contracts. Viewing these side by side makes it possible to see how a player is priced across the whole
-structure of an event rather than one contract in isolation.
+The Kalshi Structured Market Visualizer is a tool for spotting **executable pricing inconsistencies and
+arbitrage opportunities** in related prediction-market contracts on Kalshi. It covers multiple sports —
+currently tennis, NBA basketball, and WNBA basketball — where a single player or team can appear across
+several contract types at once: match-result contracts, advancement contracts (reaching a given round),
+and tournament-winner contracts. Viewing these side by side makes it possible to see when the same
+participant is priced inconsistently across related contracts, and to identify cases where a set of
+mutually-exclusive outcomes can all be bought for less than the guaranteed payout.
 
-The long-term goal is to generalize the tool beyond tennis — first to other sports that have a similar
-nested structure (for example soccer tournaments), and eventually to other kinds of structured event
-markets — so the same analysis applies wherever related contracts share a common participant or outcome.
+The long-term goal is to turn this into a **real-time, multi-category opportunity engine** for a small
+trader group — scanning every supported sport at once, tracking opportunities over time, and surfacing
+the most actionable edges in a single ranked view.
 
 ## 2. Current Version
 
-The current version is a **read-only visualizer**. It loads and organizes sports prediction-market
-contracts from Kalshi, currently focused on tennis, and lets the user view the related contracts for a
-single player or participant across different contract types (match-result, advancement, and
-tournament-winner) when those contracts are available.
+The current version is a **read-only dashboard**. It loads and organizes prediction-market contracts from
+Kalshi across multiple sports and lets the user view related contracts side by side, flagging pricing
+inconsistencies and guaranteed-arbitrage situations.
 
-Current UI capabilities:
+Current capabilities:
 
-- **Participant/player selection** — pick a player and see their contracts together.
-- **Filters** — by event/cup, contract type, outcome status, and volume/liquidity.
-- **Side-by-side tables** — related contracts for the selected participant shown together for easy comparison.
-- **Trader-facing fields** — prices, quotes, volume, and status for each contract.
-- **Debug/raw fields** — the underlying raw data is available on demand when a closer look is needed.
+- **Multi-sport coverage** — tennis (all tournaments the platform can find), NBA basketball, and WNBA
+  basketball, off one shared engine. Adding another sport is designed to be a small configuration step.
+- **Participant and team selection** — filter down to one player or team and see all their related
+  contracts together.
+- **Filters** — by sport, tournament, contract type, outcome status, and volume/liquidity.
+- **Pricing inconsistency detection** — flags where a deeper-outcome contract is priced higher than a
+  broader contract that contains it (e.g. "Win the tournament" priced above "Reach the final"), labelled
+  as executable (firm prices + available size) or display-only (price signals only).
+- **Dutch-book / guaranteed-arbitrage detector** — separately flags when the two sides of a
+  head-to-head match or series can both be bought for less than 100¢ total, locking in a guaranteed
+  payout regardless of outcome. This is genuine arbitrage, not just a pricing signal.
+- **Actionable, Blocked, and Near-edge sections** — opportunities sorted by gross edge, with plain-English
+  explanations of what blocks a trade (missing size, wide quotes, finalized markets, rule caveats).
+- **Trader-facing fields** — prices, quotes, volume, spread, and status for each contract.
+- **Dashboard clarity** — a timezone selector (defaults to Lisbon), a live data-freshness indicator,
+  a toggle to reveal underlying contract codes, and diagnostics tucked behind an "Advanced" toggle.
+- **Debug/raw fields** — the underlying raw data is available on demand.
 
 ## 3. Current Development Focus
 
-The current focus is improving **contract organization and dashboard clarity** before adding any
-advanced pricing or probability logic. The aim is a clean, trustworthy foundation that presents
-related contracts clearly.
+The current version (Stage 0 of a six-stage roadmap) has just completed a **clarity overhaul**: cleaning
+up the dashboard layout, adding always-visible data freshness, removing a misleading ranking chart, and
+generally making the tool more trustworthy and easier to read before adding new capabilities.
 
-Active work:
+What was completed in Stage 0:
 
-- Improving contract discovery so the relevant contracts are found reliably.
-- Grouping contracts by stable participant identifiers where Kalshi provides them, so the same player
-  is matched correctly across contract types.
-- Avoiding silent missing data — gaps are surfaced rather than hidden.
-- Separating trader-useful information from debug information so the main view stays uncluttered.
-- Keeping the app read-only and simple.
-- Making sure the UI supports clear comparison across related contracts.
+- Timezone selector, live data-freshness indicator ticking every second.
+- A toggle to show or hide underlying contract identifiers.
+- Diagnostics and debug information moved behind an "Advanced" toggle.
+- Removal of an opportunity-ranking bar chart that was found to be misleading.
+
+Stages 1–6 (below) are the forward plan.
 
 ## 4. Future Development Plan
 
+The agreed direction is to evolve this into a real-time, multi-category opportunity engine. The plan is
+structured in six stages, to be delivered in order:
+
 | Stage | Goal | Description |
 |---|---|---|
-| 1 | Improve the tennis visualizer and participant grouping | Strengthen contract discovery and participant matching, and refine how related contracts are displayed together. |
-| 2 | Add simple spread / calendar-spread math | Introduce basic comparisons of prices between related contracts (e.g. gaps between adjacent stages). |
-| 3 | Add clearer edge classification | Label where the structure looks inconsistent or noteworthy, in clear and conservative terms. |
-| 4 | Add scenario and probability-chain modeling | Model how outcomes across related contracts connect, to reason about implied probabilities. |
-| 5 | Generalize to other sports | Extend the same structure to other sports with nested events, such as soccer tournaments. |
-| 6 | Generalize beyond sports | Evolve into a broader structured prediction-market analysis tool across event types. |
+| 1 | Stable opportunity identity + history snapshots | Give every flagged opportunity a stable identifier and begin saving lightweight snapshots over time, so changes can be tracked. |
+| 2 | Single cross-sport ranked view | A unified scanner that ranks every opportunity across all sports in one table, replacing the current per-section layout. |
+| 3 | Lifecycle tracking | Highlight newly-actionable opportunities, flag when a blocked one becomes actionable, and keep a "recently actionable" backlog. |
+| 4 | Web API | Expose the engine through a proper API so other tools or users can query it. |
+| 5 | New dashboard and UI | Rebuild the dashboard on a more capable web-based UI framework, opportunity-first, replacing the current one. |
+| 6 | Export overhaul | Improve and standardize all data exports. |
+
+Net-of-fees edge math, real-time streaming, and multi-user hosting are explicitly planned for later —
+gross edge first.
 
 ## 5. Current Limitations
 
 - It does not execute trades.
-- It is not a full arbitrage engine.
-- It does not yet include advanced probability modeling.
-- It is currently tennis-focused.
-- Some grouping depends on the quality of Kalshi's metadata.
+- It does not yet calculate net-of-fees edge — gross edge only.
+- It does not include advanced probability modeling.
+- Some grouping and matching depends on the quality of Kalshi's metadata; gaps are surfaced rather than
+  hidden, but they do occur.
 - Quote data can be incomplete or missing for less-active contracts.
-- Generalization beyond tennis has not yet been implemented.
-- The UI and the classifications it shows are still being refined.
+- The UI and the classifications it shows are still being refined as the roadmap progresses.
 
-At this stage the project is intentionally focused on building a **reliable read-only foundation** —
-discovering, grouping, and clearly presenting related contracts — before layering on more advanced
-modeling and broader generalization.
+At this stage the project has a **reliable multi-sport read-only foundation** — discovering, grouping,
+and clearly presenting related contracts, and flagging executable inconsistencies and genuine arbitrage
+situations — and is now building toward a real-time, ranked, lifecycle-aware opportunity engine.
