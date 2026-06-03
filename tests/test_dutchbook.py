@@ -388,3 +388,12 @@ def test_blocked_finding_has_blocked_bucket_and_nonempty_blocked_reason():
     assert f["bucket"] == "blocked"
     assert f["blocked_reason"]                    # non-empty
     assert f["blocked_reason"] == f["blockers"]   # sourced from the same plain-English text
+
+
+def test_finding_carries_market_status():
+    a = market("Alcaraz", yes_bid_c=43, yes_ask_c=45)
+    b = market("Sinner", yes_bid_c=46, yes_ask_c=48)
+    assert dutchbook.find_dutch_books([a, b])[0]["market_status"] == "active"
+    # an inactive leg flips the normalized market_status (used by the lifecycle diff)
+    a_in = market("Alcaraz", yes_bid_c=43, yes_ask_c=45, status="finalized")
+    assert dutchbook.find_dutch_books([a_in, b])[0]["market_status"] == "inactive"

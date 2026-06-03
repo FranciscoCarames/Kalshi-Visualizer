@@ -130,6 +130,38 @@ GLOSSARY: dict[str, dict[str, str]] = {
                 "settlement-rule caveat — both legs are outcomes of the SAME event and settle together — "
                 "so a firm, sized dutch book is true arbitrage (gross of fees).",
     },
+    "New actionable": {
+        "short": "An opportunity that became actionable since the previous scan — it wasn't in the "
+                 "last snapshot's actionable set. The banner keeps it flagged for the chosen window.",
+        "long": "Opportunities are snapshotted each cross-sport scan. A 'new actionable' is an "
+                "opportunity_id that is actionable in the current snapshot but was NOT actionable in the "
+                "previous one — i.e. it just crossed into tradable territory. To avoid a flood on first "
+                "load, nothing is flagged new until there is a prior snapshot to compare against. The "
+                "banner persists a new flag for a configurable window (until next refresh / N minutes), "
+                "computed from when the opportunity first became actionable, so a genuinely-new edge that "
+                "stays actionable doesn't silently drop off the banner on the very next refresh.",
+    },
+    "Recently actionable": {
+        "short": "An opportunity that WAS actionable within the selected window but isn't now — with "
+                 "when it became/left actionable and why it left (went blocked / clean / leg inactive).",
+        "long": "The backlog of opportunities that were actionable at some point inside the chosen "
+                "window (15 min / 1 hour / 4 hours / 24 hours / this session) but are not actionable in "
+                "the latest snapshot. For each, the app shows when it first became actionable, when it "
+                "left, how long it lasted, the last known edge and prices, and the reason it left — "
+                "derived from its current state: it disappeared, a leg went inactive, it went blocked, "
+                "or it simply went clean (the edge closed). Useful for spotting opportunities you just "
+                "missed and patterns in how long edges live.",
+    },
+    "Changed while blocked": {
+        "short": "A blocked opportunity whose situation changed since the last scan — e.g. the blocker, "
+                 "price, available size, market status, or rule flag moved. No change → no alert.",
+        "long": "For opportunities entering, leaving, or sitting in the blocked bucket, the app diffs "
+                "the two latest snapshots and labels WHAT changed: the blocker reason, the price/edge, "
+                "the available size (liquidity), the market status (a leg going active↔inactive), "
+                "tradability, or the settlement rule flag. An opportunity that is blocked in both "
+                "snapshots with nothing changed raises no alert — only genuine movement is surfaced, so "
+                "the list stays signal, not noise.",
+    },
     "Gross quoted profit": {
         "short": "Profit from the displayed quotes and sizes — before fees, slippage, latency, and "
                  "partial-fill risk.",
@@ -170,6 +202,9 @@ COLUMN_HELP: dict[str, str] = {
     "Buy YES": "Buy YES vs Buy NO",
     "Buy NO": "Buy YES vs Buy NO",
     "Locked edge (¢)": "Dutch book",
+    "New actionable": "New actionable",
+    "Recently actionable": "Recently actionable",
+    "Changed while blocked": "Changed while blocked",
 }
 
 
