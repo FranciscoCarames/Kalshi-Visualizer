@@ -132,6 +132,46 @@ def test_nba_clean_when_ordered():
     assert row["status"] == "CLEAN"
 
 
+def test_nba_finals_series_aligns_with_championship():
+    # A Finals SERIES winner (head-to-head) and the championship futures both map to Win Championship
+    # for the same team → match-alignment equivalence row (rule-dependent, like tennis).
+    champ = _nba_event("KXNBA-26", [
+        _nba_market("KXNBA-26-BOS", "Boston", "uuid-bos", "0.40", "0.42",
+                    "Will the Boston win the 2026 Pro Basketball Finals?")])
+    series = _nba_event("KXNBASERIES-26FIN", [
+        _nba_market("KXNBASERIES-26FIN-BOS", "Boston", "uuid-bos", "0.44", "0.46",
+                    "NBA Finals series winner?")])
+    rows = data.build_contracts("KXNBA", [champ]) + data.build_contracts("KXNBASERIES", [series])
+    checks = consistency.build_checks(pd.DataFrame(rows))
+    eq = [c for _, c in checks.iterrows() if "≡ Win Championship" in c["chain"]]
+    assert eq, "expected a Finals-series ≡ Win Championship equivalence row"
+    assert eq[0]["rule_flag"] in ("RULE_CHECK_REQUIRED", "RULE_MISMATCH")   # rule-dependent, not arbitrage
+
+
+def test_nba_early_round_series_is_unknown_relationship():
+    # A 1st-round series doesn't map to a tracked ladder node → UNKNOWN_RELATIONSHIP, never a violation.
+    champ = _nba_event("KXNBA-26", [
+        _nba_market("KXNBA-26-BOS", "Boston", "uuid-bos", "0.40", "0.42",
+                    "Will the Boston win the 2026 Pro Basketball Finals?")])
+    series = _nba_event("KXNBASERIES-26R1", [
+        _nba_market("KXNBASERIES-26R1-BOS", "Boston", "uuid-bos", "0.60", "0.62",
+                    "Boston 1st Round series winner?")])
+    rows = data.build_contracts("KXNBA", [champ]) + data.build_contracts("KXNBASERIES", [series])
+    checks = consistency.build_checks(pd.DataFrame(rows))
+    assert "UNKNOWN_RELATIONSHIP" in [c["status"] for _, c in checks.iterrows()]
+
+
+def test_nba_team_without_uuid_is_low_confidence():
+    ev = _nba_event("KXNBA-26", [{
+        "ticker": "KXNBA-26-XXX", "yes_sub_title": "Mystery Team", "custom_strike": {},
+        "yes_bid_dollars": "0.10", "yes_ask_dollars": "0.12", "last_price_dollars": "0.11",
+        "status": "active", "title": "Will the Mystery Team win the 2026 Pro Basketball Finals?"}])
+    r = data.build_contracts("KXNBA", [ev])[0]
+    assert r["mapping_confidence"] == "low"
+    assert r["player_key_source"] == "name_fallback"
+    assert r["player_key"] == "mystery team"
+
+
 # --- tennis preservation (the abstraction didn't change tennis) ----------------------
 def test_tennis_still_resolves_and_classifies():
     assert data.classify_kind("KXATPMATCH") == "match"
