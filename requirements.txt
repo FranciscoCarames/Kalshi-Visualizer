@@ -2,3 +2,6 @@ streamlit>=1.40
 requests>=2.32
 pandas>=2.2
 tzdata>=2024.1  # IANA timezone database for zoneinfo (Windows has no system tz db)
+fastapi>=0.110          # engine REST API (Stage 4)
+uvicorn[standard]>=0.29  # ASGI server for serve.py
+pydantic>=2.6           # API response models

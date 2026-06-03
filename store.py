@@ -24,18 +24,20 @@ import config
 
 # Bump when the on-disk schema changes; `_migrate` brings an older file forward. Held in the SQLite
 # `user_version` pragma so no bookkeeping table is needed.
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 # Columns promoted out of each opportunity row into indexed SQL columns for cheap lifecycle/backlog
 # filtering; the FULL row always round-trips in the `data` JSON blob, so no field is ever lost. Stable
 # order — a schema test guards it.
 PROMOTED_COLUMNS = ("opportunity_id", "relationship_type", "bucket", "status", "blocked_reason")
 
-_SCHEMA_V1 = """
+# Current (v2) schema — used to create a FRESH DB complete. `meta` (v2) holds per-scan coverage JSON.
+_SCHEMA = """
 CREATE TABLE IF NOT EXISTS snapshots (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     fetched_at  TEXT NOT NULL,          -- original timestamp text (display)
-    fetched_ts  REAL NOT NULL           -- epoch seconds, UTC (ordering / retention / windows)
+    fetched_ts  REAL NOT NULL,          -- epoch seconds, UTC (ordering / retention / windows)
+    meta        TEXT                    -- per-scan coverage metadata as JSON (v2; NULL for v1 rows)
 );
 CREATE TABLE IF NOT EXISTS opportunities (
     snapshot_id        INTEGER NOT NULL REFERENCES snapshots(id) ON DELETE CASCADE,
@@ -153,9 +155,13 @@ def _migrate(conn: sqlite3.Connection) -> None:
         raise RuntimeError(
             f"snapshot DB schema v{version} is newer than supported v{SCHEMA_VERSION}"
         )
-    # v0 (fresh) -> v1: create the base schema. (Add `if version < 2: ...` style steps as the
-    # schema grows; each step migrates one version forward.)
-    conn.executescript(_SCHEMA_V1)
+    if version == 0:
+        # Fresh DB: create the FULL current schema (incl. v2 `meta`), so it's never marked v2 without it.
+        conn.executescript(_SCHEMA)
+    else:
+        # Incremental forward steps from an existing older version. v1 -> v2 adds the `meta` column.
+        if version < 2:
+            conn.execute("ALTER TABLE snapshots ADD COLUMN meta TEXT")
     conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
     conn.commit()
 
@@ -181,7 +187,7 @@ def _apply_retention(conn: sqlite3.Connection, retention_seconds: float | None =
 def _load(conn: sqlite3.Connection, clause: str, params: tuple = ()) -> list[dict[str, Any]]:
     """Read snapshots (+ their opportunity rows, JSON-expanded) matching an ORDER/WHERE clause."""
     snaps = conn.execute(
-        f"SELECT id, fetched_at, fetched_ts FROM snapshots {clause}", params).fetchall()
+        f"SELECT id, fetched_at, fetched_ts, meta FROM snapshots {clause}", params).fetchall()
     out: list[dict[str, Any]] = []
     for s in snaps:
         rows = conn.execute(
@@ -191,26 +197,28 @@ def _load(conn: sqlite3.Connection, clause: str, params: tuple = ()) -> list[dic
             "snapshot_id": s["id"],
             "fetched_at": s["fetched_at"],
             "fetched_ts": s["fetched_ts"],
+            "meta": json.loads(s["meta"]) if s["meta"] else None,
             "opportunities": [json.loads(r["data"]) for r in rows],
         })
     return out
 
 
 # --- public API ----------------------------------------------------------------------
-def write_snapshot(fetched_at: Any, opps: Any, db_path: str | None = None) -> int:
+def write_snapshot(fetched_at: Any, opps: Any, *, meta: Any = None, db_path: str | None = None) -> int:
     """Persist one snapshot of opportunity rows and return its snapshot id.
 
     `fetched_at` is the refresh timestamp (datetime / ISO / load_contracts text / epoch). `opps` is a
-    pandas DataFrame or an iterable of dict rows (consistency checks and/or dutch-book findings). An
-    empty `opps` still records a snapshot (a refresh with no opportunities is itself information).
-    Retention is applied after the write."""
+    pandas DataFrame or an iterable of dict rows (consistency checks and/or dutch-book findings). `meta`
+    (v2) is optional per-scan coverage metadata, stored as JSON. An empty `opps` still records a snapshot
+    (a refresh with no opportunities is itself information). Retention is applied after the write."""
     records = _records(opps)
     ts = _to_epoch(fetched_at)
     text = _to_text(fetched_at)
+    meta_json = json.dumps(meta) if meta is not None else None
     conn = _connect(db_path)
     try:
         sid = conn.execute(
-            "INSERT INTO snapshots (fetched_at, fetched_ts) VALUES (?, ?)", (text, ts)
+            "INSERT INTO snapshots (fetched_at, fetched_ts, meta) VALUES (?, ?, ?)", (text, ts, meta_json)
         ).lastrowid
         conn.executemany(
             "INSERT INTO opportunities "
@@ -234,6 +242,16 @@ def write_snapshot(fetched_at: Any, opps: Any, db_path: str | None = None) -> in
         return sid
     finally:
         conn.close()
+
+
+def latest(db_path: str | None = None) -> dict[str, Any] | None:
+    """The single newest snapshot (or None if the store is empty) — what the read endpoints serve."""
+    conn = _connect(db_path)
+    try:
+        snaps = _load(conn, "ORDER BY fetched_ts DESC, id DESC LIMIT 1")
+    finally:
+        conn.close()
+    return snaps[0] if snaps else None
 
 
 def latest_two(db_path: str | None = None) -> list[dict[str, Any]]:

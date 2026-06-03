@@ -130,3 +130,11 @@ ALERT_PERSISTENCE_OPTIONS = {
     "5 minutes": 5 * 60,
     "15 minutes": 15 * 60,
 }
+
+# --- FastAPI engine service (Stage 4) ------------------------------------------------
+API_HOST = "127.0.0.1"
+API_PORT = 8000
+# POST /scan is rate-guarded against the latest STORED snapshot: a new scan is skipped (returns the
+# latest result marked skipped, writes nothing) when the newest snapshot is younger than this, unless
+# ?force=true. Sane after a restart because the guard reads the store, not process memory.
+SCAN_MIN_INTERVAL_SECONDS = REFRESH_TTL   # 30s

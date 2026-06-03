@@ -127,3 +127,31 @@ def test_market_status_derived_from_leg_statuses():
     assert scanner._market_status_consistency({"child_status": "active", "parent_status": "active"}) == "active"
     assert scanner._market_status_consistency({"child_status": "active", "parent_status": ""}) == "active"
     assert scanner._market_status_consistency({"child_status": "finalized", "parent_status": "active"}) == "inactive"
+
+
+# --- Stage 4: run_scan coverage aggregation -------------------------------------------
+def test_run_scan_aggregates_coverage_and_unifies():
+    def fetch_fn(sid):
+        if sid == "tennis":
+            return _containment_df(gap=5), "fa", [("KXBAD", "boom")], 6, 5, 1, 2
+        if sid == "nba":
+            return _dutchbook_df(gap=7), "fa", [], 6, 6, 0, 0
+        return pd.DataFrame(), "fa", [], 6, 0, 0, 0   # wnba: empty
+    unified, cov = scanner.run_scan(fetch_fn, fetched_at="FA")
+    assert cov["fetched_at"] == "FA"
+    assert cov["scanned"] == 18 and cov["loaded"] == 11          # 6+6+6 / 5+6+0
+    assert cov["failed"] == 1 and cov["excluded"] == 2 and cov["skipped_no_name"] == 1
+    assert len(cov["series_errors"]) == 1 and cov["series_errors"][0]["series"] == "KXBAD"
+    assert not unified.empty and set(unified["sport"]) <= {"tennis", "nba"}
+
+
+def test_run_scan_records_sport_fetch_failure_without_blanking():
+    def fetch_fn(sid):
+        if sid == "tennis":
+            raise RuntimeError("down")
+        if sid == "nba":
+            return _dutchbook_df(gap=7), "fa", [], 6, 6, 0, 0
+        return pd.DataFrame(), "fa", [], 6, 0, 0, 0
+    unified, cov = scanner.run_scan(fetch_fn, fetched_at="FA")
+    assert any(e["sport"] == "tennis" and "down" in e["error"] for e in cov["sport_errors"])
+    assert set(unified["sport"]) <= {"nba"}                      # tennis failed; others still scanned
