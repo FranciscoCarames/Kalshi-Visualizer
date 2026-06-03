@@ -210,6 +210,71 @@ def test_nba_reach_playoffs_inversion_is_flagged():
     assert row["exec_gap_c"] == 5                                # child bid 60 − parent ask 55
 
 
+# --- WNBA: third sport, 4-rung reach-stage ladder, no conference ----------------------
+def _wnba_market(ticker, team, uuid, bid, ask, title="x"):
+    return {"ticker": ticker, "yes_sub_title": team, "custom_strike": {"basketball_team": uuid},
+            "yes_bid_dollars": bid, "yes_ask_dollars": ask, "last_price_dollars": ask,
+            "yes_bid_size_fp": "100", "yes_ask_size_fp": "100", "volume_fp": "500",
+            "status": "active", "title": title}
+
+
+def _wnba_event(event_ticker, markets):
+    return {"event_ticker": event_ticker, "title": "WNBA",
+            "product_metadata": {"competition": "Pro Basketball (W)"}, "markets": markets}
+
+
+def test_wnba_registered_and_separated_from_nba():
+    assert {"tennis", "nba", "wnba"} <= {c.sport_id for c in sports.all_sports()}
+    # The critical prefix separation: "KXWNBA…" ≠ "KXNBA…".
+    assert sports.sport_for_series("KXWNBA").sport_id == "wnba"
+    assert sports.sport_for_series("KXWNBAPLAYOFF").sport_id == "wnba"
+    assert sports.sport_for_series("KXNBA").sport_id == "nba"
+    assert sports.sport_for_series("KXNBAPLAYOFF").sport_id == "nba"
+
+
+def test_wnba_reach_stage_ladder_nodes():
+    w = sports.WNBA
+    assert w.classify("KXWNBAPLAYOFF", {"ticker": "KXWNBAPLAYOFF-26-ATL"}).ladder_node == "Reach Playoffs"
+    assert w.classify("KXWNBASEMIFINAL", {"ticker": "KXWNBASEMIFINAL-26-ATL"}).ladder_node == "Reach Semifinals"
+    assert w.classify("KXWNBAFINAL", {"ticker": "KXWNBAFINAL-26-ATL"}).ladder_node == "Reach Finals"
+    assert w.classify("KXWNBA", {"ticker": "KXWNBA-26-ATL"}).ladder_node == "Win Championship"
+    # per-game ineligible; the defunct conference market is not laddered (single-bracket format)
+    assert w.classify("KXWNBAGAME", {"ticker": "KXWNBAGAME-26-ATL"}).eligible_for_ladder_checks is False
+    assert w.classify("KXWNBAEAST", {"ticker": "KXWNBAEAST-26-ATL"}).eligible_for_ladder_checks is False
+
+
+def _wnba_ladder(pf, sf, fn, ch):
+    rows = (data.build_contracts("KXWNBAPLAYOFF", [_wnba_event("KXWNBAPLAYOFF-26", [_wnba_market("KXWNBAPLAYOFF-26-ATL", "Atlanta", "u", *pf)])])
+            + data.build_contracts("KXWNBASEMIFINAL", [_wnba_event("KXWNBASEMIFINAL-26", [_wnba_market("KXWNBASEMIFINAL-26-ATL", "Atlanta", "u", *sf)])])
+            + data.build_contracts("KXWNBAFINAL", [_wnba_event("KXWNBAFINAL-26", [_wnba_market("KXWNBAFINAL-26-ATL", "Atlanta", "u", *fn)])])
+            + data.build_contracts("KXWNBA", [_wnba_event("KXWNBA-26", [_wnba_market("KXWNBA-26-ATL", "Atlanta", "u", *ch)])]))
+    return consistency.build_checks(pd.DataFrame(rows))
+
+
+def test_wnba_four_rung_ladder_clean():
+    c = _wnba_ladder(("0.89", "0.91"), ("0.69", "0.71"), ("0.44", "0.46"), ("0.24", "0.26"))
+    chains = {r["chain"]: r["status"] for _, r in c.iterrows()}
+    assert chains["Reach Semifinals ≤ Reach Playoffs"] == "CLEAN"
+    assert chains["Reach Finals ≤ Reach Semifinals"] == "CLEAN"
+    assert chains["Win Championship ≤ Reach Finals"] == "CLEAN"
+
+
+def test_wnba_ladder_inversion_flagged():
+    # Reach Finals (deeper) bid above Reach Semifinals (broader) ask → executable violation.
+    c = _wnba_ladder(("0.89", "0.91"), ("0.50", "0.55"), ("0.60", "0.62"), ("0.24", "0.26"))
+    row = next(r for _, r in c.iterrows() if r["chain"] == "Reach Finals ≤ Reach Semifinals")
+    assert row["status"] == "EXECUTABLE_VIOLATION" and row["exec_gap_c"] == 5
+
+
+def test_wnba_identity_is_basketball_team():
+    r = data.build_contracts("KXWNBA", [_wnba_event("KXWNBA-26", [
+        _wnba_market("KXWNBA-26-ATL", "Atlanta", "uuid-atl", "0.24", "0.26",
+                     "Will Atlanta win the 2026 Women's Pro Basketball Championship?")])])[0]
+    assert r["player_key"] == "uuid-atl" and r["mapping_confidence"] == "high"
+    assert r["kind"] == "winner" and r["ladder_node"] == "Win Championship"
+    assert r["tournament"] == "Pro Basketball (W)"
+
+
 # --- tennis preservation (the abstraction didn't change tennis) ----------------------
 def test_tennis_still_resolves_and_classifies():
     assert data.classify_kind("KXATPMATCH") == "match"
