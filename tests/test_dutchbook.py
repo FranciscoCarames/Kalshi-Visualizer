@@ -1,7 +1,7 @@
 """Unit tests for the 2-outcome dutch-book / MECE detector (no network).
 
-Scope mirrors the m1 milestone: tennis head-to-head match events only, both directions
-(underround / overround), with the executable-vs-blocked precedence and the false-positive guards.
+Covers the 2-outcome detector: tennis matches + NBA/WNBA playoff series + per-game (m1.1), both
+directions (underround / overround), executable-vs-blocked precedence, and false-positive guards.
 """
 from __future__ import annotations
 
@@ -206,17 +206,37 @@ def test_fires_on_wnba_playoff_series():
     assert len(out) == 1 and out[0]["exec_gap_c"] == 8
 
 
-def test_ignores_nba_per_game_and_props():
-    # Per-game (kind 'game') is 2-outcome too, but it is NOT the match family -> out of m1 scope.
-    g1 = market("A", series="KXNBAGAME", event="KXNBAGAME-1", player_key="a", yes_ask_c=45)
+def test_fires_on_nba_per_game():
+    # m1.1: per-game (kind 'game') is a 2-outcome MECE event too -> now in scope. Underround 45+48=93.
+    g1 = market("Celtics", series="KXNBAGAME", event="KXNBAGAME-26JUN03", player_key="bos", yes_ask_c=45)
     g1["kind"] = "game"
-    g2 = market("B", series="KXNBAGAME", event="KXNBAGAME-1", player_key="b", yes_ask_c=48)
+    g2 = market("Pacers", series="KXNBAGAME", event="KXNBAGAME-26JUN03", player_key="ind", yes_ask_c=48)
     g2["kind"] = "game"
-    assert dutchbook.find_dutch_books([g1, g2]) == []
-    # A non-head-to-head prop/other row is ignored regardless of price.
+    out = dutchbook.find_dutch_books([g1, g2])
+    assert len(out) == 1 and out[0]["direction"] == "underround" and out[0]["exec_gap_c"] == 7
+
+
+def test_fires_on_wnba_per_game():
+    g1 = market("Aces", series="KXWNBAGAME", event="KXWNBAGAME-26JUN03", player_key="lv", yes_ask_c=44)
+    g1["kind"] = "game"
+    g2 = market("Liberty", series="KXWNBAGAME", event="KXWNBAGAME-26JUN03", player_key="ny", yes_ask_c=50)
+    g2["kind"] = "game"
+    out = dutchbook.find_dutch_books([g1, g2])
+    assert len(out) == 1 and out[0]["exec_gap_c"] == 6
+
+
+def test_ignores_props_and_three_outcome_game():
+    # A non-two-way prop/other row is ignored regardless of price.
     p = market("Award", series="KXNBAMVP", event="KXNBAMVP-26", player_key="x", yes_ask_c=10)
     p["kind"] = "other"
     assert dutchbook.find_dutch_books([p]) == []
+    # A draw-prone (3-outcome) game lists 3 markets -> rejected by the exactly-2 MECE guard.
+    rows = []
+    for n, k in (("Home", "h"), ("Away", "a"), ("Draw", "d")):
+        r = market(n, series="KXSOCCERGAME", event="KXSOCCERGAME-1", player_key=k, yes_ask_c=30)
+        r["kind"] = "game"
+        rows.append(r)
+    assert dutchbook.find_dutch_books(rows) == []
 
 
 # --- Robustness: the production DataFrame->records path (NaN, not None) -------------

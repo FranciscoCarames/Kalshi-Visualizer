@@ -502,12 +502,13 @@ def render_dashboard() -> None:
     # 3b. Dutch-book arbitrage (2-outcome match books) — a check family separate from
     #     the containment ladder. Both legs are the SAME side, so it gets its own table.
     # ================================================================================
-    st.subheader("🎯 Dutch-book arbitrage — match books")
-    st.caption("Head-to-head match books that can be fully covered for under the guaranteed 100¢ payout — "
-               "a locked edge needing no model. Both legs are the **same** side (Buy YES on both players, "
-               "or Buy NO on both). Distinct from the containment ladder above; thresholds do not filter this.")
+    st.subheader("🎯 Dutch-book arbitrage — match & game books")
+    st.caption("Two-way books (a head-to-head match/series **or** a single game) that can be fully covered "
+               "for under the guaranteed 100¢ payout — a locked edge needing no model. Both legs are the "
+               "**same** side (Buy YES on both, or Buy NO on both). Distinct from the containment ladder "
+               "above; thresholds do not filter this.")
     if db_df.empty:
-        st.success("No two-sided match dutch books right now (each match's prices sum to ≥ 100¢).")
+        st.success("No two-way dutch books right now (each event's prices sum to ≥ 100¢).")
     else:
         DIR_LABEL = {"underround": "Buy YES both (underround)", "overround": "Buy NO both (overround)"}
         d = db_df.assign(
