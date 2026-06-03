@@ -420,3 +420,106 @@ NBA = register(SportConfig(
     node_fn=_nba_node,
     division_fn=_nba_division,
 ))
+
+
+# ============================================================================================
+# WNBA — third sport, grounded in live discovery (2026-06-03). Same team identity as the NBA.
+# ============================================================================================
+#
+# WNBA's modern playoffs are a SINGLE bracket (no conference final — KXWNBAEAST/WEST are defunct/empty),
+# so the clean, format-agnostic ladder is the reach-stage chain (settlement rules literally say
+# "qualifies for the Playoffs / Semifinals / Finals"):
+#   Reach Playoffs (KXWNBAPLAYOFF) ⊇ Reach Semifinals (KXWNBASEMIFINAL) ⊇ Reach Finals (KXWNBAFINAL)
+#   ⊇ Win Championship (KXWNBA).
+# KXWNBASERIES = playoff series head-to-head; KXWNBAGAME/props = ineligible. No conference rung.
+
+_WNBA_ROUND_PATTERNS = (
+    ("Finals", r"\bfinals\b"),
+    ("Semifinals", r"\bsemi-?finals?\b"),
+    ("First Round", r"\b1st round\b|\bfirst round\b|\bround 1\b|\br1\b"),
+)
+_WNBA_STAGE_RANK = {"Playoffs": 1, "First Round": 2, "Semifinals": 3, "Finals": 4, "Champion": 5}
+_WNBA_CATEGORY = {
+    "winner": "Championship", "advance": "Advancement (reach a stage)", "match": "Playoff series",
+    "game": "Game (not laddered)", "other": "Other",
+}
+_WNBA_LADDER = LadderSpec(
+    node_order=("Reach Playoffs", "Reach Semifinals", "Reach Finals", "Win Championship"),
+    adjacent_pairs=(
+        ("Win Championship", "Reach Finals"),
+        ("Reach Finals", "Reach Semifinals"),
+        ("Reach Semifinals", "Reach Playoffs"),
+    ),
+    # series head-to-head ≡ a reach node (win the Finals series ⇔ win the title, etc.)
+    match_stage_to_node={"Finals": "Win Championship", "Semifinals": "Reach Finals",
+                         "First Round": "Reach Semifinals"},
+    # reach-a-stage advance markets → their node (stage derived from the series ticker below)
+    advance_stage_to_node={"Playoffs": "Reach Playoffs", "Semifinals": "Reach Semifinals",
+                           "Finals": "Reach Finals"},
+)
+
+
+def _wnba_family(cfg: SportConfig, series_ticker: str) -> str:
+    t = (series_ticker or "").upper()
+    if t == "KXWNBA":
+        return "winner"                                              # win the championship
+    if t in ("KXWNBAPLAYOFF", "KXWNBASEMIFINAL", "KXWNBAFINAL"):
+        return "advance"                                             # reach a stage (qualifiers)
+    if t == "KXWNBASERIES":
+        return "match"                                               # playoff series head-to-head
+    if t == "KXWNBAGAME":
+        return "game"                                                # single game — NOT laddered
+    return "other"                                                   # props/awards/conference(defunct)/etc.
+
+
+def _wnba_stage(cfg: SportConfig, family: str, market: dict[str, Any]) -> str:
+    if family == "winner":
+        return "Champion"
+    if family == "advance":
+        # The advance "stage" comes from which qualifier series the market is in.
+        tk = (market.get("ticker") or "").upper()
+        if tk.startswith("KXWNBAPLAYOFF"):
+            return "Playoffs"
+        if tk.startswith("KXWNBASEMIFINAL"):
+            return "Semifinals"
+        if tk.startswith("KXWNBAFINAL"):
+            return "Finals"
+        return ""
+    if family == "match":
+        return extract_round(cfg.round_patterns, market.get("title"), market.get("rules_primary"))
+    return ""
+
+
+def _wnba_node(cfg: SportConfig, family: str, stage: str) -> str | None:
+    if family == "winner":
+        return "Win Championship"
+    if family == "advance":
+        return cfg.ladder.advance_stage_to_node.get(stage)
+    if family == "match":
+        return cfg.ladder.match_stage_to_node.get(stage)
+    return None
+
+
+def _wnba_division(cfg: SportConfig, series_ticker: str) -> str:
+    return ""   # single bracket — no division concept
+
+
+WNBA = register(SportConfig(
+    sport_id="wnba", label="WNBA", emoji="🏀",
+    series_prefixes=("KXWNBA",),   # no collision: "KXWNBA…" never prefix-matches NBA's "KXNBA…"
+    default_series=("KXWNBA", "KXWNBAPLAYOFF", "KXWNBASEMIFINAL", "KXWNBAFINAL", "KXWNBASERIES", "KXWNBAGAME"),
+    winner_tickers=frozenset(),
+    identity=IdentityResolver(candidate_paths=("custom_strike.basketball_team",), id_label="basketball_team"),
+    ladder=_WNBA_LADDER,
+    category_labels=_WNBA_CATEGORY,
+    round_patterns=_WNBA_ROUND_PATTERNS,
+    stage_rank=_WNBA_STAGE_RANK,
+    ladder_families=frozenset({"match", "advance", "winner"}),
+    match_family="match",
+    divisions={},
+    division_label="",
+    family_fn=_wnba_family,
+    stage_fn=_wnba_stage,
+    node_fn=_wnba_node,
+    division_fn=_wnba_division,
+))
