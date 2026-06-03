@@ -1,4 +1,4 @@
-"""Dutch-book / MECE detector for Kalshi 2-outcome match markets.
+"""Dutch-book / MECE detector for Kalshi 2-outcome markets.
 
 A separate, generic check family from the containment ladder (`consistency.py`). A **dutch book**
 exists on a mutually-exclusive-and-exhaustive set of binary markets when you can cover EVERY outcome
@@ -6,10 +6,12 @@ for less than the guaranteed $1 (100¢) payout — a locked, executable edge tha
 model and (unlike match-alignment) carries no settlement-rule caveat: the legs are outcomes of the
 SAME event and settle together.
 
-This module is deliberately narrow — the **2-outcome case only**: a head-to-head match event with
-exactly two player markets. The two markets are mutually exclusive (one player wins) and, for tennis,
-exhaustive (no draw) — so the pair is MECE by construction. Two directions, each a pair of BUYS
-(never "sell"/"short"):
+This module handles the **2-outcome case**: any event with exactly two distinct-participant binary
+markets — a head-to-head **match/series** (tennis match, NBA/WNBA playoff series) OR a single **game**
+(NBA/WNBA `KX*GAME`). The two markets are mutually exclusive (one side wins) and, for the draw-free
+sports we support, exhaustive — so the pair is MECE by construction. (A draw-prone game would list a
+third outcome, so its event carries 3 markets and is rejected by the exactly-2 guard.) Two directions,
+each a pair of BUYS (never "sell"/"short"):
 
   - **Underround → Buy YES on both.** Cost = ``yes_ask_A + yes_ask_B``. If < 100¢, one side wins and
     pays 100¢, so the locked profit per unit is ``100 − cost``.
@@ -83,13 +85,25 @@ def _is_active(row: dict[str, Any]) -> bool:
     return str(row.get("status") or "") == "active"
 
 
-def _is_match_row(row: dict[str, Any]) -> bool:
-    """A head-to-head market row for whatever sport owns its series (tennis: family 'match').
+# Two-way (exactly-2-outcome) contract families the detector accepts. A sport's head-to-head family
+# (tennis "match"; NBA/WNBA "match" = playoff series) PLUS per-game ("game" — NBA/WNBA single games).
+# Both are 2-outcome and exhaustive for the draw-free sports we support; the exactly-2-distinct-
+# participant guard in `_detect_pair` is the real MECE safety net (a draw-prone 3-outcome game would
+# carry 3 markets and be rejected there). Tennis has no "game" family, so it's unaffected.
+_GAME_FAMILY = "game"
 
-    Resolves the sport from the row's series; rows with no recognized series (UNKNOWN sport, empty
-    `match_family`) are excluded — so a foreign/unsupported ticker never enters the detector."""
+
+def _is_two_way_row(row: dict[str, Any]) -> bool:
+    """A row from a two-way (2-outcome) event for whatever sport owns its series.
+
+    Eligible families: the sport's head-to-head family (`cfg.match_family`) and per-game (`"game"`).
+    The sport must be RECOGNIZED — a row whose series resolves to the UNKNOWN sport is always excluded
+    (a foreign/unsupported ticker never enters the detector), so the game clause can't smuggle one in."""
     cfg = sports.sport_for_series(row.get("series"))
-    return bool(cfg.match_family) and row.get("kind") == cfg.match_family
+    if cfg.sport_id == "unknown":
+        return False
+    kind = row.get("kind")
+    return kind == cfg.match_family or kind == _GAME_FAMILY
 
 
 def _leg_label(row: dict[str, Any]) -> str:
@@ -226,7 +240,7 @@ def find_dutch_books(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """
     groups: dict[str, list[dict[str, Any]]] = {}
     for row in rows or []:
-        if not _is_match_row(row):
+        if not _is_two_way_row(row):
             continue
         ev = row.get("event_ticker") or ""
         if not ev:

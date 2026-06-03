@@ -1,7 +1,7 @@
 """Unit tests for the 2-outcome dutch-book / MECE detector (no network).
 
-Scope mirrors the m1 milestone: tennis head-to-head match events only, both directions
-(underround / overround), with the executable-vs-blocked precedence and the false-positive guards.
+Covers the 2-outcome detector: tennis matches + NBA/WNBA playoff series + per-game (m1.1), both
+directions (underround / overround), executable-vs-blocked precedence, and false-positive guards.
 """
 from __future__ import annotations
 
@@ -206,17 +206,37 @@ def test_fires_on_wnba_playoff_series():
     assert len(out) == 1 and out[0]["exec_gap_c"] == 8
 
 
-def test_ignores_nba_per_game_and_props():
-    # Per-game (kind 'game') is 2-outcome too, but it is NOT the match family -> out of m1 scope.
-    g1 = market("A", series="KXNBAGAME", event="KXNBAGAME-1", player_key="a", yes_ask_c=45)
+def test_fires_on_nba_per_game():
+    # m1.1: per-game (kind 'game') is a 2-outcome MECE event too -> now in scope. Underround 45+48=93.
+    g1 = market("Celtics", series="KXNBAGAME", event="KXNBAGAME-26JUN03", player_key="bos", yes_ask_c=45)
     g1["kind"] = "game"
-    g2 = market("B", series="KXNBAGAME", event="KXNBAGAME-1", player_key="b", yes_ask_c=48)
+    g2 = market("Pacers", series="KXNBAGAME", event="KXNBAGAME-26JUN03", player_key="ind", yes_ask_c=48)
     g2["kind"] = "game"
-    assert dutchbook.find_dutch_books([g1, g2]) == []
-    # A non-head-to-head prop/other row is ignored regardless of price.
+    out = dutchbook.find_dutch_books([g1, g2])
+    assert len(out) == 1 and out[0]["direction"] == "underround" and out[0]["exec_gap_c"] == 7
+
+
+def test_fires_on_wnba_per_game():
+    g1 = market("Aces", series="KXWNBAGAME", event="KXWNBAGAME-26JUN03", player_key="lv", yes_ask_c=44)
+    g1["kind"] = "game"
+    g2 = market("Liberty", series="KXWNBAGAME", event="KXWNBAGAME-26JUN03", player_key="ny", yes_ask_c=50)
+    g2["kind"] = "game"
+    out = dutchbook.find_dutch_books([g1, g2])
+    assert len(out) == 1 and out[0]["exec_gap_c"] == 6
+
+
+def test_ignores_props_and_three_outcome_game():
+    # A non-two-way prop/other row is ignored regardless of price.
     p = market("Award", series="KXNBAMVP", event="KXNBAMVP-26", player_key="x", yes_ask_c=10)
     p["kind"] = "other"
     assert dutchbook.find_dutch_books([p]) == []
+    # A draw-prone (3-outcome) game lists 3 markets -> rejected by the exactly-2 MECE guard.
+    rows = []
+    for n, k in (("Home", "h"), ("Away", "a"), ("Draw", "d")):
+        r = market(n, series="KXSOCCERGAME", event="KXSOCCERGAME-1", player_key=k, yes_ask_c=30)
+        r["kind"] = "game"
+        rows.append(r)
+    assert dutchbook.find_dutch_books(rows) == []
 
 
 # --- Robustness: the production DataFrame->records path (NaN, not None) -------------
@@ -267,6 +287,64 @@ def test_resolve_time_none_when_legs_have_no_time():
     a = market("A", player_key="a", yes_ask_c=45)
     b = market("B", player_key="b", yes_ask_c=48)
     assert dutchbook.find_dutch_books([a, b])[0]["resolve_time"] is None
+
+
+# --- m1.1 breadth: per-game eligibility correctness & isolation ---------------------
+def test_unknown_series_with_game_kind_is_ignored():
+    # A 'game'-kind row from an UNRECOGNIZED series must still be excluded (a foreign ticker
+    # never enters the detector) — the game clause must not bypass the unknown-sport guard.
+    a = market("A", series="KXNOTASPORT", event="X-1", player_key="a", yes_ask_c=45)
+    a["kind"] = "game"
+    b = market("B", series="KXNOTASPORT", event="X-1", player_key="b", yes_ask_c=48)
+    b["kind"] = "game"
+    assert dutchbook.find_dutch_books([a, b]) == []
+
+
+def test_overround_on_per_game():
+    g1 = market("Celtics", series="KXNBAGAME", event="KXNBAGAME-1", player_key="bos",
+                yes_bid_c=55, yes_ask_c=57, no_ask_c=45)
+    g1["kind"] = "game"
+    g2 = market("Pacers", series="KXNBAGAME", event="KXNBAGAME-1", player_key="ind",
+                yes_bid_c=52, yes_ask_c=54, no_ask_c=48)
+    g2["kind"] = "game"
+    out = dutchbook.find_dutch_books([g1, g2])
+    assert len(out) == 1 and out[0]["direction"] == "overround" and out[0]["exec_gap_c"] == 7  # 100-(45+48)
+
+
+def test_mixed_match_and_game_in_one_df_both_fire():
+    # A tennis match event and an NBA game event in the same frame -> two independent findings.
+    t1 = market("Alcaraz", series="KXATPMATCH", event="KXATPMATCH-1", player_key="alc", yes_ask_c=45)
+    t2 = market("Sinner", series="KXATPMATCH", event="KXATPMATCH-1", player_key="sin", yes_ask_c=48)
+    g1 = market("Celtics", series="KXNBAGAME", event="KXNBAGAME-1", player_key="bos", yes_ask_c=40)
+    g1["kind"] = "game"
+    g2 = market("Pacers", series="KXNBAGAME", event="KXNBAGAME-1", player_key="ind", yes_ask_c=52)
+    g2["kind"] = "game"
+    out = dutchbook.find_dutch_books([t1, t2, g1, g2])
+    assert {f["event_ticker"] for f in out} == {"KXATPMATCH-1", "KXNBAGAME-1"}
+    assert sorted(f["exec_gap_c"] for f in out) == [7, 8]   # tennis 7, nba game 8
+
+
+def _kinded(player, *, kind, **kw):
+    r = market(player, **kw)
+    r["kind"] = kind
+    return r
+
+
+def test_cross_sport_mix_only_two_way_events_fire():
+    rows = []
+    # tennis match (fires) + NBA game (fires)
+    rows += [market("A", series="KXATPMATCH", event="M1", player_key="a", yes_ask_c=45),
+             market("B", series="KXATPMATCH", event="M1", player_key="b", yes_ask_c=48)]
+    rows += [_kinded("C", kind="game", series="KXNBAGAME", event="G1", player_key="c", yes_ask_c=40),
+             _kinded("D", kind="game", series="KXNBAGAME", event="G1", player_key="d", yes_ask_c=50)]
+    # 3-market winner field (excluded: not 2 markets)
+    rows += [_kinded(n, kind="winner", series="KXFOMEN", event="W1", player_key=k, yes_ask_c=20)
+             for n, k in (("E", "e"), ("F", "f"), ("G", "g"))]
+    # prop (excluded) + unknown series (excluded)
+    rows += [_kinded("H", kind="other", series="KXNBAMVP", event="P1", player_key="h", yes_ask_c=10),
+             market("I", series="KXZZZ", event="U1", player_key="i", yes_ask_c=10)]
+    out = dutchbook.find_dutch_books(rows)
+    assert {f["event_ticker"] for f in out} == {"M1", "G1"}
 
 
 # --- Two events at once: strongest edge first ---------------------------------------
