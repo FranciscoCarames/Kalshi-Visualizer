@@ -156,3 +156,58 @@ def test_to_epoch_rejects_unparseable():
         store._to_epoch("not a timestamp")
     with pytest.raises(ValueError):
         store._to_epoch(True)   # bool guarded (not treated as epoch 1)
+
+
+# --- Stage 1 integration: REAL engine output (build_checks + find_dutch_books) through the store ---
+# Unit tests above use synthetic dicts; this proves the ACTUAL row shapes — pandas numpy dtypes, the
+# tuple `layers` column, and NaN gaps from MISSING_LAYER rows — survive the JSON round-trip with their
+# opportunity_id / relationship_type / bucket / blocked_reason intact.
+def _contract(player, key, kind, stage, dc):
+    return {"player": player, "player_key": key, "kind": kind, "stage": stage,
+            "contract": f"{kind}-{stage}", "display_pct": float(dc), "display_c": dc,
+            "yes_bid_c": max(dc - 1, 0), "yes_ask_c": min(dc + 1, 100),
+            "yes_bid_pct": float(max(dc - 1, 0)), "yes_ask_pct": float(min(dc + 1, 100)),
+            "yes_bid_size": 100, "yes_ask_size": 100, "quote_quality": "Tight",
+            "volume": 10, "market_ticker": f"T-{key}-{stage}", "kalshi_url": "x",
+            "series": "KXWTAADVANCE", "tournament": "French Open"}
+
+
+def test_real_build_checks_frame_round_trips(tmp_path):
+    import pandas as pd
+
+    import consistency
+    # Final + Champion only -> a real comparison PLUS a MISSING_LAYER row (NaN display_gap, tuple layers).
+    df = pd.DataFrame([_contract("Y", "uuid-y", "advance", "Final", 40),
+                       _contract("Y", "uuid-y", "winner", "Champion", 20)])
+    checks = consistency.build_checks(df)
+    assert checks["status"].eq("MISSING_LAYER").any()        # the NaN-bearing case is present
+
+    db = _db(tmp_path)
+    store.write_snapshot("2026-06-03 12:00:00 UTC", checks, db_path=db)
+    back = store.latest_two(db_path=db)[0]["opportunities"]
+
+    assert {o["opportunity_id"] for o in back} == set(checks["opportunity_id"])
+    ml = next(o for o in back if o["status"] == "MISSING_LAYER")
+    assert ml["display_gap"] is None                          # numpy NaN -> JSON null -> None
+    assert isinstance(ml["layers"], list)                     # tuple -> list
+    for o in back:                                            # iff invariant survives persistence
+        assert bool(o["blocked_reason"]) == (o["bucket"] == "blocked")
+
+
+def test_real_dutch_book_finding_round_trips(tmp_path):
+    import dutchbook
+
+    def mk(player, key, ya):
+        return {"series": "KXATPMATCH", "event_ticker": "E1", "kind": "match", "player": player,
+                "player_key": key, "contract": f"Beat opp ({player})", "tournament": "French Open",
+                "tour": "ATP", "yes_bid_c": ya - 2, "yes_ask_c": ya, "no_ask_c": None,
+                "yes_bid_size": 100, "yes_ask_size": 100, "quote_quality": "Tight", "status": "active",
+                "market_ticker": f"T-{key}", "kalshi_url": "x", "event_title": "M", "time_value": None}
+    findings = dutchbook.find_dutch_books([mk("Alcaraz", "alc", 45), mk("Sinner", "sin", 48)])
+    assert findings and findings[0]["relationship_type"] == "dutch_book"
+
+    db = _db(tmp_path)
+    store.write_snapshot("2026-06-03 12:00:00 UTC", findings, db_path=db)
+    back = store.latest_two(db_path=db)[0]["opportunities"]
+    assert back[0]["opportunity_id"] == findings[0]["opportunity_id"]
+    assert back[0]["bucket"] == "actionable" and back[0]["blocked_reason"] == ""
