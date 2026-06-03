@@ -27,6 +27,7 @@ import altair as alt
 import pandas as pd
 import streamlit as st
 
+import dutchbook
 import sports
 from config import (
     FULL_SCAN_MIN_INTERVAL,
@@ -384,6 +385,25 @@ def render_dashboard() -> None:
     wide_sig = in_bucket(thresholded, "wide_signal")
     data_q = in_bucket(thresholded, "data_quality")
 
+    # ---- Dutch-book / MECE findings (2-outcome match books) ----------------------------------
+    # A check family SEPARATE from the containment ladder (dutchbook.py): a head-to-head whose two
+    # player books can be covered for < 100¢. Computed on the same contracts and narrowed by the same
+    # tournament / event / participant membership (empty selection = no filter, like apply_membership),
+    # so it tracks the rest of the dashboard. `bucket_of` routes each finding (actionable / blocked).
+    db_df = pd.DataFrame(dutchbook.find_dutch_books(df.to_dict("records")) if not df.empty else [])
+    if not db_df.empty:
+        if sel_tournaments:
+            db_df = db_df[db_df["tournament"].isin(set(sel_tournaments))]
+        if sel_events:
+            db_df = db_df[db_df["event_ticker"].isin(set(sel_events))]
+        if chosen_key is not None:
+            db_df = db_df[(db_df["player_key_a"] == chosen_key) | (db_df["player_key_b"] == chosen_key)]
+    if not db_df.empty:
+        db_df = db_df.assign(
+            bucket=db_df.apply(bucket_of, axis=1),
+            tradable_disp=db_df["tradable_now"].map(TRADABLE_DISP).fillna(db_df["tradable_now"]),
+        ).sort_values("exec_gap_c", ascending=False)
+
     # Per-player frames for the detail/debug sections (driven by the Participant control).
     if chosen_key is not None:
         prows = df[df["player_key"] == chosen_key].to_dict("records")
@@ -477,6 +497,51 @@ def render_dashboard() -> None:
             ftxt = f" — floor +{int(floor)}¢/unit" if pd.notna(floor) else ""
             with st.expander(f"💵 {r['player']} · {r['chain']}{ftxt}"):
                 _payoff_block(r.to_dict(), units=r.get("exec_min_size"))
+
+    # ================================================================================
+    # 3b. Dutch-book arbitrage (2-outcome match books) — a check family separate from
+    #     the containment ladder. Both legs are the SAME side, so it gets its own table.
+    # ================================================================================
+    st.subheader("🎯 Dutch-book arbitrage — match books")
+    st.caption("Head-to-head match books that can be fully covered for under the guaranteed 100¢ payout — "
+               "a locked edge needing no model. Both legs are the **same** side (Buy YES on both players, "
+               "or Buy NO on both). Distinct from the containment ladder above; thresholds do not filter this.")
+    if db_df.empty:
+        st.success("No two-sided match dutch books right now (each match's prices sum to ≥ 100¢).")
+    else:
+        DIR_LABEL = {"underround": "Buy YES both (underround)", "overround": "Buy NO both (overround)"}
+        d = db_df.assign(
+            dir_disp=db_df["direction"].map(DIR_LABEL).fillna(db_df["direction"]),
+            caveat_disp=db_df["blockers"].replace("", "—").fillna("—"),
+        )
+        st.dataframe(
+            d[["match", "tournament", "dir_disp", "action_1_text", "action_2_text", "cost_c",
+               "exec_gap_c", "exec_min_size", "exec_max_profit_dollars", "tradable_disp",
+               "caveat_disp", "url"]],
+            hide_index=True, width="stretch",
+            column_config={
+                "match": "Match",
+                "tournament": "Tournament",
+                "dir_disp": st.column_config.TextColumn(
+                    "Trade", help="Both legs are the same side: Buy YES on both players (underround) "
+                                  "or Buy NO on both (overround)."),
+                "action_1_text": st.column_config.TextColumn("Leg 1"),
+                "action_2_text": st.column_config.TextColumn("Leg 2"),
+                "cost_c": st.column_config.NumberColumn(
+                    "Cost (¢)", format="%.0f", help="Combined cost of both legs; the pair pays a guaranteed 100¢."),
+                "exec_gap_c": st.column_config.NumberColumn(
+                    "Locked edge (¢)", format="%.0f", help="100¢ − cost, guaranteed per unit (gross of fees)."),
+                "exec_min_size": st.column_config.NumberColumn("Max units", format="%.0f"),
+                "exec_max_profit_dollars": st.column_config.NumberColumn(
+                    "Gross profit ($)", format="$%.2f", help=help_for("Gross quoted profit ($)")),
+                "tradable_disp": st.column_config.TextColumn("Tradable now", help=help_for("Tradable now")),
+                "caveat_disp": st.column_config.TextColumn("Caveat"),
+                "url": st.column_config.LinkColumn("Market", display_text="open ↗"),
+            },
+        )
+        n_live = int((db_df["tradable_now"] == "Yes").sum())
+        st.caption(f"{n_live} tradable now · {len(db_df)} found. Gross, before fees, slippage, latency, "
+                   "and partial-fill risk.")
 
     # ---- Opportunity ranking chart (Actionable + Near-edge by gross edge) ----------
     rank = opportunity_ranking(actionable, near)
