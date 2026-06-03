@@ -114,3 +114,53 @@ def test_recently_actionable_reason_precedence():
 
 def test_recently_actionable_empty_history():
     assert lifecycle.recently_actionable([]) == []
+
+
+# --- Edge cases / robustness (extensive) ----------------------------------------------
+def test_handles_unordered_snapshot_input():
+    # Newest-first input must be sorted internally (store returns ascending, but be defensive).
+    snaps = [snap(3, op("a", "blocked", market_status="active")),
+             snap(1, op("a", "actionable", exec_gap_c=5)),
+             snap(2, op("a", "actionable", exec_gap_c=4))]
+    r = lifecycle.recently_actionable(snaps)[0]
+    assert r["became_ts"] == 1.0 and r["left_ts"] == 3.0
+    assert lifecycle.first_seen(snaps, "a", actionable_only=True) == 1.0
+
+
+def test_blocked_change_nan_gap_is_not_a_phantom_change():
+    nan = float("nan")
+    prev = snap(1, op("a", "blocked", exec_gap_c=nan, blocked_reason="x", status="S"))
+    cur = snap(2, op("a", "blocked", exec_gap_c=nan, blocked_reason="x", status="S"))
+    assert lifecycle.blocked_change(prev, cur) == []          # NaN != NaN must NOT register as 'price'
+
+
+def test_persisting_now_ts_defaults_to_latest_snapshot_ts():
+    hist = [snap(100, op("a", "actionable")), snap(160, op("a", "actionable"))]
+    assert {r["opportunity_id"] for r in lifecycle.persisting_new_actionable(hist, 100, now_ts=None)} == {"a"}
+    assert lifecycle.persisting_new_actionable(hist, 30, now_ts=None) == []   # ref = latest ts (160)
+
+
+def test_recently_actionable_multiple_actionable_intervals():
+    snaps = [snap(1, op("a", "actionable")), snap(2, op("a", "clean")),
+             snap(3, op("a", "actionable")), snap(4, op("a", "blocked"))]
+    r = lifecycle.recently_actionable(snaps)[0]
+    assert r["became_ts"] == 1.0          # FIRST time actionable
+    assert r["left_ts"] == 4.0            # snapshot after the LAST actionable (ts3)
+    assert r["duration_s"] == 2.0         # first-actionable (ts1) -> last-actionable (ts3) span
+    assert r["reason_left"] == "went blocked"
+
+
+def test_lifecycle_on_store_roundtripped_snapshots(tmp_path):
+    """The real path: lifecycle consumes rows that went through store JSON (None -> null -> None,
+    not NaN). Must not phantom-change or crash."""
+    import store
+    db = str(tmp_path / "lc.db")
+    store.write_snapshot(1, [op("a", "actionable", exec_gap_c=5),
+                             op("b", "actionable", exec_gap_c=None)], db_path=db)   # b: missing gap
+    store.write_snapshot(2, [op("a", "blocked", market_status="inactive", exec_gap_c=5),
+                             op("b", "actionable", exec_gap_c=None)], db_path=db)
+    prev, cur = store.latest_two(db_path=db)
+    ch = lifecycle.blocked_change(prev, cur)
+    assert {c["opportunity_id"] for c in ch} == {"a"}        # a went blocked; b unchanged & never blocked
+    rec = lifecycle.recently_actionable(store.snapshots_since(10 ** 9, db_path=db))
+    assert any(r["opportunity_id"] == "a" and r["reason_left"] == "leg inactive" for r in rec)
