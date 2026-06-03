@@ -93,3 +93,20 @@ def test_thresholds_spare_actionable_two_pass():
     thresholded = filters.apply_thresholds(universe, min_edge_c=2)
     assert len(universe[universe["bucket"] == "actionable"]) == 1   # Actionable keeps it
     assert len(thresholded) == 0                                    # other sections would not
+
+
+def test_sport_membership_filter_narrows_and_no_ops_when_column_absent():
+    import pandas as pd
+    # A cross-sport (scanner) frame carries a `sport` column.
+    cross = pd.DataFrame([
+        {"sport": "tennis", "player_key": "a", "volume": 1},
+        {"sport": "nba", "player_key": "b", "volume": 1},
+        {"sport": "wnba", "player_key": "c", "volume": 1},
+    ])
+    got = filters.apply_membership(cross, sports=["tennis", "nba"])
+    assert set(got["sport"]) == {"tennis", "nba"}
+    # Empty/None selection -> no filter.
+    assert len(filters.apply_membership(cross, sports=None)) == 3
+    # The single-sport `checks` frame has no `sport` column -> the filter must no-op, not raise.
+    no_sport_col = pd.DataFrame([{"player_key": "a", "tournament": "X", "volume": 1}])
+    assert len(filters.apply_membership(no_sport_col, sports=["tennis"])) == 1

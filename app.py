@@ -28,7 +28,9 @@ import pandas as pd
 import streamlit as st
 
 import dutchbook
+import scanner
 import sports
+import store
 from config import (
     FRESHNESS_TICK_SECONDS,
     FULL_SCAN_MIN_INTERVAL,
@@ -355,13 +357,18 @@ with st.sidebar:
         max_vol = int(df["volume"].fillna(0).max()) if not df.empty else 0
         min_vol = st.slider("Min traded volume (history)", 0, max_vol, 0,
                             help="Historical traded volume — distinct from 'Min available size'.") if max_vol > 0 else 0
+        show_cross_sport = st.toggle(
+            "Scan all sports (cross-sport view)", value=False, key="cross_sport",
+            help="Adds one ranked table aggregating opportunities across ALL sports "
+                 "(tennis + NBA + WNBA) and persists each scan. Heavier — fetches every sport.")
         show_help = st.toggle("Show explanations", value=True)
 
-    # Full scan is heavy: warn and never auto-refresh faster than FULL_SCAN_MIN_INTERVAL.
-    if scan_all:
+    # Full scan / cross-sport are heavy: warn and never auto-refresh faster than FULL_SCAN_MIN_INTERVAL.
+    if scan_all or show_cross_sport:
         effective_interval = max(interval, FULL_SCAN_MIN_INTERVAL)
         if auto_refresh and interval < FULL_SCAN_MIN_INTERVAL:
-            st.warning(f"⚠ Scan-all is heavy; auto-refresh raised to {FULL_SCAN_MIN_INTERVAL}s "
+            _why = "Scan-all" if scan_all else "Cross-sport scan"
+            st.warning(f"⚠ {_why} is heavy; auto-refresh raised to {FULL_SCAN_MIN_INTERVAL}s "
                        f"(you selected {interval}s).")
     else:
         effective_interval = interval
@@ -538,6 +545,83 @@ def render_dashboard() -> None:
             f"⚠ {len(errors)} series failed to load — results may be incomplete. "
             "See the Debug expander below for details."
         )
+
+    # ================================================================================
+    # 2b. All loaded markets — cross-sport scanner (Stage 2; toggle-gated, off by default)
+    # ================================================================================
+    # An ADDITIVE view: the per-sport dashboard below is unchanged. When enabled, scanner.py
+    # aggregates opportunities (containment + dutch-book) across EVERY sport into one ranked frame,
+    # and persists the scan to the Stage-1 SQLite store. Interim Streamlit surfacing — replaced by
+    # NiceGUI at Stage 5, so it's kept minimal. NOT all of Kalshi — only the loaded series.
+    if show_cross_sport:
+        def _cross_sport_fetch(sport_id: str) -> pd.DataFrame:
+            cfg2 = sports.get_sport(sport_id)
+            fams = tuple(sorted(set(cfg2.category_labels.values())))   # all families for this sport
+            return load_contracts(fams, scan_all, sport_id)[0]
+
+        def _snapshot_writer(fa, frame) -> None:
+            # Persist once per distinct fetch tick; Streamlit reruns (widget clicks) must not duplicate.
+            if st.session_state.get("_last_snap_fetched_at") == fa:
+                return
+            store.write_snapshot(fa, frame)
+            st.session_state["_last_snap_fetched_at"] = fa
+
+        st.subheader("🌐 All loaded markets — cross-sport")
+        st.caption(f"All loaded markets ({'full scan' if scan_all else 'core series'}) across every "
+                   "sport, ranked best→worst — NOT all of Kalshi. Gross of fees.")
+        uni, sport_errs = scanner.unified_opportunities(
+            _cross_sport_fetch, store_writer=_snapshot_writer, fetched_at=fetched_at)
+        _sport_opts = [c.sport_id for c in sports.all_sports()]
+        _sel_sports = st.multiselect(
+            "Sports", _sport_opts, default=_sport_opts,
+            format_func=lambda sid: f"{sports.get_sport(sid).emoji} {sports.get_sport(sid).label}",
+            key="cross_sport_filter")
+        uni = apply_membership(uni, sports=_sel_sports)
+        if sport_errs:
+            st.warning("⚠ Some sports failed to load: "
+                       + ", ".join(f"{e['sport']} ({e['error']})" for e in sport_errs))
+        if uni.empty:
+            st.info("No opportunities across the loaded sports right now.")
+        else:
+            st.download_button("⬇ Cross-sport opportunities (CSV)", uni.to_csv(index=False),
+                               file_name="cross_sport_opportunities.csv", mime="text/csv",
+                               key="dl_cross_sport")
+            uni_disp = uni.assign(
+                tradable_disp=uni["tradable_now"].map(TRADABLE_DISP).fillna(uni["tradable_now"]),
+                source_disp=uni["source"].map(
+                    {"containment": "Containment", "dutch_book": "Dutch book"}).fillna(uni["source"]),
+            )
+            _id_cols = ["opportunity_id"] if show_codes else []
+            st.dataframe(
+                uni_disp[["sport_label", "source_disp", "name", "detail", "tournament",
+                          "action_1_text", "action_2_text", "exec_gap_c", "exec_min_size",
+                          "exec_max_profit_dollars", "tradable_disp", "blocked_reason"]
+                         + _id_cols + ["url"]],
+                hide_index=True, width="stretch",
+                column_config={
+                    "sport_label": "Sport",
+                    "source_disp": st.column_config.TextColumn(
+                        "Type", help="Containment-ladder inconsistency or a dutch-book (MECE) arbitrage."),
+                    "name": "Participant / match",
+                    "detail": "Detail",
+                    "tournament": "Tournament",
+                    "action_1_text": st.column_config.TextColumn("Leg 1"),
+                    "action_2_text": st.column_config.TextColumn("Leg 2"),
+                    "exec_gap_c": st.column_config.NumberColumn(
+                        "Gross edge (¢)", format="%.0f", help=help_for("Executable gap (¢)")),
+                    "exec_min_size": st.column_config.NumberColumn("Max units", format="%.0f"),
+                    "exec_max_profit_dollars": st.column_config.NumberColumn(
+                        "Gross profit ($)", format="$%.2f", help=help_for("Gross quoted profit ($)")),
+                    "tradable_disp": st.column_config.TextColumn("Tradable now", help=help_for("Tradable now")),
+                    "blocked_reason": st.column_config.TextColumn("Caveat"),
+                    "opportunity_id": st.column_config.TextColumn("Opportunity ID"),
+                    "url": st.column_config.LinkColumn("Market", display_text="open ↗"),
+                },
+            )
+            n_act = int((uni["bucket"] == "actionable").sum())
+            st.caption(f"{n_act} actionable · {len(uni)} opportunities across {uni['sport'].nunique()} "
+                       "sport(s). Gross, before fees/slippage. Scan persisted to the snapshot store.")
+        st.divider()
 
     # ================================================================================
     # 3. Actionable now — membership universe only (thresholds spare it)

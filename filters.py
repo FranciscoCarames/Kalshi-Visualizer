@@ -27,6 +27,7 @@ def apply_membership(
     layers: Iterable[str] | None = None,
     events: Iterable[str] | None = None,
     players: Iterable[str] | None = None,
+    sports: Iterable[str] | None = None,
     min_volume: float = 0,
 ) -> pd.DataFrame:
     """Narrow the *universe* of comparisons. Applied to every section, including Actionable now.
@@ -53,6 +54,10 @@ def apply_membership(
         out = out[out["child_event_ticker"].isin(evset) | out["parent_event_ticker"].isin(evset)]
     if players:
         out = out[out["player_key"].isin(set(players))]
+    if sports and "sport" in out.columns:
+        # Cross-sport (scanner) frames carry a `sport` column; the single-sport `checks` frame does
+        # not, so this no-ops there. Mirrors the other membership filters.
+        out = out[out["sport"].isin(set(sports))]
     if min_volume:
         out = out[out["volume"].fillna(0) >= min_volume]
     return out
