@@ -530,7 +530,7 @@ def render_dashboard() -> None:
                 "cost_c": st.column_config.NumberColumn(
                     "Cost (¢)", format="%.0f", help="Combined cost of both legs; the pair pays a guaranteed 100¢."),
                 "exec_gap_c": st.column_config.NumberColumn(
-                    "Locked edge (¢)", format="%.0f", help="100¢ − cost, guaranteed per unit (gross of fees)."),
+                    "Locked edge (¢)", format="%.0f", help=help_for("Locked edge (¢)")),
                 "exec_min_size": st.column_config.NumberColumn("Max units", format="%.0f"),
                 "exec_max_profit_dollars": st.column_config.NumberColumn(
                     "Gross profit ($)", format="$%.2f", help=help_for("Gross quoted profit ($)")),

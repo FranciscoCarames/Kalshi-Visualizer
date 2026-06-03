@@ -56,6 +56,12 @@ _Reach Semifinal ⊇ Reach Final ⊇ Win Tournament: a deeper outcome can't be m
 
 The app's core relationship. Reaching the semifinal contains reaching the final, which contains winning the tournament — each deeper outcome is a subset of the broader one. Because a subset can never be more probable than the set that contains it, a deeper contract must not price above its broader prerequisite. When it does — with firm, sized quotes — that's an executable inconsistency: buy YES on the broader contract and buy NO on the deeper one.
 
+## Dutch book
+
+_A guaranteed edge from covering BOTH outcomes of a two-way market for under 100¢; the locked profit per unit is 100¢ − the total cost of the two legs._
+
+A dutch book is the simplest kind of locked edge and needs no probability model. A head-to-head match has exactly two outcomes that are mutually exclusive (only one player wins) and exhaustive (someone must — tennis has no draw), so exactly one of the two contracts settles at $1. If you can assemble a position that pays that $1 for less than $1, the difference is locked in every outcome. Two directions, each a pair of BUYS: buy YES on both players when their YES asks sum to under 100¢ (an ‘underround’), or buy NO on both when their NO asks sum to under 100¢ (an ‘overround’). Because the two player markets are priced on independent order books, their prices need not add to 100¢, which is what creates the edge. Unlike a containment/match-alignment edge there is no settlement-rule caveat — both legs are outcomes of the SAME event and settle together — so a firm, sized dutch book is true arbitrage (gross of fees).
+
 ## Gross quoted profit
 
 _Profit from the displayed quotes and sizes — before fees, slippage, latency, and partial-fill risk._
