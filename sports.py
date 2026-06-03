@@ -347,14 +347,18 @@ _NBA_STAGE_RANK = {
     "Finals": 4, "Conference": 5, "Champion": 6,
 }
 _NBA_CATEGORY = {
-    "winner": "Championship", "advance": "Conference (reach Finals)", "match": "Playoff series",
+    "winner": "Championship", "advance": "Advancement (reach a stage)", "match": "Playoff series",
     "game": "Game (not laddered)", "other": "Other",
 }
+# Containment ladder (broad → deep): Reach Playoffs ⊇ Win Conference (= reach the Finals) ⊇ Win
+# Championship. To win your conference you must be in the playoffs; to win the title you must win your
+# conference. The advance-market "stage" is derived from the series (NBA has no title round), so multiple
+# advance series map to different rungs via advance_stage_to_node.
 _NBA_LADDER = LadderSpec(
-    node_order=("Win Conference", "Win Championship"),
-    adjacent_pairs=(("Win Championship", "Win Conference"),),
+    node_order=("Reach Playoffs", "Win Conference", "Win Championship"),
+    adjacent_pairs=(("Win Championship", "Win Conference"), ("Win Conference", "Reach Playoffs")),
     match_stage_to_node={"Finals": "Win Championship", "Conference Finals": "Win Conference"},
-    advance_stage_to_node={},   # NBA advance node comes from the family (conference), not a stage
+    advance_stage_to_node={"Playoffs": "Reach Playoffs", "Conference": "Win Conference"},
 )
 
 
@@ -362,21 +366,22 @@ def _nba_family(cfg: SportConfig, series_ticker: str) -> str:
     """NBA market family is determined by the SERIES (not a title-extracted stage)."""
     t = (series_ticker or "").upper()
     if t == "KXNBA":
-        return "winner"                 # win the championship
-    if t in ("KXNBAEAST", "KXNBAWEST"):
-        return "advance"                # win your conference = reach the Finals
+        return "winner"                            # win the championship
+    if t in ("KXNBAEAST", "KXNBAWEST", "KXNBAPLAYOFF"):
+        return "advance"                           # reach-a-stage (conference / playoffs)
     if t == "KXNBASERIES":
-        return "match"                  # playoff series head-to-head
+        return "match"                             # playoff series head-to-head
     if t == "KXNBAGAME":
-        return "game"                   # single game — NOT a series/ladder outcome
-    return "other"                      # spreads/totals/props/awards/draft/etc.
+        return "game"                              # single game — NOT a series/ladder outcome
+    return "other"                                 # spreads/totals/props/awards/draft/etc.
 
 
 def _nba_stage(cfg: SportConfig, family: str, market: dict[str, Any]) -> str:
     if family == "winner":
         return "Champion"
     if family == "advance":
-        return "Conference"
+        # NBA has no title round, so the advance "stage" comes from which series the market is in.
+        return "Playoffs" if (market.get("ticker") or "").upper().startswith("KXNBAPLAYOFF") else "Conference"
     if family == "match":
         return extract_round(cfg.round_patterns, market.get("title"), market.get("rules_primary"))
     return ""
@@ -386,9 +391,9 @@ def _nba_node(cfg: SportConfig, family: str, stage: str) -> str | None:
     if family == "winner":
         return "Win Championship"
     if family == "advance":
-        return "Win Conference"
+        return cfg.ladder.advance_stage_to_node.get(stage)   # Playoffs / Conference
     if family == "match":
-        return cfg.ladder.match_stage_to_node.get(stage)   # Finals / Conference Finals only
+        return cfg.ladder.match_stage_to_node.get(stage)     # Finals / Conference Finals only
     return None
 
 
@@ -399,7 +404,7 @@ def _nba_division(cfg: SportConfig, series_ticker: str) -> str:
 NBA = register(SportConfig(
     sport_id="nba", label="NBA", emoji="🏀",
     series_prefixes=("KXNBA",),
-    default_series=("KXNBA", "KXNBAEAST", "KXNBAWEST", "KXNBASERIES", "KXNBAGAME"),
+    default_series=("KXNBA", "KXNBAEAST", "KXNBAWEST", "KXNBAPLAYOFF", "KXNBASERIES", "KXNBAGAME"),
     winner_tickers=frozenset(),
     identity=IdentityResolver(candidate_paths=("custom_strike.basketball_team",), id_label="basketball_team"),
     ladder=_NBA_LADDER,
