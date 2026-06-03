@@ -110,3 +110,23 @@ SNAPSHOT_DB_PATH = "snapshots.db"
 # retention is deterministic/testable). Sized above the largest planned backlog window (24h, Stage 3)
 # plus margin, so the lifecycle/backlog views always have enough history.
 SNAPSHOT_RETENTION_SECONDS = 30 * 60 * 60   # 30 hours
+
+# --- Lifecycle (Stage 3 — alerts + recently-actionable backlog) ----------------------
+# Recently-actionable backlog windows (§10): label -> seconds. "This session" is a sentinel the app
+# resolves to the app/process start time. 1 hour is the default.
+BACKLOG_WINDOWS = {
+    "15 min": 15 * 60,
+    "1 hour": 60 * 60,
+    "4 hours": 4 * 60 * 60,
+    "24 hours": 24 * 60 * 60,
+    "This session": None,
+}
+BACKLOG_DEFAULT = "1 hour"
+# New-actionable banner persistence (§8). "Until next refresh" -> single-transition diff (window None);
+# the "N minutes" modes keep a still-actionable new row in the banner for that long. (No "until
+# acknowledged" yet — that needs a NiceGUI ack at Stage 5.)
+ALERT_PERSISTENCE_OPTIONS = {
+    "Until next refresh": None,
+    "5 minutes": 5 * 60,
+    "15 minutes": 15 * 60,
+}

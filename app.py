@@ -28,15 +28,20 @@ import pandas as pd
 import streamlit as st
 
 import dutchbook
+import lifecycle
 import scanner
 import sports
 import store
 from config import (
+    ALERT_PERSISTENCE_OPTIONS,
+    BACKLOG_DEFAULT,
+    BACKLOG_WINDOWS,
     FRESHNESS_TICK_SECONDS,
     FULL_SCAN_MIN_INTERVAL,
     REFRESH_DEFAULT_SECONDS,
     REFRESH_OPTIONS,
     REFRESH_TTL,
+    SNAPSHOT_RETENTION_SECONDS,
     STALE_AFTER_SECONDS,
     TIMEZONE_DEFAULT,
     TIMEZONE_OPTIONS,
@@ -577,6 +582,26 @@ def render_dashboard() -> None:
             format_func=lambda sid: f"{sports.get_sport(sid).emoji} {sports.get_sport(sid).label}",
             key="cross_sport_filter")
         uni = apply_membership(uni, sports=_sel_sports)
+
+        # --- Lifecycle (Stage 3) — derived from the snapshot history just written -----------------
+        # Safe normalization: latest_two() can be [] or length 1, so never unpack blindly.
+        _pair = store.latest_two()
+        _prev = _pair[0] if len(_pair) == 2 else None
+        _cur = _pair[-1] if _pair else None
+        _persist = st.selectbox("New-actionable banner persistence", list(ALERT_PERSISTENCE_OPTIONS),
+                                index=0, key="alert_persist", help=help_for("New actionable"))
+        _window_s = ALERT_PERSISTENCE_OPTIONS[_persist]
+        if _window_s is None:
+            _new_rows = lifecycle.new_actionable(_prev, _cur)
+        else:   # full retained history so first-seen isn't clipped (see lifecycle.persisting_new_actionable)
+            _new_rows = lifecycle.persisting_new_actionable(
+                store.snapshots_since(SNAPSHOT_RETENTION_SECONDS), _window_s, now_ts=None)
+        _new_ids = {r.get("opportunity_id") for r in _new_rows}
+        if _new_ids:
+            st.success(f"🆕 {len(_new_ids)} newly actionable — flagged in the table below.")
+        if not uni.empty:
+            uni = uni.assign(is_new=uni["opportunity_id"].isin(_new_ids))
+
         if sport_errs:
             st.warning("⚠ Some sports failed to load: "
                        + ", ".join(f"{e['sport']} ({e['error']})" for e in sport_errs))
@@ -593,12 +618,13 @@ def render_dashboard() -> None:
             )
             _id_cols = ["opportunity_id"] if show_codes else []
             st.dataframe(
-                uni_disp[["sport_label", "source_disp", "name", "detail", "tournament",
+                uni_disp[["is_new", "sport_label", "source_disp", "name", "detail", "tournament",
                           "action_1_text", "action_2_text", "exec_gap_c", "exec_min_size",
                           "exec_max_profit_dollars", "tradable_disp", "blocked_reason"]
                          + _id_cols + ["url"]],
                 hide_index=True, width="stretch",
                 column_config={
+                    "is_new": st.column_config.CheckboxColumn("New", help=help_for("New actionable")),
                     "sport_label": "Sport",
                     "source_disp": st.column_config.TextColumn(
                         "Type", help="Containment-ladder inconsistency or a dutch-book (MECE) arbitrage."),
@@ -621,6 +647,56 @@ def render_dashboard() -> None:
             n_act = int((uni["bucket"] == "actionable").sum())
             st.caption(f"{n_act} actionable · {len(uni)} opportunities across {uni['sport'].nunique()} "
                        "sport(s). Gross, before fees/slippage. Scan persisted to the snapshot store.")
+
+        def _ts_disp(ts) -> str:
+            return fmt_time(datetime.fromtimestamp(ts, timezone.utc), tz_name, fmt="%H:%M:%S %Z") if ts else "—"
+
+        # --- Recently-actionable backlog (§10) ----------------------------------------------------
+        with st.expander("📉 Recently actionable (left the actionable set)"):
+            _win = st.selectbox("Window", list(BACKLOG_WINDOWS),
+                                index=list(BACKLOG_WINDOWS).index(BACKLOG_DEFAULT),
+                                key="backlog_window", help=help_for("Recently actionable"))
+            _win_s = BACKLOG_WINDOWS[_win]
+            _hist = store.snapshots_since(_win_s if _win_s is not None else SNAPSHOT_RETENTION_SECONDS)
+            _recent = lifecycle.recently_actionable(_hist)
+            if not _recent:
+                st.caption("Nothing left the actionable set in this window.")
+            else:
+                rdf = pd.DataFrame(_recent)
+                rdf["became"] = [_ts_disp(t) for t in rdf["became_ts"]]
+                rdf["left"] = [_ts_disp(t) for t in rdf["left_ts"]]
+                rdf["mins"] = (pd.to_numeric(rdf["duration_s"], errors="coerce") / 60).round(1)
+                st.download_button("⬇ Recently-actionable (CSV)", rdf.to_csv(index=False),
+                                   file_name="recently_actionable.csv", mime="text/csv", key="dl_recent")
+                st.dataframe(
+                    rdf[["sport", "name", "became", "left", "mins", "reason_left", "last_edge_c",
+                         "current_status", "url"]],
+                    hide_index=True, width="stretch",
+                    column_config={
+                        "sport": "Sport", "name": "Participant / match",
+                        "became": "Became actionable", "left": "Left actionable",
+                        "mins": st.column_config.NumberColumn("Lasted (min)", format="%.1f"),
+                        "reason_left": "Why it left",
+                        "last_edge_c": st.column_config.NumberColumn("Last edge (¢)", format="%.0f"),
+                        "current_status": "Now", "url": st.column_config.LinkColumn("Market", display_text="open ↗"),
+                    },
+                )
+                st.caption(f"{len(_recent)} opportunity(ies) were actionable in the last {_win} but aren't now.")
+
+        # --- Changed-while-blocked (§9, minimal interim surfacing) ---------------------------------
+        _changed = lifecycle.blocked_change(_prev, _cur)
+        if _changed:
+            with st.expander(f"🔁 Changed while blocked ({len(_changed)})"):
+                cdf = pd.DataFrame([{
+                    "opportunity_id": c["opportunity_id"],
+                    "from": c["prev_bucket"], "to": c["cur_bucket"],
+                    "what changed": ", ".join(c["changes"]) or ("entered/left blocked" if c["transitioned"] else ""),
+                    "sport": (c["row"] or {}).get("sport"), "name": (c["row"] or {}).get("name"),
+                    "caveat": (c["row"] or {}).get("blocked_reason"),
+                } for c in _changed])
+                st.dataframe(cdf, hide_index=True, width="stretch",
+                             column_config={"what changed": st.column_config.TextColumn(
+                                 "What changed", help=help_for("Changed while blocked"))})
         st.divider()
 
     # ================================================================================

@@ -107,3 +107,16 @@ def test_empty_when_all_sports_empty():
     assert unified.empty
     assert list(unified.columns) == scanner.UNIFIED_COLUMNS    # columns intact even when empty
     assert errors == []
+
+
+# --- Stage 3: unified row carries the lifecycle-diff fields (rule_flag + market_status) ---
+def test_unified_columns_include_lifecycle_fields():
+    assert "rule_flag" in scanner.UNIFIED_COLUMNS
+    assert "market_status" in scanner.UNIFIED_COLUMNS
+
+
+def test_rows_carry_market_status_and_rule_flag():
+    unified, _ = scanner.unified_opportunities(_fetch)
+    assert set(unified["market_status"]) <= {"active", "inactive"}
+    # containment rows expose rule_flag (possibly ""), dutch-book rows never carry a rule caveat
+    assert (unified.loc[unified["source"] == "dutch_book", "rule_flag"] == "").all()

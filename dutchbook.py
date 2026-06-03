@@ -228,6 +228,9 @@ def _detect_pair(event_ticker: str, markets: list[dict[str, Any]]) -> dict[str, 
         "player_key_b": b.get("player_key", ""),
         "resolve_time": resolve_time,
         "tradable_now": tradable_now,
+        # Normalized leg-status for the lifecycle diff (§9 market_status / §10 "leg inactive"): a single
+        # market_status from the same both-legs-active check that drives tradability.
+        "market_status": "active" if both_active else "inactive",
         "blockers": blockers_str,
         # Two-leg buy-only action plan (same vocabulary as consistency rows, so the dashboard reuses it).
         "action_1_side": side, "action_1_contract": label_a, "action_1_price_c": best["price_a"],

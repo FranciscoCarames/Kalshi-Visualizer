@@ -44,9 +44,20 @@ UNIFIED_COLUMNS = [
     "action_1_text", "action_2_text",          # the two buys (same vocabulary across both shapes)
     "exec_gap_c", "exec_min_size", "exec_max_profit_dollars",  # gross edge / sizing
     "bucket", "status", "tradable_now", "blocked_reason",      # routing / state (Stage 1)
+    "market_status", "rule_flag",              # lifecycle-diff inputs (Stage 3 §9/§10)
     "relationship_type", "opportunity_id",     # identity (Stage 1)
     "url",                                      # link
 ]
+
+
+def _market_status_consistency(r: dict[str, Any]) -> str:
+    """Normalized leg status for a consistency row: 'inactive' if any present leg is non-active,
+    else 'active' (a blank/absent leg status — e.g. a single-sided row — does not mark inactive)."""
+    for s in (r.get("child_status"), r.get("parent_status")):
+        s = str(s or "")
+        if s and s != "active":
+            return "inactive"
+    return "active"
 
 
 def _num(x: Any) -> Any:
@@ -64,6 +75,7 @@ def _to_unified_consistency(r: dict[str, Any], cfg) -> dict[str, Any]:
         "exec_max_profit_dollars": _num(r.get("exec_max_profit_dollars")),
         "bucket": r.get("bucket") or "", "status": r.get("status") or "",
         "tradable_now": r.get("tradable_now") or "", "blocked_reason": r.get("blocked_reason") or "",
+        "market_status": _market_status_consistency(r), "rule_flag": r.get("rule_flag") or "",
         "relationship_type": r.get("relationship_type") or "", "opportunity_id": r.get("opportunity_id") or "",
         "url": r.get("child_url") or r.get("parent_url") or "",
     }
@@ -79,6 +91,7 @@ def _to_unified_dutchbook(r: dict[str, Any], cfg) -> dict[str, Any]:
         "exec_max_profit_dollars": _num(r.get("exec_max_profit_dollars")),
         "bucket": r.get("bucket") or "", "status": r.get("status") or "",
         "tradable_now": r.get("tradable_now") or "", "blocked_reason": r.get("blocked_reason") or "",
+        "market_status": r.get("market_status") or "active", "rule_flag": "",  # dutch books carry no rule caveat
         "relationship_type": r.get("relationship_type") or "", "opportunity_id": r.get("opportunity_id") or "",
         "url": r.get("url") or "",
     }
