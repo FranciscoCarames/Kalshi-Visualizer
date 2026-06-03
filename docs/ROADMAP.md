@@ -45,13 +45,15 @@ current Streamlit stack — while keeping the durable logic migration-ready.
 
 ### The six stages, in order
 
-- **Stage 0 — Clarity quick wins (no new infrastructure).** *Upcoming.* Immediate daily value with zero
-  new infra: a timezone selector (Lisbon default) applied to every displayed time; **remove** the
-  misleading ranking graph; a "Show IDs & codes" toggle (default OFF) exposing series/event/market codes,
-  participant IDs, and the synthetic `opportunity_id`; an always-visible **data-freshness & coverage
-  strip** on the main dashboard (exchange + local time, data age, refresh status, stale-data warning,
-  coverage/fetch-failure counts); and **debug + full diagnostics moved behind a single Advanced toggle,
-  default OFF**.
+- **Stage 0 — Clarity quick wins (no new infrastructure).** *Shipped — PR #34.* Immediate daily value with
+  zero new infra: a timezone selector (Lisbon default) applied to every displayed time; **remove** the
+  misleading ranking graph; a "Show IDs & codes" toggle (default OFF) exposing series/event/market codes
+  and participant IDs; an always-visible **data-freshness & coverage strip** on the main dashboard (local
+  time, data age, refresh status, stale-data warning, coverage/fetch-failure counts); and **debug + full
+  diagnostics moved behind a single Advanced toggle, default OFF**.
+  *Implementation note:* the freshness strip is rendered by a dedicated lightweight `st.fragment`
+  (`FRESHNESS_TICK_SECONDS`, default 10s) that recomputes age from the cached fetch, so **Data age climbs
+  live and the stale warning fires even when auto-refresh is off** — without any extra network fetch.
 
 - **Stage 1 — Opportunity schema + SQLite snapshot store (durable backbone).** *Upcoming.* Give every
   opportunity a stable, deterministic `opportunity_id`; make `blocked_reason` a **required** schema field

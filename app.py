@@ -29,6 +29,7 @@ import streamlit as st
 
 import sports
 from config import (
+    FRESHNESS_TICK_SECONDS,
     FULL_SCAN_MIN_INTERVAL,
     REFRESH_DEFAULT_SECONDS,
     REFRESH_OPTIONS,
@@ -245,6 +246,14 @@ except KalshiError as exc:
     st.error(f"Couldn't load Kalshi data: {exc}")
     st.stop()
 
+# Stash freshness inputs so the lightweight freshness fragment can re-render the age/stale strip on its
+# OWN fast timer WITHOUT re-fetching (the heavy fetch stays on load_contracts' cache + the dashboard's
+# refresh interval). render_dashboard() refreshes this dict each time it actually re-fetches.
+st.session_state["_freshness"] = {
+    "fetched_at": fetched_at, "errors": errors, "n_scanned": n_scanned, "n_loaded": n_loaded,
+    "skipped_no_name": _skipped, "n_excluded_unknown": _excl,
+}
+
 # ---- Sidebar (part 2: after the fetch — options derived from the loaded data) --------------
 with st.sidebar:
     # Division control is sport-specific: tennis splits by Tour (Women/Men); a sport with no division
@@ -362,6 +371,58 @@ players_filter = [chosen_key] if chosen_key else None
 st.title(f"{cfg.emoji} Kalshi {cfg.label} — Executable Inconsistency Dashboard")
 
 
+def _render_freshness_strip(fr: dict) -> None:
+    """Render the always-visible data-freshness & coverage strip from a stashed inputs dict.
+    Pure presentation; age is recomputed against the current time on every call (so it climbs)."""
+    fa = fr.get("fetched_at")
+    errors = fr.get("errors") or []
+    n_loaded, n_scanned = fr.get("n_loaded", 0), fr.get("n_scanned", 0)
+    n_excluded_unknown, skipped_no_name = fr.get("n_excluded_unknown", 0), fr.get("skipped_no_name", 0)
+    age = data_age_seconds(fa)
+    stale = is_stale(age, STALE_AFTER_SECONDS)
+    if errors and n_loaded == 0:
+        refresh_status = "❌ Failed"
+    elif errors:
+        refresh_status = f"⚠ Partial ({len(errors)} failed)"
+    else:
+        refresh_status = "✅ Success"
+    fc1, fc2, fc3, fc4 = st.columns(4)
+    fc1.metric("Data time", fmt_time(fa, tz_name, fmt="%H:%M:%S %Z") or "—")
+    fc2.metric("Data age", f"{int(age)}s" if age is not None else "—")
+    fc3.metric("Refresh status", refresh_status)
+    fc4.metric("Coverage", f"{n_loaded}/{n_scanned} series",
+               help="Series loaded / scanned for the enabled contract families.")
+    cov_bits = []
+    if n_excluded_unknown:
+        cov_bits.append(f"{n_excluded_unknown} series excluded (unrecognised kind)")
+    if skipped_no_name:
+        cov_bits.append(f"{skipped_no_name} markets skipped (no participant name)")
+    if errors:
+        cov_bits.append(f"{len(errors)} series failed")
+    if cov_bits:
+        st.caption("Coverage notes: " + " · ".join(cov_bits) + ". (Full list in Advanced → Debug.)")
+    if stale:
+        st.warning(
+            f"⚠ Stale data — last refresh was {int(age)}s ago (threshold {STALE_AFTER_SECONDS}s). "
+            "Auto-refresh may be off, or the last fetch failed."
+        )
+
+
+@st.fragment(run_every=FRESHNESS_TICK_SECONDS)
+def render_freshness() -> None:
+    """Re-render the freshness strip every few seconds so 'Data age' climbs and the stale warning
+    appears even when the main auto-refresh is off — WITHOUT re-fetching market data (reads the
+    stashed dict only)."""
+    fr = st.session_state.get("_freshness")
+    if not fr:
+        st.caption("Loading market data…")
+        return
+    _render_freshness_strip(fr)
+
+
+render_freshness()
+
+
 @st.fragment(run_every=run_every)
 def render_dashboard() -> None:
     try:
@@ -370,6 +431,11 @@ def render_dashboard() -> None:
     except KalshiError as exc:
         st.error(f"Couldn't refresh Kalshi data: {exc}")
         return
+    # Refresh the freshness strip's inputs whenever we actually re-fetch (resets Data age to ~0).
+    st.session_state["_freshness"] = {
+        "fetched_at": fetched_at, "errors": errors, "n_scanned": n_scanned, "n_loaded": n_loaded,
+        "skipped_no_name": skipped_no_name, "n_excluded_unknown": n_excluded_unknown,
+    }
     df = df_all[df_all["tour"].isin(div_values)] if (div_values and not df_all.empty) else df_all
     checks = build_checks(df)
 
@@ -423,35 +489,8 @@ def render_dashboard() -> None:
         f"{len(checks)} comparisons{scan_note}{refresh_note}"
     )
 
-    # Freshness + coverage: data age, refresh status, and what was loaded/skipped/failed — surfaced up
-    # top so incomplete data is never silent (the full failed-series list lives in Advanced → Debug).
-    age = data_age_seconds(fetched_at)
-    stale = is_stale(age, STALE_AFTER_SECONDS)
-    if errors and n_loaded == 0:
-        refresh_status = "❌ Failed"
-    elif errors:
-        refresh_status = f"⚠ Partial ({len(errors)} failed)"
-    else:
-        refresh_status = "✅ Success"
-    fc1, fc2, fc3 = st.columns(3)
-    fc1.metric("Data age", f"{int(age)}s" if age is not None else "—")
-    fc2.metric("Refresh status", refresh_status)
-    fc3.metric("Coverage", f"{n_loaded}/{n_scanned} series",
-               help="Series loaded / scanned for the enabled contract families.")
-    cov_bits = []
-    if n_excluded_unknown:
-        cov_bits.append(f"{n_excluded_unknown} series excluded (unrecognised kind)")
-    if skipped_no_name:
-        cov_bits.append(f"{skipped_no_name} markets skipped (no participant name)")
-    if errors:
-        cov_bits.append(f"{len(errors)} series failed")
-    if cov_bits:
-        st.caption("Coverage notes: " + " · ".join(cov_bits) + ". (Full list in Advanced → Debug.)")
-    if stale:
-        st.warning(
-            f"⚠ Stale data — last refresh was {int(age)}s ago (threshold {STALE_AFTER_SECONDS}s). "
-            "Auto-refresh may be off, or the last fetch failed."
-        )
+    # (The data-freshness & coverage strip is rendered by render_freshness() above the dashboard, on
+    # its own fast timer, so 'Data age' climbs live and the stale warning fires without re-fetching.)
 
     # ================================================================================
     # 2. Summary cards + Export
