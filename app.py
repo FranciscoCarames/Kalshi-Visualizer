@@ -1,7 +1,9 @@
-"""Streamlit UI for the Kalshi tennis viewer — trader-first executable-inconsistency dashboard.
+"""Streamlit UI for the Kalshi multi-sport viewer — trader-first executable-inconsistency dashboard.
 
-Default view: what's actionable now, what's blocked and why, what's near the edge. Diagnostics,
-per-player detail, and debug are collapsed below. Controls live in the left sidebar.
+Pick a Sport in the sidebar; the whole dashboard is driven by that sport's `SportConfig` (sports.py) —
+its series, containment ladder, division control, families, and labels. Default view: what's actionable
+now, what's blocked and why, what's near the edge. Non-laddered markets (per-game, props) surface in a
+dedicated table. Diagnostics, per-player detail, and debug are collapsed below.
 
 Filtering model:
   - Contract-family toggles change what is FETCHED from Kalshi (fewer families → fewer requests).
@@ -25,8 +27,8 @@ import altair as alt
 import pandas as pd
 import streamlit as st
 
+import sports
 from config import (
-    DEFAULT_SERIES,
     FULL_SCAN_MIN_INTERVAL,
     REFRESH_DEFAULT_SECONDS,
     REFRESH_OPTIONS,
@@ -34,7 +36,6 @@ from config import (
 )
 from consistency import (
     ACTION_STATUSES,
-    NODE_ORDER,
     bucket_of,
     build_checks,
     build_player_nodes,
@@ -44,37 +45,45 @@ from consistency import (
     representative,
     scenario_payoffs,
 )
-from data import CATEGORY, build_contracts, classify_kind, link_audit, series_for_families
+from data import build_contracts, link_audit, series_for_families
 from filters import QUOTE_MODES, STATUS_MODES, apply_membership, apply_thresholds
 from glossary import help_for
 from kalshi_client import (
     KalshiError,
-    discover_tennis_series,
+    discover_series_for_sport,
     get_events_for_series,
     get_series_titles,
 )
 from viz import ladder_prices, opportunity_ranking, payoff_chart_data
 
-st.set_page_config(page_title="Kalshi Tennis Dashboard", page_icon="🎾", layout="wide")
+# The selected sport drives the whole dashboard. It is held in session_state so set_page_config (which
+# must be the FIRST Streamlit call) can read it before the sidebar renders the Sport selector. The
+# selector (key="sport_id") updates it; changing it triggers a rerun that repaints the title.
+st.session_state.setdefault("sport_id", sports.TENNIS.sport_id)
+_cfg = sports.get_sport(st.session_state["sport_id"])
+if _cfg.sport_id == "unknown":
+    _cfg = sports.TENNIS
+    st.session_state["sport_id"] = _cfg.sport_id
 
-TOUR_FILTER = {"Women": ["WTA"], "Men": ["ATP"], "Both": ["ATP", "WTA"]}
+st.set_page_config(page_title=f"Kalshi {_cfg.label} Dashboard", page_icon=_cfg.emoji, layout="wide")
+
 STATUS_GROUPS = ["All", "Clean", "Broken", "Warning", "Missing data", "Unknown relationship"]
 GROUP_SORT = {"Broken": 0, "Warning": 1, "Missing data": 2, "Unknown relationship": 3, "Clean": 4}
-# All recognized contract families (drop the catch-all "Other"); default all ON.
-ALL_CONTRACT_TYPES = [v for k, v in CATEGORY.items() if k != "other"]
 
 STATUS_GROUP_LABELS = {
     "All": "All",
     "Clean": "Consistent",
-    "Broken": "Actionable gross edge",
-    "Warning": "Watchlist signals",
+    "Broken": "Executable edge",
+    "Warning": "Theoretical / watchlist",
     "Missing data": "Incomplete data",
     "Unknown relationship": "Unverifiable",
 }
+# "Executable" = firm bid/ask + size (you can place both buys now). "Theoretical" = based on a display
+# price (midpoint/last), not a firm, sized order — informative, not actionable.
 STATUS_LABELS = {
     "CLEAN": "Consistent",
-    "EXECUTABLE_VIOLATION": "Actionable gross edge",
-    "DISPLAY_VIOLATION": "Display inconsistency",
+    "EXECUTABLE_VIOLATION": "Executable edge",
+    "DISPLAY_VIOLATION": "Theoretical inconsistency",
     "WIDE_QUOTE": "Wide quote / watchlist",
     "MISSING_QUOTE": "Missing firm quote",
     "MISSING_LAYER": "Missing layer",
@@ -89,19 +98,20 @@ TRADABLE_DISP = {
 
 
 @st.cache_data(ttl=3600, show_spinner=False)
-def discover() -> list[str]:
-    return discover_tennis_series()
+def discover(sport_id: str) -> list[str]:
+    return discover_series_for_sport(sports.get_sport(sport_id))
 
 
-@st.cache_data(ttl=REFRESH_TTL, show_spinner="Fetching tennis markets…")
-def load_contracts(families: tuple, scan_all: bool) -> tuple[pd.DataFrame, str, list[tuple[str, str]], int, int, int, int]:
+@st.cache_data(ttl=REFRESH_TTL, show_spinner="Fetching markets…")
+def load_contracts(families: tuple, scan_all: bool, sport_id: str) -> tuple[pd.DataFrame, str, list[tuple[str, str]], int, int, int, int]:
     # Fetch ONLY the series for the enabled contract families (family toggles reduce API requests).
     # Tournament/event/participant filters are client-side and do NOT change what's fetched.
-    all_series = discover() if scan_all else DEFAULT_SERIES
+    cfg = sports.get_sport(sport_id)
+    all_series = discover(sport_id) if scan_all else list(cfg.default_series)
     tickers = series_for_families(all_series, families)
-    # Count discovered series excluded because their kind is unrecognised (never in any family list).
+    # Count discovered series excluded because their family is unrecognised (never in any family list).
     n_excluded_unknown = sum(
-        1 for s in all_series if CATEGORY.get(classify_kind(s), "Other") == "Other"
+        1 for s in all_series if cfg.category_labels.get(cfg.family_of(s), "Other") == "Other"
     )
     results, errors = get_events_for_series(tickers)
     titles = get_series_titles([t for t, _ in results])
@@ -202,38 +212,57 @@ def _payoff_block(check_row: dict, units=None) -> None:
 st.session_state.setdefault("scan_all_toggle", True)
 scan_all = st.session_state["scan_all_toggle"]
 
-# ---- Sidebar (part 1: before the fetch — only family + scan_all affect what's fetched) -----
+# ---- Sidebar (part 1: before the fetch — sport + family + scan_all affect what's fetched) -----
 with st.sidebar:
     st.header("Controls")
+    st.radio(
+        "Sport", [c.sport_id for c in sports.all_sports()],
+        format_func=lambda sid: f"{sports.get_sport(sid).emoji} {sports.get_sport(sid).label}",
+        key="sport_id", horizontal=True,
+        help="Which sport's markets to load. Each sport has its own contracts, ladder, and filters.",
+    )
+    cfg = sports.get_sport(st.session_state["sport_id"])
     if st.button("🔄 Refresh data"):
         discover.clear()
         load_contracts.clear()
         st.rerun()
+    all_contract_types = [v for k, v in cfg.category_labels.items() if k != "other"]
     selected_types = st.multiselect(
-        "Contract family", ALL_CONTRACT_TYPES, default=ALL_CONTRACT_TYPES,
+        "Contract family", all_contract_types, default=all_contract_types,
+        key=f"families_{cfg.sport_id}",
         help="Which contract types to FETCH. Fewer families → fewer API requests.",
     )
     st.caption("ℹ️ Only contract-family toggles change what's **fetched**. Tournament, event and "
                "participant filters are **client-side** (no extra API requests).")
 
 try:
-    df_all, fetched_at, errors, n_scanned, n_loaded, _skipped, _excl = load_contracts(tuple(selected_types), scan_all)
+    df_all, fetched_at, errors, n_scanned, n_loaded, _skipped, _excl = load_contracts(
+        tuple(selected_types), scan_all, cfg.sport_id)
 except KalshiError as exc:
     st.error(f"Couldn't load Kalshi data: {exc}")
     st.stop()
 
 # ---- Sidebar (part 2: after the fetch — options derived from the loaded data) --------------
 with st.sidebar:
-    tournament = st.radio(
-        "Tour", ["Women", "Men", "Both"], index=2,
-        help="WTA (Women) / ATP (Men) / both.",
-    )
-    df = df_all[df_all["tour"].isin(TOUR_FILTER[tournament])] if not df_all.empty else df_all
+    # Division control is sport-specific: tennis splits by Tour (Women/Men); a sport with no division
+    # concept (e.g. NBA) hides it entirely and applies no division filter.
+    if cfg.divisions:
+        division = st.radio(
+            cfg.division_label, list(cfg.divisions), index=len(cfg.divisions) - 1,
+            key=f"division_{cfg.sport_id}", help=f"Filter by {cfg.division_label.lower()}.",
+        )
+        div_label = division
+        div_values = cfg.divisions[division]
+        df = df_all[df_all["tour"].isin(div_values)] if not df_all.empty else df_all
+    else:
+        div_label = cfg.label
+        div_values = None
+        df = df_all
 
     t_opts = sorted(df["tournament"].dropna().unique().tolist()) if not df.empty else []
     sel_tournaments = st.multiselect(
-        "Tournament", t_opts, default=t_opts,
-        help="Client-side filter. Each tournament's ladders are grouped separately.",
+        "Tournament / season", t_opts, default=t_opts, key=f"tournaments_{cfg.sport_id}",
+        help="Client-side filter. Each tournament/season's ladders are grouped separately.",
     )
 
     auto_refresh = st.toggle("Auto-refresh", value=True,
@@ -260,12 +289,15 @@ with st.sidebar:
     with st.expander("Market universe"):
         # ONE participant control: "All" = no filter + no detail; a name = filter to them + drive detail.
         participant = st.selectbox("Participant", ["All"] + sorted(label_to_key),
+                                   key=f"participant_{cfg.sport_id}",
                                    help="Pick a participant to filter the whole dashboard to them and "
                                         "show their detail below. 'All' = no filter.")
         chosen_key = label_to_key.get(participant) if participant != "All" else None
-        sel_event_labels = st.multiselect("Event / game", sorted(ev_label_to_tickers), default=[])
+        sel_event_labels = st.multiselect("Event / game", sorted(ev_label_to_tickers), default=[],
+                                           key=f"events_{cfg.sport_id}")
         sel_events = set().union(*[ev_label_to_tickers[lbl] for lbl in sel_event_labels]) if sel_event_labels else set()
-        sel_layers = st.multiselect("Stage / layer", list(NODE_ORDER) + match_stages, default=[],
+        sel_layers = st.multiselect("Stage / layer", list(cfg.ladder.node_order) + match_stages, default=[],
+                                    key=f"layers_{cfg.sport_id}",
                                     help="Containment layers and match rounds.")
 
     with st.expander("Thresholds"):
@@ -283,11 +315,14 @@ with st.sidebar:
         show_near = st.toggle("Show near-edge watchlist", value=True)
         show_signals = st.toggle("Show watchlist signals", value=False)
         show_dataq = st.toggle("Show data-quality issues", value=False)
+        show_unmapped = st.toggle("Show non-laddered / unmapped contracts", value=False,
+                                  help="Contracts not part of a containment ladder (per-game, props, "
+                                       "spreads, …). Off = ladder-only view.")
 
     with st.expander("Advanced — data scope"):
-        st.toggle("Scan all tennis tournaments", key="scan_all_toggle",
-                  help="ON (default): discover & fetch all tennis series for the enabled families. "
-                       "OFF: only the six default core series (match/advance/winner for ATP + WTA).")
+        st.toggle(f"Scan all {cfg.label} series", key="scan_all_toggle",
+                  help=f"ON (default): discover & fetch all {cfg.label} series for the enabled families. "
+                       "OFF: only the core default series.")
         max_vol = int(df["volume"].fillna(0).max()) if not df.empty else 0
         min_vol = st.slider("Min traded volume (history)", 0, max_vol, 0,
                             help="Historical traded volume — distinct from 'Min available size'.") if max_vol > 0 else 0
@@ -305,17 +340,18 @@ with st.sidebar:
 
 players_filter = [chosen_key] if chosen_key else None
 
-st.title("🎾 Kalshi Tennis — Executable Inconsistency Dashboard")
+st.title(f"{cfg.emoji} Kalshi {cfg.label} — Executable Inconsistency Dashboard")
 
 
 @st.fragment(run_every=run_every)
 def render_dashboard() -> None:
     try:
-        df_all, fetched_at, errors, n_scanned, n_loaded, skipped_no_name, n_excluded_unknown = load_contracts(tuple(selected_types), scan_all)
+        df_all, fetched_at, errors, n_scanned, n_loaded, skipped_no_name, n_excluded_unknown = load_contracts(
+            tuple(selected_types), scan_all, cfg.sport_id)
     except KalshiError as exc:
         st.error(f"Couldn't refresh Kalshi data: {exc}")
         return
-    df = df_all[df_all["tour"].isin(TOUR_FILTER[tournament])] if not df_all.empty else df_all
+    df = df_all[df_all["tour"].isin(div_values)] if (div_values and not df_all.empty) else df_all
     checks = build_checks(df)
 
     dash_base = checks.copy()
@@ -360,10 +396,10 @@ def render_dashboard() -> None:
     # ================================================================================
     # 1. Header + metadata
     # ================================================================================
-    scan_note = " · all tennis" if scan_all else " · core series"
+    scan_note = f" · all {cfg.label}" if scan_all else " · core series"
     refresh_note = f" · auto-refresh {effective_interval}s" if auto_refresh else " · auto-refresh off"
     st.caption(
-        f"Last refreshed {fetched_at} · {tournament} · {len(df)} contracts · "
+        f"Last refreshed {fetched_at} · {cfg.emoji} {div_label} · {len(df)} contracts · "
         f"{len(checks)} comparisons{scan_note}{refresh_note}"
     )
 
@@ -551,6 +587,43 @@ def render_dashboard() -> None:
                 )
 
     # ================================================================================
+    # 6c. Non-laddered / unmapped contracts (toggle) — markets excluded from ladder checks
+    # ================================================================================
+    if show_unmapped:
+        if not df.empty and "ladder_eligible" in df.columns:
+            unmapped = df[~df["ladder_eligible"].astype(bool)]
+        else:
+            unmapped = df.iloc[0:0]
+        with st.expander(f"🗂 Non-laddered / unmapped contracts ({len(unmapped)})", expanded=False):
+            st.caption("Contracts that aren't part of a containment ladder (per-game, props, spreads, "
+                       "awards, …). Shown for transparency — never silently dropped, never in ladder checks.")
+            if unmapped.empty:
+                st.caption("None — every loaded contract maps to the ladder.")
+            else:
+                fam_opts = sorted(unmapped["market_family"].dropna().unique().tolist())
+                sel_fams = st.multiselect("Market family", fam_opts, default=fam_opts,
+                                          key=f"unmapped_fams_{cfg.sport_id}")
+                view = unmapped[unmapped["market_family"].isin(sel_fams)] if sel_fams else unmapped
+                view = view.sort_values(["market_family", "volume"], ascending=[True, False],
+                                        na_position="last")
+                st.caption(f"{len(view)} of {len(unmapped)} non-laddered contracts.")
+                st.dataframe(
+                    view[["player", "contract", "market_family", "category", "classification_reason",
+                          "display_pct", "volume", "status", "kalshi_url"]],
+                    hide_index=True, width="stretch",
+                    column_config={
+                        "player": "Participant", "contract": "Contract",
+                        "market_family": st.column_config.TextColumn("Family"),
+                        "category": "Type",
+                        "classification_reason": st.column_config.TextColumn("Why not laddered"),
+                        "display_pct": st.column_config.NumberColumn("Display %", format="%.1f%%"),
+                        "volume": st.column_config.NumberColumn("Volume", format="%.0f"),
+                        "status": "Status",
+                        "kalshi_url": st.column_config.LinkColumn("Kalshi", display_text="open ↗"),
+                    },
+                )
+
+    # ================================================================================
     # 7. Selected player detail (collapsed) — driven by the Participant control
     # ================================================================================
     with st.expander("🔍 Selected player detail", expanded=False):
@@ -562,7 +635,7 @@ def render_dashboard() -> None:
             nodes = build_player_nodes(prows)
 
             chain_rows = []
-            for node in NODE_ORDER:
+            for node in cfg.ladder.node_order:
                 src = nodes.get(node, {})
                 primary = representative(src)
                 if primary is None:
@@ -592,7 +665,7 @@ def render_dashboard() -> None:
             if len(lplot) >= 2:
                 ladder_chart = alt.Chart(lplot).mark_bar().encode(
                     x=alt.X("display_pct:Q", title="Display probability (%)"),
-                    y=alt.Y("layer:N", sort=list(NODE_ORDER), title=None),
+                    y=alt.Y("layer:N", sort=list(cfg.ladder.node_order), title=None),
                     color=alt.Color("inverted:N", title="Inverted",
                                     scale=alt.Scale(domain=[False, True], range=["#1565c0", "#c62828"])),
                     tooltip=[alt.Tooltip("layer:N", title="Layer"),
