@@ -84,7 +84,9 @@ data.py            # NO streamlit/pandas: parsing, to_cents(), classify_kind/tou
                    #   build_contracts() (ALL tennis events — no FO gate — stamps tournament/tournament_source)
 consistency.py     # NO streamlit: node_of, build_player_nodes, representative, expected_nodes,
                    #   layer_spreads, build_checks (groups by [player_key, tournament]); buy-only action
-                   #   plan + tradable_now + blockers; bucket_of (dashboard routing)
+                   #   plan + tradable_now + blockers; bucket_of (dashboard routing, incl. dutch-book)
+dutchbook.py       # NO streamlit: find_dutch_books() — 2-outcome MECE arbitrage detector (a check family
+                   #   SEPARATE from the containment ladder); status EXECUTABLE_DUTCH_BOOK; see section below
 glossary.py        # NO streamlit: GLOSSARY{term:{short,long}}, BLOCKERS, WATCHLIST_NOTE, help_for
 filters.py         # NO streamlit: apply_membership (tournament/family/layer/event/participant/volume)
                    #   / apply_thresholds (size/quote/market-status) — the two-pass filter split
@@ -92,7 +94,8 @@ viz.py             # NO streamlit: opportunity_ranking (tidy frame for the ranki
 app.py             # Streamlit ONLY: sidebar controls, auto-refresh fragment, dashboard sections, chart
 scripts/           # check_links.py (local link reachability), export_glossary.py (-> docs/GLOSSARY.md)
 docs/GLOSSARY.md   # generated in-depth glossary (also published as a Google Doc)
-tests/             # pytest: test_data, test_consistency, test_glossary, test_client, test_filters, test_viz
+tests/             # pytest: test_data, test_consistency, test_dutchbook, test_glossary, test_client,
+                   #   test_filters, test_viz, test_sports
 ```
 
 `data.py`, `consistency.py`, `glossary.py`, `filters.py`, `viz.py` MUST stay free of Streamlit imports.
@@ -161,6 +164,30 @@ Anything unprovable → `UNKNOWN_RELATIONSHIP` (never a violation).
 draw has settled):** Cirstea `Quarterfinal win ≡ Reach Semifinal` → `EXECUTABLE_VIOLATION` (~2¢) flagged
 `RULE_MISMATCH`; Sabalenka Reach Final > Reach Semifinal on display → `DISPLAY_VIOLATION`; Gauff/Swiatek
 empty books → `MISSING_QUOTE`. (For repeatable assertions use the unit tests, not live data.)
+
+## Dutch-book / MECE detector — `dutchbook.py` (do not regress)
+
+A **separate check family** from the containment ladder, in its own module (`dutchbook.py`, NO streamlit).
+A dutch book is an executable arbitrage on a **mutually-exclusive-and-exhaustive** set of binary markets:
+cover EVERY outcome for under the guaranteed 100¢ payout. Currently the **2-outcome case only** — a
+head-to-head event with **exactly two** distinct-participant markets (one wins, no draw → MECE by
+construction). `find_dutch_books(rows)` groups match-family rows by `event_ticker` and emits ≤1 finding/event.
+
+- **Two directions, both pairs of BUYS** (never "sell"): **underround** → Buy YES both (`yes_ask_A +
+  yes_ask_B < 100`); **overround** → Buy NO both (`no_ask_A + no_ask_B < 100`, with the `100 − yes_bid`
+  fallback). They're mutually exclusive (`bid ≤ ask`) so only one can fire. Exact integer cents only.
+- **Sport-agnostic via `match_family`:** fires on tennis matches + NBA/WNBA playoff **series**; per-game
+  (`KX*GAME`), props, winner, advance are NOT match-family → ignored. Unknown series excluded.
+- **One status `EXECUTABLE_DUTCH_BOOK`** carrying `tradable_now` + `blockers` (covers actionable AND
+  blocked). **Routing is the only consistency.py touch:** `bucket_of` has one branch (actionable if
+  tradable, else blocked) + a `STATUS_GROUP` entry — detection stays entirely in `dutchbook.py`. The status
+  string is held as a literal in `consistency.py` (a test guards the contract). **It is a true arbitrage**
+  (same event, both legs settle together) → no rule caveat, unlike match-alignment.
+- **UI:** `app.py` renders a **dedicated "Dutch-book arbitrage — match books" section** (both legs are the
+  *same* side, so it can't reuse the ladder's Buy-YES-broader/Buy-NO-deeper table). Membership-filtered like
+  the rest; thresholds spare it (like Actionable now). Glossary term "Dutch book" → "Locked edge (¢)" column.
+- **Out of scope (seeds):** per-game 2-outcome books (S5); n-outcome winner **fields** (need completeness
+  proof + multi-leg) (S6). `find_dutch_books` consumes `df.to_dict("records")` so it is **NaN-safe**.
 
 ## Mapping audit & raw ladder spreads
 
