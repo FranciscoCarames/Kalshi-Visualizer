@@ -154,6 +154,36 @@ def test_unknown_series_row_is_ignored():
     assert dutchbook.find_dutch_books([a, b]) == []
 
 
+# --- Finding fields + dashboard routing (task #4 integration) -----------------------
+def test_finding_carries_player_keys_and_resolve_time():
+    a = market("Alcaraz", player_key="k_alc", yes_ask_c=45)
+    a["time_value"] = "2026-06-05T10:00:00Z"
+    b = market("Sinner", player_key="k_sin", yes_ask_c=48)
+    b["time_value"] = "2026-06-04T10:00:00Z"
+    f = dutchbook.find_dutch_books([a, b])[0]
+    assert f["player_key_a"] == "k_alc" and f["player_key_b"] == "k_sin"
+    assert f["resolve_time"] == "2026-06-04T10:00:00Z"   # earliest leg
+
+
+def test_actionable_dutch_book_routes_via_bucket_of():
+    import consistency
+    a = market("A", player_key="a", yes_ask_c=45)
+    b = market("B", player_key="b", yes_ask_c=48)
+    f = dutchbook.find_dutch_books([a, b])[0]
+    # The shared dashboard router recognizes the dutch-book status (string contract held in sync).
+    assert consistency.STATUS_GROUP[dutchbook.EXECUTABLE_DUTCH_BOOK] == "Broken"
+    assert consistency.bucket_of(f) == "actionable"
+
+
+def test_blocked_dutch_book_routes_to_blocked_bucket():
+    import consistency
+    a = market("A", player_key="a", yes_ask_c=45, yes_ask_size=0)   # no size -> not tradable
+    b = market("B", player_key="b", yes_ask_c=48)
+    f = dutchbook.find_dutch_books([a, b])[0]
+    assert f["tradable_now"] == "No"
+    assert consistency.bucket_of(f) == "blocked"
+
+
 # --- Two events at once: strongest edge first ---------------------------------------
 def test_multiple_events_sorted_by_gap_desc():
     e1 = [market("A", event="EV1", player_key="a", yes_ask_c=45),

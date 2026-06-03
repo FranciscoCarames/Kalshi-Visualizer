@@ -143,6 +143,11 @@ def _detect_pair(event_ticker: str, markets: list[dict[str, Any]]) -> dict[str, 
     if a.get("player_key") and a.get("player_key") == b.get("player_key"):
         return None
 
+    # Soonest the edge starts settling (capital frees / opportunity expires): the earlier leg time.
+    # ISO-8601 strings sort chronologically; None-safe.
+    times = [t for t in (a.get("time_value"), b.get("time_value")) if t]
+    resolve_time = min(times) if times else None
+
     # Both directions; at most one can have gap_c > 0 (bid ≤ ask), but pick the max defensively.
     candidates = [c for c in (_direction_candidate("buy_yes", a, b),
                               _direction_candidate("buy_no", a, b)) if c is not None]
@@ -190,6 +195,9 @@ def _detect_pair(event_ticker: str, markets: list[dict[str, Any]]) -> dict[str, 
         "match": f"{label_a} vs {label_b}",
         "player_a": label_a,
         "player_b": label_b,
+        "player_key_a": a.get("player_key", ""),
+        "player_key_b": b.get("player_key", ""),
+        "resolve_time": resolve_time,
         "tradable_now": tradable_now,
         "blockers": "; ".join(blockers),
         # Two-leg buy-only action plan (same vocabulary as consistency rows, so the dashboard reuses it).

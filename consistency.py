@@ -62,6 +62,9 @@ _QUALITY_RANK = {"Tight": 0, "OK": 1, "Wide": 2, "Very wide": 3, "One-sided": 4,
 STATUS_GROUP = {
     "CLEAN": "Clean",
     "EXECUTABLE_VIOLATION": "Broken",
+    # Dutch-book findings come from the sibling `dutchbook` module (status string kept as a literal
+    # here to avoid importing it — `dutchbook.EXECUTABLE_DUTCH_BOOK`). Grouped with executable edges.
+    "EXECUTABLE_DUTCH_BOOK": "Broken",
     "DISPLAY_VIOLATION": "Warning",
     "WIDE_QUOTE": "Warning",
     "MISSING_QUOTE": "Missing data",
@@ -768,7 +771,9 @@ def bucket_of(check_row: dict[str, Any]) -> str:
     - clean          : consistent and not near the edge
     """
     status = check_row.get("status")
-    if status == "EXECUTABLE_VIOLATION":
+    if status in ("EXECUTABLE_VIOLATION", "EXECUTABLE_DUTCH_BOOK"):
+        # Both are firm executable edges: tradable now -> actionable, else blocked (no size / inactive
+        # leg). A dutch book carries no rule caveat, so its tradable_now is a plain Yes/No.
         return "actionable" if str(check_row.get("tradable_now") or "").startswith("Yes") else "blocked"
     if status == "QUOTE_SIZE_MISSING":
         return "blocked"
