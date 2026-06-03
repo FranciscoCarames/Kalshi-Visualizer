@@ -82,13 +82,16 @@ kalshi_client.py   # read-only HTTP: paginated GET, Retry-After/exponential back
 data.py            # NO streamlit/pandas: parsing, to_cents(), classify_kind/tour_of, pricing helpers,
                    #   tournament_of()->(key,source), series_for_families(), kalshi_market_url(),
                    #   build_contracts() (ALL tennis events — no FO gate — stamps tournament/tournament_source)
+                   #   + fmt_time/data_age_seconds/is_stale (display-only TZ + staleness helpers, Stage 0)
 consistency.py     # NO streamlit: node_of, build_player_nodes, representative, expected_nodes,
                    #   layer_spreads, build_checks (groups by [player_key, tournament]); buy-only action
                    #   plan + tradable_now + blockers; bucket_of (dashboard routing)
 glossary.py        # NO streamlit: GLOSSARY{term:{short,long}}, BLOCKERS, WATCHLIST_NOTE, help_for
 filters.py         # NO streamlit: apply_membership (tournament/family/layer/event/participant/volume)
                    #   / apply_thresholds (size/quote/market-status) — the two-pass filter split
-viz.py             # NO streamlit: opportunity_ranking (tidy frame for the ranking bar chart)
+viz.py             # NO streamlit: payoff_chart_data + ladder_prices (tidy chart frames). NOTE: the
+                   #   opportunity_ranking bar chart was REMOVED (Stage 0) — it was misleading; the
+                   #   Actionable table is the ranking surface (Stage 2 adds a sortable unified table).
 app.py             # Streamlit ONLY: sidebar controls, auto-refresh fragment, dashboard sections, chart
 scripts/           # check_links.py (local link reachability), export_glossary.py (-> docs/GLOSSARY.md)
 docs/GLOSSARY.md   # generated in-depth glossary (also published as a Google Doc)

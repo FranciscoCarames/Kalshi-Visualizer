@@ -17,6 +17,7 @@ import re
 from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
 from typing import Any
+from zoneinfo import ZoneInfo
 
 import sports
 from config import (
@@ -35,6 +36,59 @@ from config import (
 _ROUND_PATTERNS = sports.TENNIS.round_patterns
 _STAGE_RANK = sports.TENNIS.stage_rank
 CATEGORY = sports.TENNIS.category_labels
+
+# --- Display-time helpers (timezone formatting; DISPLAY-ONLY — never used in cents/comparison logic) -
+_FETCHED_AT_FMT = "%Y-%m-%d %H:%M:%S UTC"
+
+
+def parse_fetched_at(text: Any) -> datetime | None:
+    """Parse a ``load_contracts`` fetched_at value ("2026-06-03 12:00:00 UTC") to an aware UTC
+    datetime. Accepts a datetime (returned UTC-aware) or an ISO-8601 string too. None if
+    empty/unparseable."""
+    if isinstance(text, datetime):
+        return text if text.tzinfo else text.replace(tzinfo=timezone.utc)
+    if not text:
+        return None
+    s = str(text).strip()
+    try:
+        return datetime.strptime(s, _FETCHED_AT_FMT).replace(tzinfo=timezone.utc)
+    except (ValueError, TypeError):
+        try:
+            dt = datetime.fromisoformat(s)
+            return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+        except (ValueError, TypeError):
+            return None
+
+
+def fmt_time(ts: Any, tz_name: str = "UTC", fmt: str = "%Y-%m-%d %H:%M:%S %Z") -> str:
+    """Format a UTC timestamp (datetime / fetched_at string / ISO string) in the target IANA zone,
+    for DISPLAY only. Returns "" for missing/unparseable input; falls back to UTC if the zone is
+    unknown (e.g. the ``tzdata`` package is absent on Windows)."""
+    dt = parse_fetched_at(ts)
+    if dt is None:
+        return ""
+    try:
+        zone = ZoneInfo(tz_name)
+    except Exception:
+        zone = timezone.utc
+    return dt.astimezone(zone).strftime(fmt)
+
+
+def data_age_seconds(fetched_at: Any, now: datetime | None = None) -> float | None:
+    """Seconds elapsed between ``fetched_at`` (UTC) and ``now`` (UTC; defaults to current time).
+    None when ``fetched_at`` is unparseable."""
+    dt = parse_fetched_at(fetched_at)
+    if dt is None:
+        return None
+    now = now or datetime.now(timezone.utc)
+    if now.tzinfo is None:
+        now = now.replace(tzinfo=timezone.utc)
+    return (now - dt).total_seconds()
+
+
+def is_stale(age_seconds: float | None, threshold_seconds: float) -> bool:
+    """True when data age exceeds the staleness threshold. Unknown age (None) → False (not stale)."""
+    return age_seconds is not None and age_seconds > threshold_seconds
 
 
 def to_float(value: Any) -> float | None:

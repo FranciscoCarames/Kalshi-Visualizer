@@ -33,6 +33,9 @@ from config import (
     REFRESH_DEFAULT_SECONDS,
     REFRESH_OPTIONS,
     REFRESH_TTL,
+    STALE_AFTER_SECONDS,
+    TIMEZONE_DEFAULT,
+    TIMEZONE_OPTIONS,
 )
 from consistency import (
     ACTION_STATUSES,
@@ -45,7 +48,7 @@ from consistency import (
     representative,
     scenario_payoffs,
 )
-from data import build_contracts, link_audit, series_for_families
+from data import build_contracts, data_age_seconds, fmt_time, is_stale, link_audit, series_for_families
 from filters import QUOTE_MODES, STATUS_MODES, apply_membership, apply_thresholds
 from glossary import help_for
 from kalshi_client import (
@@ -54,7 +57,7 @@ from kalshi_client import (
     get_events_for_series,
     get_series_titles,
 )
-from viz import ladder_prices, opportunity_ranking, payoff_chart_data
+from viz import ladder_prices, payoff_chart_data
 
 # The selected sport drives the whole dashboard. It is held in session_state so set_page_config (which
 # must be the FIRST Streamlit call) can read it before the sidebar renders the Sport selector. The
@@ -319,6 +322,22 @@ with st.sidebar:
                                   help="Contracts not part of a containment ladder (per-game, props, "
                                        "spreads, …). Off = ladder-only view.")
 
+    with st.expander("Display"):
+        tz_name = st.selectbox(
+            "Time zone", TIMEZONE_OPTIONS, index=TIMEZONE_OPTIONS.index(TIMEZONE_DEFAULT),
+            help="Display zone for all timestamps (default Lisbon). Comparison math is unaffected — "
+                 "it is always exact UTC cents.",
+        )
+        show_codes = st.toggle(
+            "Show IDs & codes", value=False,
+            help="Reveal series/event/market (contract) tickers and participant IDs in the tables and "
+                 "the per-player detail.",
+        )
+        show_advanced = st.toggle(
+            "Advanced: diagnostics & debug", value=False,
+            help="Show Full diagnostics and the Debug panel. Hidden by default.",
+        )
+
     with st.expander("Advanced — data scope"):
         st.toggle(f"Scan all {cfg.label} series", key="scan_all_toggle",
                   help=f"ON (default): discover & fetch all {cfg.label} series for the enabled families. "
@@ -394,14 +413,45 @@ def render_dashboard() -> None:
         prows, chosen, pdf, pchecks = [], None, df.iloc[0:0], checks.iloc[0:0]
 
     # ================================================================================
-    # 1. Header + metadata
+    # 1. Header + data-freshness & coverage strip (ALWAYS visible — never behind Advanced)
     # ================================================================================
-    scan_note = f" · all {cfg.label}" if scan_all else " · core series"
+    scan_note = f" · all {cfg.label} (full scan)" if scan_all else " · core series"
     refresh_note = f" · auto-refresh {effective_interval}s" if auto_refresh else " · auto-refresh off"
+    local_refreshed = fmt_time(fetched_at, tz_name) or fetched_at
     st.caption(
-        f"Last refreshed {fetched_at} · {cfg.emoji} {div_label} · {len(df)} contracts · "
+        f"Last refreshed {local_refreshed} · {cfg.emoji} {div_label} · {len(df)} contracts · "
         f"{len(checks)} comparisons{scan_note}{refresh_note}"
     )
+
+    # Freshness + coverage: data age, refresh status, and what was loaded/skipped/failed — surfaced up
+    # top so incomplete data is never silent (the full failed-series list lives in Advanced → Debug).
+    age = data_age_seconds(fetched_at)
+    stale = is_stale(age, STALE_AFTER_SECONDS)
+    if errors and n_loaded == 0:
+        refresh_status = "❌ Failed"
+    elif errors:
+        refresh_status = f"⚠ Partial ({len(errors)} failed)"
+    else:
+        refresh_status = "✅ Success"
+    fc1, fc2, fc3 = st.columns(3)
+    fc1.metric("Data age", f"{int(age)}s" if age is not None else "—")
+    fc2.metric("Refresh status", refresh_status)
+    fc3.metric("Coverage", f"{n_loaded}/{n_scanned} series",
+               help="Series loaded / scanned for the enabled contract families.")
+    cov_bits = []
+    if n_excluded_unknown:
+        cov_bits.append(f"{n_excluded_unknown} series excluded (unrecognised kind)")
+    if skipped_no_name:
+        cov_bits.append(f"{skipped_no_name} markets skipped (no participant name)")
+    if errors:
+        cov_bits.append(f"{len(errors)} series failed")
+    if cov_bits:
+        st.caption("Coverage notes: " + " · ".join(cov_bits) + ". (Full list in Advanced → Debug.)")
+    if stale:
+        st.warning(
+            f"⚠ Stale data — last refresh was {int(age)}s ago (threshold {STALE_AFTER_SECONDS}s). "
+            "Auto-refresh may be off, or the last fetch failed."
+        )
 
     # ================================================================================
     # 2. Summary cards + Export
@@ -413,7 +463,7 @@ def render_dashboard() -> None:
     c3.metric("Blocked", len(blocked))
     c4.metric("Near-edge", len(near))
     c5.metric("Data-quality issues", len(data_q))
-    c6.metric("Last refreshed", fetched_at.split(" ", 1)[1] if " " in fetched_at else fetched_at)
+    c6.metric("Last refreshed", fmt_time(fetched_at, tz_name, fmt="%H:%M:%S %Z") or fetched_at)
 
     with st.expander("⬇ Export"):
         ex1, ex2 = st.columns(2)
@@ -448,9 +498,12 @@ def render_dashboard() -> None:
         # Time-to-resolution: hours until the soonest leg settles (sortable; "—" when unknown).
         _now = pd.Timestamp.now(tz="UTC")
         a["resolve_hrs"] = (pd.to_datetime(a["resolve_time"], utc=True, errors="coerce") - _now).dt.total_seconds() / 3600
+        _code_cols = ["player_key", "child_event_ticker", "child_ticker", "parent_ticker"] if show_codes else []
+        _act_cols = (["player", "tournament", "chain", "buy_yes_disp", "buy_no_disp", "exec_gap_c",
+                      "exec_min_size", "exec_max_profit_dollars", "resolve_hrs", "tradable_disp",
+                      "caveat_disp"] + _code_cols + ["child_url", "parent_url"])
         st.dataframe(
-            a[["player", "tournament", "chain", "buy_yes_disp", "buy_no_disp", "exec_gap_c", "exec_min_size",
-               "exec_max_profit_dollars", "resolve_hrs", "tradable_disp", "caveat_disp", "child_url", "parent_url"]],
+            a[_act_cols],
             hide_index=True, width="stretch",
             column_config={
                 "player": "Player",
@@ -464,6 +517,10 @@ def render_dashboard() -> None:
                 "resolve_hrs": st.column_config.NumberColumn("Resolves in (h)", format="%.0f", help="Hours until the soonest leg settles — how long capital is tied up. Lower = more urgent. Sort by this column."),
                 "tradable_disp": st.column_config.TextColumn("Tradable now", help=help_for("Tradable now")),
                 "caveat_disp": st.column_config.TextColumn("Caveat"),
+                "player_key": st.column_config.TextColumn("Participant ID"),
+                "child_event_ticker": st.column_config.TextColumn("Event code"),
+                "child_ticker": st.column_config.TextColumn("Deeper ticker"),
+                "parent_ticker": st.column_config.TextColumn("Broader ticker"),
                 "child_url": st.column_config.LinkColumn("Deeper link", display_text="open ↗"),
                 "parent_url": st.column_config.LinkColumn("Broader link", display_text="open ↗"),
             },
@@ -478,23 +535,9 @@ def render_dashboard() -> None:
             with st.expander(f"💵 {r['player']} · {r['chain']}{ftxt}"):
                 _payoff_block(r.to_dict(), units=r.get("exec_min_size"))
 
-    # ---- Opportunity ranking chart (Actionable + Near-edge by gross edge) ----------
-    rank = opportunity_ranking(actionable, near)
-    if not rank.empty:
-        st.caption("Opportunity ranking — gross edge in ¢ (Actionable in green, Near-edge in amber):")
-        chart = (
-            alt.Chart(rank).mark_bar().encode(
-                x=alt.X("edge_c:Q", title="Gross edge (¢)"),
-                y=alt.Y("label:N", sort="-x", title=None),
-                color=alt.Color("kind:N", title="",
-                                scale=alt.Scale(domain=["Actionable", "Near-edge"],
-                                                range=["#2e7d32", "#f9a825"])),
-                tooltip=[alt.Tooltip("label:N", title="Opportunity"),
-                         alt.Tooltip("kind:N", title="Kind"),
-                         alt.Tooltip("edge_c:Q", title="Edge (¢)")],
-            )
-        )
-        st.altair_chart(chart, width="stretch")
+    # (Removed) The gross-edge ranking bar chart was misleading. The Actionable-now table above is
+    # already sorted by gross edge and is the ranking surface; Stage 2 replaces it with a unified,
+    # cross-sport sortable opportunity table.
 
     # ================================================================================
     # 4. Blocked opportunities
@@ -508,9 +551,11 @@ def render_dashboard() -> None:
             b["buy_yes_disp"] = [_buy_disp(c, p) for c, p in zip(b["action_1_contract"], b["action_1_price_c"])]
             b["buy_no_disp"] = [_buy_disp(c, p) for c, p in zip(b["action_2_contract"], b["action_2_price_c"])]
             st.caption("These look interesting but **cannot be traded now** — buy prices are indicative only.")
+            _b_code_cols = ["player_key", "child_event_ticker", "child_ticker", "parent_ticker"] if show_codes else []
+            _b_cols = (["player", "tournament", "chain", "buy_yes_disp", "buy_no_disp", "blockers",
+                        "tradable_disp"] + _b_code_cols + ["child_url", "parent_url"])
             st.dataframe(
-                b[["player", "tournament", "chain", "buy_yes_disp", "buy_no_disp", "blockers",
-                   "tradable_disp", "child_url", "parent_url"]],
+                b[_b_cols],
                 hide_index=True, width="stretch",
                 column_config={
                     "player": "Player", "tournament": "Tournament", "chain": "Chain",
@@ -518,6 +563,10 @@ def render_dashboard() -> None:
                     "buy_no_disp": st.column_config.TextColumn("Buy NO (indicative)"),
                     "blockers": st.column_config.TextColumn("Why blocked"),
                     "tradable_disp": st.column_config.TextColumn("Tradable now"),
+                    "player_key": st.column_config.TextColumn("Participant ID"),
+                    "child_event_ticker": st.column_config.TextColumn("Event code"),
+                    "child_ticker": st.column_config.TextColumn("Deeper ticker"),
+                    "parent_ticker": st.column_config.TextColumn("Broader ticker"),
                     "child_url": st.column_config.LinkColumn("Deeper link", display_text="open ↗"),
                     "parent_url": st.column_config.LinkColumn("Broader link", display_text="open ↗"),
                 },
@@ -763,10 +812,13 @@ def render_dashboard() -> None:
             st.caption("All contracts for this player:")
             pdf2 = pdf.copy()
             pdf2["time_dt"] = pd.to_datetime(pdf2["time_value"], utc=True, errors="coerce")
+            _p_code_cols = (["series", "event_ticker", "market_ticker", "player_key", "player_key_source"]
+                            if show_codes else [])
+            _p_cols = (["contract", "category", "tournament", "stage", "opponent", "display_pct",
+                        "quote_quality", "yes_bid_pct", "yes_ask_pct", "no_bid_pct", "no_ask_pct",
+                        "spread_cents", "volume", "status", "time_dt"] + _p_code_cols + ["kalshi_url"])
             st.dataframe(
-                pdf2[["contract", "category", "tournament", "stage", "opponent", "display_pct", "quote_quality",
-                      "yes_bid_pct", "yes_ask_pct", "no_bid_pct", "no_ask_pct",
-                      "spread_cents", "volume", "status", "time_dt", "kalshi_url"]],
+                pdf2[_p_cols],
                 hide_index=True, width="stretch",
                 column_config={
                     "contract": "Contract", "category": "Type", "tournament": "Tournament",
@@ -781,6 +833,11 @@ def render_dashboard() -> None:
                     "volume": st.column_config.NumberColumn("Volume", format="%.0f"),
                     "status": "Status",
                     "time_dt": st.column_config.DatetimeColumn("Time", format="YYYY-MM-DD HH:mm"),
+                    "series": st.column_config.TextColumn("Series code"),
+                    "event_ticker": st.column_config.TextColumn("Event code"),
+                    "market_ticker": st.column_config.TextColumn("Market / contract ticker"),
+                    "player_key": st.column_config.TextColumn("Participant ID"),
+                    "player_key_source": st.column_config.TextColumn("ID source"),
                     "kalshi_url": st.column_config.LinkColumn("Kalshi", display_text="open ↗"),
                 },
             )
@@ -805,6 +862,12 @@ def render_dashboard() -> None:
                                 file_name=f"{safe}_snapshot.json", mime="application/json", key="dl_snap")
             ec2.download_button("⬇ Export contracts (CSV)", pdf2.drop(columns=["time_dt"]).to_csv(index=False),
                                 file_name=f"{safe}_contracts.csv", mime="text/csv", key="dl_pcsv")
+
+    # Diagnostics + Debug are hidden by default; the sidebar "Advanced: diagnostics & debug" toggle
+    # reveals them. They are the LAST two sections, so an early return keeps everything above always
+    # visible without reindenting their bodies.
+    if not show_advanced:
+        return
 
     # ================================================================================
     # 8. Full diagnostics: all comparisons (collapsed) — from the membership universe

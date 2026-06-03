@@ -88,3 +88,14 @@ REFRESH_OPTIONS = [60, 120, 300]   # selectable auto-refresh intervals (seconds)
 REFRESH_DEFAULT_SECONDS = 120      # conservative default (safe even for the heavier full scan)
 FULL_SCAN_MIN_INTERVAL = 120       # full scan is heavy: never auto-refresh faster than this
 REFRESH_TTL = 30                   # load_contracts cache TTL (≤ smallest interval -> each tick refetches)
+
+# --- Display / timezone --------------------------------------------------------------
+# Timestamps are computed in UTC; the dashboard converts to the user's chosen zone for DISPLAY ONLY
+# (never for the exact-cents comparison logic). Lisbon is the owner's local zone and the default.
+TIMEZONE_DEFAULT = "Europe/Lisbon"
+TIMEZONE_OPTIONS = [
+    "Europe/Lisbon", "UTC", "Europe/London", "Europe/Paris",
+    "America/New_York", "America/Chicago", "America/Los_Angeles",
+]
+# Data older than this many seconds is flagged stale in the main-dashboard freshness strip.
+STALE_AFTER_SECONDS = 300
