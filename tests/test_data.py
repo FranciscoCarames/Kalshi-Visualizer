@@ -342,3 +342,29 @@ def test_clean_tournament_strips_only_gender_discipline():
     assert data._clean_tournament("French Open Men Singles") == "French Open"
     assert data._clean_tournament("Wimbledon Mixed Doubles") == "Wimbledon"
     assert data._clean_tournament("") == ""
+
+
+def test_fmt_time_formats_and_falls_back_safely():
+    s = "2026-06-03 12:00:00 UTC"
+    assert data.fmt_time(s, "UTC").startswith("2026-06-03 12:00:00")
+    # Lisbon in June is WEST (UTC+1) when tzdata is present → 13:00; if tzdata is absent the formatter
+    # falls back to UTC (12:00). Either way it must not raise and must return a formatted string.
+    assert data.fmt_time(s, "Europe/Lisbon").startswith("2026-06-03 1")
+    # Unknown zone → UTC fallback, never an exception.
+    assert data.fmt_time(s, "Not/AZone").startswith("2026-06-03 12:00:00")
+    # Missing / unparseable input → "".
+    assert data.fmt_time("", "UTC") == ""
+    assert data.fmt_time(None, "UTC") == ""
+    assert data.fmt_time("garbage", "UTC") == ""
+
+
+def test_data_age_and_is_stale():
+    from datetime import datetime, timezone
+    fetched = "2026-06-03 12:00:00 UTC"
+    now = datetime(2026, 6, 3, 12, 5, 0, tzinfo=timezone.utc)   # exactly 5 minutes later
+    age = data.data_age_seconds(fetched, now=now)
+    assert age == 300
+    assert data.is_stale(age, 299) is True
+    assert data.is_stale(age, 300) is False        # strictly greater-than, not >=
+    assert data.is_stale(None, 10) is False         # unknown age is not stale
+    assert data.data_age_seconds("garbage") is None
