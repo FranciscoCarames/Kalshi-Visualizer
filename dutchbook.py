@@ -97,11 +97,13 @@ def _is_two_way_row(row: dict[str, Any]) -> bool:
     """A row from a two-way (2-outcome) event for whatever sport owns its series.
 
     Eligible families: the sport's head-to-head family (`cfg.match_family`) and per-game (`"game"`).
-    Resolves the sport from the row's series; rows with no recognized series (UNKNOWN sport) are
-    excluded — so a foreign/unsupported ticker never enters the detector."""
+    The sport must be RECOGNIZED — a row whose series resolves to the UNKNOWN sport is always excluded
+    (a foreign/unsupported ticker never enters the detector), so the game clause can't smuggle one in."""
     cfg = sports.sport_for_series(row.get("series"))
+    if cfg.sport_id == "unknown":
+        return False
     kind = row.get("kind")
-    return (bool(cfg.match_family) and kind == cfg.match_family) or kind == _GAME_FAMILY
+    return kind == cfg.match_family or kind == _GAME_FAMILY
 
 
 def _leg_label(row: dict[str, Any]) -> str:

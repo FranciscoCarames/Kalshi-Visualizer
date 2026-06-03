@@ -289,6 +289,64 @@ def test_resolve_time_none_when_legs_have_no_time():
     assert dutchbook.find_dutch_books([a, b])[0]["resolve_time"] is None
 
 
+# --- m1.1 breadth: per-game eligibility correctness & isolation ---------------------
+def test_unknown_series_with_game_kind_is_ignored():
+    # A 'game'-kind row from an UNRECOGNIZED series must still be excluded (a foreign ticker
+    # never enters the detector) — the game clause must not bypass the unknown-sport guard.
+    a = market("A", series="KXNOTASPORT", event="X-1", player_key="a", yes_ask_c=45)
+    a["kind"] = "game"
+    b = market("B", series="KXNOTASPORT", event="X-1", player_key="b", yes_ask_c=48)
+    b["kind"] = "game"
+    assert dutchbook.find_dutch_books([a, b]) == []
+
+
+def test_overround_on_per_game():
+    g1 = market("Celtics", series="KXNBAGAME", event="KXNBAGAME-1", player_key="bos",
+                yes_bid_c=55, yes_ask_c=57, no_ask_c=45)
+    g1["kind"] = "game"
+    g2 = market("Pacers", series="KXNBAGAME", event="KXNBAGAME-1", player_key="ind",
+                yes_bid_c=52, yes_ask_c=54, no_ask_c=48)
+    g2["kind"] = "game"
+    out = dutchbook.find_dutch_books([g1, g2])
+    assert len(out) == 1 and out[0]["direction"] == "overround" and out[0]["exec_gap_c"] == 7  # 100-(45+48)
+
+
+def test_mixed_match_and_game_in_one_df_both_fire():
+    # A tennis match event and an NBA game event in the same frame -> two independent findings.
+    t1 = market("Alcaraz", series="KXATPMATCH", event="KXATPMATCH-1", player_key="alc", yes_ask_c=45)
+    t2 = market("Sinner", series="KXATPMATCH", event="KXATPMATCH-1", player_key="sin", yes_ask_c=48)
+    g1 = market("Celtics", series="KXNBAGAME", event="KXNBAGAME-1", player_key="bos", yes_ask_c=40)
+    g1["kind"] = "game"
+    g2 = market("Pacers", series="KXNBAGAME", event="KXNBAGAME-1", player_key="ind", yes_ask_c=52)
+    g2["kind"] = "game"
+    out = dutchbook.find_dutch_books([t1, t2, g1, g2])
+    assert {f["event_ticker"] for f in out} == {"KXATPMATCH-1", "KXNBAGAME-1"}
+    assert sorted(f["exec_gap_c"] for f in out) == [7, 8]   # tennis 7, nba game 8
+
+
+def _kinded(player, *, kind, **kw):
+    r = market(player, **kw)
+    r["kind"] = kind
+    return r
+
+
+def test_cross_sport_mix_only_two_way_events_fire():
+    rows = []
+    # tennis match (fires) + NBA game (fires)
+    rows += [market("A", series="KXATPMATCH", event="M1", player_key="a", yes_ask_c=45),
+             market("B", series="KXATPMATCH", event="M1", player_key="b", yes_ask_c=48)]
+    rows += [_kinded("C", kind="game", series="KXNBAGAME", event="G1", player_key="c", yes_ask_c=40),
+             _kinded("D", kind="game", series="KXNBAGAME", event="G1", player_key="d", yes_ask_c=50)]
+    # 3-market winner field (excluded: not 2 markets)
+    rows += [_kinded(n, kind="winner", series="KXFOMEN", event="W1", player_key=k, yes_ask_c=20)
+             for n, k in (("E", "e"), ("F", "f"), ("G", "g"))]
+    # prop (excluded) + unknown series (excluded)
+    rows += [_kinded("H", kind="other", series="KXNBAMVP", event="P1", player_key="h", yes_ask_c=10),
+             market("I", series="KXZZZ", event="U1", player_key="i", yes_ask_c=10)]
+    out = dutchbook.find_dutch_books(rows)
+    assert {f["event_ticker"] for f in out} == {"M1", "G1"}
+
+
 # --- Two events at once: strongest edge first ---------------------------------------
 def test_multiple_events_sorted_by_gap_desc():
     e1 = [market("A", event="EV1", player_key="a", yes_ask_c=45),
