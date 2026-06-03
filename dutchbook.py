@@ -33,6 +33,7 @@ from __future__ import annotations
 
 from typing import Any
 
+import data
 import sports
 from glossary import BLOCKERS
 
@@ -198,8 +199,22 @@ def _detect_pair(event_ticker: str, markets: list[dict[str, Any]]) -> dict[str, 
         f"→ {gap_c}¢ locked per unit ({label_a} {best['price_a']}¢ + {label_b} {best['price_b']}¢)"
     )
 
+    # Stage-1 schema: stable opportunity_id + relationship_type + dashboard bucket + REQUIRED
+    # blocked_reason. Id recipe = the check type + the event + the SORTED participant keys, so it is
+    # leg-order-independent and unique per event (one finding per event). A dutch book is actionable
+    # when tradable (carries no rule caveat), else blocked; blocked_reason is non-empty IFF blocked.
+    keys = sorted([str(a.get("player_key") or ""), str(b.get("player_key") or "")])
+    oid = data.opportunity_id(CHECK_TYPE, event_ticker, keys[0], keys[1])
+    bucket = "actionable" if tradable_now.startswith("Yes") else "blocked"
+    blockers_str = "; ".join(blockers)
+    blocked_reason = (blockers_str or "not executable now") if bucket == "blocked" else ""
+
     return {
         "check_type": CHECK_TYPE,
+        "relationship_type": CHECK_TYPE,
+        "opportunity_id": oid,
+        "bucket": bucket,
+        "blocked_reason": blocked_reason,
         "status": EXECUTABLE_DUTCH_BOOK,
         "direction": direction,
         "event_ticker": event_ticker,
@@ -213,7 +228,7 @@ def _detect_pair(event_ticker: str, markets: list[dict[str, Any]]) -> dict[str, 
         "player_key_b": b.get("player_key", ""),
         "resolve_time": resolve_time,
         "tradable_now": tradable_now,
-        "blockers": "; ".join(blockers),
+        "blockers": blockers_str,
         # Two-leg buy-only action plan (same vocabulary as consistency rows, so the dashboard reuses it).
         "action_1_side": side, "action_1_contract": label_a, "action_1_price_c": best["price_a"],
         "action_1_text": _buy_text(side, label_a, best["price_a"]),

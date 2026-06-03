@@ -10,6 +10,10 @@ env/
 *.pem
 .streamlit/secrets.toml
 
+# Snapshot store (Stage 1) — local opportunity-history SQLite DB
+*.db
+snapshots.db
+
 # OS / editor
 .DS_Store
 .vscode/
