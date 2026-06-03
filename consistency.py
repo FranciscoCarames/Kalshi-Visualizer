@@ -460,6 +460,10 @@ def _row(player: str, player_key: str, chain: str, child: dict | None, parent: d
          child_node: str = "", parent_node: str = "", tournament: str = "") -> dict:
     """Assemble one consistency-table row."""
     vols = [r.get("volume") for r in (child, parent) if r and r.get("volume") is not None]
+    # Time-to-resolution: the EARLIER of the two legs' times — the soonest the opportunity starts
+    # settling (capital frees / the edge expires). ISO-8601 strings sort chronologically.
+    times = [r.get("time_value") for r in (child, parent) if r and r.get("time_value")]
+    resolve_time = min(times) if times else None
     child_contract = child.get("contract") if child else ""
     parent_contract = parent.get("contract") if parent else ""
     a1_leg, a2_leg = comp.get("action_1_leg"), comp.get("action_2_leg")
@@ -497,6 +501,7 @@ def _row(player: str, player_key: str, chain: str, child: dict | None, parent: d
         "rule_flag": comp.get("rule_flag", ""),
         "reason": comp["reason"],
         "volume": min(vols) if vols else None,
+        "resolve_time": resolve_time,
         "comp_quote_quality": comp.get("quote_quality", ""),
         "child_status": child.get("status") if child else "",
         "parent_status": parent.get("status") if parent else "",
@@ -543,7 +548,7 @@ def build_checks(df: pd.DataFrame) -> pd.DataFrame:
         "child_contract", "parent_contract", "child_display_pct",
         "parent_display_pct", "child_bid_pct", "parent_ask_pct", "executable_gap",
         "display_gap", "status", "status_group", "rule_flag", "reason", "volume",
-        "comp_quote_quality", "child_status", "parent_status", "tournament",
+        "resolve_time", "comp_quote_quality", "child_status", "parent_status", "tournament",
         "tradable_now", "blockers", "watchlist_note",
         "action_1_side", "action_1_leg", "action_1_price_c", "action_1_contract", "action_1_text",
         "action_2_side", "action_2_leg", "action_2_price_c", "action_2_contract", "action_2_text",
@@ -619,6 +624,108 @@ def build_checks(df: pd.DataFrame) -> pd.DataFrame:
                                 tournament=_tournament))
 
     return pd.DataFrame(out, columns=columns)
+
+
+def scenario_payoffs(check_row: dict[str, Any], units: Any = None) -> dict[str, Any] | None:
+    """Per-unit settlement-scenario payoffs for an opportunity's two-buy position.
+
+    Every actionable inconsistency is a pair of BUYS — Buy YES on one leg, Buy NO on the other —
+    and each contract settles to exactly 100c (its outcome happens) or 0c (it doesn't). This
+    enumerates the terminal states and reports, per single unit (one YES + one NO), the up-front
+    `cost_c`, the `payout_c` in each state, and the `profit_c` (= payout − cost). It makes the
+    edge concrete: you can see the money in every outcome, and the worst row is the guaranteed floor.
+
+    Two shapes, distinguished by `rule_flag` (set only for match-alignment equivalence pairs):
+
+    - **containment** (broader ⊇ deeper): THREE distinct states. The two 100c states are the
+      guaranteed floor; the broader-but-not-deeper state pays an extra $1 — a directional BONUS,
+      not the edge. The worst-case profit equals the engine's `exec_gap_c` by construction.
+    - **equivalence** (the two legs are the same event): TWO aligned states that both pay the floor,
+      PLUS a 'rules diverge' RISK state whose payout is NOT guaranteed (the legs may settle
+      differently on walkover/retire nuance — the existing RULE_CHECK_REQUIRED caveat). Its payout
+      and profit are left None so we never imply a guaranteed number where the rules are unverified.
+
+    Returns None when the row carries no buy-only action plan. `cost_c`/`profit_c`/`roc_pct` are
+    None when a leg price is missing (e.g. a display-only row with no firm ask to buy at).
+
+    When `units` (the tradable size) is given, also reports `capital_c` (= cost × units, what you
+    stake) and `total_floor_profit_c` (= worst-case × units, the guaranteed take); both None if the
+    per-unit number or `units` is missing.
+    """
+    if check_row.get("status") not in ACTION_STATUSES:
+        return None
+    if check_row.get("action_1_side") != "buy_yes" or check_row.get("action_2_side") != "buy_no":
+        return None
+
+    yes_price = _num(check_row.get("action_1_price_c"))   # cost to Buy YES on the long leg @ its ask
+    no_price = _num(check_row.get("action_2_price_c"))    # cost to Buy NO on the short leg @ the NO ask
+    cost_c = (yes_price + no_price) if (yes_price is not None and no_price is not None) else None
+
+    equivalence = bool(check_row.get("rule_flag"))
+
+    def _scn(label: str, yes_pay: int | None, no_pay: int | None,
+             *, bonus: bool = False, risk: bool = False) -> dict[str, Any]:
+        payout = None if risk else (yes_pay + no_pay)
+        profit = (payout - cost_c) if (payout is not None and cost_c is not None) else None
+        return {
+            "label": label,
+            "yes_leg_payout_c": None if risk else yes_pay,
+            "no_leg_payout_c": None if risk else no_pay,
+            "payout_c": payout,
+            "profit_c": profit,
+            "is_bonus": bonus,
+            "is_risk": risk,
+            "is_guaranteed_floor": False,   # set below once worst-case is known
+        }
+
+    if equivalence:
+        # The two legs settle on the same underlying outcome; use the node name as its label.
+        event = check_row.get("parent_node") or check_row.get("child_node") or "the outcome"
+        scenarios = [
+            _scn(f"{event} (legs settle aligned)", 100, 0),
+            _scn(f"Not {event} (legs settle aligned)", 0, 100),
+            _scn("Settlement rules diverge (not auto-verified)", None, None, risk=True),
+        ]
+        kind = "equivalence"
+    else:
+        # Containment: action is always Buy YES the broader (parent), Buy NO the deeper (child).
+        broader = check_row.get("parent_node") or "the broader outcome"
+        deeper = check_row.get("child_node") or "the deeper outcome"
+        scenarios = [
+            _scn(f"{deeper}", 100, 0),
+            _scn(f"{broader}, not {deeper}", 100, 100, bonus=True),
+            _scn(f"Not {broader}", 0, 100),
+        ]
+        kind = "containment"
+
+    # Worst/best across the GUARANTEED (non-risk) states only — the rule-risk state is unknown,
+    # never counted as a floor.
+    guaranteed = [s["profit_c"] for s in scenarios if not s["is_risk"] and s["profit_c"] is not None]
+    worst = min(guaranteed) if guaranteed else None
+    best = max(guaranteed) if guaranteed else None
+    if worst is not None:
+        for s in scenarios:
+            if not s["is_risk"] and s["profit_c"] == worst:
+                s["is_guaranteed_floor"] = True
+
+    roc_pct = round(worst / cost_c * 100, 1) if (worst is not None and cost_c) else None
+
+    units = _num(units)
+    capital_c = (cost_c * units) if (cost_c is not None and units is not None) else None
+    total_floor_profit_c = (worst * units) if (worst is not None and units is not None) else None
+
+    return {
+        "kind": kind,
+        "cost_c": cost_c,
+        "scenarios": scenarios,
+        "worst_case_profit_c": worst,
+        "best_case_profit_c": best,
+        "roc_pct": roc_pct,
+        "has_rule_risk": equivalence,
+        "units": units,
+        "capital_c": capital_c,
+        "total_floor_profit_c": total_floor_profit_c,
+    }
 
 
 # Trader-dashboard buckets. Pure mapping from one consistency-check row to the dashboard section it

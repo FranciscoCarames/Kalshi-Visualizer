@@ -69,6 +69,111 @@ def test_profit_fields_blank_for_clean_row():
         assert out[k] is None
 
 
+# --- m1: scenario payoffs (per-unit P&L in each terminal settlement state) -------------
+def _check(child, parent, equivalence=False,
+           child_node="Win Tournament", parent_node="Reach Final"):
+    """A consistency-check row as scenario_payoffs consumes it: _classify output plus the node
+    labels and contract names that build_checks/_row would attach."""
+    comp = consistency._classify(child, parent, equivalence)
+    return {**comp, "child_node": child_node, "parent_node": parent_node,
+            "child_contract": "Deeper", "parent_contract": "Broader"}
+
+
+def test_scenario_payoffs_containment_three_states_and_floor_equals_gap():
+    # child bid 37 / ask 38 > parent ask 35 → forward containment executable violation, gap 2.
+    child = leg(display_c=37, bid_c=37, ask_c=38)
+    parent = leg(display_c=35, bid_c=34, ask_c=35)
+    row = _check(child, parent, equivalence=False)
+    pay = consistency.scenario_payoffs(row)
+    assert pay is not None
+    assert pay["kind"] == "containment"
+    # Buy YES parent @ 35 + Buy NO child @ (100−37)=63 → cost 98/unit.
+    assert pay["cost_c"] == 98
+    assert [s["payout_c"] for s in pay["scenarios"]] == [100, 200, 100]
+    assert [s["profit_c"] for s in pay["scenarios"]] == [2, 102, 2]
+    # Worst-case floor equals the engine's exec_gap_c (independent derivation — the key invariant).
+    assert pay["worst_case_profit_c"] == row["exec_gap_c"] == 2
+    assert pay["best_case_profit_c"] == 102
+    # The broader-but-not-deeper middle state is the +$1/unit bonus.
+    bonus = [s for s in pay["scenarios"] if s["is_bonus"]]
+    assert len(bonus) == 1 and bonus[0]["profit_c"] == 102
+    assert pay["roc_pct"] == round(2 / 98 * 100, 1)
+    assert pay["has_rule_risk"] is False
+
+
+def test_scenario_payoffs_two_floor_rows_flagged_bonus_excluded():
+    child = leg(display_c=37, bid_c=37, ask_c=38)
+    parent = leg(display_c=35, bid_c=34, ask_c=35)
+    pay = consistency.scenario_payoffs(_check(child, parent))
+    floors = [s for s in pay["scenarios"] if s["is_guaranteed_floor"]]
+    assert len(floors) == 2 and all(s["profit_c"] == 2 for s in floors)
+    assert all(not s["is_bonus"] for s in floors)
+
+
+def test_scenario_payoffs_equivalence_has_rule_risk_row():
+    # Reverse equivalence cross: parent bid 37 vs child ask 35 → gap 2 (long deeper / short broader).
+    child = leg(display_c=30, bid_c=19, ask_c=35)
+    parent = leg(display_c=30, bid_c=37, ask_c=40)
+    row = _check(child, parent, equivalence=True,
+                 child_node="Reach Semifinal", parent_node="Reach Semifinal")
+    pay = consistency.scenario_payoffs(row)
+    assert pay["kind"] == "equivalence"
+    assert pay["has_rule_risk"] is True
+    risk = [s for s in pay["scenarios"] if s["is_risk"]]
+    assert len(risk) == 1
+    assert risk[0]["payout_c"] is None and risk[0]["profit_c"] is None
+    assert risk[0]["is_guaranteed_floor"] is False
+    aligned = [s for s in pay["scenarios"] if not s["is_risk"]]
+    assert len(aligned) == 2 and all(s["payout_c"] == 100 for s in aligned)
+    # Floor still equals exec_gap_c on the winning (reverse) direction.
+    assert pay["worst_case_profit_c"] == row["exec_gap_c"] == 2
+
+
+def test_scenario_payoffs_units_scale_capital_and_total_floor():
+    child = leg(display_c=37, bid_c=37, ask_c=38)
+    parent = leg(display_c=35, bid_c=34, ask_c=35)
+    pay = consistency.scenario_payoffs(_check(child, parent), units=80)
+    assert pay["units"] == 80
+    assert pay["capital_c"] == 98 * 80               # cost/unit × units
+    assert pay["total_floor_profit_c"] == 2 * 80     # worst-case/unit × units
+    # Per-unit numbers are unchanged by units.
+    assert pay["cost_c"] == 98 and pay["worst_case_profit_c"] == 2
+    # Missing units leaves the totals None.
+    bare = consistency.scenario_payoffs(_check(child, parent))
+    assert bare["capital_c"] is None and bare["total_floor_profit_c"] is None
+
+
+def test_scenario_payoffs_none_for_non_action_row():
+    child = leg(display_c=20, bid_c=10, ask_c=12)
+    parent = leg(display_c=50, bid_c=58, ask_c=60)
+    assert _check(child, parent)["status"] == "CLEAN"
+    assert consistency.scenario_payoffs(_check(child, parent)) is None
+
+
+def test_scenario_payoffs_missing_price_keeps_structure_drops_money():
+    # Display-only inconsistency with no firm ask to buy at: payouts are structural, money is None.
+    parent = leg(display_c=40, bid_c=None, ask_c=None, quality="One-sided")
+    child = leg(display_c=50, bid_c=None, ask_c=None, quality="One-sided")
+    row = _check(child, parent)
+    assert row["status"] == "DISPLAY_VIOLATION"
+    pay = consistency.scenario_payoffs(row)
+    assert pay is not None and pay["cost_c"] is None
+    assert [s["payout_c"] for s in pay["scenarios"]] == [100, 200, 100]
+    assert all(s["profit_c"] is None for s in pay["scenarios"])
+    assert pay["worst_case_profit_c"] is None and pay["roc_pct"] is None
+
+
+def test_row_resolve_time_is_earliest_leg():
+    child = {"time_value": "2026-06-08T13:00:00Z", "contract": "Deeper"}
+    parent = {"time_value": "2026-06-07T11:00:00Z", "contract": "Broader"}
+    comp = {"status": "CLEAN", "status_group": "Clean", "reason": "", "quote_quality": "Tight"}
+    row = consistency._row("P", "k", "chain", child, parent, comp)
+    assert row["resolve_time"] == "2026-06-07T11:00:00Z"      # the earlier of the two legs
+    # No times anywhere → None, never an error.
+    row2 = consistency._row("P", "k", "chain", {"contract": "D"}, {"contract": "B"}, comp)
+    assert row2["resolve_time"] is None
+
+
 def test_spread_certainty_label():
     assert consistency.spread_certainty_label("") == "Locked gross spread"
     assert consistency.spread_certainty_label("RULE_MISMATCH") == "Rule-dependent gross spread"
