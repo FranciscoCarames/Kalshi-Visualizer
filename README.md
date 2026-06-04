@@ -1,7 +1,7 @@
 # Kalshi Visualizer — Multi-Sport Executable-Inconsistency Dashboard
 
 A small, read-only [Streamlit](https://streamlit.io/) app that pulls live
-[Kalshi](https://kalshi.com/) prediction-market data for **tennis (ATP/WTA), NBA, and WNBA**.
+[Kalshi](https://kalshi.com/) prediction-market data for **tennis (ATP/WTA), NBA, WNBA, and golf**.
 It surfaces two classes of opportunity across related contracts:
 
 1. **Layer-consistency violations** — a deeper outcome must not price above a prerequisite that

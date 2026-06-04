@@ -568,3 +568,78 @@ WNBA = register(SportConfig(
     node_fn=_wnba_node,
     division_fn=_wnba_division,
 ))
+
+
+# --- Golf (5th sport): finishing-position containment ladder; exact-series ownership; no head-to-head ---
+# Top 20 ⊇ Top 10 ⊇ Top 5 ⊇ Win Tournament. "Simple" placement contracts only. Props, round-finishers
+# (KXPGAR1TOP5…), and H2H share the golf_competitor UUID + competition string, so golf owns EXACTLY its
+# four tickers via exact_series; everything else resolves to UNKNOWN (the false-positive guard).
+# match_family="" → golf yields no dutch books. Step-0 live discovery confirmed every value (see the kss
+# research-gates note); competition strings confirmed on 2 tournaments — extend to ≥3 before fully trusting.
+_GOLF_STAGE_RANK = {"Top 20": 1, "Top 10": 2, "Top 5": 3, "Champion": 4}
+_GOLF_CATEGORY = {"advance": "Finish position", "winner": "Tournament winner", "other": "Other"}
+_GOLF_EXACT = frozenset({"KXPGATOP20", "KXPGATOP10", "KXPGATOP5", "KXPGATOUR"})
+_GOLF_LADDER = LadderSpec(
+    node_order=("Top 20", "Top 10", "Top 5", "Win Tournament"),
+    adjacent_pairs=(("Win Tournament", "Top 5"), ("Top 5", "Top 10"), ("Top 10", "Top 20")),
+    match_stage_to_node={},                    # no head-to-head
+    advance_stage_to_node={"Top 20": "Top 20", "Top 10": "Top 10", "Top 5": "Top 5"},
+)
+
+
+def _golf_family(cfg: SportConfig, series_ticker: str) -> str:
+    t = (series_ticker or "").upper()
+    if t == "KXPGATOUR":
+        return "winner"                                              # win the tournament
+    if t in ("KXPGATOP5", "KXPGATOP10", "KXPGATOP20"):
+        return "advance"                                             # finish within Top N (incl. ties)
+    return "other"                                                   # defensive — golf owns only the four
+
+
+def _golf_stage(cfg: SportConfig, family: str, market: dict[str, Any]) -> str:
+    if family == "winner":
+        return "Champion"
+    if family == "advance":
+        # The rung lives in the SERIES (the market ticker), not the title (NBA/WNBA-style). No prefix
+        # collision among 5/10/20: "KXPGATOP10"/"KXPGATOP20" never start with "KXPGATOP5".
+        tk = (market.get("ticker") or "").upper()
+        if tk.startswith("KXPGATOP5"):
+            return "Top 5"
+        if tk.startswith("KXPGATOP10"):
+            return "Top 10"
+        if tk.startswith("KXPGATOP20"):
+            return "Top 20"
+    return ""
+
+
+def _golf_node(cfg: SportConfig, family: str, stage: str) -> str | None:
+    if family == "winner":
+        return "Win Tournament"
+    if family == "advance":
+        return cfg.ladder.advance_stage_to_node.get(stage)
+    return None
+
+
+def _golf_division(cfg: SportConfig, series_ticker: str) -> str:
+    return ""   # no tour split (one coherent rung set per tournament)
+
+
+GOLF = register(SportConfig(
+    sport_id="golf", label="Golf", emoji="⛳",
+    series_prefixes=(), default_series=tuple(sorted(_GOLF_EXACT)),
+    winner_tickers=frozenset(),
+    identity=IdentityResolver(candidate_paths=("custom_strike.golf_competitor",), id_label="golf_competitor"),
+    ladder=_GOLF_LADDER,
+    category_labels=_GOLF_CATEGORY,
+    round_patterns=(),
+    stage_rank=_GOLF_STAGE_RANK,
+    ladder_families=frozenset({"advance", "winner"}),
+    match_family="",                           # no head-to-head → no dutch books
+    divisions={},
+    division_label="",
+    family_fn=_golf_family,
+    stage_fn=_golf_stage,
+    node_fn=_golf_node,
+    division_fn=_golf_division,
+    exact_series=_GOLF_EXACT,
+))
