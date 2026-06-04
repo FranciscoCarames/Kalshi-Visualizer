@@ -188,6 +188,24 @@ def test_nba_clean_when_ordered():
     assert row["status"] == "CLEAN"
 
 
+def test_nba_categories_use_nba_labels_not_tennis():
+    """PR 3: per-sport category dispatch — an NBA comparison row carries NBA category labels (resolved
+    off each leg's own sport), never the tennis CATEGORY labels or a blank."""
+    champ = _nba_event("KXNBA-26", [
+        _nba_market("KXNBA-26-BOS", "Boston", "uuid-bos", "0.40", "0.42",
+                    "Will the Boston win the 2026 Pro Basketball Finals?")])
+    conf = _nba_event("KXNBAEAST-26", [
+        _nba_market("KXNBAEAST-26-BOS", "Boston", "uuid-bos", "0.55", "0.57",
+                    "Will the Boston win the Eastern Conference Championship?")])
+    rows = data.build_contracts("KXNBA", [champ]) + data.build_contracts("KXNBAEAST", [conf])
+    checks = consistency.build_checks(pd.DataFrame(rows))
+    row = next(c for _, c in checks.iterrows() if c["chain"] == "Win Championship ≤ Win Conference")
+    # child = Win Championship (kind "winner"); parent = Win Conference (kind "advance").
+    assert row["child_category"] == "Championship"                  # NBA winner label
+    assert row["parent_category"] == "Advancement (reach a stage)"  # NBA advance label
+    assert row["child_category"] != "Tournament winner"             # NOT the tennis label (the bug)
+
+
 def test_nba_finals_series_aligns_with_championship():
     # A Finals SERIES winner (head-to-head) and the championship futures both map to Win Championship
     # for the same team → match-alignment equivalence row (rule-dependent, like tennis).
