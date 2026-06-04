@@ -28,17 +28,20 @@ process-wide rate throttle.
 ## Run & verify
 
 ```bash
-pip install -r requirements.txt          # runtime: streamlit, requests, pandas
-streamlit run app.py
-pip install -r requirements-dev.txt      # adds pytest + ruff
-pytest -q                                # unit tests for the pure layers (no network)
+pip install -r requirements.txt          # runtime: streamlit, requests, pandas, fastapi, nicegui, uvicorn
+streamlit run app.py                     # Streamlit UI
+python serve.py                          # FastAPI + NiceGUI dashboard (/) + REST API
+pip install -r requirements-dev.txt      # adds pytest, pytest-asyncio, ruff
+pytest -q                                # unit tests for the pure layers + headless NiceGUI smoke (no network)
 ruff check .                             # lint
 ```
 
-To verify without a browser: `pytest -q`; `python -c "import app"`; and a headless boot —
+To verify without a browser: `pytest -q`; `python -c "import app, serve"`; a headless Streamlit boot —
 `streamlit run app.py --server.headless true --server.port 8765` then check
-`http://localhost:8765/_stcore/health` returns `200`. Live Kalshi calls, `pip`, and `git push` in this
-environment require running the Bash tool with the sandbox disabled (network is otherwise blocked).
+`http://localhost:8765/_stcore/health` returns `200`; and a `serve.py` boot — `GET /` and `/metrics` →
+`200`. The NiceGUI dashboard itself has headless browser smoke tests (`tests/test_browser.py`, via
+`nicegui.testing` — no selenium). Live Kalshi calls, `pip`, and `git push` in this environment require
+running the Bash tool with the sandbox disabled (network is otherwise blocked).
 
 **NiceGUI dashboard / LAN hosting:** `python serve.py` runs the FastAPI engine API + NiceGUI dashboard on
 one app (default loopback `127.0.0.1:8000`). `API_HOST`/`API_PORT` are env-overridable; binding a
@@ -380,17 +383,23 @@ chart was **removed** (Stage 0 — misleading; Actionable table is the ranking s
 
 ## Repository status
 
-`main` is **feature-complete at PR #35** (merged). Shipped and on main:
+`main` has shipped the full engine + dual front-ends. On main:
 
-- All-tennis generalization (`tournament_of`, grouping by player+tournament, fetch-by-family)
-- Multi-sport abstraction (`sports.py`): Tennis, NBA, WNBA registered via `SportConfig`
-- Dutch-book / MECE detector (`dutchbook.py`): 2-outcome books on match/series AND per-game (`KX*GAME`)
-- Stage 0 dashboard clarity: Lisbon default timezone, per-second data freshness/coverage strip,
-  "Show IDs & codes" toggle, opportunity-ranking graph removed (misleading), debug+diagnostics behind Advanced
+- All-tennis generalization + multi-sport abstraction (`sports.py`): Tennis, NBA, WNBA, golf, soccer via
+  `SportConfig`; dutch-book / MECE detector (`dutchbook.py`) + synthetic exact-score bundles
+  (`synthetic_bundle.py`).
+- **Engine-behind-an-API:** SQLite snapshot store (`store.py`, v3 — opportunities + per-sport evidence
+  frames), cross-sport `scanner.py`, lifecycle/alerts, a typed **FastAPI** REST API (`api.py`:
+  `/opportunities` `/coverage` `/metrics` `/scan` `/alerts` …), non-blocking `POST /scan` behind a
+  **ScanManager** singleflight + per-process HTTP rate-limit + env-gated `SCAN_TOKEN`.
+- **NiceGUI dashboard** (`webui/`, mounted on FastAPI via `serve.py`): ranked Actionable/Review/Blocked,
+  participant-detail panel, diagnostics/debug with AG-Grids, truthful empty states, snapshot export, live
+  freshness; pure `webui/viewmodel.py` + `webui/diagnostics.py` cores. The Streamlit `app.py` still ships.
 
-`pytest` ~158 tests (`test_data`, `test_consistency`, `test_dutchbook`, `test_glossary`, `test_client`,
-`test_filters`, `test_viz`, `test_sports`, `test_app`). All branches from the earlier development stack
-are merged; there are no open feature PRs blocking current work.
+`pytest` is the full suite (`test_data`, `test_consistency`, `test_dutchbook`, `test_synthetic_bundle`,
+`test_store`, `test_scanner`, `test_lifecycle`, `test_api`, `test_webui`, `test_viewmodel`,
+`test_diagnostics`, `test_ratelimit`, `test_browser` [headless NiceGUI], …). All UNIFIED-PLAN Phase A–E PRs
+are merged; only Phase F follow-ons (advancement/field detectors, known-limits docs) remain.
 
 ## Iteration history (intent)
 1. Per-player French Open match viewer.
