@@ -4,6 +4,7 @@ schema, /opportunities filtering, 404, /coverage (meta / no-meta / empty), /aler
 (stub-fetch write + store-backed TTL-guard skip + force)."""
 from __future__ import annotations
 
+import os
 import time
 
 import pandas as pd
@@ -51,10 +52,14 @@ def client(tmp_path):
     api.app.dependency_overrides[api.db_path_dep] = lambda: db
     api.app.dependency_overrides[api.fetch_dep] = lambda: _stub_fetch
     scan_manager.manager.reset()                 # the singleflight is a singleton — isolate each test
+    api._scan_limiter.reset()                    # the HTTP /scan rate limiter is a singleton too (PR 26b)
+    os.environ.pop("SCAN_TOKEN", None)           # gate OFF by default unless a test sets it
     c = TestClient(api.app)
     yield c, db
     api.app.dependency_overrides.clear()
     scan_manager.manager.reset()
+    api._scan_limiter.reset()
+    os.environ.pop("SCAN_TOKEN", None)
 
 
 def test_healthz_and_docs(client):
@@ -222,3 +227,33 @@ def test_metrics_viewer_count_present(client):
     body = c.get("/metrics").json()
     assert body["viewer_count"] == 0          # no websocket clients in the test client
     presence.reset()
+
+
+# --- scan-token gate + HTTP rate limit (PR 26b) ---------------------------------------
+def test_scan_open_by_default_when_token_unset(client):
+    c, _ = client
+    assert "SCAN_TOKEN" not in os.environ
+    assert c.post("/scan").status_code == 202          # no header needed when the gate is off
+
+
+def test_scan_token_required_when_set(client):
+    c, _ = client
+    os.environ["SCAN_TOKEN"] = "s3cret"
+    assert c.post("/scan").status_code == 401                                  # no header
+    assert c.post("/scan", headers={"X-Scan-Token": "wrong"}).status_code == 401
+    assert c.post("/scan", headers={"X-Scan-Token": "s3cret"}).status_code == 202   # correct token
+
+
+def test_scan_http_rate_limited(client, monkeypatch):
+    c, _ = client
+    # Shrink the window cap so a couple of calls trip it; the limiter is reset per-test by the fixture.
+    monkeypatch.setattr(api._scan_limiter, "max_events", 2)
+    assert c.post("/scan").status_code == 202
+    assert c.post("/scan").status_code == 202
+    assert c.post("/scan").status_code == 429          # third within the window is rejected
+
+
+def test_scan_status_not_gated(client):
+    c, _ = client
+    os.environ["SCAN_TOKEN"] = "s3cret"
+    assert c.get("/scan/status").status_code == 200     # read-only status stays open

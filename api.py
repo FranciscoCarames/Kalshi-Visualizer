@@ -10,10 +10,13 @@ Run: `python serve.py` (or `uvicorn api:app`). OpenAPI docs at `/docs`.
 """
 from __future__ import annotations
 
+import hmac
+import logging
+import os
 import time
 from typing import Any, Callable
 
-from fastapi import Depends, FastAPI, HTTPException, Response
+from fastapi import Depends, FastAPI, Header, HTTPException, Response
 from pydantic import BaseModel, ConfigDict
 
 import config
@@ -22,6 +25,7 @@ import fetch
 import kalshi_client
 import lifecycle
 import presence
+import ratelimit
 import scan_manager
 import scanner
 import sports
@@ -29,6 +33,21 @@ import store
 from webui import diagnostics
 
 app = FastAPI(title="Kalshi opportunity engine", version="4.0")
+logger = logging.getLogger("kalshi.api")
+
+# Per-process HTTP `/scan` rate limiter (PR 26b) — distinct from the ScanManager scan TTL. Guards the
+# endpoint itself; the in-process dashboard button (engine.run_scan_now) never touches it.
+_scan_limiter = ratelimit.SlidingWindow(config.SCAN_HTTP_MAX_PER_WINDOW, config.SCAN_HTTP_WINDOW_SECONDS)
+
+
+def require_scan_token(x_scan_token: str | None = Header(default=None, alias="X-Scan-Token")) -> None:
+    """Scan-token gate (PR 26b, locked decision §8). When the `SCAN_TOKEN` env var is SET, `POST /scan`
+    requires a matching `X-Scan-Token` header (constant-time compare); when UNSET the gate is OFF (today's
+    open behaviour). Loopback dev simply leaves it unset; a LAN scheduler must send the header."""
+    token = os.getenv("SCAN_TOKEN", "")
+    if token and not hmac.compare_digest(x_scan_token or "", token):
+        logger.warning("Rejected POST /scan: missing or invalid X-Scan-Token")
+        raise HTTPException(status_code=401, detail="Invalid or missing X-Scan-Token")
 
 
 # --- response models (stable — Stage 6 export reuses these) --------------------------
@@ -275,14 +294,23 @@ def _scan_write_fn(fetched_at: str, unified, coverage, frames, db_path: str | No
     return store.write_snapshot(fetched_at, unified, meta=coverage, frames=frames, db_path=db_path)
 
 
-@app.post("/scan", response_model=ScanStatus, status_code=202)
+@app.post("/scan", response_model=ScanStatus, status_code=202, dependencies=[Depends(require_scan_token)])
 def post_scan(response: Response, force: bool = False, wait: bool = False,
               db_path: str | None = Depends(db_path_dep),
               fetch_fn: Callable[[str], tuple] = Depends(fetch_dep)):
     """Non-blocking (PR 21b): trigger a scan via the process-local singleflight and return 202 with the
     current status immediately. `?wait=true` blocks up to SCAN_WAIT_TIMEOUT_SECONDS for the scan to finish
     (still 202 past the bound). `?force=true` overrides the TTL/budget guards. Two triggers (or a button +
-    this) collapse to one upstream fetch. Poll `GET /scan/status` for completion."""
+    this) collapse to one upstream fetch. Poll `GET /scan/status` for completion.
+
+    Security (PR 26b): gated by `require_scan_token` (header required only when `SCAN_TOKEN` is set) and a
+    per-process HTTP rate limit (429 when exceeded). The dashboard's own "Scan now" button calls the engine
+    IN-PROCESS, not this endpoint, so it bypasses both guards; an external scheduler/curl must honour them."""
+    if not _scan_limiter.allow(time.time()):
+        logger.warning("Rate-limited POST /scan (>%d in %ds)",
+                       config.SCAN_HTTP_MAX_PER_WINDOW, config.SCAN_HTTP_WINDOW_SECONDS)
+        raise HTTPException(status_code=429, detail="Too many scan requests; slow down.")
+    logger.info("Accepted POST /scan (force=%s, wait=%s)", force, wait)
     st = scan_manager.manager.trigger(
         run_fn=_scan_run_fn(fetch_fn), write_fn=_scan_write_fn, force=force,
         wait_timeout=(config.SCAN_WAIT_TIMEOUT_SECONDS if wait else 0.0), db_path=db_path)

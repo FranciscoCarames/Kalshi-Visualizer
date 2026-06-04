@@ -158,6 +158,11 @@ SCAN_BUDGET_MAX_SECONDS = 120
 SCAN_BUDGET_MAX_REQUESTS = 2000
 SCAN_BUDGET_MAX_FAILED_SERIES = 20
 SCAN_BUDGET_COOLDOWN_SECONDS = 300
+# Scan-token gate (PR 26b): when the SCAN_TOKEN env var is set, HTTP `POST /scan` requires a matching
+# `X-Scan-Token` header (off by default — env read lives in api.py, keeping config import-free). These
+# cap how often the HTTP /scan endpoint itself can be hit (per process), distinct from the scan TTL above.
+SCAN_HTTP_MAX_PER_WINDOW = 10
+SCAN_HTTP_WINDOW_SECONDS = 60
 
 # --- NiceGUI dashboard (Stage 5) -----------------------------------------------------
 # NiceGUI needs a storage secret to sign its per-user session cookie. There is NO auth/multi-user here,
