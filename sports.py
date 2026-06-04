@@ -14,7 +14,7 @@ unsupported sport), NEVER silently to tennis — so a foreign ticker is visibly 
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Callable
 
 import config
@@ -116,6 +116,12 @@ class SportConfig:
     stage_fn: Callable[["SportConfig", str, dict], str]
     node_fn: Callable[["SportConfig", str, str], str | None]
     division_fn: Callable[["SportConfig", str], str]
+    # Synthetic exact-score state bundles (optional; empty for sports without exact-score markets, so
+    # adding a sport stays one register() call). `state_bundles` maps a verified format key to the
+    # per-player expected scoreline set; `score_format_fn` resolves an event's (division, tournament)
+    # to that key, or None when the format is unprovable (→ no bundle, never a guessed emit).
+    state_bundles: dict[str, tuple[str, ...]] = field(default_factory=dict)
+    score_format_fn: Callable[["SportConfig", str, str], str | None] | None = None
 
     # ---- convenience API (engine calls these) --------------------------------------------
     def family_of(self, series_ticker: str) -> str:
@@ -123,6 +129,10 @@ class SportConfig:
 
     def division_of(self, series_ticker: str) -> str:
         return self.division_fn(self, series_ticker)
+
+    def score_format(self, division: str, tournament: str) -> str | None:
+        """Verified best-of format key for an event (e.g. 'tennis_bo5'), or None when unprovable."""
+        return self.score_format_fn(self, division, tournament) if self.score_format_fn else None
 
     def stage_of(self, family: str, market: dict[str, Any]) -> str:
         return self.stage_fn(self, family, market)
@@ -308,6 +318,22 @@ def _tennis_division(cfg: SportConfig, series_ticker: str) -> str:
     return "ATP"
 
 
+# Match format = which exact-set-score states are possible for a player win. Only **men's Grand Slam
+# singles** are best-of-5 ({3-0,3-1,3-2}); WTA and non-Slam ATP are best-of-3 ({2-0,2-1}). Gender comes
+# from the division (ATP/WTA); Grand-Slam-ness from the tournament key. NOT keyed off ATP/WTA alone (ATP
+# is bo3 outside the Slams). Verified live: French Open men's exact-score events carry 3 states/player.
+_GRAND_SLAM_KEYS = ("australian open", "french open", "roland garros", "wimbledon", "us open")
+
+
+def _tennis_score_format(cfg: SportConfig, division: str, tournament: str) -> str | None:
+    t = (tournament or "").strip().lower()
+    if not t or t.startswith("unknown"):
+        return None  # tournament unprovable → no format → no bundle (never emit on a guess)
+    if (division or "").upper() == "WTA":
+        return "tennis_bo3"
+    return "tennis_bo5" if any(k in t for k in _GRAND_SLAM_KEYS) else "tennis_bo3"
+
+
 TENNIS = register(SportConfig(
     sport_id="tennis", label="Tennis", emoji="🎾",
     series_prefixes=tuple(config.TENNIS_SERIES_PREFIXES),
@@ -326,6 +352,8 @@ TENNIS = register(SportConfig(
     stage_fn=_tennis_stage,
     node_fn=_tennis_node,
     division_fn=_tennis_division,
+    state_bundles={"tennis_bo5": ("3-0", "3-1", "3-2"), "tennis_bo3": ("2-0", "2-1")},
+    score_format_fn=_tennis_score_format,
 ))
 
 
