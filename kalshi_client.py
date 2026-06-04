@@ -160,9 +160,13 @@ def discover_series_for_sport(cfg: sports.SportConfig) -> list[str]:
     """Return the tickers of all series worth scanning for one sport.
 
     Lists every series whose ticker carries one of the sport's prefixes (plus its explicitly-named
-    winner tickers) and lets the data layer stamp each event with its tournament. Sport-agnostic:
-    the same scan works for tennis, NBA, or any registered sport.
+    winner tickers, plus any exact-owned tickers) and lets the data layer stamp each event with its
+    tournament. Sport-agnostic: the same scan works for tennis, NBA, or any registered sport.
     """
+    # Exact-only sports (no prefixes / winner tickers) arrive as new EVENTS inside a fixed set of series,
+    # never as new series — so the full set is known up front and we skip the /series scan entirely.
+    if cfg.exact_series and not cfg.series_prefixes and not cfg.winner_tickers:
+        return sorted(cfg.exact_series)
     series = get_paginated("/series", {"limit": 200}, list_key="series")
     tickers = [
         s["ticker"]
@@ -171,6 +175,7 @@ def discover_series_for_sport(cfg: sports.SportConfig) -> list[str]:
         and (
             s["ticker"].startswith(cfg.series_prefixes)
             or s["ticker"] in cfg.winner_tickers
+            or s["ticker"] in cfg.exact_series
         )
     ]
     return sorted(set(tickers))

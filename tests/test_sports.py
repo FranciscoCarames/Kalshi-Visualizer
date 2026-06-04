@@ -6,6 +6,8 @@ NBA containment ladder built end-to-end through the (unchanged) detection engine
 """
 from __future__ import annotations
 
+import dataclasses
+
 import pandas as pd
 
 import consistency
@@ -27,6 +29,30 @@ def test_unknown_series_resolves_to_unknown_not_tennis():
 def test_registry_has_tennis_and_nba():
     ids = {c.sport_id for c in sports.all_sports()}
     assert {"tennis", "nba"} <= ids
+
+
+# --- exact_series ownership (PR 2) ---------------------------------------------------
+def test_exact_series_wins_over_broad_prefix_regardless_of_order(monkeypatch):
+    """A sport's exact-owned ticker resolves to it even when another sport's broad prefix would also
+    match AND is registered first — exact is the most specific signal (pass 1 beats pass 2)."""
+    broad = dataclasses.replace(sports.NBA, sport_id="broadsport", series_prefixes=("KX",),
+                                winner_tickers=frozenset(), exact_series=frozenset())
+    exact = dataclasses.replace(sports.TENNIS, sport_id="exactsport", series_prefixes=(),
+                                winner_tickers=frozenset(), exact_series=frozenset({"KXEXACT5"}))
+    # broad registered FIRST: its "KX" prefix would grab KXEXACT5 if exact didn't win in pass 1.
+    monkeypatch.setattr(sports, "_REGISTRY", {"broadsport": broad, "exactsport": exact})
+    assert sports.sport_for_series("KXEXACT5").sport_id == "exactsport"   # exact wins despite order
+    assert sports.sport_for_series("KXOTHER").sport_id == "broadsport"    # prefix still resolves (pass 2)
+    assert sports.sport_for_series("ZZZ").sport_id == "unknown"           # owned by neither
+
+
+def test_real_sports_unchanged_with_empty_exact_series():
+    """Registered sports default exact_series to empty, so resolution is byte-identical to before."""
+    assert sports.TENNIS.exact_series == frozenset()
+    assert sports.sport_for_series("KXATPMATCH").sport_id == "tennis"
+    assert sports.sport_for_series("KXNBA").sport_id == "nba"
+    assert sports.sport_for_series("KXWNBA").sport_id == "wnba"   # prefix precedence still holds
+    assert sports.sport_for_series("KXFOO").sport_id == "unknown"
 
 
 # --- round parser: hyphenated rounds must NOT collapse to Final/Finals (all sports) --------

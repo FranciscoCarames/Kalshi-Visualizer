@@ -122,6 +122,10 @@ class SportConfig:
     # to that key, or None when the format is unprovable (→ no bundle, never a guessed emit).
     state_bundles: dict[str, tuple[str, ...]] = field(default_factory=dict)
     score_format_fn: Callable[["SportConfig", str, str], str | None] | None = None
+    # Exact ticker ownership (optional). When non-empty, these tickers resolve to THIS sport BEFORE any
+    # prefix/winner match (exact is the most specific signal). Lets a sport own specific tickers without a
+    # broad prefix that would swallow unrelated series. Empty for prefix-owned sports -> no behavior change.
+    exact_series: frozenset[str] = field(default_factory=frozenset)
 
     # ---- convenience API (engine calls these) --------------------------------------------
     def family_of(self, series_ticker: str) -> str:
@@ -199,7 +203,7 @@ def get_sport(sport_id: str) -> SportConfig:
 
 
 def sport_for_series(series_ticker: Any) -> SportConfig:
-    """Resolve the sport that owns a series ticker, by prefix / winner-ticker membership.
+    """Resolve the sport that owns a series ticker, by exact-ticker then prefix / winner-ticker membership.
 
     Returns `UNKNOWN` (an explicit unsupported sport) when nothing matches — NEVER a silent tennis
     default. (For unit-test rows that carry no series, the engine applies its own tennis back-compat
@@ -208,6 +212,12 @@ def sport_for_series(series_ticker: Any) -> SportConfig:
     t = str(series_ticker or "").upper()
     if not t:
         return UNKNOWN
+    # Pass 1: exact ownership is the most specific signal — it wins regardless of registry order, so a
+    # future sport's broad prefix can never shadow another sport's exact ticker.
+    for cfg in _REGISTRY.values():
+        if t in cfg.exact_series:
+            return cfg
+    # Pass 2: existing prefix / winner-ticker ownership.
     for cfg in _REGISTRY.values():
         if t.startswith(cfg.series_prefixes) or t in cfg.winner_tickers:
             return cfg
