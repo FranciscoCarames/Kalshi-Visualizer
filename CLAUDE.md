@@ -93,75 +93,49 @@ Key WNBA series: `KXWNBA` (championship), `KXWNBAPLAYOFF`/`KXWNBASEMIFINAL`/`KXW
 ## Architecture
 
 ```
-config.py          # BASE_URL, DEFAULT_SERIES, discovery prefixes, thresholds, rate-limit
-                   #   (MAX_RPS/CONCURRENCY/BACKOFF_*) + refresh (REFRESH_TTL/OPTIONS/NEAR_EDGE_MIN_C) knobs
-                   #   + engine knobs (SNAPSHOT_DB_PATH, SNAPSHOT_RETENTION_SECONDS, SCAN_MIN_INTERVAL_SECONDS,
-                   #   API_HOST/API_PORT, NICEGUI_STORAGE_SECRET_FALLBACK, UI_REFRESH_SECONDS,
-                   #   BACKLOG_WINDOWS, ALERT_PERSISTENCE_OPTIONS). IMPORT-FREE (no stdlib imports at
-                   #   top level) so serve.py can read env vars without triggering side effects.
-sports.py          # NO streamlit: SportConfig registry — Tennis, NBA, WNBA registered; sport_for_series()
-                   #   resolves a series ticker to its SportConfig (UNKNOWN when unrecognized, never silent
-                   #   tennis default); IdentityResolver, MarketClassification, LadderSpec dataclasses;
-                   #   adding a sport = register(SportConfig(...))
-kalshi_client.py   # read-only HTTP: paginated GET, Retry-After/exponential backoff, process-wide
-                   #   throttle (MAX_RPS), discover_tennis_series(), get_series_titles(), get_events_for_series()
+config.py          # All tunables: BASE_URL, DEFAULT_SERIES, thresholds, rate-limit (MAX_RPS/CONCURRENCY/
+                   #   BACKOFF_*), refresh (REFRESH_TTL/OPTIONS/NEAR_EDGE_MIN_C), + engine knobs (SNAPSHOT_DB_PATH/
+                   #   RETENTION, SCAN_MIN_INTERVAL, API_HOST/PORT, NICEGUI_STORAGE_SECRET_FALLBACK,
+                   #   UI_REFRESH_SECONDS, BACKLOG_WINDOWS, ALERT_PERSISTENCE_OPTIONS). IMPORT-FREE (see Conventions).
+sports.py          # NO streamlit: SportConfig registry (Tennis/NBA/WNBA); sport_for_series() → SportConfig
+                   #   (UNKNOWN, never a silent tennis default); IdentityResolver/MarketClassification/LadderSpec;
+                   #   add a sport = register(SportConfig(...)).
+kalshi_client.py   # read-only HTTP: paginated GET, Retry-After/exponential backoff, process-wide throttle
+                   #   (MAX_RPS), discover_tennis_series(), get_series_titles(), get_events_for_series().
 data.py            # NO streamlit/pandas: parsing, to_cents(), classify_kind/tour_of, pricing helpers,
-                   #   tournament_of()->(key,source), series_for_families(), kalshi_market_url(),
-                   #   opportunity_id() (deterministic sha1 stable across scans),
-                   #   build_contracts() (ALL events for all registered sports — stamps tournament/tournament_source)
-                   #   + fmt_time/data_age_seconds/is_stale (display-only TZ + staleness helpers)
-consistency.py     # NO streamlit: node_of, build_player_nodes, representative, expected_nodes,
-                   #   layer_spreads, build_checks (groups by [player_key, tournament]); buy-only action
-                   #   plan + tradable_now + blockers; bucket_of (dashboard routing, incl. dutch-book)
-dutchbook.py       # NO streamlit: find_dutch_books() — 2-outcome MECE arbitrage detector (a check family
-                   #   SEPARATE from the containment ladder); covers match/series AND per-game (game family);
-                   #   status EXECUTABLE_DUTCH_BOOK; see section below
-glossary.py        # NO streamlit: GLOSSARY{term:{short,long}}, BLOCKERS, WATCHLIST_NOTE, help_for
-filters.py         # NO streamlit: apply_membership (tournament/family/layer/event/participant/volume)
-                   #   / apply_thresholds (size/quote/market-status) — the two-pass filter split
-viz.py             # NO streamlit: payoff_chart_data + ladder_prices (tidy chart frames)
-fetch.py           # NO streamlit: fetch_contracts(families, scan_all, sport_id) → 7-tuple
-                   #   (df, fetched_at, errors, n_scanned, n_loaded, skipped_no_name, n_excluded_unknown).
-                   #   Extracted from app.load_contracts so the engine can fetch without Streamlit.
-                   #   app.py wraps it in a thin @st.cache_data shim.
-store.py           # NO streamlit, NO pandas: standalone SQLite snapshot store.
-                   #   write_snapshot(fetched_at, opps, *, meta, db_path), latest(), latest_two(),
-                   #   snapshots_since(window). Versioned schema via PRAGMA user_version (currently v2;
-                   #   v2 adds a `meta` coverage column; _migrate upgrades v1 → v2 via ALTER).
-                   #   Retention is relative to the newest snapshot. NaN-safe (DataFrame duck-typed via
-                   #   .to_dict). The .db file is gitignored.
-scanner.py         # NO streamlit: cross-sport aggregator. unified_opportunities(fetch_fn, *, store_writer,
-                   #   fetched_at) — runs consistency.build_checks + dutchbook.find_dutch_books across
-                   #   all_sports(), stamps sport, normalizes onto UNIFIED_COLUMNS, ranks by (bucket
-                   #   priority, gross edge ¢, opportunity_id). run_scan(fetch_fn, *, fetched_at) adds
-                   #   per-sport/series coverage aggregation. Fetch is injected; no network import.
-lifecycle.py       # NO streamlit, NO store import: pure snapshot-diff. new_actionable(prev, cur),
-                   #   persisting_new_actionable(history, window_s), blocked_change(prev, cur) (§9
-                   #   "what changed"), recently_actionable(snapshots) (§10 backlog), first_seen().
-                   #   State is derived from snapshot history — no extra persisted tables.
-api.py             # FastAPI app + Pydantic models + THIN handlers (no detection logic).
-                   #   GET /opportunities (+sport/bucket/status), /opportunities/{id} (404),
-                   #   /backlog, /coverage (honest meta_present), /alerts, /healthz;
-                   #   POST /scan (store-backed TTL guard; force= overrides; persists with coverage meta).
-                   #   DB path + scan fetch are FastAPI dependencies → overridable in tests (no network).
-serve.py           # Uvicorn entrypoint: imports webui.dashboard (registers @ui.page('/')), then calls
-                   #   ui.run_with(api.app, mount_path='/', storage_secret=…). Secret from
-                   #   NICEGUI_STORAGE_SECRET env (dev fallback in config). Run: python serve.py.
-webui/             # NiceGUI dashboard (Streamlit-free):
-  dashboard.py     #   @ui.page('/') — opportunity-first cross-sport dashboard: freshness strip, sortable
-                   #   Actionable/Blocked tables (row-click explanation panel), recently-actionable backlog,
-                   #   new-actionable + blocked-change alerts (polling), manual "Scan now" button.
-                   #   Calls the engine IN-PROCESS via webui.engine (not self-HTTP).
-  engine.py        #   In-process engine accessors (store/lifecycle/scanner wrappers) for the dashboard.
-                   #   Tests can pass a tmp db_path; db_path=None → config.SNAPSHOT_DB_PATH (live store).
-app.py             # Streamlit ONLY: sidebar controls, auto-refresh fragment, dashboard sections, chart.
-                   #   load_contracts is a thin @st.cache_data wrapper over fetch.fetch_contracts.
-                   #   Kept; retirement deferred.
-scripts/           # check_links.py (local link reachability), export_glossary.py (-> docs/GLOSSARY.md)
-docs/GLOSSARY.md   # generated in-depth glossary (also published as a Google Doc)
-tests/             # pytest (~235 tests): test_data, test_consistency, test_dutchbook, test_glossary,
-                   #   test_client, test_filters, test_viz, test_sports, test_app (Streamlit layer);
-                   #   test_store, test_scanner, test_lifecycle, test_api, test_webui (engine layer).
+                   #   tournament_of(), series_for_families(), kalshi_market_url(), opportunity_id() (sha1),
+                   #   build_contracts() (ALL events, all sports), fmt_time/data_age_seconds/is_stale.
+consistency.py     # NO streamlit: build_checks (groups by [player_key, tournament]) + node/spread helpers;
+                   #   buy-only action plan + tradable_now + blockers; bucket_of (dashboard routing).
+dutchbook.py       # NO streamlit: find_dutch_books() — 2-outcome MECE arbitrage (match/series + per-game
+                   #   "game" family); status EXECUTABLE_DUTCH_BOOK (see Dutch-book section).
+glossary.py        # NO streamlit: GLOSSARY{term:{short,long}}, BLOCKERS, WATCHLIST_NOTE, help_for.
+filters.py         # NO streamlit: apply_membership (tournament/family/layer/event/participant/volume) +
+                   #   apply_thresholds (size/quote/market-status) — the two-pass filter split.
+viz.py             # NO streamlit: payoff_chart_data + ladder_prices (tidy chart frames).
+fetch.py           # NO streamlit: fetch_contracts(families, scan_all, sport_id) → 7-tuple. Extracted from
+                   #   app.load_contracts so the engine fetches without Streamlit (app wraps it in a cache shim).
+store.py           # NO streamlit/pandas: SQLite snapshot store — write_snapshot(…, meta, db_path), latest(),
+                   #   latest_two(), snapshots_since(window). Versioned (PRAGMA user_version v2 + _migrate);
+                   #   retention vs newest; NaN-safe; .db gitignored.
+scanner.py         # NO streamlit: cross-sport aggregator — unified_opportunities(fetch_fn, *, store_writer,
+                   #   fetched_at) ranks build_checks + find_dutch_books across all_sports() onto
+                   #   UNIFIED_COLUMNS; run_scan(...) adds coverage. Fetch injected; no network import.
+lifecycle.py       # NO streamlit, NO store import: pure snapshot-diff — new_actionable, persisting_new_actionable,
+                   #   blocked_change (§9), recently_actionable (§10 backlog), first_seen.
+api.py             # FastAPI app + Pydantic models + THIN handlers: GET /opportunities (+sport/bucket/status),
+                   #   /opportunities/{id}, /backlog, /coverage, /alerts, /healthz; POST /scan. Db-path + fetch
+                   #   are injectable deps (offline tests).
+serve.py           # Uvicorn entrypoint: imports webui.dashboard, then ui.run_with(api.app, mount_path='/').
+                   #   Run: python serve.py.
+webui/             # NiceGUI dashboard (Streamlit-free): dashboard.py = @ui.page('/') opportunity-first
+                   #   cross-sport view (tables + explanation panel, backlog, alerts, freshness, Scan now);
+                   #   engine.py = in-process store/lifecycle/scanner accessors (db_path=None → live store).
+app.py             # Streamlit ONLY: per-sport dashboard; load_contracts wraps fetch.fetch_contracts. Kept.
+scripts/           # check_links.py, export_glossary.py (→ docs/GLOSSARY.md).
+docs/GLOSSARY.md   # generated glossary (also a Google Doc).
+tests/             # pytest (~235): test_{data,consistency,dutchbook,glossary,client,filters,viz,sports,app}
+                   #   + test_{store,scanner,lifecycle,api,webui} (engine layer).
 ```
 
 `sports.py`, `data.py`, `consistency.py`, `glossary.py`, `filters.py`, `viz.py`, `fetch.py`,
@@ -192,47 +166,28 @@ engine import).
   volume, open_interest, status, time_value, time_kind, kalshi_url, series, event_ticker, market_ticker,
   event_title, market_title, raw_yes_bid, raw_yes_ask, raw_no_bid, raw_no_ask, raw_last, rules_primary`.
 
-## Opportunity engine (Stages 1–5, built)
+## Opportunity engine (built — per-module detail in the Architecture tree above)
 
-The engine turns the per-sport contracts into a single persistent, ranked, queryable opportunity feed.
+The engine turns per-sport contracts into one persistent, ranked, queryable opportunity feed:
+`fetch → consistency/dutchbook → scanner → store → lifecycle → api/webui`.
 
-**Opportunity invariants (do not regress):** every row (consistency check or dutch-book finding) carries:
+**Opportunity invariants (do not regress)** — every row (consistency check or dutch-book finding) carries:
 - `opportunity_id` — deterministic sha1 (`data.opportunity_id`), stable across scans for the same pair.
 - `relationship_type` — `containment_adjacent` | `match_alignment` | `dutch_book`.
-- `bucket` — routing key: `actionable` | `blocked` | `near_edge` | `display_signal` | `wide_signal` | `data_quality` | `clean`.
-- `blocked_reason` — non-empty IFF `bucket == "blocked"` (required invariant; a test guards it).
+- `bucket` — `actionable` | `blocked` | `near_edge` | `display_signal` | `wide_signal` | `data_quality` | `clean`.
+- `blocked_reason` — non-empty **IFF** `bucket == "blocked"` (a test guards it).
 
-**Stage 1 — versioned SQLite store (`store.py`):** one snapshot per scan; each row is a persisted unified
-opportunity keyed by `opportunity_id`. Schema versioned via `PRAGMA user_version` (v2: adds `meta`
-coverage column; `_migrate` upgrades v1 → v2 via ALTER, creates fresh at v2). Retention cap relative
-to the NEWEST stored snapshot. NaN-safe; pure stdlib (no pandas import); single-writer.
-
-**Stage 2 — cross-sport scanner (`scanner.py`):** `unified_opportunities(fetch_fn)` aggregates
-`consistency.build_checks` + `dutchbook.find_dutch_books` across `sports.all_sports()` into one
-`UNIFIED_COLUMNS` frame, stamps `sport`, and ranks by (bucket priority, gross edge ¢, `opportunity_id`).
-`run_scan(fetch_fn)` adds per-sport/series coverage aggregation (scanned / loaded / failed / excluded /
-`skipped_no_name`) → `(unified_df, coverage)`. Fetch is injected (Streamlit-free, testable offline).
-
-**Stage 3 — lifecycle (`lifecycle.py`):** pure snapshot-diff over persisted history (no extra state/tables):
-`new_actionable(prev, cur)` (§8 — `prev is None` → [] to suppress first-load flood), `blocked_change`
-(§9 — "what changed": blocker/price/liquidity/status/market_status/tradable_now/rule_flag),
-`recently_actionable(snapshots)` (§10 backlog), `first_seen`, `persisting_new_actionable`.
-
-**Stage 4 — FastAPI engine API (`api.py`):** thin handlers read from the latest store snapshot (fast,
-deterministic). `POST /scan` enforces a store-backed TTL guard (skip if too soon; `force=true` overrides;
-never writes a duplicate). DB path + fetch function are FastAPI dependencies → overridable in tests
-(no network hits). Pydantic models are stable (`Opportunity`, `Coverage`, `BacklogItem`, `BlockedChange`,
-`Alerts`, `ScanResult`); Stage 6 export reuses them.
-
-**Stage 5 — NiceGUI dashboard (`webui/`):** `serve.py` mounts NiceGUI onto `api.app` via
-`ui.run_with(…, mount_path='/')`. The dashboard (`webui/dashboard.py`) calls the engine IN-PROCESS
-via `webui/engine.py` (not self-HTTP) for zero-overhead reads. Scan scope is honest: core series only
-(`scan_all=False`), labelled "core series" in the UI. Storage secret from `NICEGUI_STORAGE_SECRET` env;
-dev-only fallback constant lives in `config.py` (the env read lives in `serve.py` — `config.py` stays
-import-free).
-
-**Remaining / deferred:** Stage 6 export overhaul; per-player deep-dive port → Streamlit retirement;
-full-scan toggle in the NiceGUI dashboard.
+**Cross-cutting engine rules (do not regress):**
+- The **store is the source of truth** — the API and NiceGUI read the latest snapshot; the only
+  writer-trigger is a scan, which is **store-backed TTL-guarded** (skip if too soon, never write a
+  duplicate; `force` overrides).
+- Coverage (scanned/loaded/failed/excluded/skipped) is persisted in the snapshot `meta` column;
+  `/coverage` reports `meta_present` honestly (never fakes counts).
+- `lifecycle` is derived **purely from snapshot history** — no extra state/tables (§8 new-actionable,
+  §9 blocked-change "what changed", §10 recently-actionable backlog).
+- `api.py` handlers are **thin** (no detection logic); db-path + fetch are injectable dependencies so
+  tests run offline. Pydantic models are stable (Stage-6 export reuses them).
+- NiceGUI calls the engine **in-process** (not self-HTTP); its scan is **core series only**, labelled honestly.
 
 ## Pricing model
 
@@ -381,25 +336,21 @@ chart was **removed** (Stage 0 — misleading; Actionable table is the ranking s
 - Always loop the `cursor` for pagination; the client raises if the `MAX_PAGES` cap is hit with a cursor
   still pending (no silent partial data).
 - **Failed series are surfaced in the Debug expander, never silently dropped** (hard requirement).
-- **Streamlit caches imported modules in the running server.** After editing `data.py`/`consistency.py`/…,
-  a browser "Rerun" won't pick it up — **fully stop and restart** `streamlit run app.py`. For a phantom
-  `ImportError`, clear stale bytecode too: `rm -rf __pycache__ tests/__pycache__`. (This already cost time once.)
+- **Restart the running server after editing imported modules** — both `streamlit run app.py` and
+  `python serve.py` (uvicorn) cache modules, so a browser "Rerun" / refresh won't pick up edits. Fully
+  stop and restart; for a phantom `ImportError` clear stale bytecode too (`rm -rf __pycache__
+  tests/__pycache__`). (This already cost time once.)
+- **Engine vs Streamlit separation:** `store`/`scanner`/`lifecycle`/`fetch`/`api.py`/`webui/` are
+  engine modules — they must not import `streamlit`; `app.py` is Streamlit-only and must not be imported
+  by the engine (`webui/engine.py` imports `api.fetch_dep`, NOT `app`). **`config.py` must stay
+  import-free** at the top level (so `serve.py` can read env vars before any engine import). The snapshot
+  **`.db` is gitignored** (`config.SNAPSHOT_DB_PATH`) — never commit it.
 - The FO date window in `config.py` is year-specific — update for future tournaments.
 - The Kalshi **web** site (`kalshi.com`) is bot-throttled (HTTP 429), so automated link-reachability
-  checks from this environment are unreliable (everything 429s — not a broken link). Links now point at
+  checks from this environment are unreliable (everything 429s — not a broken link). Links point at
   the specific market via the verified deep-link format (see API section); `data.link_audit` proves
   link *correctness* (URL ↔ contract identifiers) deterministically, and `scripts/check_links.py` does a
   best-effort live reachability check meant to be run from your own (unthrottled) network.
-- **`config.py` must stay import-free** at the top level — `serve.py` imports it before any network
-  module to read `NICEGUI_STORAGE_SECRET_FALLBACK`, so a stdlib import there would not cause breakage
-  but the convention keeps config trivially safe to import anywhere.
-- **The snapshot `.db` is gitignored** — never commit it. `config.SNAPSHOT_DB_PATH` controls its location.
-- **Engine vs Streamlit separation:** `store`/`scanner`/`lifecycle`/`fetch`/`api.py`/`webui/` are
-  engine modules — they must not import `streamlit`. `app.py` is Streamlit-only and must not be imported
-  by the engine. `webui/engine.py` imports `api.fetch_dep` but NOT `app`.
-- **Restarting after engine edits:** Uvicorn (`python serve.py`) also caches modules. After editing
-  `scanner.py`/`store.py`/etc., fully stop and restart `python serve.py`. Clear `__pycache__` if
-  you see a phantom `ImportError`.
 - Windows LF→CRLF warnings on commit are harmless.
 
 ## Claude Code specifics
@@ -420,23 +371,11 @@ chart was **removed** (Stage 0 — misleading; Actionable table is the ranking s
 
 ## Repository status
 
-`main` is **feature-complete through Stage 4** (PRs #35–#40 merged). Shipped and on main:
-
-- All-tennis generalization (`tournament_of`, grouping by player+tournament, fetch-by-family)
-- Multi-sport abstraction (`sports.py`): Tennis, NBA, WNBA registered via `SportConfig`
-- Dutch-book / MECE detector (`dutchbook.py`): 2-outcome books on match/series AND per-game (`KX*GAME`)
-- Stage 0 dashboard clarity: Lisbon default timezone, per-second data freshness strip, "Show IDs &
-  codes" toggle, opportunity-ranking graph removed, debug+diagnostics behind Advanced
-- Stage 1 (#37): `fetch.py` extraction + versioned SQLite `store.py` (schema v2 with `meta` column)
-- Stage 2 (#38): `scanner.py` — cross-sport `unified_opportunities` + `run_scan` with coverage
-- Stage 3 (#39): `lifecycle.py` — `new_actionable`, `blocked_change`, `recently_actionable`, `first_seen`
-- Stage 4 (#40): `api.py` — FastAPI REST API with store-backed TTL guard on `POST /scan`
-
-**Stage 5 open:** PR #41 — `serve.py` + `webui/` (NiceGUI dashboard). Not yet merged; owner merges manually.
-
-`pytest` ≈235 tests (Streamlit layer: `test_data`, `test_consistency`, `test_dutchbook`, `test_glossary`,
-`test_client`, `test_filters`, `test_viz`, `test_sports`, `test_app`; engine layer: `test_store`,
-`test_scanner`, `test_lifecycle`, `test_api`, `test_webui`).
+`main` is **feature-complete through Stage 4** (PRs #35–#40 merged): all-tennis generalization,
+multi-sport (`sports.py`), dutch-book detector, Stage-0 clarity, and engine Stages 1–4 (opportunity
+schema + SQLite store, cross-sport scanner, lifecycle, FastAPI API). **Stage 5 (#41 — `serve.py` +
+`webui/` NiceGUI dashboard) is open** — owner merges manually. ~235 tests (file list: the `tests/` entry
+in the Architecture tree). See the Iteration history below for what each stage delivered.
 
 **Remaining / deferred:** Stage 6 export overhaul; per-player deep-dive port → Streamlit retirement;
 full-scan toggle in the NiceGUI dashboard.
@@ -465,41 +404,11 @@ full-scan toggle in the NiceGUI dashboard.
     sidebar cleanup (merged participant control, Active-only default with finalized still visible in
     diagnostics, Advanced last, scan-all + all-families default), **Actionable ranked by edge**, and an
     **opportunity-ranking chart** (`viz.opportunity_ranking` + Altair). Min-gross-edge control removed.
-13. **Multi-sport generalization** (`sports.py`): `SportConfig` abstraction with `IdentityResolver`,
-    `LadderSpec`, `MarketClassification`; Tennis, NBA, and WNBA registered as first-class sports.
-    `sport_for_series()` resolves any series ticker to its sport (explicit `UNKNOWN` when unrecognized —
-    no silent tennis default). Engine (`data.py`, `consistency.py`) reads sport config off the registry;
-    no sport name is hardcoded in the engine. NBA ladder: Reach Playoffs ⊇ Win Conference ⊇ Win
-    Championship; WNBA ladder: Reach Playoffs ⊇ Reach Semifinals ⊇ Reach Finals ⊇ Win Championship.
-14. **Dutch-book / MECE detector** (`dutchbook.py`): `find_dutch_books()` detects executable arbitrage
-    on 2-outcome MECE events — head-to-head matches/series (tennis, NBA/WNBA) AND per-game (`KX*GAME`)
-    markets (milestone m1.1). Both underround (Buy YES both) and overround (Buy NO both) directions;
-    dedicated dashboard section; `EXECUTABLE_DUTCH_BOOK` status. Per-game eligibility is sport-agnostic
-    via the `"game"` family — tennis is unaffected (no game family in its config).
-15. **Stage 0 dashboard clarity**: Lisbon default timezone + per-second freshness/coverage strip so data
-    age is always visible; "Show IDs & codes" toggle collapses internal identifiers by default;
-    opportunity-ranking bar chart removed (misleading; Actionable table is the ranking surface); debug +
-    full diagnostics moved behind the Advanced expander.
-16. **Stage 1 — opportunity schema + SQLite store** (`fetch.py`, `store.py`): `fetch_contracts` extracted
-    from `app.load_contracts` (Streamlit-free, injected into the engine; `app.py` keeps a thin
-    `@st.cache_data` wrapper). Versioned SQLite store (`PRAGMA user_version`; v2 + `_migrate`). Every
-    opportunity row carries a stable `opportunity_id` (sha1), `relationship_type`, `bucket`, and
-    `blocked_reason`. Retention relative to the newest snapshot; NaN-safe; pure stdlib.
-17. **Stage 2 — cross-sport scanner** (`scanner.py`): `unified_opportunities` + `run_scan` aggregate
-    `consistency.build_checks` + `dutchbook.find_dutch_books` across all registered sports into one
-    ranked `UNIFIED_COLUMNS` frame (bucket priority → gross edge ¢ → id). Per-sport failures are
-    isolated; fetch is injected (Streamlit-free, unit-testable). Coverage dict (scanned/loaded/failed/
-    excluded/skipped_no_name + per-series errors) persisted in the snapshot `meta` column.
-18. **Stage 3 — lifecycle** (`lifecycle.py`): pure snapshot-diff over persisted history (no extra tables).
-    `new_actionable` (§8 — `prev is None` → [] suppresses first-load flood), `blocked_change` (§9,
-    tracks blocker/price/liquidity/status/market_status/tradable_now/rule_flag changes),
-    `recently_actionable` (§10 backlog), `first_seen`, `persisting_new_actionable` (banner persistence window).
-19. **Stage 4 — FastAPI engine API** (`api.py`): thin read endpoints (`/opportunities`, `/backlog`,
-    `/coverage`, `/alerts`, `/healthz`) serve the latest store snapshot. `POST /scan` enforces a
-    store-backed TTL guard (skip → `skipped:true`; `force=true` overrides; no duplicate writes). DB path
-    + fetch are FastAPI dependencies → overridable in tests (no network). Pydantic models are stable.
-20. **Stage 5 — NiceGUI cross-sport dashboard** (`serve.py`, `webui/`): `ui.run_with(api.app)` mounts
-    NiceGUI at `/` alongside the REST API on one uvicorn process. Dashboard reads engine IN-PROCESS via
-    `webui/engine.py`; sortable Actionable/Blocked tables, row-click explanation panel, recently-actionable
-    backlog, new-actionable + blocked-change alerts (polling), per-second freshness strip, manual "Scan
-    now" (core series, labelled honestly). Storage secret from `NICEGUI_STORAGE_SECRET` env.
+13. **Multi-sport** (`sports.py`): `SportConfig` registry (Tennis/NBA/WNBA) with `IdentityResolver`/`LadderSpec`/`MarketClassification`; `sport_for_series` resolves any ticker (explicit `UNKNOWN`, no silent tennis default); the engine reads sport config off the registry (no hardcoded sport).
+14. **Dutch-book detector** (`dutchbook.py`): 2-outcome MECE arbitrage on matches/series + per-game (`KX*GAME`, m1.1); under/overround; dedicated section; `EXECUTABLE_DUTCH_BOOK`; sport-agnostic via the `"game"` family.
+15. **Stage 0 clarity**: Lisbon-default TZ + per-second freshness/coverage strip, "Show IDs & codes" toggle, ranking chart removed, debug/diagnostics behind Advanced.
+16. **Stage 1 — opportunity schema + SQLite store** (`fetch.py`, `store.py`): stable `opportunity_id`/`relationship_type`/`bucket`/`blocked_reason`; `fetch_contracts` extracted from `app.load_contracts`; versioned store (v2 + `_migrate`), retention, NaN-safe.
+17. **Stage 2 — cross-sport scanner** (`scanner.py`): `unified_opportunities`/`run_scan` aggregate + rank across sports (bucket priority → edge → id); per-sport failures isolated; coverage persisted in `meta`.
+18. **Stage 3 — lifecycle** (`lifecycle.py`): pure snapshot-diff — new-actionable (§8), blocked-change (§9), recently-actionable (§10), first-seen, persisting-new-actionable.
+19. **Stage 4 — FastAPI engine API** (`api.py`): thin read endpoints serving the latest snapshot + store-backed-TTL `POST /scan`; injectable deps (offline tests); stable Pydantic models.
+20. **Stage 5 — NiceGUI cross-sport dashboard** (`serve.py`, `webui/`): mounted on `api.app` at `/`; in-process reads; sortable tables + explanation panel, backlog, alerts, freshness strip, honest core-series "Scan now".
