@@ -10,6 +10,7 @@ Run: `python serve.py` (or `uvicorn api:app`). OpenAPI docs at `/docs`.
 """
 from __future__ import annotations
 
+import time
 from typing import Any, Callable
 
 from fastapi import Depends, FastAPI, HTTPException, Response
@@ -24,6 +25,7 @@ import scan_manager
 import scanner
 import sports
 import store
+from webui import diagnostics
 
 app = FastAPI(title="Kalshi opportunity engine", version="4.0")
 
@@ -86,6 +88,28 @@ class Coverage(BaseModel):
     kalshi_requests: int = 0
     sport_errors: list[dict[str, Any]] = []
     series_errors: list[dict[str, Any]] = []
+
+
+class Metrics(BaseModel):
+    """Low-cardinality monitoring payload (PR 25a) — counters + scan heartbeat, no per-row data. Distinct
+    from `/coverage` (which carries the full failure lists): `/metrics` is for dashboards/alerting."""
+    model_config = ConfigDict(extra="ignore")
+    snapshot_id: int | None = None
+    snapshot_age_seconds: float | None = None
+    stale: bool | None = None
+    opportunities: int = 0
+    actionable: int = 0
+    contracts_scanned: int = 0
+    checks_tested: int = 0
+    kalshi_requests: int = 0
+    scanned_series: int = 0
+    failed_series: int = 0
+    sport_error_count: int = 0
+    scan_status: str = "idle"
+    scan_since: float | None = None
+    scan_in_progress_seconds: float | None = None
+    last_scan_error: str | None = None
+    viewer_count: int | None = None
 
 
 class BacklogItem(BaseModel):
@@ -207,6 +231,18 @@ def get_coverage(db_path: str | None = Depends(db_path_dep)):
                     checks_tested=meta.get("checks_tested", 0),
                     kalshi_requests=meta.get("kalshi_requests", 0),
                     sport_errors=meta.get("sport_errors", []), series_errors=meta.get("series_errors", []))
+
+
+@app.get("/metrics", response_model=Metrics)
+def get_metrics(db_path: str | None = Depends(db_path_dep)):
+    """Low-cardinality scan-health metrics for monitoring (PR 25a). Built from the store + scan-manager
+    status directly (mirrors `/coverage`; no engine import → no cycle). Honest when there is no scan."""
+    snap = store.latest(db_path=db_path)
+    age = data.data_age_seconds(snap["fetched_at"]) if snap else None
+    stale = data.is_stale(age, config.STALE_AFTER_SECONDS) if age is not None else None
+    return Metrics(**diagnostics.build_metrics(
+        snapshot=snap, scan_status=scan_manager.manager.status(), now_age=age,
+        stale=stale, now=time.time()))
 
 
 @app.get("/alerts", response_model=Alerts)

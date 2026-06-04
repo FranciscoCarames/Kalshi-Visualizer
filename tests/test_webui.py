@@ -202,3 +202,42 @@ def test_frame_availability_and_payoff_for_opp(tmpdb):
     assert pay and pay["cost_c"] == 95
     # An unmatched / dutch-book opp has no matched checks row → None (so the dashboard guards the chart).
     assert engine.payoff_for_opp({"opportunity_id": "zzz", "sport": "tennis", "participant_key": "p1"}) is None
+
+
+# --- observability accessors (PR 25a) -------------------------------------------------
+import scan_manager  # noqa: E402
+
+
+def test_engine_metrics_diagnostics_and_category(tmpdb):
+    engine._FRAME_CACHE.clear()
+    scan_manager.manager.reset()
+    contracts = [
+        {"ladder_eligible": True, "mapping_confidence": "high", "series": "KXATPADVANCE", "market_family": "advance"},
+        {"ladder_eligible": False, "mapping_confidence": "low", "series": "KXZZUNKNOWN", "market_family": "props"},
+    ]
+    store.write_snapshot("2026-06-04 12:00:00 UTC",
+                         [op("a", bucket="actionable"), op("b", bucket="blocked")],
+                         meta={"scanned": 5, "loaded": 4, "failed": 1, "kalshi_requests": 12,
+                               "contracts_scanned": 2, "checks_tested": 3,
+                               "sport_errors": [{"sport": "nba", "error": "x"}],
+                               "series_errors": [{"sport": "tennis", "series": "KXX", "error": "y"}]},
+                         frames=[{"sport": "tennis", "frame_type": "contracts", "schema_version": 1,
+                                  "rows": contracts}])
+    m = engine.metrics()
+    assert m["snapshot_id"] and m["opportunities"] == 2 and m["actionable"] == 1
+    assert m["kalshi_requests"] == 12 and m["failed_series"] == 1 and m["sport_error_count"] == 1
+    assert m["scan_status"] == "idle"                        # no scan run through the manager
+
+    d = engine.diagnostics()
+    assert d["sport_errors"][0]["sport"] == "nba" and d["series_errors"][0]["series"] == "KXX"
+
+    c = engine.category_breakdown()
+    assert c["total"] == 2 and c["laddered"] == 1 and c["non_laddered"] == 1
+    assert c["low_confidence"] == 1 and c["unsupported"] == 1
+
+
+def test_engine_metrics_honest_when_empty(tmpdb):
+    scan_manager.manager.reset()
+    m = engine.metrics()
+    assert m["snapshot_id"] is None and m["opportunities"] == 0 and m["scan_status"] == "idle"
+    assert engine.diagnostics()["sport_errors"] == [] and engine.category_breakdown()["total"] == 0

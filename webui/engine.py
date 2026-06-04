@@ -9,6 +9,7 @@ Scan scope is honest: the scan fetch is `api.fetch_dep()` → **core series only
 """
 from __future__ import annotations
 
+import time
 from typing import Any
 
 import config
@@ -18,6 +19,7 @@ import lifecycle
 import scan_manager
 import store
 from api import _scan_run_fn, _scan_write_fn, fetch_dep
+from webui import diagnostics as diagnostics_mod
 
 
 def latest_opportunities(db_path: str | None = None) -> list[dict[str, Any]]:
@@ -130,6 +132,32 @@ def payoff_for_opp(opp: dict[str, Any], db_path: str | None = None) -> dict[str,
     oid = opp.get("opportunity_id")
     match = next((c for c in participant_checks(sport, pkey, db_path) if c.get("opportunity_id") == oid), None)
     return consistency.scenario_payoffs(match, opp.get("exec_min_size")) if match else None
+
+
+# --- observability accessors (PR 25a) — thin wrappers over the pure diagnostics builders ---------------
+def diagnostics(db_path: str | None = None) -> dict[str, Any]:
+    """The latest snapshot's scan failure lists (sport/series errors, skipped, excluded) — surfaced for the
+    debug UI (PR 25b), which `coverage()` curates away."""
+    return diagnostics_mod.build_failures(store.latest(db_path=db_path))
+
+
+def category_breakdown(db_path: str | None = None) -> dict[str, Any]:
+    """Honest contract-category counts over the latest snapshot's stored contracts frames (all sports):
+    non-laddered vs low-confidence vs unsupported as separate axes, plus per-family counts."""
+    rows: list[dict[str, Any]] = []
+    for f in frames(db_path=db_path):
+        if f.get("frame_type") == "contracts":
+            rows.extend(f.get("rows") or [])
+    return diagnostics_mod.build_category_breakdown(rows)
+
+
+def metrics(db_path: str | None = None) -> dict[str, Any]:
+    """The low-cardinality monitoring payload (counters + scan heartbeat) for the latest snapshot."""
+    snap = store.latest(db_path=db_path)
+    age = data.data_age_seconds(snap["fetched_at"]) if snap else None
+    return diagnostics_mod.build_metrics(
+        snapshot=snap, scan_status=scan_manager.manager.status(), now_age=age,
+        stale=data.is_stale(age, config.STALE_AFTER_SECONDS), now=time.time())
 
 
 def run_scan_now(db_path: str | None = None) -> dict[str, Any]:
