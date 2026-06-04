@@ -232,10 +232,13 @@ UNKNOWN = SportConfig(
 # TENNIS — registered from the current constants, verbatim behavior
 # ============================================================================================
 
+# Order matters: `extract_round` returns the FIRST match, so the more-specific rounds MUST precede the
+# generic "Final". A hyphen is a word boundary, so a bare `\bfinal\b` would otherwise swallow
+# "semi-final" / "quarter-final" and mis-label them "Final" — list Quarterfinal/Semifinal first.
 _TENNIS_ROUND_PATTERNS = (
-    ("Final", r"\bfinal\b"),
-    ("Semifinal", r"\bsemi-?final(?:s)?\b"),
     ("Quarterfinal", r"\bquarter-?final(?:s)?\b"),
+    ("Semifinal", r"\bsemi-?final(?:s)?\b"),
+    ("Final", r"\bfinal\b"),
     ("Round of 16", r"\bround of 16\b|\bfourth round\b"),
     ("Round of 32", r"\bround of 32\b|\bthird round\b"),
     ("Round of 64", r"\bround of 64\b|\bsecond round\b"),
@@ -335,11 +338,13 @@ TENNIS = register(SportConfig(
 # Per-game (KXNBAGAME), spreads/totals, props, awards, draft → NOT laddered (ineligible).
 # Team identity: custom_strike.basketball_team (stable UUID, shared across a team's series).
 
-# Conference-Finals patterns must be checked BEFORE the generic "Finals" so they don't collide.
+# Order matters: `extract_round` returns the FIRST match, so the conference rounds MUST precede the
+# generic "Finals" — otherwise `\bfinals\b` swallows "Conference Finals" and (across the hyphen)
+# "Conference Semi-finals". Conference Semifinals carries `semi-?finals?` to catch the hyphenated form.
 _NBA_ROUND_PATTERNS = (
     ("Conference Finals", r"conference finals|\bconf\.? finals\b|\b[ew]cf\b"),
+    ("Conference Semifinals", r"conference semi-?finals?|2nd round|second round|\br2\b"),
     ("Finals", r"\bnba finals\b|\bthe finals\b|championship series|\bfinals\b"),
-    ("Conference Semifinals", r"conference semifinals|2nd round|second round|\br2\b"),
     ("First Round", r"1st round|first round|\br1\b"),
 )
 _NBA_STAGE_RANK = {
@@ -433,9 +438,11 @@ NBA = register(SportConfig(
 #   ⊇ Win Championship (KXWNBA).
 # KXWNBASERIES = playoff series head-to-head; KXWNBAGAME/props = ineligible. No conference rung.
 
+# Order matters: Semifinals MUST precede the generic "Finals" — a hyphen is a word boundary, so a bare
+# `\bfinals\b` would otherwise swallow "semi-finals" and mis-label it "Finals".
 _WNBA_ROUND_PATTERNS = (
-    ("Finals", r"\bfinals\b"),
     ("Semifinals", r"\bsemi-?finals?\b"),
+    ("Finals", r"\bfinals\b"),
     ("First Round", r"\b1st round\b|\bfirst round\b|\bround 1\b|\br1\b"),
 )
 _WNBA_STAGE_RANK = {"Playoffs": 1, "First Round": 2, "Semifinals": 3, "Finals": 4, "Champion": 5}
