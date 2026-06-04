@@ -11,6 +11,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 import api
+import scan_manager
 import store
 
 
@@ -49,9 +50,11 @@ def client(tmp_path):
     db = str(tmp_path / "api.db")
     api.app.dependency_overrides[api.db_path_dep] = lambda: db
     api.app.dependency_overrides[api.fetch_dep] = lambda: _stub_fetch
+    scan_manager.manager.reset()                 # the singleflight is a singleton — isolate each test
     c = TestClient(api.app)
     yield c, db
     api.app.dependency_overrides.clear()
+    scan_manager.manager.reset()
 
 
 def test_healthz_and_docs(client):
@@ -126,24 +129,34 @@ def test_alerts(client):
 
 def test_scan_writes_via_stub_fetch(client):
     c, db = client
-    res = c.post("/scan").json()    # no prior snapshot -> runs
-    assert res["skipped"] is False and res["opportunities"] >= 1
-    assert res["scanned"] >= 2 and res["loaded"] >= 2
-    # the scan persisted a snapshot with coverage meta
+    # PR 21b: non-blocking 202. ?wait=true joins the (fast stub) scan so the assertion is deterministic.
+    res = c.post("/scan?wait=true")
+    assert res.status_code == 202
+    st = res.json()
+    assert st["status"] == "done" and st["last_snapshot_id"] is not None
     assert store.latest(db_path=db) is not None
     assert c.get("/coverage").json()["meta_present"] is True
+    # GET /scan/status reflects the completed scan (coverage carried in last_result).
+    status = c.get("/scan/status").json()
+    assert status["status"] == "done" and status["last_result"]["scanned"] >= 2
 
 
 def test_scan_ttl_guard_skip_and_force(client):
     c, db = client
     store.write_snapshot(time.time(), [op("a")], db_path=db)   # a very recent snapshot
     before = len(store.snapshots_since(10 ** 9, db_path=db))
-    skipped = c.post("/scan").json()
-    assert skipped["skipped"] is True
+    skipped = c.post("/scan")
+    assert skipped.status_code == 202 and skipped.json()["status"] == "skipped"
+    assert skipped.json()["reason"] == "ttl"
     assert len(store.snapshots_since(10 ** 9, db_path=db)) == before   # wrote NOTHING
-    forced = c.post("/scan?force=true").json()
-    assert forced["skipped"] is False
+    forced = c.post("/scan?force=true&wait=true").json()
+    assert forced["status"] == "done"
     assert len(store.snapshots_since(10 ** 9, db_path=db)) == before + 1   # force scanned + wrote
+
+
+def test_scan_status_idle_before_any_scan(client):
+    c, _ = client
+    assert c.get("/scan/status").json()["status"] == "idle"
 
 
 def test_empty_store_endpoints_are_honest(client):

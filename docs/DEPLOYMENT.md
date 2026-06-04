@@ -127,10 +127,20 @@ Run with `-e NICEGUI_STORAGE_SECRET=...`, a persistent volume for `snapshots.db`
 ## 4. Scheduled auto-scan (keeps data fresh)
 
 The dashboard only updates when a scan runs; the UI's own timer just re-reads the store. So schedule an
-external call to `POST /scan` (it's TTL-guarded at 30s and the throttle keeps it under the rate limit).
+external call to `POST /scan`.
 
-- **Recommended interval: every 2–5 minutes.**
+**`POST /scan` is NON-BLOCKING (202).** It returns immediately with
+`202 {status, since, last_snapshot_id}` and runs the scan in a background thread; the cron just
+fire-and-forgets. A process-local **singleflight** collapses overlapping triggers (cron + a dashboard
+"Scan now") to ONE upstream fetch, and a store-backed **TTL guard** (30s) + a **scan budget** keep it
+under Kalshi's rate limit. Observe progress with `GET /scan/status` (`status` ∈
+`in_progress|done|skipped|error`). `?force=true` overrides the TTL/budget; `?wait=true` blocks up to
+`SCAN_WAIT_TIMEOUT_SECONDS` (then still returns 202).
+
+- **Recommended interval: every 2–5 minutes.** (Pick one comfortably longer than a real scan — measure
+  with `python scripts/benchmark_scan.py`.)
 - **Linux cron** (every 3 min): `*/3 * * * * curl -s -X POST http://localhost:8000/scan >/dev/null`
+  (the cron doesn't wait — the 202 returns at once; the scan finishes in the background).
 - **Windows Task Scheduler:** a 3-min recurring task running
   `powershell -Command "Invoke-RestMethod -Method Post http://localhost:8000/scan"`.
 - Scan scope = **core series, all sports** (tennis + NBA + WNBA + golf + soccer). Full-scan breadth is a
