@@ -23,7 +23,19 @@ Gates before any emit (any failure → silent skip, never a false positive):
      missing / duplicate / extra → skip.
   3. **Hedge present + same round** — a match-winner row for the player in the same match (joined by the
      event's player-key set); a stage/round mismatch is a hard rules-conflict → skip.
-  4. **Firm executable ask per leg** for a direction; a leg priced but with no size / inactive → the
+  4. **Bundle proven SAFE (`_unsafe_reason`)** — three hard suppression gates that prove a bundle's legs
+     cannot settle as a clean 0-or-100¢ MECE set, applied to the score legs + hedge together. Each only
+     suppresses on PROVEN-unsafe evidence (absent metadata never suppresses — a legacy/sparse row passes):
+       a. **Per-leg binary settlement** — any leg whose `market_type` is present and ≠ ``"binary"`` can
+          settle scalar / fair-price, breaking the bundle math (`fractional_trading_enabled` is True for
+          normal exact-score markets, so it is NOT a gate — only `market_type` is).
+       b. **Close-time sync** — the legs must close/resolve at ~the same time (within
+          ``_CLOSE_TIME_TOLERANCE_S``) to settle together; clearly-divergent `close_time` → suppress.
+       c. **Settlement-rule divergence** — a divergent `data.rule_tokens(rules_primary)` set across the
+          legs (one voids on retirement, another doesn't) is a hard mismatch → suppress. (The residual
+          matching-but-unverified case keeps the always-present `SETTLEMENT_CHECK_REQUIRED` caveat.)
+     A suppressed bundle is recorded in the optional `_diag` (Debug / live smoke), never shown.
+  5. **Firm executable ask per leg** for a direction; a leg priced but with no size / inactive → the
      finding is emitted **blocked/review** (visible), not dropped.
 
 NO streamlit / pandas imports — independently testable. Exact-score shape (verified live, French Open
@@ -32,6 +44,7 @@ NO streamlit / pandas imports — independently testable. Exact-score shape (ver
 from __future__ import annotations
 
 import re
+from datetime import datetime
 from typing import Any
 
 import data
@@ -45,6 +58,11 @@ CHECK_TYPE = "synthetic_bundle"
 # A set score is "<sets won by winner>-<sets won by loser>", each a single digit (0–3 in practice).
 _SCORELINE_RE = re.compile(r"\b([0-9])\s*-\s*([0-9])\b")
 _NO_FIRM_QUALITY = ("No quote", "Crossed")  # a leg with this quote has no usable resting order
+
+# Legs of one bundle must settle together for the hedge to hold. `close_time` is the SCHEDULED close,
+# identical across markets of the same match, so a generous tolerance suppresses only clearly-different
+# times (different match / day) while never false-suppressing a real same-match bundle (6h ≫ any match).
+_CLOSE_TIME_TOLERANCE_S = 6 * 3600
 
 
 # ============================================================================================
@@ -128,6 +146,83 @@ def _buy_text(side: str, contract: str, price_c: int | None) -> str:
 
 
 # ============================================================================================
+# Safety gates (PR: synthetic hardening 2) — prove the bundle's legs settle as a clean MECE set.
+# Each gate suppresses ONLY on proven-unsafe evidence; absent metadata never suppresses (so a legacy
+# row without the captured fields passes, preserving behavior). A suppressed bundle is recorded in
+# `_diag` and never shown — distinct from the residual settlement *risk* that keeps the review caveat.
+# ============================================================================================
+def _record(diag: dict | None, kind: str, event_ticker: str, reason: str) -> None:
+    """Fold a suppressed bundle into the optional `_diag` (Debug / live smoke). Mirrors dutchbook."""
+    if diag is not None:
+        diag.setdefault(kind, []).append({"event_ticker": event_ticker, "reason": reason})
+
+
+def _nonbinary_leg(leg_rows: list[dict]) -> str | None:
+    """The label of the first leg that can settle non-binary (scalar / fair-price), else None.
+
+    Keys on ``market_type`` only: a value present and not ``"binary"`` proves the leg won't settle
+    0-or-100¢. ``fractional_trading_enabled`` is True for normal exact-score markets (verified live), so
+    it is deliberately NOT a gate. Absent/blank ``market_type`` is unprovable → not unsafe → passes.
+    """
+    for r in leg_rows:
+        mt = str(r.get("market_type") or "").strip().lower()
+        if mt and mt != "binary":
+            return f"{_leg_label(r)} (market_type={mt})"
+    return None
+
+
+def _parse_iso(ts: Any) -> datetime | None:
+    """Parse an ISO-8601 close/expiration timestamp (accepts a trailing ``Z``), else None."""
+    if not ts:
+        return None
+    try:
+        return datetime.fromisoformat(str(ts).replace("Z", "+00:00"))
+    except (ValueError, TypeError):
+        return None
+
+
+def _close_times_diverge(leg_rows: list[dict]) -> bool:
+    """True only when EVERY leg has a parseable ``close_time`` and their spread exceeds the tolerance.
+
+    Partial / unparseable times are unprovable → False (don't suppress). Mixed tz-aware/naive raises on
+    ``max`` → treated as unprovable.
+    """
+    times = [_parse_iso(r.get("close_time")) for r in leg_rows]
+    if any(t is None for t in times) or len(times) < 2:
+        return False  # can't prove divergence without a clean time on every leg
+    try:
+        spread = (max(times) - min(times)).total_seconds()
+    except TypeError:
+        return False  # mixed aware/naive — unprovable
+    return spread > _CLOSE_TIME_TOLERANCE_S
+
+
+def _rule_token_divergence(leg_rows: list[dict]) -> set[str]:
+    """Settlement-nuance tokens NOT shared by all legs (empty = the legs agree, so no divergence).
+
+    Reuses the shared ``data.rule_tokens`` helper. A non-empty result means at least one leg carries a
+    settlement nuance (retire / walkover / cancel …) the others don't — a hard rules mismatch.
+    """
+    sets = [data.rule_tokens(r.get("rules_primary")) for r in leg_rows]
+    union = set().union(*sets) if sets else set()
+    shared = set.intersection(*sets) if sets else set()
+    return union - shared
+
+
+def _unsafe_reason(leg_rows: list[dict]) -> str | None:
+    """The first hard-suppression reason for this bundle's legs (score legs + hedge), or None if safe."""
+    label = _nonbinary_leg(leg_rows)
+    if label is not None:
+        return f"non-binary leg: {label}"
+    if _close_times_diverge(leg_rows):
+        return "legs resolve at different times"
+    diff = _rule_token_divergence(leg_rows)
+    if diff:
+        return f"settlement-rule divergence: {', '.join(sorted(diff))}"
+    return None
+
+
+# ============================================================================================
 # Detector (Task 3a) — match-winner hedge, both directions
 # ============================================================================================
 def _direction(direction: str, state_rows: list[dict], hedge_row: dict, n: int) -> dict[str, Any] | None:
@@ -160,7 +255,8 @@ def _direction(direction: str, state_rows: list[dict], hedge_row: dict, n: int) 
 
 
 def _detect_player_bundle(event_ticker: str, cfg: Any, player_key: str,
-                          score_rows: list[dict], hedge_row: dict) -> dict[str, Any] | None:
+                          score_rows: list[dict], hedge_row: dict,
+                          diag: dict | None = None) -> dict[str, Any] | None:
     """One player's bundle vs their match-winner hedge, or None when a gate fails / no direction fires."""
     expected = expected_states(cfg, score_rows[0].get("tour"), score_rows[0].get("tournament"))
     if not expected:
@@ -180,6 +276,14 @@ def _detect_player_bundle(event_ticker: str, cfg: Any, player_key: str,
         return None
 
     state_rows = [found[s] for s in expected]  # canonical order
+
+    # gate 4: the bundle's legs must settle as a clean MECE set. A proven-unsafe leg (non-binary
+    # settlement / split close-time / divergent settlement rules) is SUPPRESSED (recorded in _diag),
+    # never shown — distinct from the residual settlement risk that keeps the review caveat.
+    reason = _unsafe_reason(state_rows + [hedge_row])
+    if reason is not None:
+        _record(diag, "suppressed", event_ticker, f"{player_key}: {reason}")
+        return None
     fired = [c for c in (_direction("forward", state_rows, hedge_row, len(expected)),
                          _direction("reverse", state_rows, hedge_row, len(expected)))
              if c is not None and c["gap_c"] > 0]
@@ -286,12 +390,14 @@ def _match_hedge_index(rows: list[dict]) -> dict[str, dict]:
     return index
 
 
-def find_synthetic_bundles(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def find_synthetic_bundles(rows: list[dict[str, Any]],
+                           _diag: dict | None = None) -> list[dict[str, Any]]:
     """Scan per-player contract rows; return synthetic-bundle findings (possibly empty).
 
     Groups exact-score rows by event and by ``player_key`` (UUID — NOT the display name, which carries
     the scoreline subtitle), joins each player's bundle to their match-winner hedge, and emits at most one
-    finding per (player, best-firing direction).
+    finding per (player, best-firing direction). The optional ``_diag`` dict collects bundles SUPPRESSED
+    by a hard safety gate (`{"suppressed": [{event_ticker, reason}, …]}`) for Debug / live smoke.
     """
     rows = rows or []
     score_rows = [r for r in rows if r.get("kind") == "exact_score"]
@@ -313,7 +419,7 @@ def find_synthetic_bundles(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
             if hedge_row is None:
                 continue  # no match-winner hedge for this player → skip (advance hedge is a later PR)
             cfg = sports.sport_for_series(player_rows[0].get("series"))
-            finding = _detect_player_bundle(event_ticker, cfg, player_key, player_rows, hedge_row)
+            finding = _detect_player_bundle(event_ticker, cfg, player_key, player_rows, hedge_row, _diag)
             if finding is not None:
                 out.append(finding)
 

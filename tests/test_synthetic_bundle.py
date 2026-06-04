@@ -63,8 +63,8 @@ def test_expected_states_none_when_format_unprovable_or_unsupported():
 def score_market(player_key, score, *, event="KXATPEXACTMATCH-26X", series="KXATPEXACTMATCH",
                  tour="ATP", tournament="French Open", stage="Semifinal", yes_ask_c=2, yes_bid_c=5,
                  no_ask_c=None, yes_ask_size=100, yes_bid_size=100, quality="Tight", status="active",
-                 name="Pat"):
-    return {
+                 name="Pat", **extra):
+    row = {
         "kind": "exact_score", "series": series, "event_ticker": event, "player_key": player_key,
         "tour": tour, "tournament": tournament, "stage": stage,
         "raw_custom_strike": {"Set Score": score, "tennis_competitor": player_key},
@@ -73,12 +73,14 @@ def score_market(player_key, score, *, event="KXATPEXACTMATCH-26X", series="KXAT
         "quote_quality": quality, "status": status, "player": f"{name} wins {score}",
         "market_ticker": f"{event}-{player_key}-{score}", "kalshi_url": "http://x",
     }
+    row.update(extra)  # market_type / close_time / rules_primary / … for the safety-gate tests
+    return row
 
 
 def match_market(player_key, *, event="KXATPMATCH-26X", series="KXATPMATCH", tour="ATP",
                  tournament="French Open", stage="Semifinal", yes_ask_c=50, yes_bid_c=48, no_ask_c=None,
-                 yes_ask_size=100, yes_bid_size=100, quality="Tight", status="active", name="Pat"):
-    return {
+                 yes_ask_size=100, yes_bid_size=100, quality="Tight", status="active", name="Pat", **extra):
+    row = {
         "kind": "match", "series": series, "event_ticker": event, "player_key": player_key,
         "tour": tour, "tournament": tournament, "stage": stage,
         "yes_ask_c": yes_ask_c, "yes_bid_c": yes_bid_c, "no_ask_c": no_ask_c,
@@ -86,6 +88,8 @@ def match_market(player_key, *, event="KXATPMATCH-26X", series="KXATPMATCH", tou
         "quote_quality": quality, "status": status, "player": name,
         "market_ticker": f"{event}-{player_key}", "kalshi_url": "http://m",
     }
+    row.update(extra)
+    return row
 
 
 def _event(pk="P", opp="Q", scores=("3-0", "3-1", "3-2"), score_kw=None, hedge_kw=None):
@@ -200,3 +204,85 @@ def test_opportunity_model_preserves_legs():
     o = Opportunity(**f)  # extra fields ignored; legs/n_legs are declared so they survive the boundary
     assert o.n_legs == 4 and isinstance(o.legs, list) and len(o.legs) == 4
     assert o.status == "EXECUTABLE_SYNTHETIC_BUNDLE" and o.rule_flag == "SETTLEMENT_CHECK_REQUIRED"
+
+
+# --- Safety gates (synthetic hardening 2): prove the bundle settles as a clean MECE set -------
+_FIRE = {"score_kw": {"yes_ask_c": 2}, "hedge_kw": {"no_ask_c": 90}}  # forward fires (96 < 100, gap 4)
+
+
+def test_clean_bundle_with_safe_metadata_still_fires():
+    # All legs binary, same close-time, same settlement rules -> no gate trips -> review-only finding.
+    safe = {"market_type": "binary", "close_time": "2026-06-03T15:00:00Z",
+            "rules_primary": "Settles on walkover or retirement."}
+    rows = _event(score_kw={"yes_ask_c": 2, **safe}, hedge_kw={"no_ask_c": 90, **safe})
+    diag: dict = {}
+    f = sb.find_synthetic_bundles(rows, diag)
+    assert len(f) == 1 and f[0]["n_legs"] == 4
+    assert f[0]["rule_flag"] == "SETTLEMENT_CHECK_REQUIRED" and f[0]["tradable_now"] == "Review rules"
+    assert not diag.get("suppressed")  # nothing withheld
+
+
+def test_gate_non_binary_leg_suppresses_and_records_diag():
+    # A score leg that can settle scalar / fair-price breaks the 0-or-100¢ math -> suppress.
+    rows = _event(score_kw={"yes_ask_c": 2, "market_type": "scalar"}, hedge_kw={"no_ask_c": 90})
+    diag: dict = {}
+    assert sb.find_synthetic_bundles(rows, diag) == []
+    assert len(diag["suppressed"]) == 1 and "non-binary" in diag["suppressed"][0]["reason"]
+
+
+def test_gate_binary_market_type_ignores_fractional_trading():
+    # Live trap: fractional_trading_enabled=True is the NORM for exact-score markets -> NOT a gate.
+    rows = _event(score_kw={"yes_ask_c": 2, "market_type": "binary", "fractional_trading_enabled": True},
+                  hedge_kw={"no_ask_c": 90, "market_type": "binary", "fractional_trading_enabled": True})
+    assert len(sb.find_synthetic_bundles(rows)) == 1
+
+
+def test_gate_split_close_time_suppresses():
+    # Hedge closes two days after the score legs -> they can't settle together -> suppress.
+    rows = _event(score_kw={"yes_ask_c": 2, "close_time": "2026-06-03T15:00:00Z"},
+                  hedge_kw={"no_ask_c": 90, "close_time": "2026-06-05T15:00:00Z"})
+    diag: dict = {}
+    assert sb.find_synthetic_bundles(rows, diag) == []
+    assert "different times" in diag["suppressed"][0]["reason"]
+
+
+def test_gate_close_time_within_tolerance_does_not_suppress():
+    # A few minutes apart (< 6h tolerance) is the same match -> still fires.
+    rows = _event(score_kw={"yes_ask_c": 2, "close_time": "2026-06-03T15:00:00Z"},
+                  hedge_kw={"no_ask_c": 90, "close_time": "2026-06-03T15:05:00Z"})
+    assert len(sb.find_synthetic_bundles(rows)) == 1
+
+
+def test_gate_partial_close_time_does_not_suppress():
+    # Only the hedge has a close-time -> unprovable divergence -> don't suppress (absent metadata passes).
+    rows = _event(score_kw={"yes_ask_c": 2}, hedge_kw={"no_ask_c": 90, "close_time": "2026-06-05T00:00:00Z"})
+    assert len(sb.find_synthetic_bundles(rows)) == 1
+
+
+def test_gate_rule_token_divergence_suppresses():
+    # Hedge voids on a walkover the score legs don't mention -> divergent settlement -> suppress.
+    rows = _event(score_kw={"yes_ask_c": 2, "rules_primary": "Settles to the exact set score."},
+                  hedge_kw={"no_ask_c": 90, "rules_primary": "Void on walkover."})
+    diag: dict = {}
+    assert sb.find_synthetic_bundles(rows, diag) == []
+    assert "walkover" in diag["suppressed"][0]["reason"]
+
+
+def test_gate_matching_rule_tokens_do_not_suppress():
+    # Same nuance on every leg -> agreement, not divergence -> still fires (caveat carries the residual risk).
+    shared = {"rules_primary": "Void on walkover or retirement."}
+    rows = _event(score_kw={"yes_ask_c": 2, **shared}, hedge_kw={"no_ask_c": 90, **shared})
+    assert len(sb.find_synthetic_bundles(rows)) == 1
+
+
+def test_absent_safety_metadata_passes_all_gates():
+    # No market_type / close_time / rules_primary on any leg -> nothing PROVEN unsafe -> fires (back-compat).
+    assert len(sb.find_synthetic_bundles(_event(**_FIRE))) == 1
+
+
+def test_format_proof_not_back_inferred_from_present_states():
+    # Circularity guard: an ATP Slam (proven best-of-5 from metadata) shown only the BO3 set {2-0,2-1}
+    # must NOT be re-read as best-of-3 -> expected stays {3-0,3-1,3-2} -> incomplete -> no fire.
+    rows = _event(scores=("2-0", "2-1"), score_kw={"yes_ask_c": 2}, hedge_kw={"no_ask_c": 90})
+    assert sb.find_synthetic_bundles(rows) == []
+    assert sb.expected_states(sports.TENNIS, "ATP", "French Open") == ("3-0", "3-1", "3-2")
