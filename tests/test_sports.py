@@ -7,6 +7,8 @@ NBA containment ladder built end-to-end through the (unchanged) detection engine
 from __future__ import annotations
 
 import dataclasses
+import json
+from pathlib import Path
 
 import pandas as pd
 
@@ -456,3 +458,80 @@ def test_golf_competition_mismatch_does_not_pair():
             + data.build_contracts("KXPGATOP5", [_golf_event("KXPGATOP5-26MEM", [_golf_market("KXPGATOP5-26MEM-SCO", "Scheffler", "u", "0.90", "0.92")], "The Memorial Tournament")]))
     checks = consistency.build_checks(pd.DataFrame(rows))
     assert not any("Top 5" in c and "Top 20" in c for c in checks["chain"])
+
+
+# --- Soccer (6th sport): 3-way games + reach-stage ladder + participant typing ---------------
+_SOCCER_FIX = Path(__file__).parent / "fixtures" / "soccer"
+
+
+def _load_soccer(name):
+    return json.loads((_SOCCER_FIX / name).read_text(encoding="utf-8"))
+
+
+def _wcround(event_ticker, ticker, bid, ask, team="Brazil", uuid="u-bra"):
+    return {"event_ticker": event_ticker, "title": "x",
+            "product_metadata": {"competition": "2026 FIFA World Cup"},
+            "markets": [{"ticker": ticker, "yes_sub_title": team,
+                         "custom_strike": {"soccer_team": uuid},
+                         "yes_bid_dollars": bid, "yes_ask_dollars": ask, "last_price_dollars": ask,
+                         "yes_bid_size_fp": "100", "yes_ask_size_fp": "100", "status": "active", "title": "x"}]}
+
+
+def test_soccer_registered_and_exact_only_ownership():
+    assert {"tennis", "nba", "wnba", "golf", "soccer"} <= {c.sport_id for c in sports.all_sports()}
+    assert sports.sport_for_series("KXWCGAME").sport_id == "soccer"
+    assert sports.sport_for_series("KXWCROUND").sport_id == "soccer"
+    # Field-shaped + not-live series must NOT be owned by soccer (resolve to unknown).
+    for tk in ("KXWCSTAGE", "KXWCGROUPWINNER", "KXFIFAGAME", "KXFIFAADVANCE", "KXWCGOALLEADER"):
+        assert sports.sport_for_series(tk).sport_id == "unknown", tk
+
+
+def test_soccer_game_not_laddered_and_reach_stage_nodes():
+    g = sports.SOCCER.classify("KXWCGAME", {"ticker": "KXWCGAME-26JUN11MEXRSA-MEX", "title": "x"})
+    assert g.family == "game" and g.eligible_for_ladder_checks is False     # 3-way game: dutch-only
+    for tk, node in [("KXWCROUND-26RO16-PAR", "Reach Round of 16"),
+                     ("KXWCROUND-26QUAR-BRA", "Reach Quarterfinals"),
+                     ("KXWCROUND-26SEMI-ARG", "Reach Semifinals"),
+                     ("KXWCROUND-26FINAL-FRA", "Reach Finals")]:
+        a = sports.SOCCER.classify("KXWCROUND", {"ticker": tk, "title": "x"})
+        assert a.family == "advance" and a.ladder_node == node, tk
+
+
+def test_soccer_tie_is_non_participant_with_per_event_key():
+    rows = data.build_contracts("KXWCGAME", [_load_soccer("KXWCGAME-26JUN11MEXRSA.json")])
+    by = {r["player"]: r for r in rows}
+    assert by["Mexico"]["is_participant"] is True and by["Mexico"]["participant_type"] == "participant"
+    assert by["Mexico"]["player_key"] == "8caf91d0-aafc-4d95-8788-72947e76e667"
+    tie = by["Tie"]
+    assert tie["is_participant"] is False and tie["participant_type"] == "tie"
+    assert tie["player_key"] == "tie::KXWCGAME-26JUN11MEXRSA"               # per-event synthetic key
+    assert all(r["mutually_exclusive"] is True for r in rows)              # MECE flag stamped from the event
+    assert {r["tournament"] for r in rows} == {"2026 FIFA World Cup"}      # one stable WC key
+    assert all(r["kind"] == "game" for r in rows)
+
+
+def test_soccer_reach_stage_ladder_violation():
+    # Same team at Reach R16 (broad) + Reach QF (deep); QF bid 85 > R16 ask 82 → executable violation.
+    rows = (data.build_contracts("KXWCROUND", [_wcround("KXWCROUND-26RO16", "KXWCROUND-26RO16-BRA", "0.80", "0.82")])
+            + data.build_contracts("KXWCROUND", [_wcround("KXWCROUND-26QUAR", "KXWCROUND-26QUAR-BRA", "0.85", "0.87")]))
+    checks = consistency.build_checks(pd.DataFrame(rows))
+    row = next(c for _, c in checks.iterrows() if c["chain"] == "Reach Quarterfinals ≤ Reach Round of 16")
+    assert row["status"] == "EXECUTABLE_VIOLATION"
+    assert row["child_category"] == "Stage advancement"
+
+
+def test_soccer_game_fixture_shape():
+    ev = _load_soccer("KXWCGAME-26JUN11MEXRSA.json")
+    assert ev["mutually_exclusive"] is True and len(ev["markets"]) == 3
+    assert {m["yes_sub_title"] for m in ev["markets"]} == {"Mexico", "South Africa", "Tie"}
+    tie = next(m for m in ev["markets"] if m["yes_sub_title"] == "Tie")
+    assert tie["custom_strike"]["soccer_team"] == sports.SOCCER_TIE_UUID
+    assert "does not include extra time or penalties" in tie["rules_primary"]   # draw-excluded phrase
+
+
+def test_participant_default_invariant_for_existing_sports():
+    # Non-soccer rows are all real participants (additive fields don't regress tennis/NBA/WNBA/golf).
+    r = data.build_contracts("KXNBA", [_nba_event("KXNBA-26", [
+        _nba_market("KXNBA-26-BOS", "Boston", "uuid-bos", "0.40", "0.42",
+                    "Will the Boston win the 2026 Pro Basketball Finals?")])])[0]
+    assert r["is_participant"] is True and r["participant_type"] == "participant"
