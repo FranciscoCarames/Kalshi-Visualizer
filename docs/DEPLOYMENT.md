@@ -77,8 +77,13 @@ This is what turns "works on my hotspot" into "works for everyone."
 | `NICEGUI_STORAGE_SECRET` | a long random string | **REQUIRED for LAN exposure** — `serve.py` refuses to bind a non-loopback host without it. **Generate once and persist** (env/secret store). Signs the session cookie |
 | `ALLOW_DEV_STORAGE_SECRET_ON_LAN` *(optional)* | `1` | Trusted-LAN escape hatch — start with the dev fallback secret + a warning instead of refusing. Don't use for anything left running |
 | `SNAPSHOT_DB_PATH` *(optional)* | absolute path | Point at a writable, backed-up location instead of the CWD default |
+| `SCAN_TOKEN` *(optional)* | a long random string | **Scan-token gate** — when set, HTTP `POST /scan` requires a matching `X-Scan-Token: <value>` header (401 otherwise). **Off by default** (today's open behaviour). Loopback dev needs nothing; on a LAN, set it so only your scheduler can trigger scans. The dashboard's own "Scan now" button runs in-process and is **unaffected** |
 
 Generate a secret (any of): `python -c "import secrets; print(secrets.token_hex(32))"`.
+
+> **Scan-token gate (PR 26b).** `POST /scan` is also per-process rate-limited
+> (`SCAN_HTTP_MAX_PER_WINDOW`/`SCAN_HTTP_WINDOW_SECONDS`, default 10/60s → 429 when exceeded). If you set
+> `SCAN_TOKEN`, the scheduled-scan caller below **must** send the `X-Scan-Token` header or it gets 401.
 
 ### Run as an auto-restart service — pick ONE pattern
 
@@ -143,6 +148,8 @@ under Kalshi's rate limit. Observe progress with `GET /scan/status` (`status` �
   (the cron doesn't wait — the 202 returns at once; the scan finishes in the background).
 - **Windows Task Scheduler:** a 3-min recurring task running
   `powershell -Command "Invoke-RestMethod -Method Post http://localhost:8000/scan"`.
+- **If `SCAN_TOKEN` is set** (see Environment variables), the scheduled caller MUST send the header, e.g.
+  `curl -s -X POST -H "X-Scan-Token: $SCAN_TOKEN" http://localhost:8000/scan >/dev/null` (otherwise 401).
 - Scan scope = **core series, all sports** (tennis + NBA + WNBA + golf + soccer). Full-scan breadth is a
   possible follow-up, not part of this deployment.
 
