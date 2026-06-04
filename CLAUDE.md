@@ -101,6 +101,11 @@ consistency.py     # NO streamlit: node_of, build_player_nodes, representative, 
 dutchbook.py       # NO streamlit: find_dutch_books() — 2-outcome MECE arbitrage detector (a check family
                    #   SEPARATE from the containment ladder); covers match/series AND per-game (game family);
                    #   status EXECUTABLE_DUTCH_BOOK; see section below
+synthetic_bundle.py# NO streamlit/pandas: find_synthetic_bundles() — N-leg exact-score / state-bundle
+                   #   detector. A player's MECE set scores ({3-0,3-1,3-2} bo5 / {2-0,2-1} bo3) replicate
+                   #   "they win", priced vs their match-winner hedge; both directions; ALWAYS settlement-
+                   #   caveated (review-only, never Actionable). parse_scoreline + expected_states (format-
+                   #   gated); status EXECUTABLE_SYNTHETIC_BUNDLE; see section below
 glossary.py        # NO streamlit: GLOSSARY{term:{short,long}}, BLOCKERS, WATCHLIST_NOTE, help_for
 filters.py         # NO streamlit: apply_membership (tournament/family/layer/event/participant/volume)
                    #   / apply_thresholds (size/quote/market-status) — the two-pass filter split
@@ -204,8 +209,45 @@ construction). `find_dutch_books(rows)` groups match-family rows by `event_ticke
 - **UI:** `app.py` renders a **dedicated "Dutch-book arbitrage — match books" section** (both legs are the
   *same* side, so it can't reuse the ladder's Buy-YES-broader/Buy-NO-deeper table). Membership-filtered like
   the rest; thresholds spare it (like Actionable now). Glossary term "Dutch book" → "Locked edge (¢)" column.
-- **In scope (built):** per-game 2-outcome books (NBA/WNBA `KX*GAME`) — milestone m1.1, shipped. **Out of
-  scope (seeds):** n-outcome winner **fields** (≥3 outcomes; need completeness proof + multi-leg). `find_dutch_books` consumes `df.to_dict("records")` so it is **NaN-safe**.
+- **In scope (built):** per-game 2-outcome books (NBA/WNBA `KX*GAME`) — milestone m1.1, shipped; and the
+  **N-leg exact-score synthetic bundle** (`synthetic_bundle.py`, milestone m5 — see next section). **Out of
+  scope (seed):** n-outcome winner **fields** (≥3-player tournament/advance fields; need completeness proof).
+  `find_dutch_books` consumes `df.to_dict("records")` so it is **NaN-safe**.
+
+## Synthetic exact-score bundle detector — `synthetic_bundle.py` (do not regress)
+
+A **separate, N-leg check family** (NO streamlit/pandas). A player wins their match iff one of the exact set
+scores occurs — **best-of-5 {3-0,3-1,3-2}, best-of-3 {2-0,2-1}** — so that MECE set *replicates* "they win",
+which is also what their **match-winner** market pays (the spike-proven, reliably-joinable hedge; the
+reach-next-round advance hedge is a future seed). `find_synthetic_bundles(rows)` groups exact-score rows by
+event and by **`player_key` UUID** (NOT the display name, which carries the scoreline subtitle).
+
+- **NOT a dutch book / NOT true arbitrage.** An exact score is NOT the match-winner. On a retirement /
+  no-ball-played the score legs settle to **Fair Market Price** while the hedge settles cleanly (verified
+  live) — so EVERY finding carries `rule_flag="SETTLEMENT_CHECK_REQUIRED"`, `tradable_now="Review rules"`,
+  and is routed **review/blocked, NEVER Actionable**. Labels say **gross / top-of-book** (fees + full-depth
+  fill not modeled). Conservative wording — never "riskless"/"locked"/"true arbitrage".
+- **Two directions** (exact integer cents): **forward** = Buy YES every state + Buy NO hedge, fires when
+  `Σ yes_ask(states) + no_ask(hedge) < 100¢`; **reverse** = Buy NO every state + Buy YES hedge, fires when
+  `Σ no_ask(states) + yes_ask(hedge) < N×100¢` (N = number of states). Best firing direction wins.
+- **Gates (any fail → silent skip, never a false positive):** (1) **format proven** — the expected state set
+  comes from a verified signal (`expected_states`: division + tournament via `SportConfig.score_format_fn`;
+  men's Grand Slam = bo5, WTA + non-Slam ATP = bo3 — **NOT keyed off ATP/WTA alone**), never from the
+  discovered markets (else completeness is circular); (2) **exhaustive** — found set == expected set; (3)
+  **hedge present + same round** (stage match; a round mismatch is a hard rules-conflict); (4) **firm ask per
+  leg** (priced-but-no-size / inactive → emitted blocked/review, not dropped). Scoreline is read from the
+  structured `custom_strike["Set Score"]` (verified live), regex-fallback on the subtitle.
+- **Config:** `SportConfig.state_bundles` (format_key → per-player states) + `score_format_fn`, both DEFAULTED
+  (NBA/WNBA empty) so adding a sport stays one `register()` call.
+- **Engine wiring (mirrors dutch-book):** `scanner.unified_opportunities` calls `find_synthetic_bundles` and
+  maps it via `_to_unified_synthetic`; the **N-leg plan lives in a `legs` list** (`legs`/`n_legs` added to
+  `UNIFIED_COLUMNS` and the api.py `Opportunity` model — DECLARED so `extra="ignore"` doesn't drop them);
+  `action_1/2_*` backfilled from the first two legs so 2-leg consumers keep working. Routing:
+  `STATUS_GROUP["EXECUTABLE_SYNTHETIC_BUNDLE"]="Warning"` + a `bucket_of` branch (review/blocked, since
+  `tradable_now="Review rules"` never starts with "Yes").
+- **UI:** NiceGUI `explanation_lines`/leg-links iterate `legs`; `app.py` has a dedicated **"Synthetic-bundle
+  discrepancies — exact-score vs match-winner"** section (membership-filtered). Glossary term "Synthetic
+  bundle" → "Bundle (all legs)" column. NaN-safe.
 
 ## Mapping audit & raw ladder spreads
 

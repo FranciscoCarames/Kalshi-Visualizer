@@ -25,9 +25,10 @@ Sizes: a Buy-YES leg's tradable size is ``yes_ask_size``; a Buy-NO leg's is ``ye
 has no NO-side sizes — buying NO matches resting YES bids). Tradable units = the smaller of the two
 legs' sizes. All comparisons are EXACT integer cents (parsed upstream by ``data.to_cents``).
 
-Out of scope (see the m1 milestone plan): n-outcome winner FIELDS (≥3 outcomes) — they need a
-field-completeness proof before the YES-underround is valid, plus a multi-leg representation. No
-Streamlit / pandas imports here, so this module is independently testable.
+The N-leg **exact-score synthetic bundle** (a player's MECE set scores priced vs their match-winner) is
+BUILT in the sibling ``synthetic_bundle.py`` (milestone m5). Still out of scope here: n-outcome winner
+FIELDS (≥3-player tournament/advance fields). No Streamlit / pandas imports here, so this module is
+independently testable.
 """
 from __future__ import annotations
 
