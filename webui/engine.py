@@ -51,12 +51,13 @@ def coverage(db_path: str | None = None) -> dict[str, Any]:
     """Latest snapshot's coverage + live data age/stale; honest when the store is empty or meta-less."""
     snap = store.latest(db_path=db_path)
     if snap is None:
-        return {"meta_present": False, "fetched_at": None, "data_age_seconds": None, "stale": False,
-                "opportunities": 0, "scanned": 0, "loaded": 0, "failed": 0, "excluded": 0}
+        return {"meta_present": False, "snapshot_id": None, "fetched_at": None, "data_age_seconds": None,
+                "stale": False, "opportunities": 0, "scanned": 0, "loaded": 0, "failed": 0, "excluded": 0}
     age = data.data_age_seconds(snap["fetched_at"])
     meta = snap.get("meta") or {}
     return {
         "meta_present": bool(snap.get("meta")),
+        "snapshot_id": snap.get("snapshot_id"),
         "fetched_at": snap["fetched_at"],
         "data_age_seconds": age,
         "stale": data.is_stale(age, config.STALE_AFTER_SECONDS),
@@ -67,6 +68,15 @@ def coverage(db_path: str | None = None) -> dict[str, Any]:
         "contracts_scanned": meta.get("contracts_scanned", 0), "checks_tested": meta.get("checks_tested", 0),
         "kalshi_requests": meta.get("kalshi_requests"),
     }
+
+
+def frames(db_path: str | None = None) -> list[dict[str, Any]]:
+    """The latest snapshot's persisted evidence frames (contracts/checks/dutchbook, all sports), or [] when
+    the store is empty / the snapshot predates frame persistence. The export (PR 23) is the first reader."""
+    snap = store.latest(db_path=db_path)
+    if snap is None:
+        return []
+    return store.load_frames(snap["snapshot_id"], db_path=db_path)
 
 
 def run_scan_now(db_path: str | None = None) -> dict[str, Any]:
