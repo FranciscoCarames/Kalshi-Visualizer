@@ -50,6 +50,49 @@ def _dutchbook_df(gap=7):
     return pd.DataFrame([mk("A", "ka", a_ask), mk("B", "kb", b_ask)])
 
 
+def _synthetic_df():
+    """3 exact-score states for player P (forward-firing: 2*3 + no_ask 90 = 96 < 100) + a real 2-player
+    match event so the match-winner hedge joins. Yields one EXECUTABLE_SYNTHETIC_BUNDLE (4-leg)."""
+    def score(s, ask):
+        return {
+            "series": "KXATPEXACTMATCH", "event_ticker": "ES", "kind": "exact_score",
+            "player": f"P wins {s}", "player_key": "kp", "tour": "ATP", "tournament": "French Open",
+            "stage": "Semifinal", "raw_custom_strike": {"Set Score": s, "tennis_competitor": "kp"},
+            "yes_ask_c": ask, "yes_bid_c": 1, "no_ask_c": None, "yes_bid_size": 100, "yes_ask_size": 100,
+            "quote_quality": "Tight", "status": "active", "market_ticker": f"S-{s}", "kalshi_url": "x",
+            "time_value": None,
+        }
+
+    def mk(player, key, no_ask):
+        return {
+            "series": "KXATPMATCH", "event_ticker": "EM", "kind": "match", "player": player,
+            "player_key": key, "tour": "ATP", "tournament": "French Open", "stage": "Semifinal",
+            "yes_ask_c": 50, "yes_bid_c": 48, "no_ask_c": no_ask, "yes_bid_size": 100, "yes_ask_size": 100,
+            "quote_quality": "Tight", "status": "active", "market_ticker": f"M-{key}", "kalshi_url": "x",
+            "event_title": "M", "time_value": None,
+        }
+    return pd.DataFrame([score("3-0", 2), score("3-1", 2), score("3-2", 2),
+                         mk("P", "kp", 90), mk("Q", "kq", 10)])
+
+
+def test_scanner_includes_synthetic_bundle_with_legs():
+    unified, errors = scanner.unified_opportunities(
+        lambda sid: _synthetic_df() if sid == "tennis" else pd.DataFrame())
+    assert errors == []
+    assert list(unified.columns) == scanner.UNIFIED_COLUMNS    # legs/n_legs columns present
+    syn = unified[unified["source"] == "synthetic_bundle"]
+    assert len(syn) == 1
+    r = syn.iloc[0]
+    assert r["status"] == "EXECUTABLE_SYNTHETIC_BUNDLE"
+    assert r["bucket"] == "blocked" and r["tradable_now"] == "Review rules"
+    assert r["rule_flag"] == "SETTLEMENT_CHECK_REQUIRED"
+    assert r["n_legs"] == 4 and isinstance(r["legs"], list) and len(r["legs"]) == 4
+    # 2-leg shapes carry legs=None (the positional action fields carry them instead).
+    for src in ("containment", "dutch_book"):
+        for legs in unified.loc[unified["source"] == src, "legs"]:
+            assert legs is None
+
+
 def _fetch(sport_id):
     if sport_id == "tennis":
         return _containment_df(gap=5)

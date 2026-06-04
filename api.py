@@ -51,6 +51,10 @@ class Opportunity(BaseModel):
     rule_flag: str | None = None
     relationship_type: str | None = None
     url: str | None = None
+    # N-leg plan for synthetic-bundle findings (must be DECLARED — extra="ignore" drops undeclared
+    # fields, so an N>2 plan would be silently lost otherwise). None for the 2-leg shapes.
+    legs: list[dict[str, Any]] | None = None
+    n_legs: int | None = None
 
 
 class Coverage(BaseModel):

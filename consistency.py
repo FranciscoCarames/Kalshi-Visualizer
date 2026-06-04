@@ -65,6 +65,10 @@ STATUS_GROUP = {
     # Dutch-book findings come from the sibling `dutchbook` module (status string kept as a literal
     # here to avoid importing it — `dutchbook.EXECUTABLE_DUTCH_BOOK`). Grouped with executable edges.
     "EXECUTABLE_DUTCH_BOOK": "Broken",
+    # Synthetic exact-score bundles (sibling `synthetic_bundle` module; literal kept here to avoid an
+    # import). A real gross discrepancy but ALWAYS settlement-caveated / review-only (never Actionable),
+    # so it groups as a Warning, not Broken.
+    "EXECUTABLE_SYNTHETIC_BUNDLE": "Warning",
     "DISPLAY_VIOLATION": "Warning",
     "WIDE_QUOTE": "Warning",
     "MISSING_QUOTE": "Missing data",
@@ -806,9 +810,10 @@ def bucket_of(check_row: dict[str, Any]) -> str:
     - clean          : consistent and not near the edge
     """
     status = check_row.get("status")
-    if status in ("EXECUTABLE_VIOLATION", "EXECUTABLE_DUTCH_BOOK"):
-        # Both are firm executable edges: tradable now -> actionable, else blocked (no size / inactive
-        # leg). A dutch book carries no rule caveat, so its tradable_now is a plain Yes/No.
+    if status in ("EXECUTABLE_VIOLATION", "EXECUTABLE_DUTCH_BOOK", "EXECUTABLE_SYNTHETIC_BUNDLE"):
+        # Firm executable edges: tradable now -> actionable, else blocked (no size / inactive leg). A
+        # dutch book carries no rule caveat (plain Yes/No); a synthetic bundle is always settlement-
+        # caveated so its tradable_now is "Review rules" (never "Yes") -> it always lands in blocked/review.
         return "actionable" if str(check_row.get("tradable_now") or "").startswith("Yes") else "blocked"
     if status == "QUOTE_SIZE_MISSING":
         return "blocked"
