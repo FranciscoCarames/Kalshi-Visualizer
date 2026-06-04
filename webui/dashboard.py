@@ -164,6 +164,12 @@ def dashboard() -> None:
                           selection="single", pagination=15).classes("w-full")
     actionable.on_select(_on_select(actionable))
 
+    ui.label("🔎 Review signal (settlement-caveated — review the rules, never auto-tradable)").classes(
+        "text-lg font-bold")
+    review = ui.table(columns=_OPP_COLUMNS, rows=[], row_key="opportunity_id",
+                      selection="single", pagination=10).classes("w-full")
+    review.on_select(_on_select(review))
+
     ui.label("⛔ Blocked").classes("text-lg font-bold")
     blocked = ui.table(columns=_OPP_COLUMNS, rows=[], row_key="opportunity_id",
                        selection="single", pagination=10).classes("w-full")
@@ -199,6 +205,7 @@ def dashboard() -> None:
         changed.set_text(f"🔁 {n_ch} changed while blocked" if n_ch else "")
 
         actionable.rows = [_opp_row(o, new_ids) for o in opps if o.get("bucket") == "actionable"]
+        review.rows = [_opp_row(o, new_ids) for o in opps if o.get("bucket") == "review_signal"]
         blocked.rows = [_opp_row(o, new_ids) for o in opps if o.get("bucket") == "blocked"]
         win_s = config.BACKLOG_WINDOWS[window_select.value]
         bl = engine.backlog(win_s if win_s is not None else config.SNAPSHOT_RETENTION_SECONDS)

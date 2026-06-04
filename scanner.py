@@ -29,12 +29,13 @@ import synthetic_bundle
 # `bucket` is stamped on every row by Stage 1 (consistency.bucket_of / dutchbook).
 BUCKET_PRIORITY = {
     "actionable": 0,
-    "blocked": 1,
-    "near_edge": 2,
-    "display_signal": 3,
-    "wide_signal": 4,
-    "data_quality": 5,
-    "clean": 6,
+    "review_signal": 1,   # settlement-caveated discrepancies (synthetic bundles) — review, just below actionable
+    "blocked": 2,
+    "near_edge": 3,
+    "display_signal": 4,
+    "wide_signal": 5,
+    "data_quality": 6,
+    "clean": 7,
 }
 
 # The shared minimal schema both row shapes (containment checks + dutch-book findings) map onto. Stable

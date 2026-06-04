@@ -814,7 +814,8 @@ def scenario_payoffs(check_row: dict[str, Any], units: Any = None) -> dict[str, 
 # Trader-dashboard buckets. Pure mapping from one consistency-check row to the dashboard section it
 # belongs in — reads only fields already produced by build_checks; no math, no side effects.
 DASHBOARD_BUCKETS = (
-    "actionable", "blocked", "near_edge", "display_signal", "wide_signal", "data_quality", "clean",
+    "actionable", "review_signal", "blocked", "near_edge", "display_signal", "wide_signal",
+    "data_quality", "clean",
 )
 
 
@@ -822,6 +823,8 @@ def bucket_of(check_row: dict[str, Any]) -> str:
     """Classify a check row into a dashboard bucket (see DASHBOARD_BUCKETS).
 
     - actionable     : firm executable cross that is tradable now (incl. rule-dependent, shown with a caveat)
+    - review_signal  : a priced/sized/active settlement-caveated discrepancy to REVIEW, never auto-tradable
+                       (synthetic exact-score bundle — exact score is not the match-winner)
     - blocked        : a real/firm cross that cannot be traded now (no size, or an inactive/finalized leg)
     - near_edge      : consistent but within NEAR_EDGE_MIN_C cents of crossing, on Tight/OK quotes
     - display_signal : display-only inconsistency (DISPLAY_VIOLATION)
@@ -830,10 +833,14 @@ def bucket_of(check_row: dict[str, Any]) -> str:
     - clean          : consistent and not near the edge
     """
     status = check_row.get("status")
-    if status in ("EXECUTABLE_VIOLATION", "EXECUTABLE_DUTCH_BOOK", "EXECUTABLE_SYNTHETIC_BUNDLE"):
+    if status == "EXECUTABLE_SYNTHETIC_BUNDLE":
+        # A synthetic bundle is ALWAYS settlement-caveated (an exact score is not the match-winner), so it
+        # is never auto-tradable. When priced/sized/active its tradable_now is "Review rules" -> a distinct
+        # review_signal bucket (just below actionable); a no-size / inactive bundle ("No") -> blocked.
+        return "review_signal" if str(check_row.get("tradable_now") or "").startswith("Review") else "blocked"
+    if status in ("EXECUTABLE_VIOLATION", "EXECUTABLE_DUTCH_BOOK"):
         # Firm executable edges: tradable now -> actionable, else blocked (no size / inactive leg). A
-        # dutch book carries no rule caveat (plain Yes/No); a synthetic bundle is always settlement-
-        # caveated so its tradable_now is "Review rules" (never "Yes") -> it always lands in blocked/review.
+        # dutch book carries no rule caveat (plain Yes/No); a per-game book's settlement caveat is advisory.
         return "actionable" if str(check_row.get("tradable_now") or "").startswith("Yes") else "blocked"
     if status == "QUOTE_SIZE_MISSING":
         return "blocked"

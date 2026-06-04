@@ -108,10 +108,10 @@ def test_forward_fires_with_settlement_caveat_and_four_legs():
     assert g["status"] == "EXECUTABLE_SYNTHETIC_BUNDLE"
     assert g["direction"] == "forward" and g["exec_gap_c"] == 4 and g["n_legs"] == 4
     assert [leg["side"] for leg in g["legs"]] == ["buy_yes", "buy_yes", "buy_yes", "buy_no"]
-    # Always settlement-caveated, never Actionable.
+    # Always settlement-caveated, never Actionable -> the review_signal bucket (PR 18).
     assert g["rule_flag"] == "SETTLEMENT_CHECK_REQUIRED"
     assert g["tradable_now"] == "Review rules" and not g["tradable_now"].startswith("Yes")
-    assert g["bucket"] == "blocked" and g["blocked_reason"]
+    assert g["bucket"] == "review_signal" and g["blocked_reason"]
 
 
 def test_forward_payout_floor_is_100():
@@ -197,12 +197,34 @@ def test_nan_safe_prices_and_sizes():
 
 
 # --- routing + API integration (Task 4) -----------------------------------------------------
-def test_status_group_and_bucket_route_to_review_blocked():
+def test_priced_bundle_routes_to_review_signal():
     import consistency
     assert consistency.STATUS_GROUP[sb.EXECUTABLE_SYNTHETIC_BUNDLE] == "Warning"
     f = sb.find_synthetic_bundles(_event(score_kw={"yes_ask_c": 2}, hedge_kw={"no_ask_c": 90}))[0]
-    # "Review rules" never starts with "Yes" -> always blocked/review, never Actionable.
-    assert consistency.bucket_of(f) == "blocked"
+    # PR 18: a priced/sized/active bundle ("Review rules") -> the dedicated review_signal bucket, both on
+    # the finding's own field and via the router; never Actionable, no longer lumped with Blocked.
+    assert f["tradable_now"] == "Review rules"
+    assert f["bucket"] == "review_signal" and consistency.bucket_of(f) == "review_signal"
+
+
+def test_blocked_bundle_stays_blocked_not_review():
+    import consistency
+    # A bundle that is un-executable now (no size) is "No" -> Blocked, not review_signal.
+    f = sb.find_synthetic_bundles(_event(score_kw={"yes_ask_c": 2, "yes_ask_size": 0},
+                                         hedge_kw={"no_ask_c": 90}))[0]
+    assert f["tradable_now"] == "No"
+    assert f["bucket"] == "blocked" and consistency.bucket_of(f) == "blocked"
+
+
+def test_review_signal_ranks_just_below_actionable():
+    import consistency
+    import scanner
+    # The bucket exists in both the router's list and the ranking priority, and sits below actionable,
+    # above blocked (DASHBOARD_BUCKETS and BUCKET_PRIORITY stay in sync).
+    assert "review_signal" in consistency.DASHBOARD_BUCKETS
+    assert set(consistency.DASHBOARD_BUCKETS) == set(scanner.BUCKET_PRIORITY)
+    assert scanner.BUCKET_PRIORITY["actionable"] < scanner.BUCKET_PRIORITY["review_signal"] \
+        < scanner.BUCKET_PRIORITY["blocked"]
 
 
 def test_opportunity_model_preserves_legs():

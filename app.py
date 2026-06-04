@@ -833,24 +833,34 @@ def render_dashboard() -> None:
     # 3c. Synthetic-bundle discrepancies (exact-score set vs match-winner) — review only.
     #     N legs, all the SAME structure, so it gets its own table (not the 2-leg ladder).
     # ================================================================================
-    st.subheader("🧩 Synthetic-bundle discrepancies — exact-score vs match-winner")
+    st.subheader("🔎 Review signal — synthetic-bundle discrepancies (exact-score vs match-winner)")
     st.caption("A player's exact-set-score contracts ({3-0, 3-1, 3-2} best-of-5; {2-0, 2-1} best-of-3) "
                "together replicate 'they win the match'; priced against their match-winner this can reveal "
-               "a **gross pricing discrepancy**. **Not riskless** — an exact score is not the match-winner, "
-               "and a retirement / no-ball-played settles the score legs to Fair Market Price while the "
-               "winner settles cleanly. **Review the settlement rules before trading.** Gross, top-of-book.")
+               "a **gross pricing discrepancy**. " + help_for("Review signal") + " **Not riskless** — an "
+               "exact score is not the match-winner, and a retirement / no-ball-played settles the score "
+               "legs to Fair Market Price while the winner settles cleanly. **Review the settlement rules "
+               "before trading.** Gross, top-of-book.")
     if sb_df.empty:
         st.info("No synthetic-bundle discrepancies right now.")
     else:
         DIR_LABEL = {"forward": "Buy YES states + Buy NO winner", "reverse": "Buy NO states + Buy YES winner"}
+        sort_label = st.radio("Sort by", ["Gross discrepancy (¢)", "ROI %"], horizontal=True,
+                              key="sb_sort", help="Gross gap is the headline; ROI is the gross gap per ¢ "
+                                                  "of capital staked (both before fees / partial fill).")
+        sort_col = "roi_pct" if sort_label == "ROI %" else "exec_gap_c"
         s = sb_df.assign(
             dir_disp=sb_df["direction"].map(DIR_LABEL).fillna(sb_df["direction"]),
             caveat_disp=sb_df["blocked_reason"].replace("", "—").fillna("—"),
             roi_pct=sb_df.apply(lambda r: scanner.gross_roi_pct(r.get("exec_gap_c"), r.get("cost_c")), axis=1),
-        )
+            # Capital you actually stake = per-unit cost × tradable units (¢ → $). None when size is missing.
+            stake_dollars=sb_df.apply(
+                lambda r: round(r["cost_c"] * r["exec_min_size"] / 100, 2)
+                if (pd.notna(r.get("cost_c")) and pd.notna(r.get("exec_min_size"))) else None, axis=1),
+        ).sort_values(sort_col, ascending=False, na_position="last")
         st.dataframe(
             s[["player", "tournament", "dir_disp", "bundle_text", "cost_c", "payout_floor_c", "exec_gap_c",
-               "roi_pct", "exec_min_size", "exec_max_profit_dollars", "tradable_disp", "caveat_disp", "url"]],
+               "roi_pct", "exec_min_size", "stake_dollars", "exec_max_profit_dollars", "tradable_disp",
+               "caveat_disp", "url"]],
             hide_index=True, width="stretch",
             column_config={
                 "player": "Player",
@@ -870,6 +880,8 @@ def render_dashboard() -> None:
                                                    "partial fill. Review the settlement rules before trading."),
                 "exec_min_size": st.column_config.NumberColumn(
                     "Max units", format="%.0f", help="Top-of-book size; full-depth fill not modeled."),
+                "stake_dollars": st.column_config.NumberColumn(
+                    "Stake ($)", format="$%.2f", help="Capital staked = cost × max units (gross, top-of-book)."),
                 "exec_max_profit_dollars": st.column_config.NumberColumn("Gross ($)", format="$%.2f"),
                 "tradable_disp": st.column_config.TextColumn("Tradable now", help=help_for("Tradable now")),
                 "caveat_disp": st.column_config.TextColumn("Caveat"),

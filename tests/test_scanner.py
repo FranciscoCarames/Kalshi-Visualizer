@@ -85,7 +85,8 @@ def test_scanner_includes_synthetic_bundle_with_legs():
     assert len(syn) == 1
     r = syn.iloc[0]
     assert r["status"] == "EXECUTABLE_SYNTHETIC_BUNDLE"
-    assert r["bucket"] == "blocked" and r["tradable_now"] == "Review rules"
+    # PR 18: a priced/sized/active bundle routes to the review_signal bucket (not blocked).
+    assert r["bucket"] == "review_signal" and r["tradable_now"] == "Review rules"
     assert r["rule_flag"] == "SETTLEMENT_CHECK_REQUIRED"
     assert r["n_legs"] == 4 and isinstance(r["legs"], list) and len(r["legs"]) == 4
     # PR 13: every row carries a payout floor + gross ROI; the synthetic forward floor is 100¢.
