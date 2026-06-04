@@ -47,7 +47,11 @@ def _opp_row(o: dict[str, Any], new_ids: set[str]) -> dict[str, Any]:
         "name": o.get("name") or "", "detail": o.get("detail") or "",
         "edge": o.get("exec_gap_c"), "units": o.get("exec_min_size"),
         "profit": o.get("exec_max_profit_dollars"),
-        "tradable": o.get("tradable_now") or "", "caveat": o.get("blocked_reason") or "",
+        "tradable": o.get("tradable_now") or "",
+        # The non-blocking per-game settlement caveat (PR 6) shows alongside any blocked_reason, so an
+        # actionable game book still surfaces its postponement risk.
+        "caveat": "; ".join(p for p in (o.get("settlement_caveat"), o.get("blocked_reason"))
+                            if isinstance(p, str) and p),
     }
 
 
@@ -73,6 +77,8 @@ def explanation_lines(opp: dict[str, Any], *, show_ids: bool = False) -> list[st
         f"Tradable now: {opp.get('tradable_now')}   ·   Relationship: {opp.get('relationship_type')}"
         f"   ·   Market: {opp.get('market_status')}",
     ]
+    if opp.get("settlement_caveat"):
+        lines.append(f"Settlement caveat: {opp.get('settlement_caveat')}")
     if opp.get("blocked_reason"):
         lines.append(f"Caveat: {opp.get('blocked_reason')}")
     if show_ids:

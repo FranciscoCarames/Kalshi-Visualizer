@@ -47,6 +47,7 @@ UNIFIED_COLUMNS = [
     "exec_gap_c", "exec_min_size", "exec_max_profit_dollars",  # gross edge / sizing
     "bucket", "status", "tradable_now", "blocked_reason",      # routing / state (Stage 1)
     "market_status", "rule_flag",              # lifecycle-diff inputs (Stage 3 §9/§10)
+    "settlement_caveat",                       # non-blocking per-game settlement caveat (dutch-book PR 6)
     "relationship_type", "opportunity_id",     # identity (Stage 1)
     "ticker_1", "ticker_2", "url", "url_2",    # per-leg tickers + links (panel, Stage 5 §0)
     "legs", "n_legs",                          # N-leg plan (synthetic bundles); None for 2-leg shapes
@@ -87,6 +88,7 @@ def _to_unified_consistency(r: dict[str, Any], cfg) -> dict[str, Any]:
         "bucket": r.get("bucket") or "", "status": r.get("status") or "",
         "tradable_now": r.get("tradable_now") or "", "blocked_reason": r.get("blocked_reason") or "",
         "market_status": _market_status_consistency(r), "rule_flag": r.get("rule_flag") or "",
+        "settlement_caveat": "",  # containment ladders aren't per-game books
         "relationship_type": r.get("relationship_type") or "", "opportunity_id": r.get("opportunity_id") or "",
         # Leg 1 = broader/parent (Buy YES), leg 2 = deeper/child (Buy NO). Links must follow the legs:
         # url -> parent (leg 1), url_2 -> child (leg 2). (Was reversed: url pointed at the child.)
@@ -108,7 +110,8 @@ def _to_unified_dutchbook(r: dict[str, Any], cfg) -> dict[str, Any]:
         "exec_max_profit_dollars": _num(r.get("exec_max_profit_dollars")),
         "bucket": r.get("bucket") or "", "status": r.get("status") or "",
         "tradable_now": r.get("tradable_now") or "", "blocked_reason": r.get("blocked_reason") or "",
-        "market_status": r.get("market_status") or "active", "rule_flag": "",  # dutch books carry no rule caveat
+        "market_status": r.get("market_status") or "active", "rule_flag": "",  # dutch books carry no rule flag
+        "settlement_caveat": r.get("settlement_caveat") or "",  # non-blocking per-game caveat (PR 6)
         "relationship_type": r.get("relationship_type") or "", "opportunity_id": r.get("opportunity_id") or "",
         # Two legs of the same event; one event link (no second link).
         "ticker_1": r.get("ticker_a") or "", "ticker_2": r.get("ticker_b") or "",
@@ -136,6 +139,7 @@ def _to_unified_synthetic(r: dict[str, Any], cfg) -> dict[str, Any]:
         "bucket": r.get("bucket") or "", "status": r.get("status") or "",
         "tradable_now": r.get("tradable_now") or "", "blocked_reason": r.get("blocked_reason") or "",
         "market_status": r.get("market_status") or "active", "rule_flag": r.get("rule_flag") or "",
+        "settlement_caveat": "",  # synthetic bundles carry their caveat in blocked_reason (always review-only)
         "relationship_type": r.get("relationship_type") or "", "opportunity_id": r.get("opportunity_id") or "",
         "ticker_1": (legs[0].get("ticker") if len(legs) > 0 else "") or "",
         "ticker_2": (legs[1].get("ticker") if len(legs) > 1 else "") or "",

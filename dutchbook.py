@@ -120,6 +120,17 @@ def _buy_text(side: str, contract: str, price_c: int | None) -> str:
     return f"{word} — {contract} @ {price}"
 
 
+def _settlement_caveat(rows: list[dict[str, Any]]) -> str:
+    """The NON-blocking settlement caveat for a finding's legs, or '' when none applies.
+
+    A per-game (`_GAME_FAMILY`) book — NBA/WNBA single games and soccer 3-way games — can be broken by an
+    abnormal resolution (postponed / abandoned / no-contest / not-as-scheduled), so it carries the
+    `game_settlement` caveat. Match/series books settle together under normal one-winner settlement → ''.
+    This is ADVISORY: it never enters `blockers`/`blocked_reason`, so it can't change tradability/bucket.
+    """
+    return BLOCKERS["game_settlement"] if any(r.get("kind") == _GAME_FAMILY for r in rows) else ""
+
+
 def _direction_candidate(side: str, a: dict[str, Any], b: dict[str, Any]) -> dict[str, Any] | None:
     """Build the candidate for one direction ('buy_yes' = underround, 'buy_no' = overround).
 
@@ -233,6 +244,8 @@ def _detect_pair(event_ticker: str, markets: list[dict[str, Any]]) -> dict[str, 
         # market_status from the same both-legs-active check that drives tradability.
         "market_status": "active" if both_active else "inactive",
         "blockers": blockers_str,
+        # Non-blocking settlement caveat (per-game books only); advisory, never affects tradability/bucket.
+        "settlement_caveat": _settlement_caveat([a, b]),
         # Two-leg buy-only action plan (same vocabulary as consistency rows, so the dashboard reuses it).
         "action_1_side": side, "action_1_contract": label_a, "action_1_price_c": best["price_a"],
         "action_1_text": _buy_text(side, label_a, best["price_a"]),
@@ -402,6 +415,8 @@ def _detect_n_way(event_ticker: str, rows: list[dict[str, Any]], cfg: Any,
         "tradable_now": tradable_now,
         "market_status": "active" if all_active else "inactive",
         "blockers": blockers_str,
+        # Non-blocking settlement caveat (soccer 3-way games are per-game → carry it); advisory only.
+        "settlement_caveat": _settlement_caveat(rows),
         # Full N-leg plan in `legs`; action_1/2 backfilled from the first two legs so the unified 2-leg
         # columns + lifecycle still render. payout_floor_c is the (n-1)*100 (overround) / 100 (underround).
         "legs": legs, "n_legs": n, "payout_floor_c": floor,
