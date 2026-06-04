@@ -7,3 +7,11 @@ target-version = "py313"
 select = ["E", "F", "W", "I"]
 # E501: line-length — many Streamlit/dataframe lines intentionally exceed 120
 ignore = ["E501"]
+
+[tool.pytest.ini_options]
+# NiceGUI's `user` fixture is an async fixture → pytest-asyncio in auto mode runs it (and the async
+# browser smoke tests) without a per-test marker. Only affects async tests; the sync suite is unchanged.
+asyncio_mode = "auto"
+markers = [
+    "nicegui_main_file: the NiceGUI main file to run for the headless User simulation (tests/test_browser.py)",
+]

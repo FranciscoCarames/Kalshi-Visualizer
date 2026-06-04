@@ -155,23 +155,34 @@ are **Streamlit-free** and independently testable.
 
 ## Setup & run
 
+Two front-ends share one read-only engine. The **Streamlit** app is the original UI; the **FastAPI +
+NiceGUI** server (`serve.py`) is the opportunity-first dashboard + a typed REST API on one port.
+
 ```bash
-pip install -r requirements.txt          # streamlit, requests, pandas, altair
-streamlit run app.py
+pip install -r requirements.txt          # streamlit, requests, pandas, altair, fastapi, nicegui, uvicorn
+streamlit run app.py                     # Streamlit UI
+python serve.py                          # FastAPI + NiceGUI dashboard at /, REST at /opportunities etc.
 ```
 
 The app opens in your browser. Auto-refresh is on by default (120 s interval; configurable in the
-sidebar). Data is public — no API key required.
+sidebar). Data is public — no API key required. The REST API also serves `/coverage` and a low-cardinality
+`/metrics` (scan counters + heartbeat) for monitoring. `POST /scan` triggers a scan; on a LAN, set
+`SCAN_TOKEN` to require an `X-Scan-Token` header on it (off by default — see `docs/DEPLOYMENT.md`).
 
 ## Tests
 
-Pure logic is covered by unit tests (no network):
+Pure logic + the in-process engine are covered by unit tests (no network); the NiceGUI dashboard has
+**headless browser smoke tests** (`tests/test_browser.py`, via `nicegui.testing` — no selenium).
 
 ```bash
-pip install -r requirements-dev.txt      # adds pytest + ruff
-pytest -q                                # ~158 tests
+pip install -r requirements-dev.txt      # adds pytest, pytest-asyncio, ruff
+pytest -q                                # full suite (engine + API + viewmodel + browser smoke)
 ruff check .                             # lint
 ```
+
+Verify without a browser: `pytest -q`; `python -c "import app, serve"`; a headless Streamlit boot
+(`streamlit run app.py --server.headless true --server.port 8765` → `/_stcore/health` 200) and a `serve.py`
+boot (`GET /` and `/metrics` → 200). See `docs/RELEASE_CHECKLIST.md` for the full pre-ship checklist.
 
 ---
 
@@ -190,12 +201,19 @@ as a misleading number.
 
 ---
 
-## Roadmap (planned — not yet built)
+## Architecture (shipped) & roadmap
 
-The forward plan is to migrate from a pure Streamlit front-end to a **FastAPI back-end** exposing the
-engine as a REST API, with a **NiceGUI** interface mounted on the same server. See
-[`docs/ROADMAP.md`](docs/ROADMAP.md) for the 6-stage plan. The Streamlit app is the current production
-UI; no FastAPI/NiceGUI code exists yet.
+The engine was migrated behind a **FastAPI** back-end (typed REST API: `/opportunities`, `/coverage`,
+`/metrics`, `/scan`, `/alerts`, …) with a **NiceGUI** opportunity-first dashboard mounted on the same
+server (`serve.py`). A SQLite **snapshot store** persists each scan (opportunities + per-sport evidence
+frames); a **ScanManager** singleflights scans behind a non-blocking `POST /scan`. The dashboard surfaces
+ranked Actionable / Review / Blocked sections, a participant-detail panel, a diagnostics/debug section with
+AG-Grids, truthful empty states, snapshot export, and live freshness — all reading the engine in-process.
+The Streamlit app (`app.py`) is still shipped alongside it. See [`docs/ROADMAP.md`](docs/ROADMAP.md) for
+the staged history and [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) for office-LAN hosting.
+
+Remaining (not yet built): follow-on detectors (advancement hedge + n-outcome FIELDs) and known-limits
+documentation (net-of-fees, position limits, full-depth execution).
 
 ---
 

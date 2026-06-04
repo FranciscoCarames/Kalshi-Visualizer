@@ -1,0 +1,96 @@
+"""Headless browser smoke tests (PR 26c) — render the real NiceGUI dashboard page in-process via
+nicegui.testing.User (no selenium) and assert the key sections show. Catches page-BODY render regressions
+the pure-builder unit tests can't (the body builds on websocket connect). The dashboard reads the engine
+in-process, so a standalone NiceGUI app over a seeded tmp store renders fully — no FastAPI mount / HTTP
+needed.
+
+Anything that needs a REAL browser (a native file-download dialog, websocket reconnect) is out of scope for
+the headless User and is covered by the manual release checklist instead (docs/RELEASE_CHECKLIST.md).
+"""
+from __future__ import annotations
+
+import pytest
+from nicegui.testing import User
+
+import config
+import presence
+import scan_manager
+import store
+from webui import engine
+
+MAIN = "tests/nicegui_main.py"
+
+
+@pytest.fixture
+def seeded_db(tmp_path, monkeypatch):
+    """Point the engine at a fresh tmp store and isolate the process-global singletons the dashboard reads."""
+    db = str(tmp_path / "browser.db")
+    monkeypatch.setattr(config, "SNAPSHOT_DB_PATH", db)   # engine reads this when db_path is None
+    engine._FRAME_CACHE.clear()
+    scan_manager.manager.reset()
+    presence.reset()
+    return db
+
+
+def _actionable_opp():
+    return {
+        "opportunity_id": "o1", "sport": "tennis", "sport_label": "Tennis", "bucket": "actionable",
+        "name": "Player One", "detail": "Reach Final ⊇ Win", "source": "containment", "tournament": "FO",
+        "exec_gap_c": 4, "exec_min_size": 10, "exec_max_profit_dollars": 0.4, "participant_key": "p1",
+        "relationship_type": "containment", "action_1_text": "Buy YES", "action_2_text": "Buy NO",
+        "market_status": "active", "tradable_now": "Yes",
+    }
+
+
+def _contracts():
+    return [{"player_key": "p1", "series": "KXATPADVANCE", "ladder_node": "Reach Final", "kind": "advance",
+             "display_pct": 40, "display_c": 40, "yes_bid_pct": 38, "yes_ask_pct": 42, "quote_quality": "OK",
+             "contract": "Reach Final", "category": "Stage advancement", "stage_rank": 2,
+             "ladder_eligible": True, "mapping_confidence": "high", "status": "active", "kalshi_url": "u"}]
+
+
+def _seed(db, opps, *, frames=None):
+    store.write_snapshot("2026-06-05 12:00:00 UTC", opps, frames=frames or [], db_path=db)
+
+
+# --- render + sections ----------------------------------------------------------------
+@pytest.mark.nicegui_main_file(MAIN)
+async def test_renders_core_sections(user: User, seeded_db) -> None:
+    _seed(seeded_db, [_actionable_opp()],
+          frames=[{"sport": "tennis", "frame_type": "contracts", "schema_version": 1, "rows": _contracts()}])
+    await user.open("/")
+    await user.should_see("Kalshi opportunity engine")     # header
+    await user.should_see("Actionable now")
+    await user.should_see("Diagnostics & debug")
+    await user.should_see("Scan now")                       # the manual scan button
+
+
+# --- truthful empty states (PR 26a) ---------------------------------------------------
+@pytest.mark.nicegui_main_file(MAIN)
+async def test_empty_state_no_scan(user: User, seeded_db) -> None:
+    await user.open("/")                                    # empty store → no snapshot
+    await user.should_see("No scan yet")
+
+
+@pytest.mark.nicegui_main_file(MAIN)
+async def test_empty_state_no_opportunities(user: User, seeded_db) -> None:
+    _seed(seeded_db, [])                                    # a scan ran but found nothing
+    await user.open("/")
+    await user.should_see("no opportunities right now")
+
+
+# --- detail + diagnostics sections render (PR 24/25b) ---------------------------------
+# NOTE: the headless User sees server-side elements/labels, NOT Quasar table / AG-Grid ROW DATA (rendered
+# client-side) and cannot drive table-ROW selection (a content click doesn't fire the table's on_select).
+# So the actionable-row text and the click→open-detail interaction are manual checks
+# (docs/RELEASE_CHECKLIST.md). Here we assert the detail + diagnostics SECTIONS build without error; the
+# detail/diagnostics CONTENT builders are exhaustively unit-tested (test_viewmodel / test_webui).
+@pytest.mark.nicegui_main_file(MAIN)
+async def test_detail_and_diagnostics_sections_render(user: User, seeded_db) -> None:
+    _seed(seeded_db, [_actionable_opp()],
+          frames=[{"sport": "tennis", "frame_type": "contracts", "schema_version": 1, "rows": _contracts()}])
+    await user.open("/")
+    await user.should_see("Selected participant detail")     # the (click-to-fill) detail section exists
+    await user.should_see("Category honesty")                # diagnostics content rendered (Labels)
+    await user.should_see("Sum of independent row maxima")   # the honest metric label
+    await user.should_see("Full diagnostics")                # the full-diagnostics AG-Grid section header
