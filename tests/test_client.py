@@ -108,3 +108,12 @@ def test_discover_includes_exact_alongside_prefix(monkeypatch):
     cfg = dataclasses.replace(sports.NBA, exact_series=frozenset({"KXEXTRA"}))
     got = kc.discover_series_for_sport(cfg)
     assert "KXNBA" in got and "KXEXTRA" in got and "KXFOO" not in got
+
+
+def test_golf_discover_short_circuits_to_four_tickers(monkeypatch):
+    """GOLF is exact-only -> discovery returns its 4 tickers sorted WITHOUT scanning /series."""
+    def boom(*a, **k):
+        raise AssertionError("get_paginated must not be called for golf (exact-only)")
+    monkeypatch.setattr(kc, "get_paginated", boom)
+    assert kc.discover_series_for_sport(sports.GOLF) == [
+        "KXPGATOP10", "KXPGATOP20", "KXPGATOP5", "KXPGATOUR"]

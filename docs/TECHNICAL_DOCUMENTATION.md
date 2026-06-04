@@ -286,9 +286,10 @@ A `SportConfig` holds:
 - `round_patterns: tuple[tuple[str, str], ...]` — ordered `(label, regex)` pairs for stage extraction (most-specific first)
 - `stage_rank: dict[str, int]` — integer sort keys per stage label
 - `ladder_families: frozenset[str]` — which families participate in ladder checks
-- `match_family: str` — the head-to-head family name (`"match"` for all three sports)
-- `divisions: dict[str, list[str]]`, `division_label: str` — UI split (tennis: `{"Women": ["WTA"], "Men": ["ATP"], "Both": ...}`; NBA/WNBA: empty)
+- `match_family: str` — the head-to-head family name (`"match"` for tennis/NBA/WNBA; `""` for golf, which has no head-to-head and so produces no dutch books)
+- `divisions: dict[str, list[str]]`, `division_label: str` — UI split (tennis: `{"Women": ["WTA"], "Men": ["ATP"], "Both": ...}`; NBA/WNBA/golf: empty)
 - `family_fn`, `stage_fn`, `node_fn`, `division_fn` — small per-sport callables
+- `exact_series: frozenset[str]` (defaulted empty) — exact ticker ownership. When non-empty, these tickers resolve to this sport **before** any prefix/winner match (most specific wins regardless of registry order), and `discover_series_for_sport` short-circuits the `/series` scan for exact-only sports. Golf uses this to own exactly its 4 finishing-position series (`KXPGATOP5/10/20`, `KXPGATOUR`) without a broad prefix that would swallow round-finishers/H2H/props (which resolve to `UNKNOWN`).
 
 The `SportConfig.classify(series_ticker, market_dict)` convenience method returns a `MarketClassification` combining family, stage, stage_rank, ladder_node, eligible_for_ladder_checks, confidence, and reason.
 

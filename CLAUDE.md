@@ -5,7 +5,7 @@ Guidance for **Claude Code** working in this repository. Self-contained — read
 ## Project
 
 A small, **read-only** Streamlit **trader dashboard** over live [Kalshi](https://kalshi.com)
-prediction-market data for **tennis (ATP/WTA), NBA, and WNBA**. It surfaces **executable
+prediction-market data for **tennis (ATP/WTA), NBA, WNBA, and golf**. It surfaces **executable
 inconsistencies** across a participant's related contracts (a deeper outcome must not price above a
 prerequisite that contains it) and **dutch-book arbitrage** on 2-outcome MECE events, framed as
 buy-only opportunities (**Buy YES / Buy NO**), split into Actionable / Blocked / Near-edge sections
@@ -14,8 +14,10 @@ process-wide rate throttle.
 
 - **Owner / GitHub:** FranciscoCarames (`franciscocarames1@gmail.com`). Repo `Kalshi-Visualizer` (private), default branch `main`.
 - **Platform:** Windows 11, PowerShell, Python 3.13. (The Bash tool is also available.)
-- **Multi-sport (shipped):** `sports.py` defines a `SportConfig` abstraction; tennis, NBA, and WNBA
-  are registered sports. Adding a new sport = one `register(SportConfig(...))` call. `build_contracts`
+- **Multi-sport (shipped):** `sports.py` defines a `SportConfig` abstraction; tennis, NBA, WNBA, and golf
+  are registered sports. Adding a new sport = one `register(SportConfig(...))` call. (Golf uses
+  `exact_series` ownership of its 4 finishing-position series + `match_family=""`; no dutch books.)
+  `build_contracts`
   includes **all events for all registered sports**; containment ladders group by **(player_key,
   tournament)** per sport. Tournament is a client-side filter.
 - **Scope guard — do NOT add unless explicitly asked:** trading, authentication, order placement,
@@ -85,7 +87,7 @@ Key WNBA series: `KXWNBA` (championship), `KXWNBAPLAYOFF`/`KXWNBASEMIFINAL`/`KXW
 ```
 config.py          # BASE_URL, DEFAULT_SERIES, discovery prefixes, thresholds, rate-limit
                    #   (MAX_RPS/CONCURRENCY/BACKOFF_*) + refresh (REFRESH_TTL/OPTIONS/NEAR_EDGE_MIN_C) knobs
-sports.py          # NO streamlit: SportConfig registry — Tennis, NBA, WNBA registered; sport_for_series()
+sports.py          # NO streamlit: SportConfig registry — Tennis, NBA, WNBA, Golf registered; sport_for_series()
                    #   resolves a series ticker to its SportConfig (UNKNOWN when unrecognized, never silent
                    #   tennis default); IdentityResolver, MarketClassification, LadderSpec dataclasses;
                    #   adding a sport = register(SportConfig(...))

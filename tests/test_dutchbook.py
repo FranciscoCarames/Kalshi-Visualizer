@@ -397,3 +397,15 @@ def test_finding_carries_market_status():
     # an inactive leg flips the normalized market_status (used by the lifecycle diff)
     a_in = market("Alcaraz", yes_bid_c=43, yes_ask_c=45, status="finalized")
     assert dutchbook.find_dutch_books([a_in, b])[0]["market_status"] == "inactive"
+
+
+def test_golf_rows_produce_no_dutch_books():
+    """Golf has no head-to-head family (match_family=""), so two golf rows in one event never form a
+    dutch book — _is_two_way_row is False for the advance/winner families."""
+    a = market("Scheffler", series="KXPGATOP5", event="KXPGATOP5-26USO", player_key="sco",
+               yes_bid_c=43, yes_ask_c=45)
+    b = market("McIlroy", series="KXPGATOP5", event="KXPGATOP5-26USO", player_key="mci",
+               yes_bid_c=46, yes_ask_c=48)
+    a["kind"] = "advance"
+    b["kind"] = "advance"
+    assert dutchbook.find_dutch_books([a, b]) == []

@@ -371,3 +371,88 @@ def test_tennis_still_resolves_and_classifies():
     assert data.classify_kind("KXFOMEN") == "winner"
     assert data.tour_of("KXWTAMATCH") == "WTA"
     assert consistency.NODE_ORDER == ("Reach Semifinal", "Reach Final", "Win Tournament")
+
+
+# --- Golf (5th sport): finishing-position ladder, exact-series ownership, no head-to-head -----
+def _golf_market(ticker, name, uuid, bid, ask, title="x"):
+    return {"ticker": ticker, "yes_sub_title": name, "custom_strike": {"golf_competitor": uuid},
+            "yes_bid_dollars": bid, "yes_ask_dollars": ask, "last_price_dollars": ask,
+            "yes_bid_size_fp": "100", "yes_ask_size_fp": "100", "volume_fp": "500",
+            "status": "active", "title": title}
+
+
+def _golf_event(event_ticker, markets, competition="U.S. Open"):
+    return {"event_ticker": event_ticker, "title": "PGA",
+            "product_metadata": {"competition": competition}, "markets": markets}
+
+
+def _golf_ladder(t20, t10, t5, win=None, competition="U.S. Open"):
+    rows = (data.build_contracts("KXPGATOP20", [_golf_event("KXPGATOP20-26USO", [_golf_market("KXPGATOP20-26USO-SCO", "Scheffler", "u", *t20)], competition)])
+            + data.build_contracts("KXPGATOP10", [_golf_event("KXPGATOP10-26USO", [_golf_market("KXPGATOP10-26USO-SCO", "Scheffler", "u", *t10)], competition)])
+            + data.build_contracts("KXPGATOP5", [_golf_event("KXPGATOP5-26USO", [_golf_market("KXPGATOP5-26USO-SCO", "Scheffler", "u", *t5)], competition)]))
+    if win is not None:
+        rows += data.build_contracts("KXPGATOUR", [_golf_event("KXPGATOUR-26USO", [_golf_market("KXPGATOUR-26USO-SCO", "Scheffler", "u", *win)], competition)])
+    return consistency.build_checks(pd.DataFrame(rows))
+
+
+def test_golf_registered_and_exact_only_ownership():
+    assert {"tennis", "nba", "wnba", "golf"} <= {c.sport_id for c in sports.all_sports()}
+    for tk in ("KXPGATOP5", "KXPGATOP10", "KXPGATOP20", "KXPGATOUR"):
+        assert sports.sport_for_series(tk).sport_id == "golf", tk
+    # False-positive guards: round-finishers / H2H / props share the golf_competitor UUID + competition
+    # string but must NOT be owned by golf — exact_series ownership excludes them (resolve to unknown).
+    for tk in ("KXPGAR1TOP5", "KXPGAR2TOP10", "KXPGAH2H", "KXPGATOURCHAMP", "KXPGAWIN"):
+        assert sports.sport_for_series(tk).sport_id == "unknown", tk
+
+
+def test_golf_classification_per_rung():
+    g = sports.GOLF
+    assert g.classify("KXPGATOP5", {"ticker": "KXPGATOP5-26USO-X"}).ladder_node == "Top 5"
+    assert g.classify("KXPGATOP10", {"ticker": "KXPGATOP10-26USO-X"}).ladder_node == "Top 10"
+    assert g.classify("KXPGATOP20", {"ticker": "KXPGATOP20-26USO-X"}).ladder_node == "Top 20"
+    win = g.classify("KXPGATOUR", {"ticker": "KXPGATOUR-26USO-X"})    # winner by SERIES identity, not scope
+    assert win.family == "winner" and win.ladder_node == "Win Tournament"
+    assert all(g.classify(s, {"ticker": s + "-26USO-X"}).eligible_for_ladder_checks
+               for s in ("KXPGATOP5", "KXPGATOP10", "KXPGATOP20", "KXPGATOUR"))
+
+
+def test_golf_build_contracts_stamps_ladder_fields():
+    top5 = _golf_event("KXPGATOP5-26USO", [
+        _golf_market("KXPGATOP5-26USO-SCO", "Scheffler", "uuid-sco", "0.30", "0.32",
+                     "Will Scheffler finish in the top 5 (including ties)?")])
+    r = data.build_contracts("KXPGATOP5", [top5])[0]
+    assert r["player_key"] == "uuid-sco" and r["mapping_confidence"] == "high"
+    assert r["kind"] == "advance" and r["ladder_node"] == "Top 5" and r["ladder_eligible"] is True
+    assert r["tournament"] == "U.S. Open"                          # grouping key from competition
+    assert r["raw_custom_strike"] == {"golf_competitor": "uuid-sco"}   # golf identity path
+
+
+def test_golf_ladder_inversion_flagged():
+    # Top 5 (deeper) bid 60 > Top 10 (broader) ask 55 → executable violation on "Top 5 ≤ Top 10".
+    c = _golf_ladder(("0.80", "0.82"), ("0.50", "0.55"), ("0.60", "0.62"))
+    row = next(r for _, r in c.iterrows() if r["chain"] == "Top 5 ≤ Top 10")
+    assert row["status"] == "EXECUTABLE_VIOLATION" and row["exec_gap_c"] == 5
+
+
+def test_golf_ladder_clean_when_ordered():
+    c = _golf_ladder(("0.80", "0.82"), ("0.50", "0.52"), ("0.30", "0.32"), win=("0.10", "0.12"))
+    chains = {r["chain"]: r["status"] for _, r in c.iterrows()}
+    assert chains["Top 10 ≤ Top 20"] == "CLEAN"
+    assert chains["Top 5 ≤ Top 10"] == "CLEAN"
+    assert chains["Win Tournament ≤ Top 5"] == "CLEAN"
+
+
+def test_golf_categories_are_finish_position():
+    c = _golf_ladder(("0.80", "0.82"), ("0.50", "0.55"), ("0.60", "0.62"))
+    row = next(r for _, r in c.iterrows() if r["chain"] == "Top 5 ≤ Top 10")
+    assert row["child_category"] == "Finish position"             # per-sport dispatch, not tennis/None
+    assert row["parent_category"] == "Finish position"
+
+
+def test_golf_competition_mismatch_does_not_pair():
+    # Same golfer, but two rungs in DIFFERENT tournaments (different competition string) -> different
+    # (player_key, tournament) groups -> no Top5-vs-Top20 comparison even though prices would cross.
+    rows = (data.build_contracts("KXPGATOP20", [_golf_event("KXPGATOP20-26USO", [_golf_market("KXPGATOP20-26USO-SCO", "Scheffler", "u", "0.80", "0.82")], "U.S. Open")])
+            + data.build_contracts("KXPGATOP5", [_golf_event("KXPGATOP5-26MEM", [_golf_market("KXPGATOP5-26MEM-SCO", "Scheffler", "u", "0.90", "0.92")], "The Memorial Tournament")]))
+    checks = consistency.build_checks(pd.DataFrame(rows))
+    assert not any("Top 5" in c and "Top 20" in c for c in checks["chain"])

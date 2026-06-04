@@ -180,10 +180,11 @@ def test_run_scan_aggregates_coverage_and_unifies():
             return _containment_df(gap=5), "fa", [("KXBAD", "boom")], 6, 5, 1, 2
         if sid == "nba":
             return _dutchbook_df(gap=7), "fa", [], 6, 6, 0, 0
-        return pd.DataFrame(), "fa", [], 6, 0, 0, 0   # wnba: empty
+        return pd.DataFrame(), "fa", [], 6, 0, 0, 0   # every other registered sport: empty
     unified, cov = scanner.run_scan(fetch_fn, fetched_at="FA")
     assert cov["fetched_at"] == "FA"
-    assert cov["scanned"] == 18 and cov["loaded"] == 11          # 6+6+6 / 5+6+0
+    # 6 scanned per registered sport (robust as sports are added); only tennis(5)+nba(6) load.
+    assert cov["scanned"] == 6 * len(sports.all_sports()) and cov["loaded"] == 11
     assert cov["failed"] == 1 and cov["excluded"] == 2 and cov["skipped_no_name"] == 1
     assert len(cov["series_errors"]) == 1 and cov["series_errors"][0]["series"] == "KXBAD"
     assert not unified.empty and set(unified["sport"]) <= {"tennis", "nba"}
