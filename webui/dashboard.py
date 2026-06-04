@@ -55,6 +55,26 @@ def _ts_disp(ts: Any, tz: str) -> str:
     return data.fmt_time(datetime.fromtimestamp(ts, timezone.utc), tz, fmt="%H:%M:%S %Z") if ts else "—"
 
 
+def explanation_lines(opp: dict[str, Any], *, show_ids: bool = False) -> list[str]:
+    """The text content of the explanation panel for one opportunity (pure → unit-testable).
+    open_panel() renders these as labels and adds the leg links separately."""
+    lines = [
+        f"{opp.get('sport_label') or opp.get('sport')} · {opp.get('name')}",
+        f"{opp.get('source')} · {opp.get('detail')} · {opp.get('tournament')}",
+        f"Leg 1: {opp.get('action_1_text') or '—'}",
+        f"Leg 2: {opp.get('action_2_text') or '—'}",
+        f"Cost: {opp.get('cost_c')}¢   ·   Gross edge: {opp.get('exec_gap_c')}¢   ·   "
+        f"Max units: {opp.get('exec_min_size')}   ·   Gross profit: ${opp.get('exec_max_profit_dollars')}",
+        f"Tradable now: {opp.get('tradable_now')}   ·   Relationship: {opp.get('relationship_type')}"
+        f"   ·   Market: {opp.get('market_status')}",
+    ]
+    if opp.get("blocked_reason"):
+        lines.append(f"Caveat: {opp.get('blocked_reason')}")
+    if show_ids:
+        lines.append(f"id {opp.get('opportunity_id')} · {opp.get('ticker_1')} / {opp.get('ticker_2')}")
+    return lines
+
+
 def _backlog_row(b: dict[str, Any], tz: str) -> dict[str, Any]:
     dur = b.get("duration_s")
     return {
@@ -92,21 +112,13 @@ def dashboard() -> None:
 
     def open_panel(opp: dict[str, Any]) -> None:
         dialog.clear()
+        lines = explanation_lines(opp, show_ids=show_ids.value)
         with dialog, ui.card().classes("w-[36rem]"):
-            ui.label(f"{opp.get('sport_label') or opp.get('sport')} · {opp.get('name')}").classes("text-lg font-bold")
-            ui.label(f"{opp.get('source')} · {opp.get('detail')} · {opp.get('tournament')}").classes("text-sm text-gray-500")
+            ui.label(lines[0]).classes("text-lg font-bold")
+            ui.label(lines[1]).classes("text-sm text-gray-500")
             ui.separator()
-            ui.label(f"Leg 1: {opp.get('action_1_text') or '—'}")
-            ui.label(f"Leg 2: {opp.get('action_2_text') or '—'}")
-            cost = opp.get("cost_c")
-            ui.label(f"Cost: {cost}¢   ·   Gross edge: {opp.get('exec_gap_c')}¢   ·   "
-                     f"Max units: {opp.get('exec_min_size')}   ·   Gross profit: ${opp.get('exec_max_profit_dollars')}")
-            ui.label(f"Tradable now: {opp.get('tradable_now')}   ·   Relationship: {opp.get('relationship_type')}"
-                     f"   ·   Market: {opp.get('market_status')}")
-            if opp.get("blocked_reason"):
-                ui.label(f"Caveat: {opp.get('blocked_reason')}").classes("text-orange-700")
-            if show_ids.value:
-                ui.label(f"id {opp.get('opportunity_id')} · {opp.get('ticker_1')} / {opp.get('ticker_2')}").classes("text-xs text-gray-500")
+            for line in lines[2:]:
+                ui.label(line)
             with ui.row():
                 if opp.get("url"):
                     ui.link("Leg 1 market ↗", opp["url"], new_tab=True)
