@@ -10,10 +10,9 @@ Run: `python serve.py` (or `uvicorn api:app`). OpenAPI docs at `/docs`.
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
 from typing import Any, Callable
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Response
 from pydantic import BaseModel, ConfigDict
 
 import config
@@ -21,6 +20,7 @@ import data
 import fetch
 import kalshi_client
 import lifecycle
+import scan_manager
 import scanner
 import sports
 import store
@@ -122,17 +122,16 @@ class Alerts(BaseModel):
     blocked_changes: list[BlockedChange] = []
 
 
-class ScanResult(BaseModel):
-    skipped: bool
-    fetched_at: str | None = None
-    opportunities: int = 0
-    scanned: int = 0
-    loaded: int = 0
-    failed: int = 0
-    excluded: int = 0
-    skipped_no_name: int = 0
-    sport_errors: list[dict[str, Any]] = []
-    series_errors: list[dict[str, Any]] = []
+class ScanStatus(BaseModel):
+    # Non-blocking /scan (PR 21b): POST /scan returns this with a 202; GET /scan/status returns the live
+    # state. `status` ∈ {idle, in_progress, done, skipped, error}; `reason` explains a skip (ttl / budget
+    # cooldown). `last_result` (the coverage of the most recent completed scan) is included on /scan/status.
+    model_config = ConfigDict(extra="ignore")
+    status: str
+    since: float | None = None
+    last_snapshot_id: int | None = None
+    reason: str | None = None
+    last_result: dict[str, Any] | None = None
 
 
 # --- dependencies (overridable in tests) ---------------------------------------------
@@ -229,29 +228,31 @@ def get_alerts(persistence_s: float | None = None, db_path: str | None = Depends
     )
 
 
-def _scan_result(*, skipped: bool, n_opps: int, coverage: dict[str, Any] | None) -> ScanResult:
-    cov = coverage or {}
-    return ScanResult(skipped=skipped, fetched_at=cov.get("fetched_at"), opportunities=n_opps,
-                      scanned=cov.get("scanned", 0), loaded=cov.get("loaded", 0),
-                      failed=cov.get("failed", 0), excluded=cov.get("excluded", 0),
-                      skipped_no_name=cov.get("skipped_no_name", 0),
-                      sport_errors=cov.get("sport_errors", []), series_errors=cov.get("series_errors", []))
+def _scan_run_fn(fetch_fn: Callable[[str], tuple]) -> Callable[[str], tuple]:
+    def run_fn(fetched_at: str) -> tuple:
+        return scanner.run_scan(fetch_fn, fetched_at=fetched_at, request_count=kalshi_client.request_count)
+    return run_fn
 
 
-@app.post("/scan", response_model=ScanResult)
-def post_scan(force: bool = False, db_path: str | None = Depends(db_path_dep),
+def _scan_write_fn(fetched_at: str, unified, coverage, frames, db_path: str | None):
+    return store.write_snapshot(fetched_at, unified, meta=coverage, frames=frames, db_path=db_path)
+
+
+@app.post("/scan", response_model=ScanStatus, status_code=202)
+def post_scan(response: Response, force: bool = False, wait: bool = False,
+              db_path: str | None = Depends(db_path_dep),
               fetch_fn: Callable[[str], tuple] = Depends(fetch_dep)):
-    now = datetime.now(timezone.utc)
-    latest = store.latest(db_path=db_path)
-    # Store-backed TTL guard (sane after a restart): skip a too-soon scan, return the latest result
-    # marked skipped, and write NOTHING (no duplicate snapshot).
-    if latest is not None and not force:
-        age = now.timestamp() - (latest.get("fetched_ts") or 0.0)
-        if age < config.SCAN_MIN_INTERVAL_SECONDS:
-            return _scan_result(skipped=True, n_opps=len(latest.get("opportunities") or []),
-                                coverage=latest.get("meta"))
-    fetched_at = now.strftime("%Y-%m-%d %H:%M:%S UTC")
-    unified, coverage, frames = scanner.run_scan(
-        fetch_fn, fetched_at=fetched_at, request_count=kalshi_client.request_count)
-    store.write_snapshot(fetched_at, unified, meta=coverage, frames=frames, db_path=db_path)
-    return _scan_result(skipped=False, n_opps=len(unified), coverage=coverage)
+    """Non-blocking (PR 21b): trigger a scan via the process-local singleflight and return 202 with the
+    current status immediately. `?wait=true` blocks up to SCAN_WAIT_TIMEOUT_SECONDS for the scan to finish
+    (still 202 past the bound). `?force=true` overrides the TTL/budget guards. Two triggers (or a button +
+    this) collapse to one upstream fetch. Poll `GET /scan/status` for completion."""
+    st = scan_manager.manager.trigger(
+        run_fn=_scan_run_fn(fetch_fn), write_fn=_scan_write_fn, force=force,
+        wait_timeout=(config.SCAN_WAIT_TIMEOUT_SECONDS if wait else 0.0), db_path=db_path)
+    response.status_code = 202
+    return ScanStatus(**st)
+
+
+@app.get("/scan/status", response_model=ScanStatus)
+def get_scan_status():
+    return ScanStatus(**scan_manager.manager.status())

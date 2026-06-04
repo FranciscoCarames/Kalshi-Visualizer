@@ -44,7 +44,12 @@ environment require running the Bash tool with the sandbox disabled (network is 
 one app (default loopback `127.0.0.1:8000`). `API_HOST`/`API_PORT` are env-overridable; binding a
 non-loopback host **requires** `NICEGUI_STORAGE_SECRET` (`serve.bind_safety` fail-hard, no auth — escape:
 `ALLOW_DEV_STORAGE_SECRET_ON_LAN=1`) and warns on `WEB_CONCURRENCY>1` (store + throttle are process-local).
-See `docs/LAN_ACCESS.md` / `docs/DEPLOYMENT.md` (+ `serve_lan.ps1`).
+See `docs/LAN_ACCESS.md` / `docs/DEPLOYMENT.md` (+ `serve_lan.ps1`). **`POST /scan` is NON-BLOCKING** (202;
+PR 21b): a process-local `scan_manager.ScanManager` singleflight (shared by `POST /scan` AND
+`webui.run_scan_now` → one upstream fetch) runs the scan on a background thread; `?wait=true` bounded-blocks,
+`?force=true` overrides the TTL/budget, `GET /scan/status` polls. The scanner persists per-sport
+contracts/checks/dutchbook frames + coverage counters (`contracts_scanned`/`checks_tested`/`kalshi_requests`)
+per scan (PR 21a).
 
 ## Kalshi API (verified live, 2026)
 

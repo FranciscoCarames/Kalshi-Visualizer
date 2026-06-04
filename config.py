@@ -147,6 +147,17 @@ API_PORT = 8000
 # latest result marked skipped, writes nothing) when the newest snapshot is younger than this, unless
 # ?force=true. Sane after a restart because the guard reads the store, not process memory.
 SCAN_MIN_INTERVAL_SECONDS = REFRESH_TTL   # 30s
+# Non-blocking /scan (PR 21b): POST /scan returns 202 immediately and the scan runs in a background thread
+# (process-local ScanManager singleflight). `?wait=true` joins the in-flight scan up to this bound, then
+# returns 202 regardless (still non-blocking past the bound).
+SCAN_WAIT_TIMEOUT_SECONDS = 60
+# Scan budget: after a scan that blows ANY of these caps, the ScanManager cools down — the next
+# non-forced trigger is skipped (so a pathological scan can't hammer Kalshi every tick). `?force=true`
+# overrides the cooldown.
+SCAN_BUDGET_MAX_SECONDS = 120
+SCAN_BUDGET_MAX_REQUESTS = 2000
+SCAN_BUDGET_MAX_FAILED_SERIES = 20
+SCAN_BUDGET_COOLDOWN_SECONDS = 300
 
 # --- NiceGUI dashboard (Stage 5) -----------------------------------------------------
 # NiceGUI needs a storage secret to sign its per-user session cookie. There is NO auth/multi-user here,

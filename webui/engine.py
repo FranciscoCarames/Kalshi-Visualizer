@@ -9,16 +9,14 @@ Scan scope is honest: the scan fetch is `api.fetch_dep()` → **core series only
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
 from typing import Any
 
 import config
 import data
-import kalshi_client
 import lifecycle
-import scanner
+import scan_manager
 import store
-from api import fetch_dep
+from api import _scan_run_fn, _scan_write_fn, fetch_dep
 
 
 def latest_opportunities(db_path: str | None = None) -> list[dict[str, Any]]:
@@ -69,10 +67,11 @@ def coverage(db_path: str | None = None) -> dict[str, Any]:
 
 
 def run_scan_now(db_path: str | None = None) -> dict[str, Any]:
-    """Run a fresh scan (core series, all sports) and persist it with coverage; returns the coverage.
-    Manual trigger — always runs (no TTL guard; that guard is the API's POST /scan concern)."""
-    fetched_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
-    unified, cov, frames = scanner.run_scan(
-        fetch_dep(), fetched_at=fetched_at, request_count=kalshi_client.request_count)
-    store.write_snapshot(fetched_at, unified, meta=cov, frames=frames, db_path=db_path)
-    return cov
+    """Run a fresh scan (core series, all sports) through the shared ScanManager and return its coverage.
+    A MANUAL trigger — `force=True` overrides the TTL (the button means "scan now"), but the singleflight
+    still collapses a button click + a concurrent `POST /scan` to one upstream fetch. Bounded-waits for the
+    result so the button can report counts; returns `{}` if it's still in flight past the bound."""
+    st = scan_manager.manager.trigger(
+        run_fn=_scan_run_fn(fetch_dep()), write_fn=_scan_write_fn, force=True,
+        wait_timeout=config.SCAN_WAIT_TIMEOUT_SECONDS, db_path=db_path)
+    return st.get("last_result") or {}
