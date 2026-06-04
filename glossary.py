@@ -184,6 +184,10 @@ BLOCKERS: dict[str, str] = {
     "inactive": "The {leg} market is {status} (not open for trading right now).",
     "rule": "These are two different markets that should be equivalent, but their settlement rules "
             "aren't confirmed to match — so this isn't guaranteed arbitrage.",
+    "synthetic_settlement": "Gross discrepancy, not riskless: the exact-score legs and the match-winner "
+                            "hedge are different markets. On a retirement / no-ball-played the score legs "
+                            "resolve to Fair Market Price while the hedge settles cleanly — review the "
+                            "settlement rules before trading.",
 }
 
 WATCHLIST_NOTE = (
