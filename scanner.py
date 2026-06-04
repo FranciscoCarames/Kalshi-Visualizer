@@ -42,12 +42,19 @@ UNIFIED_COLUMNS = [
     "sport", "sport_label", "source",          # provenance
     "name", "detail", "tournament", "tour",    # what it is
     "action_1_text", "action_2_text",          # the two buys (same vocabulary across both shapes)
+    "action_1_price_c", "action_2_price_c", "cost_c",   # numeric leg prices + combined cost (panel, Stage 5 §0)
     "exec_gap_c", "exec_min_size", "exec_max_profit_dollars",  # gross edge / sizing
     "bucket", "status", "tradable_now", "blocked_reason",      # routing / state (Stage 1)
     "market_status", "rule_flag",              # lifecycle-diff inputs (Stage 3 §9/§10)
     "relationship_type", "opportunity_id",     # identity (Stage 1)
-    "url",                                      # link
+    "ticker_1", "ticker_2", "url", "url_2",    # per-leg tickers + links (panel, Stage 5 §0)
 ]
+
+
+def _cost(a: Any, b: Any) -> Any:
+    """Combined cost of the two legs in cents, or None if either price is missing."""
+    a, b = _num(a), _num(b)
+    return (a + b) if (a is not None and b is not None) else None
 
 
 def _market_status_consistency(r: dict[str, Any]) -> str:
@@ -71,13 +78,17 @@ def _to_unified_consistency(r: dict[str, Any], cfg) -> dict[str, Any]:
         "name": r.get("player") or "", "detail": r.get("chain") or "",
         "tournament": r.get("tournament") or "", "tour": r.get("tour") or "",
         "action_1_text": r.get("action_1_text") or "", "action_2_text": r.get("action_2_text") or "",
+        "action_1_price_c": _num(r.get("action_1_price_c")), "action_2_price_c": _num(r.get("action_2_price_c")),
+        "cost_c": _cost(r.get("action_1_price_c"), r.get("action_2_price_c")),
         "exec_gap_c": _num(r.get("exec_gap_c")), "exec_min_size": _num(r.get("exec_min_size")),
         "exec_max_profit_dollars": _num(r.get("exec_max_profit_dollars")),
         "bucket": r.get("bucket") or "", "status": r.get("status") or "",
         "tradable_now": r.get("tradable_now") or "", "blocked_reason": r.get("blocked_reason") or "",
         "market_status": _market_status_consistency(r), "rule_flag": r.get("rule_flag") or "",
         "relationship_type": r.get("relationship_type") or "", "opportunity_id": r.get("opportunity_id") or "",
-        "url": r.get("child_url") or r.get("parent_url") or "",
+        # Leg 1 = broader/parent (Buy YES), leg 2 = deeper/child (Buy NO).
+        "ticker_1": r.get("parent_ticker") or "", "ticker_2": r.get("child_ticker") or "",
+        "url": r.get("child_url") or r.get("parent_url") or "", "url_2": r.get("parent_url") or "",
     }
 
 
@@ -87,13 +98,17 @@ def _to_unified_dutchbook(r: dict[str, Any], cfg) -> dict[str, Any]:
         "name": r.get("match") or "", "detail": r.get("direction") or "",
         "tournament": r.get("tournament") or "", "tour": r.get("tour") or "",
         "action_1_text": r.get("action_1_text") or "", "action_2_text": r.get("action_2_text") or "",
+        "action_1_price_c": _num(r.get("action_1_price_c")), "action_2_price_c": _num(r.get("action_2_price_c")),
+        "cost_c": _num(r.get("cost_c")),
         "exec_gap_c": _num(r.get("exec_gap_c")), "exec_min_size": _num(r.get("exec_min_size")),
         "exec_max_profit_dollars": _num(r.get("exec_max_profit_dollars")),
         "bucket": r.get("bucket") or "", "status": r.get("status") or "",
         "tradable_now": r.get("tradable_now") or "", "blocked_reason": r.get("blocked_reason") or "",
         "market_status": r.get("market_status") or "active", "rule_flag": "",  # dutch books carry no rule caveat
         "relationship_type": r.get("relationship_type") or "", "opportunity_id": r.get("opportunity_id") or "",
-        "url": r.get("url") or "",
+        # Two legs of the same event; one event link (no second link).
+        "ticker_1": r.get("ticker_a") or "", "ticker_2": r.get("ticker_b") or "",
+        "url": r.get("url") or "", "url_2": "",
     }
 
 
