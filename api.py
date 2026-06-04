@@ -19,6 +19,7 @@ from pydantic import BaseModel, ConfigDict
 import config
 import data
 import fetch
+import kalshi_client
 import lifecycle
 import scanner
 import sports
@@ -79,6 +80,10 @@ class Coverage(BaseModel):
     failed: int = 0
     excluded: int = 0
     skipped_no_name: int = 0
+    # Volume counters + Kalshi requests issued this scan (PR 21a), distinct from the opportunity count.
+    contracts_scanned: int = 0
+    checks_tested: int = 0
+    kalshi_requests: int = 0
     sport_errors: list[dict[str, Any]] = []
     series_errors: list[dict[str, Any]] = []
 
@@ -199,6 +204,9 @@ def get_coverage(db_path: str | None = Depends(db_path_dep)):
                     scanned=meta.get("scanned", 0), loaded=meta.get("loaded", 0),
                     failed=meta.get("failed", 0), excluded=meta.get("excluded", 0),
                     skipped_no_name=meta.get("skipped_no_name", 0),
+                    contracts_scanned=meta.get("contracts_scanned", 0),
+                    checks_tested=meta.get("checks_tested", 0),
+                    kalshi_requests=meta.get("kalshi_requests", 0),
                     sport_errors=meta.get("sport_errors", []), series_errors=meta.get("series_errors", []))
 
 
@@ -243,6 +251,7 @@ def post_scan(force: bool = False, db_path: str | None = Depends(db_path_dep),
             return _scan_result(skipped=True, n_opps=len(latest.get("opportunities") or []),
                                 coverage=latest.get("meta"))
     fetched_at = now.strftime("%Y-%m-%d %H:%M:%S UTC")
-    unified, coverage = scanner.run_scan(fetch_fn, fetched_at=fetched_at)
-    store.write_snapshot(fetched_at, unified, meta=coverage, db_path=db_path)
+    unified, coverage, frames = scanner.run_scan(
+        fetch_fn, fetched_at=fetched_at, request_count=kalshi_client.request_count)
+    store.write_snapshot(fetched_at, unified, meta=coverage, frames=frames, db_path=db_path)
     return _scan_result(skipped=False, n_opps=len(unified), coverage=coverage)

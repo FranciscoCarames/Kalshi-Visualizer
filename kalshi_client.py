@@ -45,6 +45,32 @@ _session.mount("https://", _adapter)
 _session.mount("http://", _adapter)
 
 
+# --- Process-wide request counter (PR 21a) -------------------------------------------
+# Counts every HTTP ATTEMPT (each _session.get, so retries are counted) so a scan can report how many
+# Kalshi requests it issued. Process-wide, like the throttle; read via request_count() and zeroed via
+# reset_request_count(). Its own lock so it never contends with the rate limiter.
+_req_lock = threading.Lock()
+_request_count = 0
+
+
+def _count_request() -> None:
+    global _request_count
+    with _req_lock:
+        _request_count += 1
+
+
+def request_count() -> int:
+    """Total Kalshi HTTP attempts issued by this process since start / the last reset."""
+    with _req_lock:
+        return _request_count
+
+
+def reset_request_count() -> None:
+    global _request_count
+    with _req_lock:
+        _request_count = 0
+
+
 # --- Process-wide request throttle ---------------------------------------------------
 # Hand every caller a time "slot" spaced 1/MAX_RPS apart, so aggregate issuance across all threads
 # in this process never exceeds MAX_RPS. NOTE: process-wide only (see module docstring).
@@ -93,6 +119,7 @@ def _get(path: str, params: dict[str, Any]) -> dict[str, Any]:
     last_error: Exception | None = None
     for attempt in range(MAX_RETRIES):
         _throttle()
+        _count_request()   # per HTTP attempt (retries counted)
         try:
             resp = _session.get(url, params=params, timeout=REQUEST_TIMEOUT)
         except requests.RequestException as exc:

@@ -386,7 +386,9 @@ def write_snapshot(fetched_at: Any, opps: Any, *, meta: Any = None, frames: Any 
                     _promoted(r, "bucket"),
                     _promoted(r, "status"),
                     _promoted(r, "blocked_reason"),
-                    json.dumps(_jsonable(r)),
+                    # Stamp the assigned snapshot_id into the row JSON (PR 21a) so every read/exported row
+                    # knows which snapshot it came from.
+                    json.dumps({**_jsonable(r), "snapshot_id": sid}),
                 )
                 for r in records
             ],

@@ -14,6 +14,7 @@ from typing import Any
 
 import config
 import data
+import kalshi_client
 import lifecycle
 import scanner
 import store
@@ -71,6 +72,7 @@ def run_scan_now(db_path: str | None = None) -> dict[str, Any]:
     """Run a fresh scan (core series, all sports) and persist it with coverage; returns the coverage.
     Manual trigger — always runs (no TTL guard; that guard is the API's POST /scan concern)."""
     fetched_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
-    unified, cov = scanner.run_scan(fetch_dep(), fetched_at=fetched_at)
-    store.write_snapshot(fetched_at, unified, meta=cov, db_path=db_path)
+    unified, cov, frames = scanner.run_scan(
+        fetch_dep(), fetched_at=fetched_at, request_count=kalshi_client.request_count)
+    store.write_snapshot(fetched_at, unified, meta=cov, frames=frames, db_path=db_path)
     return cov

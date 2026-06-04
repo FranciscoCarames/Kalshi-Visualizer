@@ -76,6 +76,17 @@ def test_get_retries_on_429_then_succeeds(monkeypatch):
     assert len(calls) == 2   # retried once
 
 
+def test_request_counter_counts_every_attempt_including_retries(monkeypatch):
+    # PR 21a: the process-wide request counter ticks PER HTTP attempt, so a retried 429 counts twice.
+    _patch(monkeypatch, [_Resp(429, {"Retry-After": "0"}), _Resp(200, json_data={"ok": True})])
+    kc.reset_request_count()
+    assert kc.request_count() == 0
+    kc._get("/x", {})
+    assert kc.request_count() == 2   # the 429 attempt + the 200 attempt
+    kc.reset_request_count()
+    assert kc.request_count() == 0
+
+
 def test_get_raises_after_max_retries(monkeypatch):
     _patch(monkeypatch, [_Resp(503) for _ in range(config.MAX_RETRIES)])
     with pytest.raises(kc.KalshiError):
