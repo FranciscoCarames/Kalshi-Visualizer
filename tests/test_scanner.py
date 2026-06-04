@@ -9,6 +9,7 @@ from __future__ import annotations
 import pandas as pd
 
 import scanner
+import sports
 import store
 
 
@@ -198,6 +199,31 @@ def test_run_scan_records_sport_fetch_failure_without_blanking():
     unified, cov = scanner.run_scan(fetch_fn, fetched_at="FA")
     assert any(e["sport"] == "tennis" and "down" in e["error"] for e in cov["sport_errors"])
     assert set(unified["sport"]) <= {"nba"}                      # tennis failed; others still scanned
+
+
+# --- leg <-> ticker <-> url alignment (regression: links must follow the legs) -------
+def test_consistency_leg_ticker_url_alignment():
+    """Containment row: leg 1 = parent/broader (Buy YES), leg 2 = child/deeper (Buy NO).
+    The links must match the legs: url -> parent (leg 1), url_2 -> child (leg 2)."""
+    r = {
+        "parent_ticker": "PT", "child_ticker": "CT",
+        "parent_url": "https://k/parent", "child_url": "https://k/child",
+    }
+    out = scanner._to_unified_consistency(r, sports.TENNIS)
+    assert out["ticker_1"] == "PT" and out["url"] == "https://k/parent"    # leg 1 -> parent
+    assert out["ticker_2"] == "CT" and out["url_2"] == "https://k/child"   # leg 2 -> child
+    # Fallbacks stay within the leg's own side: a missing child link does not steal leg 1's parent link.
+    out2 = scanner._to_unified_consistency(
+        {"parent_ticker": "PT", "child_ticker": "CT", "parent_url": "https://k/parent"}, sports.TENNIS)
+    assert out2["url"] == "https://k/parent" and out2["url_2"] == "https://k/parent"
+
+
+def test_dutchbook_leg_ticker_url_shape():
+    """Dutch-book row: two legs of one event -> both leg tickers, a single event link, no second link."""
+    r = {"ticker_a": "TA", "ticker_b": "TB", "url": "https://k/event"}
+    out = scanner._to_unified_dutchbook(r, sports.NBA)
+    assert out["ticker_1"] == "TA" and out["ticker_2"] == "TB"
+    assert out["url"] == "https://k/event" and out["url_2"] == ""
 
 
 # --- Stage 5 §0: explanation-panel enrichment fields ---------------------------------
