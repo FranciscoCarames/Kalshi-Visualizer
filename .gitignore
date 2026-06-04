@@ -13,6 +13,9 @@ env/
 # Snapshot store (Stage 1) — local opportunity-history SQLite DB
 *.db
 snapshots.db
+*.db-wal             # WAL sidecar files (v3 enables WAL mode)
+*.db-shm
+*.pre-v*-backup      # pre-migration backups (store._backup_before_migration)
 
 # OS / editor
 .DS_Store
