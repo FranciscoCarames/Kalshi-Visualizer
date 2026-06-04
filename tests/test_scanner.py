@@ -88,10 +88,8 @@ def test_scanner_includes_synthetic_bundle_with_legs():
     assert r["bucket"] == "blocked" and r["tradable_now"] == "Review rules"
     assert r["rule_flag"] == "SETTLEMENT_CHECK_REQUIRED"
     assert r["n_legs"] == 4 and isinstance(r["legs"], list) and len(r["legs"]) == 4
-    # 2-leg shapes carry legs=None (the positional action fields carry them instead).
-    for src in ("containment", "dutch_book"):
-        for legs in unified.loc[unified["source"] == src, "legs"]:
-            assert legs is None
+    # PR 13: every row carries a payout floor + gross ROI; the synthetic forward floor is 100¢.
+    assert r["payout_floor_c"] == 100 and r["roi_pct"] == round(r["exec_gap_c"] / r["cost_c"] * 100, 1)
 
 
 def _fetch(sport_id):
@@ -246,3 +244,48 @@ def test_explanation_fields_populated_per_source():
     if not act.empty:
         r = act.iloc[0]
         assert r["action_1_price_c"] is not None and r["ticker_1"] and r["ticker_2"]
+
+
+# --- PR 13: payout_floor_c + roi_pct + uniform legs ----------------------------------
+def test_unified_columns_include_floor_and_roi():
+    for col in ("payout_floor_c", "roi_pct"):
+        assert col in scanner.UNIFIED_COLUMNS
+
+
+def test_gross_roi_pct_helper():
+    assert scanner.gross_roi_pct(7, 93) == round(7 / 93 * 100, 1)
+    assert scanner.gross_roi_pct(10, 0) is None          # non-positive cost -> None (no divide-by-zero)
+    assert scanner.gross_roi_pct(None, 93) is None
+    assert scanner.gross_roi_pct(5, float("nan")) is None
+
+
+def test_legs_of_synthesizes_two_leg_and_passes_through_n_leg():
+    # N-leg shape: returns the row's own legs untouched.
+    real = [{"text": "a"}, {"text": "b"}, {"text": "c"}]
+    assert scanner.legs_of({"legs": real}) is real
+    # 2-leg shape: synthesize from positional action fields + tickers + links.
+    row = {"action_1_side": "buy_yes", "action_1_contract": "Reach Final", "action_1_price_c": 40,
+           "action_1_text": "Buy YES — Reach Final @ 40¢", "ticker_1": "PT", "url": "u1",
+           "action_2_side": "buy_no", "action_2_contract": "Win", "action_2_price_c": 38,
+           "action_2_text": "Buy NO — Win @ 38¢", "ticker_2": "CT", "url_2": "u2"}
+    legs = scanner.legs_of(row)
+    assert [lg["text"] for lg in legs] == ["Buy YES — Reach Final @ 40¢", "Buy NO — Win @ 38¢"]
+    assert legs[0]["ticker"] == "PT" and legs[0]["url"] == "u1" and legs[0]["price_c"] == 40
+    assert legs[1]["ticker"] == "CT" and legs[1]["url"] == "u2"
+    # A leg with no action text is dropped (a single-sided / clean row yields a shorter list, no blank leg).
+    assert scanner.legs_of({"action_1_text": "only one", "ticker_1": "X"}) == [
+        {"side": "", "contract": "", "price_c": None, "size": None, "ticker": "X", "url": "", "text": "only one"}]
+    assert scanner.legs_of({}) == []
+
+
+def test_rows_carry_floor_roi_and_synthesized_legs():
+    unified, _ = scanner.unified_opportunities(_fetch)
+    db = unified[unified["source"] == "dutch_book"].iloc[0]
+    assert db["payout_floor_c"] == 100                                       # 2-way book pays 100¢
+    assert db["roi_pct"] == round(db["exec_gap_c"] / db["cost_c"] * 100, 1)
+    assert isinstance(db["legs"], list) and len(db["legs"]) == 2             # synthesized 2-leg list
+    act = unified[(unified["source"] == "containment") & (unified["bucket"] == "actionable")]
+    if not act.empty:
+        r = act.iloc[0]
+        assert r["payout_floor_c"] == 100 and r["roi_pct"] is not None       # broader-YES + deeper-NO floor
+        assert isinstance(r["legs"], list) and len(r["legs"]) == 2

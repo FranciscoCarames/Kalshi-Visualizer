@@ -351,6 +351,8 @@ def _build_finding(event_ticker: str, cfg: Any, player_key: str, hedge_row: dict
         "blockers": "; ".join(blockers),
         "blocked_reason": "; ".join(blockers),  # non-empty by construction (settlement caveat always present)
         "n_legs": len(out_legs), "legs": out_legs,
+        # The guaranteed payout floor: forward = 100¢, reverse = N×100¢ (the direction's threshold). (PR 13)
+        "payout_floor_c": cand["threshold_c"],
         "cost_c": cand["cost_c"], "exec_gap_c": gap, "exec_min_size": min_size,
         "exec_max_profit_dollars": round(gap * min_size / 100, 2) if min_size is not None else None,
         "reason": reason,

@@ -22,6 +22,7 @@ _OPP_COLUMNS = [
     {"name": "name", "label": "Participant / match", "field": "name", "sortable": True},
     {"name": "detail", "label": "Detail", "field": "detail"},
     {"name": "edge", "label": "Edge ¢", "field": "edge", "sortable": True},
+    {"name": "roi", "label": "ROI %", "field": "roi", "sortable": True},
     {"name": "units", "label": "Max units", "field": "units", "sortable": True},
     {"name": "profit", "label": "Gross $", "field": "profit", "sortable": True},
     {"name": "tradable", "label": "Tradable", "field": "tradable"},
@@ -45,7 +46,7 @@ def _opp_row(o: dict[str, Any], new_ids: set[str]) -> dict[str, Any]:
         "new": "🆕" if o.get("opportunity_id") in new_ids else "",
         "sport": o.get("sport_label") or o.get("sport") or "",
         "name": o.get("name") or "", "detail": o.get("detail") or "",
-        "edge": o.get("exec_gap_c"), "units": o.get("exec_min_size"),
+        "edge": o.get("exec_gap_c"), "roi": o.get("roi_pct"), "units": o.get("exec_min_size"),
         "profit": o.get("exec_max_profit_dollars"),
         "tradable": o.get("tradable_now") or "",
         # The non-blocking per-game settlement caveat (PR 6) shows alongside any blocked_reason, so an
@@ -71,9 +72,12 @@ def explanation_lines(opp: dict[str, Any], *, show_ids: bool = False) -> list[st
         lines += [f"Leg {i + 1}: {leg.get('text') or '—'}" for i, leg in enumerate(legs)]
     else:                                                     # 2-leg shapes use the positional fields
         lines += [f"Leg 1: {opp.get('action_1_text') or '—'}", f"Leg 2: {opp.get('action_2_text') or '—'}"]
+    _roi = opp.get("roi_pct")
+    _floor = opp.get("payout_floor_c")
     lines += [
-        f"Cost: {opp.get('cost_c')}¢   ·   Gross edge: {opp.get('exec_gap_c')}¢   ·   "
-        f"Max units: {opp.get('exec_min_size')}   ·   Gross profit: ${opp.get('exec_max_profit_dollars')}",
+        f"Cost: {opp.get('cost_c')}¢   ·   Floor: {_floor}¢   ·   Gross edge: {opp.get('exec_gap_c')}¢"
+        + (f"   ·   ROI: {_roi}%" if _roi is not None else "")
+        + f"   ·   Max units: {opp.get('exec_min_size')}   ·   Gross profit: ${opp.get('exec_max_profit_dollars')}",
         f"Tradable now: {opp.get('tradable_now')}   ·   Relationship: {opp.get('relationship_type')}"
         f"   ·   Market: {opp.get('market_status')}",
     ]

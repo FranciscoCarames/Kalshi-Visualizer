@@ -258,6 +258,7 @@ def _detect_pair(event_ticker: str, markets: list[dict[str, Any]]) -> dict[str, 
         "action_2_text": _buy_text(side, label_b, best["price_b"]),
         # Profit / sizing (mirrors consistency's exec_* keys; gross of fees/slippage).
         "cost_c": best["cost_c"],
+        "payout_floor_c": 100,   # a 2-way book pays exactly 100¢ in every state (PR 13 schema parity)
         "exec_gap_c": gap_c,
         "exec_min_size": min_size,
         "exec_max_profit_dollars": round(gap_c * min_size / 100, 2) if min_size is not None else None,

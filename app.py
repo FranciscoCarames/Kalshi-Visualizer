@@ -790,10 +790,11 @@ def render_dashboard() -> None:
             dir_disp=db_df["direction"].map(DIR_LABEL).fillna(db_df["direction"]),
             caveat_disp=db_df.apply(dutch_caveat_text, axis=1),
             plan=db_df.apply(dutch_plan_text, axis=1),
+            roi_pct=db_df.apply(lambda r: scanner.gross_roi_pct(r.get("exec_gap_c"), r.get("cost_c")), axis=1),
         )
         st.dataframe(
-            d[["match", "tournament", "dir_disp", "plan", "cost_c",
-               "exec_gap_c", "exec_min_size", "exec_max_profit_dollars", "tradable_disp",
+            d[["match", "tournament", "dir_disp", "plan", "cost_c", "payout_floor_c",
+               "exec_gap_c", "roi_pct", "exec_min_size", "exec_max_profit_dollars", "tradable_disp",
                "caveat_disp", "url"]],
             hide_index=True, width="stretch",
             column_config={
@@ -808,8 +809,14 @@ def render_dashboard() -> None:
                 "cost_c": st.column_config.NumberColumn(
                     "Cost (¢)", format="%.0f", help="Combined cost of all legs. Payout floor = 100¢ "
                                                     "(underround) or (n−1)×100¢ (n-way overround)."),
+                "payout_floor_c": st.column_config.NumberColumn(
+                    "Floor (¢)", format="%.0f", help="Guaranteed payout in every state: 100¢ (2-way / "
+                                                     "underround) or (n−1)×100¢ (n-way overround)."),
                 "exec_gap_c": st.column_config.NumberColumn(
                     "Gross edge (¢)", format="%.0f", help=help_for("Gross edge (¢)")),
+                "roi_pct": st.column_config.NumberColumn(
+                    "ROI %", format="%.1f%%", help="Gross gap ÷ cost — return on the capital staked, "
+                                                   "before fees / slippage / partial fill."),
                 "exec_min_size": st.column_config.NumberColumn("Max units", format="%.0f"),
                 "exec_max_profit_dollars": st.column_config.NumberColumn(
                     "Gross profit ($)", format="$%.2f", help=help_for("Gross quoted profit ($)")),
@@ -839,10 +846,11 @@ def render_dashboard() -> None:
         s = sb_df.assign(
             dir_disp=sb_df["direction"].map(DIR_LABEL).fillna(sb_df["direction"]),
             caveat_disp=sb_df["blocked_reason"].replace("", "—").fillna("—"),
+            roi_pct=sb_df.apply(lambda r: scanner.gross_roi_pct(r.get("exec_gap_c"), r.get("cost_c")), axis=1),
         )
         st.dataframe(
-            s[["player", "tournament", "dir_disp", "bundle_text", "cost_c", "exec_gap_c",
-               "exec_min_size", "exec_max_profit_dollars", "tradable_disp", "caveat_disp", "url"]],
+            s[["player", "tournament", "dir_disp", "bundle_text", "cost_c", "payout_floor_c", "exec_gap_c",
+               "roi_pct", "exec_min_size", "exec_max_profit_dollars", "tradable_disp", "caveat_disp", "url"]],
             hide_index=True, width="stretch",
             column_config={
                 "player": "Player",
@@ -852,8 +860,14 @@ def render_dashboard() -> None:
                 "bundle_text": st.column_config.TextColumn("Bundle (all legs)", help=help_for("Bundle (all legs)")),
                 "cost_c": st.column_config.NumberColumn(
                     "Cost (¢)", format="%.0f", help="Combined cost of all legs (top-of-book, gross of fees)."),
+                "payout_floor_c": st.column_config.NumberColumn(
+                    "Floor (¢)", format="%.0f", help="Guaranteed payout in every covered state: 100¢ "
+                                                     "(forward) or N×100¢ (reverse, N score states)."),
                 "exec_gap_c": st.column_config.NumberColumn(
                     "Gross discrepancy (¢)", format="%.0f", help=help_for("Bundle (all legs)")),
+                "roi_pct": st.column_config.NumberColumn(
+                    "ROI %", format="%.1f%%", help="Gross discrepancy ÷ cost, before fees / slippage / "
+                                                   "partial fill. Review the settlement rules before trading."),
                 "exec_min_size": st.column_config.NumberColumn(
                     "Max units", format="%.0f", help="Top-of-book size; full-depth fill not modeled."),
                 "exec_max_profit_dollars": st.column_config.NumberColumn("Gross ($)", format="$%.2f"),

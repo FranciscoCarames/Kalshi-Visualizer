@@ -60,6 +60,13 @@ def test_underround_yes_sum_below_100_is_executable():
     assert f["blockers"] == ""
 
 
+def test_two_way_finding_carries_payout_floor_100():
+    # PR 13: a 2-way book pays exactly 100¢ in every state -> payout_floor_c == 100.
+    a = market("Alcaraz", yes_bid_c=43, yes_ask_c=45)
+    b = market("Sinner", yes_bid_c=46, yes_ask_c=48)
+    assert dutchbook.find_dutch_books([a, b])[0]["payout_floor_c"] == 100
+
+
 def test_reason_wording_is_conservative_not_locked():
     # PR 5: the rendered reason must NOT say "locked"; it says "gross per unit, under normal settlement".
     a = market("Alcaraz", yes_bid_c=43, yes_ask_c=45)

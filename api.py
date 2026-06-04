@@ -40,19 +40,31 @@ class Opportunity(BaseModel):
     tour: str | None = None
     action_1_text: str | None = None
     action_2_text: str | None = None
+    # Numeric leg prices + combined cost (must be DECLARED — extra="ignore" drops undeclared fields).
+    action_1_price_c: float | None = None
+    action_2_price_c: float | None = None
+    cost_c: float | None = None
     exec_gap_c: float | None = None
     exec_min_size: float | None = None
     exec_max_profit_dollars: float | None = None
+    # Guaranteed payout floor + gross ROI on cost (PR 13).
+    payout_floor_c: float | None = None
+    roi_pct: float | None = None
     bucket: str | None = None
     status: str | None = None
     tradable_now: str | None = None
     blocked_reason: str | None = None
     market_status: str | None = None
     rule_flag: str | None = None
+    settlement_caveat: str | None = None
     relationship_type: str | None = None
+    # Per-leg tickers + the second leg's link (the panel surfaces both legs).
+    ticker_1: str | None = None
+    ticker_2: str | None = None
     url: str | None = None
+    url_2: str | None = None
     # N-leg plan for synthetic-bundle findings (must be DECLARED — extra="ignore" drops undeclared
-    # fields, so an N>2 plan would be silently lost otherwise). None for the 2-leg shapes.
+    # fields, so an N>2 plan would be silently lost otherwise). Synthesized 2-leg for the other shapes.
     legs: list[dict[str, Any]] | None = None
     n_legs: int | None = None
 
@@ -83,6 +95,10 @@ class BacklogItem(BaseModel):
     last_edge_c: float | None = None
     last_action_1_text: str | None = None
     last_action_2_text: str | None = None
+    # The full N-leg plan of the opportunity as it last looked actionable (PR 13); None for old snapshots.
+    last_legs: list[dict[str, Any]] | None = None
+    payout_floor_c: float | None = None
+    roi_pct: float | None = None
     current_status: str | None = None
     current_bucket: str | None = None
     url: str | None = None
