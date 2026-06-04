@@ -29,6 +29,36 @@ def test_registry_has_tennis_and_nba():
     assert {"tennis", "nba"} <= ids
 
 
+# --- round parser: hyphenated rounds must NOT collapse to Final/Finals (all sports) --------
+def _round(cfg, text):
+    return sports.extract_round(cfg.round_patterns, text)
+
+
+def test_round_parser_hyphenated_variants_not_final_tennis():
+    # A hyphen is a word boundary, so a bare \bfinal\b used to swallow these → "Final". (sports.py)
+    assert _round(sports.TENNIS, "Will X reach the Semi-final?") == "Semifinal"
+    assert _round(sports.TENNIS, "Will X reach the Semi-finals?") == "Semifinal"
+    assert _round(sports.TENNIS, "Will X win the Quarter-final?") == "Quarterfinal"
+    assert _round(sports.TENNIS, "Will X win the Quarter-finals?") == "Quarterfinal"
+    # Non-hyphenated forms and the genuine Final are unchanged.
+    assert _round(sports.TENNIS, "Will X reach the Semifinal?") == "Semifinal"
+    assert _round(sports.TENNIS, "Will X win the Quarterfinal?") == "Quarterfinal"
+    assert _round(sports.TENNIS, "Will X win the Final?") == "Final"
+
+
+def test_round_parser_hyphenated_variants_not_finals_nba():
+    assert _round(sports.NBA, "Win the Conference Semi-finals?") == "Conference Semifinals"
+    assert _round(sports.NBA, "Win the Conference Semifinals?") == "Conference Semifinals"
+    assert _round(sports.NBA, "Win the Conference Finals?") == "Conference Finals"
+    assert _round(sports.NBA, "Win the NBA Finals?") == "Finals"
+
+
+def test_round_parser_hyphenated_variants_not_finals_wnba():
+    assert _round(sports.WNBA, "Reach the Semi-finals?") == "Semifinals"
+    assert _round(sports.WNBA, "Reach the Semifinals?") == "Semifinals"
+    assert _round(sports.WNBA, "Reach the Finals?") == "Finals"
+
+
 # --- NBA classification (grounded in live discovery) ---------------------------------
 def _mc(series, title):
     return sports.NBA.classify(series, {"title": title})
