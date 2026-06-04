@@ -40,6 +40,12 @@ To verify without a browser: `pytest -q`; `python -c "import app"`; and a headle
 `http://localhost:8765/_stcore/health` returns `200`. Live Kalshi calls, `pip`, and `git push` in this
 environment require running the Bash tool with the sandbox disabled (network is otherwise blocked).
 
+**NiceGUI dashboard / LAN hosting:** `python serve.py` runs the FastAPI engine API + NiceGUI dashboard on
+one app (default loopback `127.0.0.1:8000`). `API_HOST`/`API_PORT` are env-overridable; binding a
+non-loopback host **requires** `NICEGUI_STORAGE_SECRET` (`serve.bind_safety` fail-hard, no auth — escape:
+`ALLOW_DEV_STORAGE_SECRET_ON_LAN=1`) and warns on `WEB_CONCURRENCY>1` (store + throttle are process-local).
+See `docs/LAN_ACCESS.md` / `docs/DEPLOYMENT.md` (+ `serve_lan.ps1`).
+
 ## Kalshi API (verified live, 2026)
 
 - **Base URL:** `https://external-api.kalshi.com/trade-api/v2`. ⚠️ `api.kalshi.com` does **not** resolve.
