@@ -114,11 +114,18 @@ def test_forward_fires_with_settlement_caveat_and_four_legs():
     assert g["bucket"] == "blocked" and g["blocked_reason"]
 
 
+def test_forward_payout_floor_is_100():
+    # PR 13: forward bundle pays 100¢ in every covered state.
+    f = sb.find_synthetic_bundles(_event(score_kw={"yes_ask_c": 2}, hedge_kw={"no_ask_c": 90}))[0]
+    assert f["payout_floor_c"] == 100
+
+
 def test_reverse_fires_at_n_times_100_threshold():
     # forward 40*3+90=210 (no); reverse no_ask(90)*3 + yes_ask(20) = 290 < 300 -> gap 10.
     rows = _event(score_kw={"yes_ask_c": 40, "no_ask_c": 90}, hedge_kw={"yes_ask_c": 20, "no_ask_c": 90})
     f = sb.find_synthetic_bundles(rows)
     assert len(f) == 1 and f[0]["direction"] == "reverse" and f[0]["exec_gap_c"] == 10
+    assert f[0]["payout_floor_c"] == 300                     # reverse floor = N states × 100¢ (3×100)
 
 
 def test_single_exact_score_not_equivalent_to_match_winner():

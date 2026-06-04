@@ -155,3 +155,22 @@ def test_empty_store_endpoints_are_honest(client):
     assert c.get("/alerts").json() == {"new_actionable": [], "blocked_changes": []}
     cov = c.get("/coverage").json()
     assert cov["meta_present"] is False and cov["fetched_at"] is None and cov["scanned"] == 0
+
+
+# --- PR 13: schema fields survive the API boundary -----------------------------------
+def test_opportunity_model_preserves_pr13_fields():
+    # extra="ignore" drops UNDECLARED fields, so every persisted column the UI/export needs must be
+    # declared. PR 13 added payout_floor_c/roi_pct/cost_c/settlement_caveat/ticker_1/2/url_2 + N-leg legs.
+    row = op("x")
+    row.update(cost_c=93, action_1_price_c=45, action_2_price_c=48, payout_floor_c=100, roi_pct=7.5,
+              settlement_caveat="per-game", ticker_1="TA", ticker_2="TB", url_2="u2",
+              legs=[{"text": "a"}, {"text": "b"}], n_legs=2)
+    o = api.Opportunity(**row)
+    assert o.cost_c == 93 and o.payout_floor_c == 100 and o.roi_pct == 7.5
+    assert o.settlement_caveat == "per-game" and o.ticker_1 == "TA" and o.ticker_2 == "TB" and o.url_2 == "u2"
+    assert o.n_legs == 2 and isinstance(o.legs, list) and len(o.legs) == 2
+
+
+def test_backlog_model_carries_last_legs():
+    item = api.BacklogItem(opportunity_id="x", last_legs=[{"text": "a"}], payout_floor_c=100, roi_pct=9.0)
+    assert isinstance(item.last_legs, list) and item.payout_floor_c == 100 and item.roi_pct == 9.0

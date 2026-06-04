@@ -50,7 +50,8 @@ UNIFIED_COLUMNS = [
     "settlement_caveat",                       # non-blocking per-game settlement caveat (dutch-book PR 6)
     "relationship_type", "opportunity_id",     # identity (Stage 1)
     "ticker_1", "ticker_2", "url", "url_2",    # per-leg tickers + links (panel, Stage 5 §0)
-    "legs", "n_legs",                          # N-leg plan (synthetic bundles); None for 2-leg shapes
+    "legs", "n_legs",                          # N-leg plan (synthetic bundles); synthesized 2-leg otherwise
+    "payout_floor_c", "roi_pct",               # guaranteed payout floor + gross ROI on cost (PR 13)
 ]
 
 
@@ -75,8 +76,58 @@ def _num(x: Any) -> Any:
     return None if x is None or (isinstance(x, float) and x != x) else x
 
 
+def gross_roi_pct(gap: Any, cost: Any) -> Any:
+    """Gross ROI % on top-of-book cost (gap / cost × 100, 1 dp), or None when cost is missing/non-positive.
+    GROSS — before fees / slippage / partial fill (same caveat as exec_max_profit_dollars). Shared by the
+    unified mappers and the Streamlit dutch-book / synthetic tables so the number is defined once."""
+    gap, cost = _num(gap), _num(cost)
+    if gap is None or cost is None or cost <= 0:
+        return None
+    return round(gap / cost * 100, 1)
+
+
+def legs_of(row: dict[str, Any]) -> list[dict[str, Any]]:
+    """Every opportunity as a uniform list of leg dicts. Returns the row's own ``legs`` when it is a
+    non-empty list (N-leg dutch books / synthetic bundles); otherwise SYNTHESIZES a 2-leg list from the
+    positional ``action_1/2_*`` + ``ticker_1/2`` + ``url``/``url_2`` fields. This gives every row — the
+    2-leg containment / dutch shapes AND old snapshots written before ``legs`` existed — a single render
+    path. A leg with no action text is dropped, so a single-sided row yields a shorter list, not a blank
+    leg."""
+    legs = row.get("legs")
+    if isinstance(legs, list) and legs:
+        return legs
+    out: list[dict[str, Any]] = []
+    for i, (tk, url) in enumerate(((row.get("ticker_1"), row.get("url")),
+                                   (row.get("ticker_2"), row.get("url_2"))), start=1):
+        text = row.get(f"action_{i}_text")
+        if not text:
+            continue
+        out.append({
+            "side": row.get(f"action_{i}_side") or "",
+            "contract": row.get(f"action_{i}_contract") or "",
+            "price_c": _num(row.get(f"action_{i}_price_c")),
+            "size": None,
+            "ticker": tk or "",
+            "url": url or "",
+            "text": text,
+        })
+    return out
+
+
+def _finalize_unified(d: dict[str, Any], *, payout_floor_c: Any) -> dict[str, Any]:
+    """Stamp the derived schema fields (PR 13) onto a built unified row: the guaranteed payout floor, the
+    gross ROI on cost, and a uniform ``legs`` list (synthesized for 2-leg shapes). ``n_legs`` follows the
+    leg list. Idempotent over the existing ``legs`` so N-leg findings keep their real list."""
+    d["payout_floor_c"] = _num(payout_floor_c)
+    d["roi_pct"] = gross_roi_pct(d.get("exec_gap_c"), d.get("cost_c"))
+    legs = legs_of(d)
+    d["legs"] = legs or None
+    d["n_legs"] = _num(d.get("n_legs")) or (len(legs) if legs else None)
+    return d
+
+
 def _to_unified_consistency(r: dict[str, Any], cfg) -> dict[str, Any]:
-    return {
+    d = {
         "sport": cfg.sport_id, "sport_label": cfg.label, "source": "containment",
         "name": r.get("player") or "", "detail": r.get("chain") or "",
         "tournament": r.get("tournament") or "", "tour": r.get("tour") or "",
@@ -94,12 +145,15 @@ def _to_unified_consistency(r: dict[str, Any], cfg) -> dict[str, Any]:
         # url -> parent (leg 1), url_2 -> child (leg 2). (Was reversed: url pointed at the child.)
         "ticker_1": r.get("parent_ticker") or "", "ticker_2": r.get("child_ticker") or "",
         "url": r.get("parent_url") or r.get("child_url") or "", "url_2": r.get("child_url") or r.get("parent_url") or "",
-        "legs": None, "n_legs": None,  # 2-leg shape — the positional action_1/2 fields carry it
+        "legs": None, "n_legs": None,  # synthesized into a 2-leg list by _finalize_unified (parity)
     }
+    # broader-YES + deeper-NO guarantees ≥100¢ in every settled state, so the floor is 100 when there's a
+    # buy-plan (a firm cost), else None (CLEAN / display-only rows have no executable position).
+    return _finalize_unified(d, payout_floor_c=(100 if d["cost_c"] is not None else None))
 
 
 def _to_unified_dutchbook(r: dict[str, Any], cfg) -> dict[str, Any]:
-    return {
+    d = {
         "sport": cfg.sport_id, "sport_label": cfg.label, "source": "dutch_book",
         "name": r.get("match") or "", "detail": r.get("direction") or "",
         "tournament": r.get("tournament") or "", "tour": r.get("tour") or "",
@@ -116,17 +170,19 @@ def _to_unified_dutchbook(r: dict[str, Any], cfg) -> dict[str, Any]:
         # Two legs of the same event; one event link (no second link).
         "ticker_1": r.get("ticker_a") or "", "ticker_2": r.get("ticker_b") or "",
         "url": r.get("url") or "", "url_2": "",
-        # 2-leg books carry legs=None (positional action_1/2 fields). The n-outcome (soccer 3-way) path
-        # sets a full `legs` list, which flows through to the UI's dynamic N-leg rendering.
+        # 2-leg books carry legs=None (synthesized below); the n-outcome (soccer 3-way) path sets a full
+        # `legs` list. _finalize_unified normalizes both into a uniform list + n_legs.
         "legs": r.get("legs"), "n_legs": _num(r.get("n_legs")),
     }
+    # 2-way floor is 100¢; the n-way path already carries (n−1)·100 (overround) / 100 (underround).
+    return _finalize_unified(d, payout_floor_c=(_num(r.get("payout_floor_c")) or 100))
 
 
 def _to_unified_synthetic(r: dict[str, Any], cfg) -> dict[str, Any]:
     """Map a synthetic-bundle finding (N legs) onto the unified schema. The full plan lives in `legs`;
     `action_1/2_*` are backfilled (by the detector) from the first two legs so 2-leg consumers still work."""
     legs = r.get("legs") or []
-    return {
+    d = {
         "sport": cfg.sport_id, "sport_label": cfg.label, "source": "synthetic_bundle",
         "name": r.get("player") or r.get("match") or "",
         "detail": f"score bundle vs match-winner ({r.get('direction') or ''})".strip(),
@@ -146,6 +202,8 @@ def _to_unified_synthetic(r: dict[str, Any], cfg) -> dict[str, Any]:
         "url": r.get("url") or "", "url_2": "",
         "legs": legs, "n_legs": _num(r.get("n_legs")),
     }
+    # synthetic forward floor = 100¢, reverse = N×100¢ (carried as payout_floor_c by _build_finding).
+    return _finalize_unified(d, payout_floor_c=_num(r.get("payout_floor_c")))
 
 
 def _rank_key(row: dict[str, Any]) -> tuple:

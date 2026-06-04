@@ -191,6 +191,11 @@ def recently_actionable(snapshots: list[dict[str, Any]], *, now_ts: float | None
             "last_edge_c": _num(last_row.get("exec_gap_c")),
             "last_action_1_text": last_row.get("action_1_text"),
             "last_action_2_text": last_row.get("action_2_text"),
+            # The full N-leg plan as it last looked actionable (PR 13); keep the 2 positional texts for
+            # back-compat. None when the snapshot predates the `legs` column.
+            "last_legs": last_row.get("legs"),
+            "payout_floor_c": _num(last_row.get("payout_floor_c")),
+            "roi_pct": _num(last_row.get("roi_pct")),
             "current_status": (cur_row or {}).get("status"),
             "current_bucket": (cur_row or {}).get("bucket"),
             "url": last_row.get("url"),

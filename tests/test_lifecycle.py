@@ -16,6 +16,7 @@ def op(oid, bucket="actionable", **kw):
         "rule_flag": kw.get("rule_flag", ""), "sport": kw.get("sport", "tennis"),
         "name": kw.get("name", "X"), "url": kw.get("url", ""),
         "action_1_text": kw.get("a1", ""), "action_2_text": kw.get("a2", ""),
+        "legs": kw.get("legs"), "payout_floor_c": kw.get("payout_floor_c"), "roi_pct": kw.get("roi_pct"),
     }
 
 
@@ -95,6 +96,15 @@ def test_recently_actionable_went_blocked_with_fields():
     assert r["became_ts"] == 1.0 and r["left_ts"] == 3.0 and r["duration_s"] == 1.0
     assert r["reason_left"] == "went blocked"
     assert r["last_edge_c"] == 4 and r["sport"] == "nba"   # last actionable snapshot (ts2)
+
+
+def test_recently_actionable_carries_last_legs_and_floor_roi():
+    # PR 13: the backlog carries the full N-leg plan + floor/ROI as the opp last looked actionable.
+    legs = [{"text": "Buy YES — Reach Final @ 40¢"}, {"text": "Buy NO — Win @ 38¢"}]
+    snaps = [snap(1, op("a", "actionable", legs=legs, payout_floor_c=100, roi_pct=9.0)),
+             snap(2, op("a", "blocked", market_status="active"))]
+    r = lifecycle.recently_actionable(snaps)[0]
+    assert r["last_legs"] == legs and r["payout_floor_c"] == 100 and r["roi_pct"] == 9.0
 
 
 def test_recently_actionable_excludes_still_actionable():
