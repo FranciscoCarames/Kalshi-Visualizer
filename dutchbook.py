@@ -32,7 +32,7 @@ independently testable.
 """
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, NamedTuple
 
 import data
 import sports
@@ -252,10 +252,185 @@ def _detect_pair(event_ticker: str, markets: list[dict[str, Any]]) -> dict[str, 
     }
 
 
-def find_dutch_books(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Scan per-player contract rows and return one dutch-book finding per qualifying 2-outcome match
-    event (possibly empty). Groups head-to-head market rows by ``event_ticker``; only events with
-    exactly two distinct-participant markets are evaluated.
+# ---- N-outcome (n>=3) MECE dutch book ----------------------------------------------------------------
+# Soccer World Cup group games are 3-WAY (Home / Away / Tie), so `_detect_pair` (which rejects any event
+# without exactly 2 markets) can't see them. `find_dutch_books` dispatches the soccer `game` family to
+# `_detect_n_way`; every other 2-way sport keeps `_detect_pair` byte-identical.
+#   - Underround -> Buy YES all n. One outcome wins -> pays 100c. Fires if sum(yes_ask) < 100c (needs
+#     EXHAUSTIVE). Locked = 100 - cost.
+#   - Overround -> Buy NO all n. Exactly one outcome wins -> the other (n-1) NOs each pay 100c, so the
+#     payout floor is (n-1)*100c (needs MUTUALLY EXCLUSIVE). Fires if sum(no_ask) < (n-1)*100c.
+# (n=2 reduces to `_detect_pair`'s 100c floor.) Exact integer cents throughout.
+
+_DRAW_EXCLUDED_PHRASE = "does not include extra time or penalties"
+
+
+class MeceProof(NamedTuple):
+    ok: bool
+    mutually_exclusive: bool
+    exhaustive: bool
+    settlement_basis: str
+    reason: str
+
+
+def prove_mece(event_rows: list[dict[str, Any]], cfg: Any) -> MeceProof:
+    """Prove a soccer game event is a true MECE 3-way (Home/Away/Tie) safe to dutch-book.
+
+    Requires: exactly 2 real participants + 1 non-participant Tie (from `is_participant`); 3 distinct
+    keys; the event flagged `mutually_exclusive`; the draw-excluded settlement phrase present (a true
+    90-minute 3-way, not a 2-way "to advance" book); and a SHARED settlement basis (the same rule-token
+    set on every leg). `ok` gates emission.
+    """
+    teams = [r for r in event_rows if r.get("is_participant")]
+    ties = [r for r in event_rows if not r.get("is_participant")]
+    if len(event_rows) != 3 or len(teams) != 2 or len(ties) != 1:
+        return MeceProof(False, False, False, "", "expected exactly 2 participants + 1 tie")
+    if len({str(r.get("player_key") or "") for r in event_rows}) != 3:
+        return MeceProof(False, False, False, "", "duplicate participant keys")
+    if not all(bool(r.get("mutually_exclusive")) for r in event_rows):
+        return MeceProof(False, False, False, "", "event not flagged mutually_exclusive")
+    if not any(_DRAW_EXCLUDED_PHRASE in str(r.get("rules_primary") or "").lower() for r in event_rows):
+        return MeceProof(False, True, False, "", "missing draw-excluded settlement phrase")
+    bases = {frozenset(data.rule_tokens(r.get("rules_primary"))) for r in event_rows}
+    if len(bases) != 1:
+        return MeceProof(False, True, True, "", "settlement basis differs across legs")
+    basis = ", ".join(sorted(next(iter(bases)))) or "standard one-winner"
+    return MeceProof(True, True, True, basis, "")
+
+
+def _n_direction_candidate(side: str, rows: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """Price one direction across all n legs. Underround floor = 100c; overround floor = (n-1)*100c."""
+    n = len(rows)
+    if side == "buy_yes":
+        prices = [_firm_yes_ask_c(r) for r in rows]
+        sizes = [r.get("yes_ask_size") for r in rows]   # buying YES hits resting asks
+        floor = 100
+    else:
+        prices = [_firm_no_ask_c(r) for r in rows]
+        sizes = [r.get("yes_bid_size") for r in rows]   # buying NO hits resting YES bids
+        floor = (n - 1) * 100
+    if any(p is None for p in prices):
+        return None
+    cost = sum(prices)
+    min_size = min(sizes) if all(_pos(s) for s in sizes) else None
+    return {"side": side, "cost_c": cost, "gap_c": floor - cost, "prices": prices,
+            "min_size": min_size, "payout_floor_c": floor}
+
+
+def _record(diag: dict | None, kind: str, event_ticker: str, reason: str) -> None:
+    """Fold a rejected / eligible-non-firing candidate into the optional `_diag` (Debug / live smoke)."""
+    if diag is not None:
+        diag.setdefault(kind, []).append({"event_ticker": event_ticker, "reason": reason})
+
+
+def _detect_n_way(event_ticker: str, rows: list[dict[str, Any]], cfg: Any,
+                  diag: dict | None = None) -> dict[str, Any] | None:
+    """Detect an n-outcome dutch book on one MECE event (currently soccer 3-way games), or None."""
+    proof = prove_mece(rows, cfg)
+    if not proof.ok:
+        _record(diag, "rejected", event_ticker, proof.reason)
+        return None
+    n = len(rows)
+    candidates = [c for c in (_n_direction_candidate("buy_yes", rows),
+                              _n_direction_candidate("buy_no", rows)) if c is not None]
+    fired = [c for c in candidates if c["gap_c"] > 0]
+    if not fired:
+        _record(diag, "eligible_non_firing", event_ticker, "priced, no positive gap")
+        return None
+    best = max(fired, key=lambda c: c["gap_c"])
+    side = best["side"]
+    direction = "underround" if side == "buy_yes" else "overround"
+    word = "buy YES" if side == "buy_yes" else "buy NO"
+    gap_c, min_size, floor, cost = best["gap_c"], best["min_size"], best["payout_floor_c"], best["cost_c"]
+
+    legs: list[dict[str, Any]] = []
+    for r, p in zip(rows, best["prices"]):
+        size = r.get("yes_ask_size") if side == "buy_yes" else r.get("yes_bid_size")
+        label = _leg_label(r)
+        legs.append({"side": side, "contract": label, "price_c": p, "size": _num(size),
+                     "ticker": r.get("market_ticker", ""), "url": r.get("kalshi_url", ""),
+                     "text": _buy_text(side, label, p)})
+
+    all_active = all(_is_active(r) for r in rows)
+    tradable_now = "Yes" if (min_size is not None and all_active) else "No"
+    blockers: list[str] = []
+    if min_size is None:
+        blockers.append(BLOCKERS["size_missing"])
+    for r in rows:
+        q = r.get("quote_quality")
+        if q in ("No quote", "One-sided"):
+            blockers.append(BLOCKERS["no_quote"].format(leg=_leg_label(r)))
+        elif q == "Crossed":
+            blockers.append(BLOCKERS["crossed"].format(leg=_leg_label(r)))
+        s = str(r.get("status") or "")
+        if s and s != "active":
+            blockers.append(BLOCKERS["inactive"].format(leg=_leg_label(r), status=s))
+
+    # Id recipe = check type + event + SORTED participant keys (leg-order-independent, one finding/event).
+    keys = sorted(str(r.get("player_key") or "") for r in rows)
+    oid = data.opportunity_id(CHECK_TYPE, event_ticker, *keys)
+    bucket = "actionable" if tradable_now.startswith("Yes") else "blocked"
+    blockers_str = "; ".join(blockers)
+    blocked_reason = (blockers_str or "not executable now") if bucket == "blocked" else ""
+    participants = [_leg_label(r) for r in rows if r.get("is_participant")]
+    match = " vs ".join(participants) if participants else (rows[0].get("event_title") or event_ticker)
+    times = [t for t in (r.get("time_value") for r in rows) if t]
+    reason = (f"{direction}: {word} all {n} legs costs {cost}c < {floor}c payout floor "
+              f"-> {gap_c}c locked per unit")
+
+    return {
+        "check_type": CHECK_TYPE,
+        "relationship_type": CHECK_TYPE,
+        "opportunity_id": oid,
+        "bucket": bucket,
+        "blocked_reason": blocked_reason,
+        "status": EXECUTABLE_DUTCH_BOOK,
+        "direction": direction,
+        "event_ticker": event_ticker,
+        "series": rows[0].get("series", ""),
+        "tournament": rows[0].get("tournament", ""),
+        "tour": rows[0].get("tour", ""),
+        "match": match,
+        "player_a": legs[0]["contract"], "player_b": legs[1]["contract"],
+        "player_key_a": rows[0].get("player_key", ""), "player_key_b": rows[1].get("player_key", ""),
+        "resolve_time": min(times) if times else None,
+        "tradable_now": tradable_now,
+        "market_status": "active" if all_active else "inactive",
+        "blockers": blockers_str,
+        # Full N-leg plan in `legs`; action_1/2 backfilled from the first two legs so the unified 2-leg
+        # columns + lifecycle still render. payout_floor_c is the (n-1)*100 (overround) / 100 (underround).
+        "legs": legs, "n_legs": n, "payout_floor_c": floor,
+        "action_1_side": legs[0]["side"], "action_1_contract": legs[0]["contract"],
+        "action_1_price_c": legs[0]["price_c"], "action_1_text": legs[0]["text"],
+        "action_2_side": legs[1]["side"], "action_2_contract": legs[1]["contract"],
+        "action_2_price_c": legs[1]["price_c"], "action_2_text": legs[1]["text"],
+        "cost_c": cost,
+        "exec_gap_c": gap_c,
+        "exec_min_size": min_size,
+        "exec_max_profit_dollars": round(gap_c * min_size / 100, 2) if min_size is not None else None,
+        "reason": reason,
+        "event_title": rows[0].get("event_title", ""),
+        "ticker_a": rows[0].get("market_ticker", ""),
+        "ticker_b": rows[1].get("market_ticker", ""),
+        "url": rows[0].get("kalshi_url", ""),
+    }
+
+
+def proof_audit(event_rows: list[dict[str, Any]], cfg: Any) -> dict[str, Any]:
+    """For tests / live smoke: the MECE proof + both priced directions WITHOUT the gap>0 filter."""
+    return {
+        "proof": prove_mece(event_rows, cfg),
+        "underround": _n_direction_candidate("buy_yes", event_rows),
+        "overround": _n_direction_candidate("buy_no", event_rows),
+    }
+
+
+def find_dutch_books(rows: list[dict[str, Any]],
+                     _diag: dict | None = None) -> list[dict[str, Any]]:
+    """Scan per-player contract rows and return one dutch-book finding per qualifying event (possibly
+    empty). Eligible rows are grouped by ``event_ticker``; **soccer 3-way games dispatch to
+    ``_detect_n_way``, every other 2-way sport keeps ``_detect_pair`` byte-identical**. The optional
+    ``_diag`` dict collects rejected + eligible-non-firing n-way candidates (for Debug / live smoke).
     """
     groups: dict[str, list[dict[str, Any]]] = {}
     for row in rows or []:
@@ -268,7 +443,11 @@ def find_dutch_books(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
     out: list[dict[str, Any]] = []
     for event_ticker, markets in groups.items():
-        finding = _detect_pair(event_ticker, markets)
+        cfg = sports.sport_for_series(markets[0].get("series"))
+        if cfg.sport_id == "soccer":
+            finding = _detect_n_way(event_ticker, markets, cfg, _diag)
+        else:
+            finding = _detect_pair(event_ticker, markets)
         if finding is not None:
             out.append(finding)
     # Strongest edge first (largest locked gap), deterministic tiebreak on event ticker.

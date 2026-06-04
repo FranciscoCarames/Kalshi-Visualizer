@@ -52,6 +52,18 @@ def opportunity_id(*parts: Any) -> str:
     return hashlib.sha1(raw.encode("utf-8")).hexdigest()[:16]
 
 
+# Settlement-nuance tokens that, when they DIFFER between markets, signal the markets may settle
+# differently (a rule mismatch). Shared by the consistency match-alignment flag (`consistency._rule_flag`)
+# and the n-outcome dutch-book settlement-basis check (`dutchbook.prove_mece`). Lowercased substring match.
+RULE_TOKENS = ("ball has been played", "walkover", "retire", "withdraw", "forfeit", "cancel")
+
+
+def rule_tokens(text: Any) -> set[str]:
+    """The set of settlement-nuance tokens present in a market's ``rules_primary`` text."""
+    t = str(text or "").lower()
+    return {tok for tok in RULE_TOKENS if tok in t}
+
+
 # --- Display-time helpers (timezone formatting; DISPLAY-ONLY — never used in cents/comparison logic) -
 _FETCHED_AT_FMT = "%Y-%m-%d %H:%M:%S UTC"
 

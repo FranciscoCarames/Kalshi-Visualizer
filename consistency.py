@@ -20,7 +20,7 @@ import pandas as pd
 
 import sports
 from config import DISPLAY_TOL_C, NEAR_EDGE_MIN_C
-from data import opportunity_id
+from data import opportunity_id, rule_tokens
 from glossary import BLOCKERS, WATCHLIST_NOTE
 
 # Statuses that represent an actual price inconsistency with a buy direction (get a Buy YES / Buy NO
@@ -53,9 +53,8 @@ def _sport_for_rows(rows: list[dict[str, Any]]):
             return cfg
     return sports.TENNIS
 
-# Settlement-rule nuance tokens; a difference between two markets means the equivalence may
-# not hold exactly (e.g. walkover / "ball has been played" handling differs).
-_RULE_TOKENS = ["ball has been played", "walkover", "retire", "withdraw", "forfeit", "cancel"]
+# Settlement-rule nuance tokens are single-sourced in `data.RULE_TOKENS` (shared with the n-outcome
+# dutch-book settlement-basis check); `_rule_flag` below uses `data.rule_tokens`.
 
 _QUALITY_RANK = {"Tight": 0, "OK": 1, "Wide": 2, "Very wide": 3, "One-sided": 4, "No quote": 5, "Crossed": 6}
 
@@ -286,10 +285,8 @@ def _is_active(row: dict[str, Any]) -> bool:
 
 def _rule_flag(child: dict[str, Any], parent: dict[str, Any]) -> tuple[str, str]:
     """Rule compatibility for an equivalence pair: (flag, note)."""
-    cr = str(child.get("rules_primary") or "").lower()
-    pr = str(parent.get("rules_primary") or "").lower()
-    c_tokens = {t for t in _RULE_TOKENS if t in cr}
-    p_tokens = {t for t in _RULE_TOKENS if t in pr}
+    c_tokens = rule_tokens(child.get("rules_primary"))
+    p_tokens = rule_tokens(parent.get("rules_primary"))
     if c_tokens != p_tokens:
         diff = sorted(c_tokens.symmetric_difference(p_tokens))
         return "RULE_MISMATCH", f"settlement nuance differs: {', '.join(diff)}"

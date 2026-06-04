@@ -113,7 +113,9 @@ def _to_unified_dutchbook(r: dict[str, Any], cfg) -> dict[str, Any]:
         # Two legs of the same event; one event link (no second link).
         "ticker_1": r.get("ticker_a") or "", "ticker_2": r.get("ticker_b") or "",
         "url": r.get("url") or "", "url_2": "",
-        "legs": None, "n_legs": None,  # 2-leg shape
+        # 2-leg books carry legs=None (positional action_1/2 fields). The n-outcome (soccer 3-way) path
+        # sets a full `legs` list, which flows through to the UI's dynamic N-leg rendering.
+        "legs": r.get("legs"), "n_legs": _num(r.get("n_legs")),
     }
 
 
