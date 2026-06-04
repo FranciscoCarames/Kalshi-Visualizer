@@ -130,6 +130,22 @@ GLOSSARY: dict[str, dict[str, str]] = {
                 "settlement-rule caveat — both legs are outcomes of the SAME event and settle together — "
                 "so a firm, sized dutch book is true arbitrage (gross of fees).",
     },
+    "Synthetic bundle": {
+        "short": "A gross pricing discrepancy where a player's exact-set-score contracts (the MECE set "
+                 "for them winning) are mispriced against their match-winner. NOT riskless — review the "
+                 "settlement rules.",
+        "long": "Unlike a dutch book (two outcomes of ONE market), a synthetic bundle spans two market "
+                "families. A player wins their match iff one of the exact set scores occurs — best-of-5 "
+                "{3-0, 3-1, 3-2}, best-of-3 {2-0, 2-1} — so that MECE set replicates 'they win', which is "
+                "also what their match-winner market pays. Two directions: buy YES every score state + buy "
+                "NO the match-winner (pays 100¢, a discrepancy when the legs cost < 100¢); or buy NO every "
+                "state + buy YES the winner (pays N×100¢ for N states, a discrepancy when the legs cost < "
+                "N×100¢). It is NOT true arbitrage: an exact score is not the match-winner, and on a "
+                "retirement or a no-ball-played the exact-score legs resolve to Fair Market Price while the "
+                "winner settles cleanly — so every finding carries a settlement caveat and is shown "
+                "review-only, never actionable. Gross of fees; sizes are top-of-book (full-depth fill not "
+                "modeled).",
+    },
     "New actionable": {
         "short": "An opportunity that became actionable since the previous scan — it wasn't in the "
                  "last snapshot's actionable set. The banner keeps it flagged for the chosen window.",
@@ -206,6 +222,7 @@ COLUMN_HELP: dict[str, str] = {
     "Buy YES": "Buy YES vs Buy NO",
     "Buy NO": "Buy YES vs Buy NO",
     "Locked edge (¢)": "Dutch book",
+    "Bundle (all legs)": "Synthetic bundle",
     "New actionable": "New actionable",
     "Recently actionable": "Recently actionable",
     "Changed while blocked": "Changed while blocked",

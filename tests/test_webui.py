@@ -128,3 +128,21 @@ def test_explanation_lines_content():
     # without show_ids and without a caveat, those lines are omitted
     plain = dash.explanation_lines(op("BBB", bucket="actionable"), show_ids=False)
     assert not any("T-a / T-b" in line for line in plain) and not any(line.startswith("Caveat") for line in plain)
+
+
+def test_explanation_lines_iterates_n_legs_for_synthetic_bundle():
+    o = op("SYN", bucket="blocked", status="EXECUTABLE_SYNTHETIC_BUNDLE",
+           tradable_now="Review rules", blocked_reason="settlement caveat")
+    o["source"] = "synthetic_bundle"
+    o["legs"] = [
+        {"text": "Buy YES — P wins 3-0 @ 2¢", "url": "u30"},
+        {"text": "Buy YES — P wins 3-1 @ 2¢", "url": "u31"},
+        {"text": "Buy YES — P wins 3-2 @ 2¢", "url": "u32"},
+        {"text": "Buy NO — P @ 90¢", "url": "uw"},
+    ]
+    blob = "\n".join(dash.explanation_lines(o))
+    assert "Leg 1: Buy YES — P wins 3-0 @ 2¢" in blob
+    assert "Leg 4: Buy NO — P @ 90¢" in blob          # ALL four legs listed, not just two
+    assert "Tradable now: Review rules" in blob and "Caveat: settlement caveat" in blob
+    # 2-leg shapes (no `legs` list) keep the positional fallback.
+    assert "Leg 2: Buy YES — B @ 48¢" in "\n".join(dash.explanation_lines(op("DB")))
