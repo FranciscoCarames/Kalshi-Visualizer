@@ -372,8 +372,13 @@ def _detect_n_way(event_ticker: str, rows: list[dict[str, Any]], cfg: Any,
     bucket = "actionable" if tradable_now.startswith("Yes") else "blocked"
     blockers_str = "; ".join(blockers)
     blocked_reason = (blockers_str or "not executable now") if bucket == "blocked" else ""
-    participants = [_leg_label(r) for r in rows if r.get("is_participant")]
+    # a/b are the real participants (teams) so the participant filter matches a chosen team regardless of
+    # market order; the Tie / any extra legs live only in `legs` (and are never selectable participants).
+    team_rows = [r for r in rows if r.get("is_participant")] or rows
+    participants = [_leg_label(r) for r in team_rows]
     match = " vs ".join(participants) if participants else (rows[0].get("event_title") or event_ticker)
+    pa = team_rows[0]
+    pb = team_rows[1] if len(team_rows) > 1 else team_rows[0]
     times = [t for t in (r.get("time_value") for r in rows) if t]
     reason = (f"{direction}: {word} all {n} legs costs {cost}c < {floor}c payout floor "
               f"-> {gap_c}c locked per unit")
@@ -391,8 +396,8 @@ def _detect_n_way(event_ticker: str, rows: list[dict[str, Any]], cfg: Any,
         "tournament": rows[0].get("tournament", ""),
         "tour": rows[0].get("tour", ""),
         "match": match,
-        "player_a": legs[0]["contract"], "player_b": legs[1]["contract"],
-        "player_key_a": rows[0].get("player_key", ""), "player_key_b": rows[1].get("player_key", ""),
+        "player_a": _leg_label(pa), "player_b": _leg_label(pb),
+        "player_key_a": pa.get("player_key", ""), "player_key_b": pb.get("player_key", ""),
         "resolve_time": min(times) if times else None,
         "tradable_now": tradable_now,
         "market_status": "active" if all_active else "inactive",

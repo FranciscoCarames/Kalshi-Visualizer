@@ -142,3 +142,16 @@ def test_app_renders_nba_and_unmapped_table():
         toggle.set_value(True)
         at.run()
         assert not at.exception
+
+
+def test_dutch_plan_text_lists_all_n_legs():
+    """The dutch-book table's plan cell lists EVERY leg for an n-outcome (soccer 3-way) finding, and
+    falls back to the positional action_1/2 fields for a 2-leg book."""
+    import app
+    n_leg = {"legs": [{"text": "Buy YES — Mexico @ 40¢"}, {"text": "Buy YES — South Africa @ 30¢"},
+                      {"text": "Buy YES — Tie @ 25¢"}]}
+    plan = app.dutch_plan_text(n_leg)
+    assert "Mexico" in plan and "South Africa" in plan and "Tie" in plan   # all 3 legs shown
+    two_leg = {"legs": None, "action_1_text": "Buy YES — A @ 45¢", "action_2_text": "Buy NO — B @ 49¢"}
+    plan2 = app.dutch_plan_text(two_leg)
+    assert "A @ 45¢" in plan2 and "B @ 49¢" in plan2

@@ -116,19 +116,23 @@ GLOSSARY: dict[str, dict[str, str]] = {
                 "contract and buy NO on the deeper one.",
     },
     "Dutch book": {
-        "short": "A guaranteed edge from covering BOTH outcomes of a two-way market for under 100¢; the "
-                 "locked profit per unit is 100¢ − the total cost of the two legs.",
+        "short": "A locked edge from covering EVERY outcome of a mutually-exclusive set for under the "
+                 "payout floor — 100¢ for a 2-outcome book, (n−1)×100¢ for an n-way overround; the locked "
+                 "profit per unit is the floor minus the total cost of all legs.",
         "long": "A dutch book is the simplest kind of locked edge and needs no probability model. A "
-                "head-to-head match has exactly two outcomes that are mutually exclusive (only one player "
-                "wins) and exhaustive (someone must — tennis has no draw), so exactly one of the two "
-                "contracts settles at $1. If you can assemble a position that pays that $1 for less than "
-                "$1, the difference is locked in every outcome. Two directions, each a pair of BUYS: "
-                "buy YES on both players when their YES asks sum to under 100¢ (an ‘underround’), or buy "
-                "NO on both when their NO asks sum to under 100¢ (an ‘overround’). Because the two player "
-                "markets are priced on independent order books, their prices need not add to 100¢, which "
-                "is what creates the edge. Unlike a containment/match-alignment edge there is no "
-                "settlement-rule caveat — both legs are outcomes of the SAME event and settle together — "
-                "so a firm, sized dutch book is true arbitrage (gross of fees).",
+                "mutually-exclusive-and-exhaustive (MECE) set of contracts has exactly one winner, so one "
+                "contract settles at $1. If you can assemble a position that pays that $1 for less than its "
+                "cost, the difference is locked in every outcome. The 2-outcome case is a head-to-head "
+                "match/series or a single game (draw-free sports have no third outcome). The n-outcome case "
+                "is a soccer World Cup group game — three MECE outcomes (Home / Away / Tie). Two directions, "
+                "each all BUYS of the SAME side: buy YES on EVERY leg when their YES asks sum to under 100¢ "
+                "(an ‘underround’ — one leg pays 100¢), or buy NO on every leg when their NO asks sum to "
+                "under the (n−1)×100¢ floor (an ‘overround’ — exactly one outcome wins, so the other n−1 "
+                "NOs each pay 100¢). Because each market is priced on an independent order book, prices need "
+                "not add to the floor, which is what creates the edge. Both legs are outcomes of the SAME "
+                "event and settle together (no match-alignment settlement caveat) — so a firm, sized book "
+                "is a gross edge (before fees) under normal one-winner settlement; the residual risk is an "
+                "abnormal resolution (a cancelled / abandoned game settling to a fair price).",
     },
     "Synthetic bundle": {
         "short": "A gross pricing discrepancy where a player's exact-set-score contracts (the MECE set "

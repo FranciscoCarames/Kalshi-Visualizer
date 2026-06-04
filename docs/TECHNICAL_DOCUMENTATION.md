@@ -72,7 +72,7 @@ data.py           — Parse raw JSON → per-participant contract rows (flat dic
 consistency.py    — Build per-participant nodes → pairwise comparisons → edge classification;
                     sport-resolved ladder per row
   ↓
-dutchbook.py      — 2-outcome MECE detector: find_dutch_books() on match + game rows
+dutchbook.py      — MECE dutch-book detector: find_dutch_books() on 2-outcome match + game rows AND soccer 3-way games (n-outcome via prove_mece/_detect_n_way; overround floor (n-1)*100)
   ↓
 filters.py        — Membership + threshold filtering on the comparison DataFrame
   ↓
