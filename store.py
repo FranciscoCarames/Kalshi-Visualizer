@@ -23,15 +23,33 @@ from typing import Any
 import config
 
 # Bump when the on-disk schema changes; `_migrate` brings an older file forward. Held in the SQLite
-# `user_version` pragma so no bookkeeping table is needed.
-SCHEMA_VERSION = 2
+# `user_version` pragma so no bookkeeping table is needed. v3 adds `snapshot_frames` (per-sport/per-frame
+# evidence) + WAL; the v2->v3 upgrade backs up the file first and falls back to a fresh DB on failure.
+SCHEMA_VERSION = 3
 
 # Columns promoted out of each opportunity row into indexed SQL columns for cheap lifecycle/backlog
 # filtering; the FULL row always round-trips in the `data` JSON blob, so no field is ever lost. Stable
 # order — a schema test guards it.
 PROMOTED_COLUMNS = ("opportunity_id", "relationship_type", "bucket", "status", "blocked_reason")
 
-# Current (v2) schema — used to create a FRESH DB complete. `meta` (v2) holds per-scan coverage JSON.
+# v3 addition: per-snapshot evidence frames (the per-sport contracts / checks / dutch-book DataFrames the
+# scanner produces), each stored as one JSON blob, partial-loadable by (sport, frame_type), with its OWN
+# `schema_version` so a frame's shape can evolve independently of the snapshot schema. Kept as a separate
+# constant so the v2->v3 migration can create it via a single forward step.
+_FRAMES_SCHEMA = """
+CREATE TABLE IF NOT EXISTS snapshot_frames (
+    snapshot_id     INTEGER NOT NULL REFERENCES snapshots(id) ON DELETE CASCADE,
+    sport           TEXT,
+    frame_type      TEXT,                -- 'contracts' | 'checks' | 'dutchbook' | ... (scanner-defined)
+    schema_version  INTEGER,             -- per-frame version (NOT the global SCHEMA_VERSION)
+    rows_json       TEXT NOT NULL,       -- the frame's rows as a JSON array (NaN->null, tuples->arrays)
+    row_count       INTEGER
+);
+CREATE INDEX IF NOT EXISTS ix_frame_snapshot ON snapshot_frames(snapshot_id);
+"""
+
+# Current (v3) schema — used to create a FRESH DB complete. `meta` (v2) holds per-scan coverage JSON;
+# `snapshot_frames` (v3) holds the per-sport/per-frame evidence.
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS snapshots (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -50,7 +68,7 @@ CREATE TABLE IF NOT EXISTS opportunities (
 );
 CREATE INDEX IF NOT EXISTS ix_opp_snapshot ON opportunities(snapshot_id);
 CREATE INDEX IF NOT EXISTS ix_opp_id       ON opportunities(opportunity_id);
-"""
+""" + _FRAMES_SCHEMA
 
 
 # --- time normalization (exact UTC; deterministic) -----------------------------------
@@ -137,17 +155,43 @@ def _promoted(row: dict[str, Any], key: str) -> str | None:
 
 # --- connection / migration ----------------------------------------------------------
 def _connect(db_path: str | None) -> sqlite3.Connection:
-    conn = sqlite3.connect(db_path or config.SNAPSHOT_DB_PATH)
+    resolved = db_path or config.SNAPSHOT_DB_PATH
+    conn = sqlite3.connect(resolved)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
-    _migrate(conn)
+    # WAL lets a reader proceed while a scan write holds the writer lock; busy_timeout bounds the wait on a
+    # held lock instead of raising "database is locked" immediately. (No-ops / harmless for :memory:.)
+    conn.execute("PRAGMA journal_mode = WAL")
+    conn.execute(f"PRAGMA busy_timeout = {int(config.SNAPSHOT_BUSY_TIMEOUT_MS)}")
+    _migrate(conn, resolved)
     return conn
 
 
-def _migrate(conn: sqlite3.Connection) -> None:
-    """Bring the file to SCHEMA_VERSION. A fresh (user_version 0) file is created at the current
-    version; future intermediate versions apply forward steps here. A newer-than-supported file is a
-    hard error (never downgrade-write)."""
+def _backup_before_migration(conn: sqlite3.Connection, db_path: str) -> None:
+    """Snapshot the CURRENT (pre-upgrade) DB to ``<db>.pre-v<N>-backup`` via SQLite's online backup API
+    (WAL-safe, captures the committed state) so an older file is never lost across a migration. Skipped for
+    in-memory / unnamed databases (nothing on disk to preserve)."""
+    if not db_path or db_path == ":memory:":
+        return
+    backup_path = f"{db_path}.pre-v{SCHEMA_VERSION}-backup"
+    with sqlite3.connect(backup_path) as bck:
+        conn.backup(bck)
+
+
+def _reset_to_fresh(conn: sqlite3.Connection) -> None:
+    """Drop everything and recreate the current schema at SCHEMA_VERSION (the fresh-DB fallback)."""
+    for table in ("snapshot_frames", "opportunities", "snapshots"):
+        conn.execute(f"DROP TABLE IF EXISTS {table}")
+    conn.executescript(_SCHEMA)
+    conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
+    conn.commit()
+
+
+def _migrate(conn: sqlite3.Connection, db_path: str = "") -> None:
+    """Bring the file to SCHEMA_VERSION. A fresh (user_version 0) file is created at the current version;
+    an older file is BACKED UP and walked forward step-by-step. If a forward step fails on a malformed
+    file, we warn and reset to a fresh v3 DB — the original is preserved in the backup. A
+    newer-than-supported file is a hard error (never downgrade-write)."""
     version = conn.execute("PRAGMA user_version").fetchone()[0]
     if version == SCHEMA_VERSION:
         return
@@ -156,14 +200,25 @@ def _migrate(conn: sqlite3.Connection) -> None:
             f"snapshot DB schema v{version} is newer than supported v{SCHEMA_VERSION}"
         )
     if version == 0:
-        # Fresh DB: create the FULL current schema (incl. v2 `meta`), so it's never marked v2 without it.
+        # Fresh DB: create the FULL current schema (incl. v2 `meta` + v3 `snapshot_frames`).
         conn.executescript(_SCHEMA)
-    else:
-        # Incremental forward steps from an existing older version. v1 -> v2 adds the `meta` column.
+        conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
+        conn.commit()
+        return
+    # Upgrading an EXISTING older file: back it up first, then apply incremental forward steps.
+    _backup_before_migration(conn, db_path)
+    try:
         if version < 2:
-            conn.execute("ALTER TABLE snapshots ADD COLUMN meta TEXT")
-    conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
-    conn.commit()
+            conn.execute("ALTER TABLE snapshots ADD COLUMN meta TEXT")   # v1 -> v2: per-scan coverage JSON
+        if version < 3:
+            conn.executescript(_FRAMES_SCHEMA)                            # v2 -> v3: per-frame evidence
+        conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
+        conn.commit()
+    except sqlite3.DatabaseError as exc:
+        # ASCII-only (Windows cp1252 consoles can't encode non-ASCII and would crash the print).
+        print(f"WARNING: snapshot DB migration v{version}->v{SCHEMA_VERSION} failed ({exc}); starting a "
+              f"fresh DB. The previous data is preserved at {db_path}.pre-v{SCHEMA_VERSION}-backup.")
+        _reset_to_fresh(conn)
 
 
 def _apply_retention(conn: sqlite3.Connection, retention_seconds: float | None = None) -> int:
@@ -179,6 +234,7 @@ def _apply_retention(conn: sqlite3.Connection, retention_seconds: float | None =
     if not old:
         return 0
     marks = ",".join("?" * len(old))
+    conn.execute(f"DELETE FROM snapshot_frames WHERE snapshot_id IN ({marks})", old)
     conn.execute(f"DELETE FROM opportunities WHERE snapshot_id IN ({marks})", old)
     conn.execute(f"DELETE FROM snapshots WHERE id IN ({marks})", old)
     return len(old)
@@ -203,14 +259,26 @@ def _load(conn: sqlite3.Connection, clause: str, params: tuple = ()) -> list[dic
     return out
 
 
+def _frame_rows(frame: dict[str, Any]) -> tuple[Any, Any, Any, str, int]:
+    """Flatten one frame spec ``{sport, frame_type, schema_version, rows}`` into the INSERT tuple
+    (sport, frame_type, schema_version, rows_json, row_count). ``rows`` is a DataFrame or dict-iterable;
+    it is JSON-serialized NaN-safely (reusing `_jsonable`)."""
+    rows = [_jsonable(r) for r in _records(frame.get("rows"))]
+    return (frame.get("sport"), frame.get("frame_type"), frame.get("schema_version"),
+            json.dumps(rows), len(rows))
+
+
 # --- public API ----------------------------------------------------------------------
-def write_snapshot(fetched_at: Any, opps: Any, *, meta: Any = None, db_path: str | None = None) -> int:
+def write_snapshot(fetched_at: Any, opps: Any, *, meta: Any = None, frames: Any = None,
+                   db_path: str | None = None) -> int:
     """Persist one snapshot of opportunity rows and return its snapshot id.
 
     `fetched_at` is the refresh timestamp (datetime / ISO / load_contracts text / epoch). `opps` is a
     pandas DataFrame or an iterable of dict rows (consistency checks and/or dutch-book findings). `meta`
-    (v2) is optional per-scan coverage metadata, stored as JSON. An empty `opps` still records a snapshot
-    (a refresh with no opportunities is itself information). Retention is applied after the write."""
+    (v2) is optional per-scan coverage metadata, stored as JSON. `frames` (v3) is an optional iterable of
+    ``{sport, frame_type, schema_version, rows}`` evidence frames written into `snapshot_frames` in the
+    SAME transaction (scan = one transaction). An empty `opps` still records a snapshot (a refresh with no
+    opportunities is itself information). Retention is applied after the write."""
     records = _records(opps)
     ts = _to_epoch(fetched_at)
     text = _to_text(fetched_at)
@@ -237,11 +305,46 @@ def write_snapshot(fetched_at: Any, opps: Any, *, meta: Any = None, db_path: str
                 for r in records
             ],
         )
+        if frames:
+            conn.executemany(
+                "INSERT INTO snapshot_frames "
+                "(snapshot_id, sport, frame_type, schema_version, rows_json, row_count) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                [(sid, *_frame_rows(f)) for f in frames],
+            )
         _apply_retention(conn)
         conn.commit()
         return sid
     finally:
         conn.close()
+
+
+def load_frames(snapshot_id: int, *, sport: str | None = None, frame_type: str | None = None,
+                db_path: str | None = None) -> list[dict[str, Any]]:
+    """Load a snapshot's evidence frames (v3), optionally narrowed to one `sport` and/or `frame_type`
+    (partial-loadable — the UI fetches only the frame it needs). Each result is
+    ``{sport, frame_type, schema_version, row_count, rows}`` with `rows` JSON-expanded. Empty when the
+    snapshot has no matching frames (incl. old snapshots written before v3)."""
+    clause = "WHERE snapshot_id = ?"
+    params: list[Any] = [snapshot_id]
+    if sport is not None:
+        clause += " AND sport = ?"
+        params.append(sport)
+    if frame_type is not None:
+        clause += " AND frame_type = ?"
+        params.append(frame_type)
+    conn = _connect(db_path)
+    try:
+        rows = conn.execute(
+            f"SELECT sport, frame_type, schema_version, row_count, rows_json "
+            f"FROM snapshot_frames {clause} ORDER BY rowid", tuple(params)
+        ).fetchall()
+    finally:
+        conn.close()
+    return [{
+        "sport": r["sport"], "frame_type": r["frame_type"], "schema_version": r["schema_version"],
+        "row_count": r["row_count"], "rows": json.loads(r["rows_json"]),
+    } for r in rows]
 
 
 def latest(db_path: str | None = None) -> dict[str, Any] | None:

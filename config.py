@@ -110,6 +110,9 @@ SNAPSHOT_DB_PATH = "snapshots.db"
 # retention is deterministic/testable). Sized above the largest planned backlog window (24h, Stage 3)
 # plus margin, so the lifecycle/backlog views always have enough history.
 SNAPSHOT_RETENTION_SECONDS = 30 * 60 * 60   # 30 hours
+# SQLite busy-timeout (ms): how long a connection waits on a held lock before raising. With WAL mode
+# (set per-connect in store._connect) this lets a reader proceed during a scan write instead of erroring.
+SNAPSHOT_BUSY_TIMEOUT_MS = 5000
 
 # --- Lifecycle (Stage 3 — alerts + recently-actionable backlog) ----------------------
 # Recently-actionable backlog windows (§10): label -> seconds. "This session" is a sentinel the app

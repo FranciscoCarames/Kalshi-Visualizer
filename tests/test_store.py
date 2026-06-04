@@ -222,44 +222,102 @@ def _table_columns(db, table):
         con.close()
 
 
-def test_fresh_db_is_v2_with_meta_column(tmp_path):
-    db = _db(tmp_path)
-    store.write_snapshot(1000, [_opp("a")], db_path=db)      # creates a fresh DB
+def _user_version(db):
     con = sqlite3.connect(db)
     try:
-        assert con.execute("PRAGMA user_version").fetchone()[0] == 2
+        return con.execute("PRAGMA user_version").fetchone()[0]
     finally:
         con.close()
-    assert "meta" in _table_columns(db, "snapshots")
 
 
-def test_v1_db_upgrades_to_v2_via_alter(tmp_path):
-    db = _db(tmp_path)
-    # Hand-build a v1 DB: old snapshots schema WITHOUT meta, user_version=1, one snapshot + opp.
+def _has_table(db, name):
     con = sqlite3.connect(db)
     try:
+        return con.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (name,)).fetchone() is not None
+    finally:
+        con.close()
+
+
+def test_fresh_db_is_v3_with_meta_and_frames(tmp_path):
+    db = _db(tmp_path)
+    store.write_snapshot(1000, [_opp("a")], db_path=db)      # creates a fresh DB
+    assert _user_version(db) == 3 == store.SCHEMA_VERSION
+    assert "meta" in _table_columns(db, "snapshots")
+    assert _has_table(db, "snapshot_frames")
+
+
+def _build_legacy_db(db, version):
+    """Hand-build a pre-v3 DB at `version` (1 = no meta, 2 = with meta) + one snapshot + opp."""
+    con = sqlite3.connect(db)
+    try:
+        meta_col = ", meta TEXT" if version >= 2 else ""
         con.executescript(
-            "CREATE TABLE snapshots (id INTEGER PRIMARY KEY AUTOINCREMENT, fetched_at TEXT NOT NULL, "
-            "fetched_ts REAL NOT NULL);"
+            f"CREATE TABLE snapshots (id INTEGER PRIMARY KEY AUTOINCREMENT, fetched_at TEXT NOT NULL, "
+            f"fetched_ts REAL NOT NULL{meta_col});"
             "CREATE TABLE opportunities (snapshot_id INTEGER, opportunity_id TEXT, relationship_type TEXT, "
             "bucket TEXT, status TEXT, blocked_reason TEXT, data TEXT NOT NULL);")
         con.execute("INSERT INTO snapshots (fetched_at, fetched_ts) VALUES (?, ?)", ("old", 500.0))
         con.execute("INSERT INTO opportunities (snapshot_id, opportunity_id, data) VALUES (1, 'old1', ?)",
                     ('{"opportunity_id": "old1", "bucket": "actionable"}',))
-        con.execute("PRAGMA user_version = 1")
+        con.execute(f"PRAGMA user_version = {version}")
         con.commit()
     finally:
         con.close()
-    # Any store call triggers _migrate: v1 -> v2 via ALTER.
-    snap = store.latest(db_path=db)
-    assert "meta" in _table_columns(db, "snapshots")
-    con = sqlite3.connect(db)
-    try:
-        assert con.execute("PRAGMA user_version").fetchone()[0] == 2
-    finally:
-        con.close()
+
+
+def test_v1_db_upgrades_to_v3(tmp_path):
+    db = _db(tmp_path)
+    _build_legacy_db(db, version=1)
+    snap = store.latest(db_path=db)                              # any store call triggers _migrate: v1->v3
+    assert _user_version(db) == 3
+    assert "meta" in _table_columns(db, "snapshots") and _has_table(db, "snapshot_frames")
     assert snap["opportunities"][0]["opportunity_id"] == "old1"   # old row still readable
     assert snap["meta"] is None                                   # old snapshot has no meta
+
+
+def test_v2_db_upgrades_to_v3_and_backs_up(tmp_path):
+    import os
+    db = _db(tmp_path)
+    _build_legacy_db(db, version=2)
+    snap = store.latest(db_path=db)                              # v2 -> v3
+    assert _user_version(db) == 3 and _has_table(db, "snapshot_frames")
+    assert snap["opportunities"][0]["opportunity_id"] == "old1"   # old data intact
+    # The pre-upgrade DB was backed up; the backup is itself a readable v2 SQLite file with the old row.
+    backup = f"{db}.pre-v3-backup"
+    assert os.path.exists(backup)
+    con = sqlite3.connect(backup)
+    try:
+        assert con.execute("PRAGMA user_version").fetchone()[0] == 2
+        assert con.execute("SELECT opportunity_id FROM opportunities").fetchone()[0] == "old1"
+        assert con.execute(
+            "SELECT 1 FROM sqlite_master WHERE name='snapshot_frames'").fetchone() is None  # pre-v3
+    finally:
+        con.close()
+
+
+def test_migration_failure_resets_to_fresh_v3_preserving_backup(tmp_path, monkeypatch, capsys):
+    import os
+    db = _db(tmp_path)
+    _build_legacy_db(db, version=2)
+    # Force the v2->v3 forward step to fail; the store must back up, warn, and start a fresh v3 DB.
+    monkeypatch.setattr(store, "_FRAMES_SCHEMA", "CREATE TABLE bad (")  # malformed -> DatabaseError
+    store.write_snapshot(1000, [_opp("new")], db_path=db)
+    assert _user_version(db) == 3 and _has_table(db, "snapshot_frames")
+    assert os.path.exists(f"{db}.pre-v3-backup")                  # original preserved
+    assert "migration v2->v3 failed" in capsys.readouterr().out
+    snap = store.latest(db_path=db)
+    assert [o["opportunity_id"] for o in snap["opportunities"]] == ["new"]   # fresh DB has only new data
+
+
+def test_connect_enables_wal(tmp_path):
+    db = _db(tmp_path)
+    store.write_snapshot(1000, [_opp("a")], db_path=db)
+    con = sqlite3.connect(db)
+    try:
+        assert con.execute("PRAGMA journal_mode").fetchone()[0].lower() == "wal"
+    finally:
+        con.close()
 
 
 def test_write_snapshot_meta_roundtrips_and_latest(tmp_path):
@@ -271,3 +329,64 @@ def test_write_snapshot_meta_roundtrips_and_latest(tmp_path):
     assert latest["meta"] == {"scanned": 7, "failed": 1}
     # an earlier snapshot without meta reads back None
     assert store.snapshots_since(10 ** 9, db_path=db)[0]["meta"] is None
+
+
+# --- Stage 5 (PR 19): v3 snapshot_frames round-trip + partial load --------------------
+def test_write_snapshot_frames_round_trip_type_safe(tmp_path):
+    import datetime as _dt
+
+    db = _db(tmp_path)
+    # A frame with the tricky types the round-trip must normalize: NaN, tuple, None, datetime, nested.
+    contracts = [
+        {"player": "A", "yes_bid_c": 45, "display_pct": NAN, "tags": ("x", "y"),
+         "opponent": None, "ts": _dt.datetime(2026, 6, 3, 12, 0, 0)},
+        {"player": "B", "yes_bid_c": 48, "display_pct": 51.5, "tags": ("z",), "opponent": "A"},
+    ]
+    sid = store.write_snapshot(
+        1000, [_opp("a")], db_path=db,
+        frames=[{"sport": "tennis", "frame_type": "contracts", "schema_version": 1, "rows": contracts},
+                {"sport": "nba", "frame_type": "dutchbook", "schema_version": 1, "rows": []}])
+
+    all_frames = store.load_frames(sid, db_path=db)
+    assert {(f["sport"], f["frame_type"]) for f in all_frames} == {("tennis", "contracts"), ("nba", "dutchbook")}
+
+    tennis = store.load_frames(sid, sport="tennis", frame_type="contracts", db_path=db)
+    assert len(tennis) == 1 and tennis[0]["row_count"] == 2 and tennis[0]["schema_version"] == 1
+    rows = tennis[0]["rows"]
+    assert rows[0]["display_pct"] is None                # NaN -> JSON null -> None
+    assert rows[0]["tags"] == ["x", "y"]                 # tuple -> list
+    assert rows[0]["opponent"] is None                   # None stays None
+    assert isinstance(rows[0]["ts"], str)                # datetime -> str (never a bare object)
+
+    # partial load narrows correctly; an empty frame round-trips as row_count 0.
+    assert store.load_frames(sid, sport="nba", db_path=db)[0]["row_count"] == 0
+    assert store.load_frames(sid, sport="wnba", db_path=db) == []   # no such frame
+
+
+def test_dataframe_frame_round_trips(tmp_path):
+    import pandas as pd
+
+    db = _db(tmp_path)
+    df = pd.DataFrame([{"player": "A", "gap": 5.0}, {"player": "B", "gap": NAN}])
+    sid = store.write_snapshot(1000, [_opp("a")], db_path=db,
+                               frames=[{"sport": "tennis", "frame_type": "checks", "schema_version": 2, "rows": df}])
+    f = store.load_frames(sid, frame_type="checks", db_path=db)[0]
+    assert f["row_count"] == 2 and f["schema_version"] == 2
+    assert f["rows"][1]["gap"] is None                   # NaN from a DataFrame -> None
+
+
+def test_write_snapshot_without_frames_is_unchanged(tmp_path):
+    db = _db(tmp_path)
+    sid = store.write_snapshot(1000, [_opp("a")], db_path=db)   # no frames kwarg (back-compat)
+    assert store.load_frames(sid, db_path=db) == []
+    assert store.latest(db_path=db)["opportunities"][0]["opportunity_id"] == "a"
+
+
+def test_retention_drops_frames_with_their_snapshot(tmp_path):
+    db = _db(tmp_path)
+    old = store.write_snapshot(1000, [_opp("a")], db_path=db,
+                               frames=[{"sport": "tennis", "frame_type": "contracts", "schema_version": 1,
+                                        "rows": [{"player": "A"}]}])
+    # A newer snapshot far beyond the retention window evicts the old one (+ its frames).
+    store.write_snapshot(1000 + config.SNAPSHOT_RETENTION_SECONDS + 10, [_opp("b")], db_path=db)
+    assert store.load_frames(old, db_path=db) == []             # the old snapshot's frames are gone
