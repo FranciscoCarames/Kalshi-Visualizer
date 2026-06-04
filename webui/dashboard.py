@@ -61,8 +61,13 @@ def explanation_lines(opp: dict[str, Any], *, show_ids: bool = False) -> list[st
     lines = [
         f"{opp.get('sport_label') or opp.get('sport')} · {opp.get('name')}",
         f"{opp.get('source')} · {opp.get('detail')} · {opp.get('tournament')}",
-        f"Leg 1: {opp.get('action_1_text') or '—'}",
-        f"Leg 2: {opp.get('action_2_text') or '—'}",
+    ]
+    legs = opp.get("legs")
+    if isinstance(legs, list) and legs:                      # N-leg (synthetic bundle): list every leg
+        lines += [f"Leg {i + 1}: {leg.get('text') or '—'}" for i, leg in enumerate(legs)]
+    else:                                                     # 2-leg shapes use the positional fields
+        lines += [f"Leg 1: {opp.get('action_1_text') or '—'}", f"Leg 2: {opp.get('action_2_text') or '—'}"]
+    lines += [
         f"Cost: {opp.get('cost_c')}¢   ·   Gross edge: {opp.get('exec_gap_c')}¢   ·   "
         f"Max units: {opp.get('exec_min_size')}   ·   Gross profit: ${opp.get('exec_max_profit_dollars')}",
         f"Tradable now: {opp.get('tradable_now')}   ·   Relationship: {opp.get('relationship_type')}"
@@ -120,10 +125,16 @@ def dashboard() -> None:
             for line in lines[2:]:
                 ui.label(line)
             with ui.row():
-                if opp.get("url"):
-                    ui.link("Leg 1 market ↗", opp["url"], new_tab=True)
-                if opp.get("url_2"):
-                    ui.link("Leg 2 market ↗", opp["url_2"], new_tab=True)
+                legs = opp.get("legs")
+                if isinstance(legs, list) and legs:           # N-leg: one link per leg with a url
+                    for i, leg in enumerate(legs):
+                        if leg.get("url"):
+                            ui.link(f"Leg {i + 1} market ↗", leg["url"], new_tab=True)
+                else:
+                    if opp.get("url"):
+                        ui.link("Leg 1 market ↗", opp["url"], new_tab=True)
+                    if opp.get("url_2"):
+                        ui.link("Leg 2 market ↗", opp["url_2"], new_tab=True)
             ui.button("Close", on_click=dialog.close)
         dialog.open()
 

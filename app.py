@@ -32,6 +32,7 @@ import lifecycle
 import scanner
 import sports
 import store
+import synthetic_bundle
 from config import (
     ALERT_PERSISTENCE_OPTIONS,
     BACKLOG_DEFAULT,
@@ -101,6 +102,7 @@ STATUS_LABELS = {
 TRADABLE_DISP = {
     "Yes": "✅ Yes",
     "Yes — rule-dependent": "⚠ Yes (verify rules)",
+    "Review rules": "⚠ Review rules",
     "No": "❌ No",
 }
 
@@ -476,6 +478,24 @@ def render_dashboard() -> None:
             tradable_disp=db_df["tradable_now"].map(TRADABLE_DISP).fillna(db_df["tradable_now"]),
         ).sort_values("exec_gap_c", ascending=False)
 
+    # ---- Synthetic exact-score bundles (N-leg, vs the match-winner hedge) ---------------------
+    # A SEPARATE family (synthetic_bundle.py): a player's MECE exact-score set replicates "they win the
+    # match", priced against their match-winner. Always settlement-caveated (review-only, never tradable
+    # as arbitrage). Narrowed by the same tournament / event / participant membership as the rest.
+    sb_df = pd.DataFrame(synthetic_bundle.find_synthetic_bundles(df.to_dict("records")) if not df.empty else [])
+    if not sb_df.empty:
+        if sel_tournaments:
+            sb_df = sb_df[sb_df["tournament"].isin(set(sel_tournaments))]
+        if sel_events:
+            sb_df = sb_df[sb_df["event_ticker"].isin(set(sel_events))]
+        if chosen_key is not None:
+            sb_df = sb_df[sb_df["player_key"] == chosen_key]
+    if not sb_df.empty:
+        sb_df = sb_df.assign(
+            tradable_disp=sb_df["tradable_now"].map(TRADABLE_DISP).fillna(sb_df["tradable_now"]),
+            bundle_text=sb_df["legs"].apply(lambda legs: " + ".join(x.get("text", "") for x in (legs or []))),
+        ).sort_values("exec_gap_c", ascending=False)
+
     # Per-player frames for the detail/debug sections (driven by the Participant control).
     if chosen_key is not None:
         prows = df[df["player_key"] == chosen_key].to_dict("records")
@@ -774,6 +794,49 @@ def render_dashboard() -> None:
         n_live = int((db_df["tradable_now"] == "Yes").sum())
         st.caption(f"{n_live} tradable now · {len(db_df)} found. Gross, before fees, slippage, latency, "
                    "and partial-fill risk.")
+
+    # ================================================================================
+    # 3c. Synthetic-bundle discrepancies (exact-score set vs match-winner) — review only.
+    #     N legs, all the SAME structure, so it gets its own table (not the 2-leg ladder).
+    # ================================================================================
+    st.subheader("🧩 Synthetic-bundle discrepancies — exact-score vs match-winner")
+    st.caption("A player's exact-set-score contracts ({3-0, 3-1, 3-2} best-of-5; {2-0, 2-1} best-of-3) "
+               "together replicate 'they win the match'; priced against their match-winner this can reveal "
+               "a **gross pricing discrepancy**. **Not riskless** — an exact score is not the match-winner, "
+               "and a retirement / no-ball-played settles the score legs to Fair Market Price while the "
+               "winner settles cleanly. **Review the settlement rules before trading.** Gross, top-of-book.")
+    if sb_df.empty:
+        st.info("No synthetic-bundle discrepancies right now.")
+    else:
+        DIR_LABEL = {"forward": "Buy YES states + Buy NO winner", "reverse": "Buy NO states + Buy YES winner"}
+        s = sb_df.assign(
+            dir_disp=sb_df["direction"].map(DIR_LABEL).fillna(sb_df["direction"]),
+            caveat_disp=sb_df["blocked_reason"].replace("", "—").fillna("—"),
+        )
+        st.dataframe(
+            s[["player", "tournament", "dir_disp", "bundle_text", "cost_c", "exec_gap_c",
+               "exec_min_size", "exec_max_profit_dollars", "tradable_disp", "caveat_disp", "url"]],
+            hide_index=True, width="stretch",
+            column_config={
+                "player": "Player",
+                "tournament": "Tournament",
+                "dir_disp": st.column_config.TextColumn(
+                    "Trade", help="Every leg is a BUY: all score states one side + the match-winner the other."),
+                "bundle_text": st.column_config.TextColumn("Bundle (all legs)", help=help_for("Bundle (all legs)")),
+                "cost_c": st.column_config.NumberColumn(
+                    "Cost (¢)", format="%.0f", help="Combined cost of all legs (top-of-book, gross of fees)."),
+                "exec_gap_c": st.column_config.NumberColumn(
+                    "Gross discrepancy (¢)", format="%.0f", help=help_for("Bundle (all legs)")),
+                "exec_min_size": st.column_config.NumberColumn(
+                    "Max units", format="%.0f", help="Top-of-book size; full-depth fill not modeled."),
+                "exec_max_profit_dollars": st.column_config.NumberColumn("Gross ($)", format="$%.2f"),
+                "tradable_disp": st.column_config.TextColumn("Tradable now", help=help_for("Tradable now")),
+                "caveat_disp": st.column_config.TextColumn("Caveat"),
+                "url": st.column_config.LinkColumn("Match", display_text="open ↗"),
+            },
+        )
+        st.caption(f"{len(sb_df)} found · all review-only (settlement-caveated, never riskless). "
+                   "Gross, before fees and partial-fill risk.")
 
     # (Removed) The gross-edge ranking bar chart was misleading. The Actionable-now table above is
     # already sorted by gross edge and is the ranking surface; Stage 2 replaces it with a unified,
