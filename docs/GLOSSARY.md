@@ -62,6 +62,30 @@ _A guaranteed edge from covering BOTH outcomes of a two-way market for under 100
 
 A dutch book is the simplest kind of locked edge and needs no probability model. A head-to-head match has exactly two outcomes that are mutually exclusive (only one player wins) and exhaustive (someone must — tennis has no draw), so exactly one of the two contracts settles at $1. If you can assemble a position that pays that $1 for less than $1, the difference is locked in every outcome. Two directions, each a pair of BUYS: buy YES on both players when their YES asks sum to under 100¢ (an ‘underround’), or buy NO on both when their NO asks sum to under 100¢ (an ‘overround’). Because the two player markets are priced on independent order books, their prices need not add to 100¢, which is what creates the edge. Unlike a containment/match-alignment edge there is no settlement-rule caveat — both legs are outcomes of the SAME event and settle together — so a firm, sized dutch book is true arbitrage (gross of fees).
 
+## Synthetic bundle
+
+_A gross pricing discrepancy where a player's exact-set-score contracts (the MECE set for them winning) are mispriced against their match-winner. NOT riskless — review the settlement rules._
+
+Unlike a dutch book (two outcomes of ONE market), a synthetic bundle spans two market families. A player wins their match iff one of the exact set scores occurs — best-of-5 {3-0, 3-1, 3-2}, best-of-3 {2-0, 2-1} — so that MECE set replicates 'they win', which is also what their match-winner market pays. Two directions: buy YES every score state + buy NO the match-winner (pays 100¢, a discrepancy when the legs cost < 100¢); or buy NO every state + buy YES the winner (pays N×100¢ for N states, a discrepancy when the legs cost < N×100¢). It is NOT true arbitrage: an exact score is not the match-winner, and on a retirement or a no-ball-played the exact-score legs resolve to Fair Market Price while the winner settles cleanly — so every finding carries a settlement caveat and is shown review-only, never actionable. Gross of fees; sizes are top-of-book (full-depth fill not modeled).
+
+## New actionable
+
+_An opportunity that became actionable since the previous scan — it wasn't in the last snapshot's actionable set. The banner keeps it flagged for the chosen window._
+
+Opportunities are snapshotted each cross-sport scan. A 'new actionable' is an opportunity_id that is actionable in the current snapshot but was NOT actionable in the previous one — i.e. it just crossed into tradable territory. To avoid a flood on first load, nothing is flagged new until there is a prior snapshot to compare against. The banner persists a new flag for a configurable window (until next refresh / N minutes), computed from when the opportunity first became actionable, so a genuinely-new edge that stays actionable doesn't silently drop off the banner on the very next refresh.
+
+## Recently actionable
+
+_An opportunity that WAS actionable within the selected window but isn't now — with when it became/left actionable and why it left (went blocked / clean / leg inactive)._
+
+The backlog of opportunities that were actionable at some point inside the chosen window (15 min / 1 hour / 4 hours / 24 hours / this session) but are not actionable in the latest snapshot. For each, the app shows when it first became actionable, when it left, how long it lasted, the last known edge and prices, and the reason it left — derived from its current state: it disappeared, a leg went inactive, it went blocked, or it simply went clean (the edge closed). Useful for spotting opportunities you just missed and patterns in how long edges live.
+
+## Changed while blocked
+
+_A blocked opportunity whose situation changed since the last scan — e.g. the blocker, price, available size, market status, or rule flag moved. No change → no alert._
+
+For opportunities entering, leaving, or sitting in the blocked bucket, the app diffs the two latest snapshots and labels WHAT changed: the blocker reason, the price/edge, the available size (liquidity), the market status (a leg going active↔inactive), tradability, or the settlement rule flag. An opportunity that is blocked in both snapshots with nothing changed raises no alert — only genuine movement is surfaced, so the list stays signal, not noise.
+
 ## Gross quoted profit
 
 _Profit from the displayed quotes and sizes — before fees, slippage, latency, and partial-fill risk._
