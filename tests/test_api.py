@@ -187,3 +187,29 @@ def test_opportunity_model_preserves_pr13_fields():
 def test_backlog_model_carries_last_legs():
     item = api.BacklogItem(opportunity_id="x", last_legs=[{"text": "a"}], payout_floor_c=100, roi_pct=9.0)
     assert isinstance(item.last_legs, list) and item.payout_floor_c == 100 and item.roi_pct == 9.0
+
+
+def test_metrics_empty_then_seeded(client):
+    c, db = client
+    m = c.get("/metrics")
+    assert m.status_code == 200
+    body = m.json()
+    assert body["snapshot_id"] is None and body["opportunities"] == 0 and body["scan_status"] == "idle"
+
+    store.write_snapshot("2026-06-03 12:00:00 UTC",
+                         [op("a", bucket="actionable"), op("b", bucket="blocked")],
+                         meta={"scanned": 6, "loaded": 5, "failed": 1, "kalshi_requests": 18,
+                               "contracts_scanned": 9, "checks_tested": 4,
+                               "sport_errors": [{"sport": "nba", "error": "boom"}]},
+                         db_path=db)
+    body = c.get("/metrics").json()
+    assert body["snapshot_id"] and body["opportunities"] == 2 and body["actionable"] == 1
+    assert body["kalshi_requests"] == 18 and body["failed_series"] == 1 and body["sport_error_count"] == 1
+    assert body["contracts_scanned"] == 9 and body["checks_tested"] == 4
+
+
+def test_metrics_reflects_scan_status_after_scan(client):
+    c, db = client
+    assert c.post("/scan?wait=true").status_code == 202
+    body = c.get("/metrics").json()
+    assert body["snapshot_id"] is not None and body["scan_status"] in ("done", "in_progress")
