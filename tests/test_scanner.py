@@ -180,13 +180,16 @@ def test_run_scan_aggregates_coverage_and_unifies():
         if sid == "nba":
             return _dutchbook_df(gap=7), "fa", [], 6, 6, 0, 0
         return pd.DataFrame(), "fa", [], 6, 0, 0, 0   # every other registered sport: empty
-    unified, cov = scanner.run_scan(fetch_fn, fetched_at="FA")
+    unified, cov, frames = scanner.run_scan(fetch_fn, fetched_at="FA")
     assert cov["fetched_at"] == "FA"
     # 6 scanned per registered sport (robust as sports are added); only tennis(5)+nba(6) load.
     assert cov["scanned"] == 6 * len(sports.all_sports()) and cov["loaded"] == 11
     assert cov["failed"] == 1 and cov["excluded"] == 2 and cov["skipped_no_name"] == 1
     assert len(cov["series_errors"]) == 1 and cov["series_errors"][0]["series"] == "KXBAD"
     assert not unified.empty and set(unified["sport"]) <= {"tennis", "nba"}
+    # PR 21a: per-sport evidence frames collected, and the two volume counters present + distinct.
+    assert {f["frame_type"] for f in frames} <= {"contracts", "checks", "dutchbook"}
+    assert cov["contracts_scanned"] >= 1 and cov["checks_tested"] >= 1
 
 
 def test_run_scan_records_sport_fetch_failure_without_blanking():
@@ -196,7 +199,7 @@ def test_run_scan_records_sport_fetch_failure_without_blanking():
         if sid == "nba":
             return _dutchbook_df(gap=7), "fa", [], 6, 6, 0, 0
         return pd.DataFrame(), "fa", [], 6, 0, 0, 0
-    unified, cov = scanner.run_scan(fetch_fn, fetched_at="FA")
+    unified, cov, _frames = scanner.run_scan(fetch_fn, fetched_at="FA")
     assert any(e["sport"] == "tennis" and "down" in e["error"] for e in cov["sport_errors"])
     assert set(unified["sport"]) <= {"nba"}                      # tennis failed; others still scanned
 
@@ -290,3 +293,44 @@ def test_rows_carry_floor_roi_and_synthesized_legs():
         r = act.iloc[0]
         assert r["payout_floor_c"] == 100 and r["roi_pct"] is not None       # broader-YES + deeper-NO floor
         assert isinstance(r["legs"], list) and len(r["legs"]) == 2
+
+
+# --- PR 21a: scanner persistence (frames + counters + request counter + snapshot_id) ---
+def _tuple_fetch(sid):
+    """A run_scan-shaped fetch (the 7-tuple) — tennis containment + nba dutchbook, others empty."""
+    if sid == "tennis":
+        return _containment_df(gap=5), "fa", [], 6, 5, 0, 0
+    if sid == "nba":
+        return _dutchbook_df(gap=7), "fa", [], 6, 6, 0, 0
+    return pd.DataFrame(), "fa", [], 6, 0, 0, 0
+
+
+def test_run_scan_persists_frames_counters_and_snapshot_id(tmp_path):
+    db = str(tmp_path / "scan.db")
+    # A fake request counter proves the injected delta lands in coverage without the scanner importing
+    # kalshi_client.
+    calls = {"n": 0}
+
+    def fake_count():
+        calls["n"] += 7   # pretend 7 HTTP attempts each time it's read
+        return calls["n"]
+
+    unified, cov, frames = scanner.run_scan(_tuple_fetch, fetched_at="2026-06-04 00:00:00 UTC",
+                                            request_count=fake_count)
+    # Coverage carries the two volume counters (distinct from the opp count) + the request delta.
+    assert cov["contracts_scanned"] >= 1 and cov["checks_tested"] >= 1
+    assert cov["kalshi_requests"] == 7   # second read - first read
+    assert {f["frame_type"] for f in frames} <= {"contracts", "checks", "dutchbook"}
+
+    sid = store.write_snapshot("2026-06-04 00:00:00 UTC", unified, meta=cov, frames=frames, db_path=db)
+    # The per-sport evidence frames persisted and reload, partial-loadable by sport/frame_type.
+    contracts = store.load_frames(sid, frame_type="contracts", db_path=db)
+    assert contracts and all(f["row_count"] >= 1 for f in contracts)
+    # Every persisted opportunity row carries its snapshot_id.
+    back = store.latest(db_path=db)["opportunities"]
+    assert back and all(o.get("snapshot_id") == sid for o in back)
+
+
+def test_run_scan_without_request_count_omits_kalshi_requests():
+    _unified, cov, _frames = scanner.run_scan(_tuple_fetch, fetched_at="FA")   # no counter injected
+    assert "kalshi_requests" not in cov                                       # present only when given

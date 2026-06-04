@@ -53,6 +53,7 @@ UNIFIED_COLUMNS = [
     "ticker_1", "ticker_2", "url", "url_2",    # per-leg tickers + links (panel, Stage 5 §0)
     "legs", "n_legs",                          # N-leg plan (synthetic bundles); synthesized 2-leg otherwise
     "payout_floor_c", "roi_pct",               # guaranteed payout floor + gross ROI on cost (PR 13)
+    "snapshot_id",                             # stamped by store.write_snapshot at write time (PR 21a)
 ]
 
 
@@ -220,6 +221,7 @@ def unified_opportunities(
     *,
     store_writer: Callable[[Any, "pd.DataFrame"], Any] | None = None,
     fetched_at: Any = None,
+    frames_out: list[dict[str, Any]] | None = None,
 ) -> tuple[pd.DataFrame, list[dict[str, Any]]]:
     """Aggregate opportunities across every registered sport into one ranked frame.
 
@@ -228,6 +230,12 @@ def unified_opportunities(
     processing error for one sport is recorded and skipped (never blanks the others). If `store_writer`
     is given, the scan is persisted once via `store_writer(fetched_at, frame)` (the app wires this to
     `store.write_snapshot`; tests inject a tmp-db writer or omit it).
+
+    When `frames_out` (a list) is given, the per-sport EVIDENCE frames behind the opportunities are
+    appended to it as `{sport, frame_type, schema_version, rows}` for `frame_type` ∈
+    {contracts, checks, dutchbook} (empties skipped) — the caller persists them via the v3
+    `store.write_snapshot(frames=…)` (PR 21a). Out-param (not a return value) so the 2-tuple return and
+    every existing caller stay unchanged.
 
     Returns `(unified_df, per_sport_errors)` where each error is `{"sport": id, "error": msg}`.
     """
@@ -244,14 +252,21 @@ def unified_opportunities(
         try:
             records = contracts.to_dict("records")
             checks = consistency.build_checks(contracts)
+            checks_records = checks.to_dict("records")
             books = dutchbook.find_dutch_books(records)
             bundles = synthetic_bundle.find_synthetic_bundles(records)
         except Exception as exc:
             errors.append({"sport": cfg.sport_id, "error": str(exc)})
             continue
-        rows.extend(_to_unified_consistency(r, cfg) for r in checks.to_dict("records"))
+        rows.extend(_to_unified_consistency(r, cfg) for r in checks_records)
         rows.extend(_to_unified_dutchbook(r, cfg) for r in books)
         rows.extend(_to_unified_synthetic(r, cfg) for r in bundles)
+        if frames_out is not None:
+            for frame_type, frame_rows in (("contracts", records), ("checks", checks_records),
+                                           ("dutchbook", books)):
+                if frame_rows:
+                    frames_out.append({"sport": cfg.sport_id, "frame_type": frame_type,
+                                       "schema_version": 1, "rows": frame_rows})
 
     rows.sort(key=_rank_key)
     unified = pd.DataFrame(rows, columns=UNIFIED_COLUMNS)
@@ -261,16 +276,21 @@ def unified_opportunities(
     return unified, errors
 
 
-def run_scan(fetch_fn: Callable[[str], tuple], *, fetched_at: Any = None
-             ) -> tuple[pd.DataFrame, dict[str, Any]]:
+def run_scan(fetch_fn: Callable[[str], tuple], *, fetched_at: Any = None,
+             request_count: Callable[[], int] | None = None
+             ) -> tuple[pd.DataFrame, dict[str, Any], list[dict[str, Any]]]:
     """Fetch every sport, aggregate coverage, and produce the unified ranked frame — the service entry.
 
     `fetch_fn(sport_id)` returns the `fetch.fetch_contracts` 7-tuple
     `(df, _fetched_at, errors, n_scanned, n_loaded, skipped_no_name, n_excluded_unknown)`. Returns
-    `(unified_df, coverage)` where `coverage` carries the scan-wide counts + per-series / per-sport
-    errors (so `/coverage` is honest). Pure: fetch injected, no store, no network. A per-sport fetch
-    failure is recorded and that sport contributes nothing — never blanks the rest.
+    `(unified_df, coverage, frames)` where `coverage` carries the scan-wide counts + per-series /
+    per-sport errors (so `/coverage` is honest), and `frames` is the per-sport evidence to persist via
+    `store.write_snapshot(frames=…)`. `request_count` is an injected no-arg counter (e.g.
+    `kalshi_client.request_count`) read before/after so coverage carries the Kalshi `kalshi_requests`
+    issued this scan — injected (not imported) so the scanner stays network-free. Pure: fetch injected,
+    no store, no network. A per-sport fetch failure is recorded and that sport contributes nothing.
     """
+    before = request_count() if request_count else None
     dfs: dict[str, Any] = {}
     scanned = loaded = skipped = excluded = 0
     series_errors: list[dict[str, Any]] = []
@@ -292,13 +312,21 @@ def run_scan(fetch_fn: Callable[[str], tuple], *, fetched_at: Any = None
 
     # Reuse the pure aggregator over the already-fetched per-sport frames (it adds its own
     # per-sport PROCESSING errors — build_checks/find_dutch_books failures — to the set).
-    unified, processing_errors = unified_opportunities(lambda sid: dfs.get(sid), fetched_at=fetched_at)
+    frames: list[dict[str, Any]] = []
+    unified, processing_errors = unified_opportunities(
+        lambda sid: dfs.get(sid), fetched_at=fetched_at, frames_out=frames)
 
+    # Two named volume counters, kept DISTINCT from the opportunity count (§ PR 19/21 meta).
+    contracts_scanned = sum(len(f["rows"]) for f in frames if f["frame_type"] == "contracts")
+    checks_tested = sum(len(f["rows"]) for f in frames if f["frame_type"] == "checks")
     coverage = {
         "fetched_at": fetched_at,
         "scanned": scanned, "loaded": loaded, "failed": len(series_errors), "excluded": excluded,
         "skipped_no_name": skipped,
+        "contracts_scanned": contracts_scanned, "checks_tested": checks_tested,
         "sport_errors": fetch_errors + processing_errors,   # fetch-level + processing-level
         "series_errors": series_errors,
     }
-    return unified, coverage
+    if before is not None:
+        coverage["kalshi_requests"] = request_count() - before
+    return unified, coverage, frames
