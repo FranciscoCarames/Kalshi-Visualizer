@@ -20,7 +20,7 @@ import pandas as pd
 
 import sports
 from config import DISPLAY_TOL_C, NEAR_EDGE_MIN_C
-from data import CATEGORY, opportunity_id
+from data import opportunity_id
 from glossary import BLOCKERS, WATCHLIST_NOTE
 
 # Statuses that represent an actual price inconsistency with a buy direction (get a Buy YES / Buy NO
@@ -567,8 +567,10 @@ def _row(player: str, player_key: str, chain: str, child: dict | None, parent: d
         "parent_ticker": parent.get("market_ticker") if parent else "",
         "child_url": child.get("kalshi_url") if child else "",
         "parent_url": parent.get("kalshi_url") if parent else "",
-        "child_category": CATEGORY.get(child.get("kind")) if child else "",
-        "parent_category": CATEGORY.get(parent.get("kind")) if parent else "",
+        # Category label is per-sport (NBA/WNBA/golf have their own labels, incl. a "game" key tennis
+        # lacks); resolve off each leg's own sport, defaulting to "Other" for any unmapped kind.
+        "child_category": _sport_for_row(child).category_labels.get(child.get("kind"), "Other") if child else "",
+        "parent_category": _sport_for_row(parent).category_labels.get(parent.get("kind"), "Other") if parent else "",
     }
     # Dashboard bucket + REQUIRED blocked_reason (Stage 1): blocked_reason is non-empty IFF the row is
     # bucketed `blocked`. Reuse the plain-English `blockers`; fall back to a generic reason if a blocked
