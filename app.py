@@ -769,10 +769,11 @@ def render_dashboard() -> None:
     # ================================================================================
     st.subheader("🎯 Dutch-book arbitrage — match, game & 3-way books")
     st.caption("Books where you can cover EVERY outcome for under the guaranteed payout floor (100¢ for a "
-               "two-way match/game; **(n−1)×100¢** for an n-way overround) — a locked edge needing no model. "
-               "Every leg is the **same** side (Buy YES on all, or Buy NO on all). Includes 3-way soccer "
-               "World Cup games (Home / Away / Tie). Distinct from the containment ladder above; thresholds "
-               "do not filter this.")
+               "two-way match/game; **(n−1)×100¢** for an n-way overround) — a **gross pricing discrepancy** "
+               "needing no model. Holds under normal one-winner settlement (**not riskless** — a postponed / "
+               "abandoned game can break a per-game book). Every leg is the **same** side (Buy YES on all, or "
+               "Buy NO on all). Includes 3-way soccer World Cup games (Home / Away / Tie). Distinct from the "
+               "containment ladder above; thresholds do not filter this.")
     if db_df.empty:
         st.success("No dutch books right now (each event's prices sum to ≥ its payout floor).")
     else:
@@ -794,13 +795,13 @@ def render_dashboard() -> None:
                     "Trade", help="Every leg is the SAME side: Buy YES on all (underround) or Buy NO on "
                                   "all (overround). Covers 2-way match/game books AND 3-way soccer games."),
                 "plan": st.column_config.TextColumn(
-                    "Plan (all legs)", help="Buy every listed leg the same side; the locked edge holds "
-                                            "whichever single outcome wins."),
+                    "Plan (all legs)", help="Buy every listed leg the same side; the gross gap holds "
+                                            "whichever single outcome wins, under normal settlement."),
                 "cost_c": st.column_config.NumberColumn(
                     "Cost (¢)", format="%.0f", help="Combined cost of all legs. Payout floor = 100¢ "
                                                     "(underround) or (n−1)×100¢ (n-way overround)."),
                 "exec_gap_c": st.column_config.NumberColumn(
-                    "Locked edge (¢)", format="%.0f", help=help_for("Locked edge (¢)")),
+                    "Gross edge (¢)", format="%.0f", help=help_for("Gross edge (¢)")),
                 "exec_min_size": st.column_config.NumberColumn("Max units", format="%.0f"),
                 "exec_max_profit_dollars": st.column_config.NumberColumn(
                     "Gross profit ($)", format="$%.2f", help=help_for("Gross quoted profit ($)")),

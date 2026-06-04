@@ -59,6 +59,17 @@ def test_underround_yes_sum_below_100_is_executable():
     assert f["blockers"] == ""
 
 
+def test_reason_wording_is_conservative_not_locked():
+    # PR 5: the rendered reason must NOT say "locked"; it says "gross per unit, under normal settlement".
+    a = market("Alcaraz", yes_bid_c=43, yes_ask_c=45)
+    b = market("Sinner", yes_bid_c=46, yes_ask_c=48)
+    f = dutchbook.find_dutch_books([a, b])[0]
+    blob = f["reason"].lower()
+    for banned in ("locked", "riskless", "true arbitrage"):
+        assert banned not in blob, f"reason still says {banned!r}: {f['reason']!r}"
+    assert "gross per unit" in blob and "under normal one-winner settlement" in blob
+
+
 # --- Overround (Buy NO both) ---------------------------------------------------------
 def test_overround_no_sum_below_100_is_executable():
     # no_ask 46 + 49 = 95 < 100 -> 5c locked per unit, both NO buys.
