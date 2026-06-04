@@ -210,11 +210,17 @@ unchanged 2-way `_detect_pair`; ≤1 finding/event.
 - **One status `EXECUTABLE_DUTCH_BOOK`** carrying `tradable_now` + `blockers` (covers actionable AND
   blocked). **Routing is the only consistency.py touch:** `bucket_of` has one branch (actionable if
   tradable, else blocked) + a `STATUS_GROUP` entry — detection stays entirely in `dutchbook.py`. The status
-  string is held as a literal in `consistency.py` (a test guards the contract). **It is a true arbitrage**
-  (same event, both legs settle together) → no rule caveat, unlike match-alignment.
+  string is held as a literal in `consistency.py` (a test guards the contract). **Conservative wording —
+  never "riskless"/"locked"/"true arbitrage"** (single-sourced via `glossary.DUTCH_BOOK_BASIS`): it is a
+  **gross two-way pricing discrepancy under normal one-winner settlement**. Match/series legs settle
+  together; a **per-game (`KX*GAME`) book carries a non-blocking postponement caveat** (`settlement_caveat`
+  from `BLOCKERS["game_settlement"]` — abnormal resolution like a postponed/abandoned/no-contest game can
+  break it). The caveat is advisory: it never changes `tradable_now`/bucket, so a game book can still be
+  Actionable.
 - **UI:** `app.py` renders a **dedicated "Dutch-book arbitrage — match books" section** (both legs are the
   *same* side, so it can't reuse the ladder's Buy-YES-broader/Buy-NO-deeper table). Membership-filtered like
-  the rest; thresholds spare it (like Actionable now). Glossary term "Dutch book" → "Locked edge (¢)" column.
+  the rest; thresholds spare it (like Actionable now). Glossary term "Dutch book" → "Gross edge (¢)" column;
+  the Caveat column shows `settlement_caveat` + `blockers`.
 - **In scope (built):** per-game 2-outcome books (NBA/WNBA `KX*GAME`) — milestone m1.1, shipped; and the
   **N-leg exact-score synthetic bundle** (`synthetic_bundle.py`, milestone m5 — see next section). **Out of
   scope (seed):** n-outcome winner **fields** (≥3-player tournament/advance fields; need completeness proof).

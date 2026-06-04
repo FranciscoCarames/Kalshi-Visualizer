@@ -19,6 +19,20 @@ def test_column_help_keys_resolve_to_real_terms():
     assert glossary.help_for("a label with no glossary entry") == ""
 
 
+def test_dutch_book_copy_is_conservative_and_single_sourced():
+    """The dutch-book glossary entry must NOT call findings 'locked'/'riskless'/'true arbitrage', and the
+    canonical basis phrase is single-sourced via DUTCH_BOOK_BASIS (PR 5 — conservative labeling)."""
+    db = glossary.GLOSSARY["Dutch book"]
+    blob = (db["short"] + " " + db["long"]).lower()
+    for banned in ("locked", "riskless", "true arbitrage"):
+        assert banned not in blob, f"dutch-book copy still says {banned!r}: {blob!r}"
+    assert glossary.DUTCH_BOOK_BASIS in db["long"], "long text must reference DUTCH_BOOK_BASIS (single source)"
+    assert "under normal one-winner settlement" in glossary.DUTCH_BOOK_BASIS
+    # The renamed column key resolves; the old 'Locked edge' key is gone.
+    assert "Gross edge (¢)" in glossary.COLUMN_HELP and "Locked edge (¢)" not in glossary.COLUMN_HELP
+    assert glossary.help_for("Gross edge (¢)") == db["short"]
+
+
 def test_blockers_are_non_empty_and_format_cleanly():
     assert glossary.BLOCKERS
     for key, template in glossary.BLOCKERS.items():

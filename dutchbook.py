@@ -2,9 +2,11 @@
 
 A separate, generic check family from the containment ladder (`consistency.py`). A **dutch book**
 exists on a mutually-exclusive-and-exhaustive set of binary markets when you can cover EVERY outcome
-for less than the guaranteed $1 (100¢) payout — a locked, executable edge that needs no probability
-model and (unlike match-alignment) carries no settlement-rule caveat: the legs are outcomes of the
-SAME event and settle together.
+for less than the guaranteed $1 (100¢) payout — a gross, executable pricing discrepancy that needs no
+probability model. It holds under NORMAL one-winner settlement (NOT riskless, NOT "true arbitrage"): the
+legs are outcomes of the SAME event and normally settle together, but an abnormal resolution (a postponed
+/ abandoned / no-contest game) can break that, so per-game (`KX*GAME`) findings carry a postponement
+settlement caveat (`settlement_caveat`); match/series settle together.
 
 This module handles the **2-outcome case**: any event with exactly two distinct-participant binary
 markets — a head-to-head **match/series** (tennis match, NBA/WNBA playoff series) OR a single **game**
@@ -14,9 +16,9 @@ third outcome, so its event carries 3 markets and is rejected by the exactly-2 g
 each a pair of BUYS (never "sell"/"short"):
 
   - **Underround → Buy YES on both.** Cost = ``yes_ask_A + yes_ask_B``. If < 100¢, one side wins and
-    pays 100¢, so the locked profit per unit is ``100 − cost``.
+    pays 100¢, so the gross gap per unit is ``100 − cost``.
   - **Overround → Buy NO on both.** Cost = ``no_ask_A + no_ask_B``. Exactly one NO pays 100¢ (the
-    loser's), so the locked profit per unit is ``100 − cost``. (Equivalent to
+    loser's), so the gross gap per unit is ``100 − cost``. (Equivalent to
     ``yes_bid_A + yes_bid_B > 100``, since ``no_ask = 100 − yes_bid`` on Kalshi's unified book.)
 
 Because ``bid ≤ ask`` always, the two directions are mutually exclusive — at most ONE fires per event.
@@ -124,7 +126,7 @@ def _direction_candidate(side: str, a: dict[str, Any], b: dict[str, Any]) -> dic
     """Build the candidate for one direction ('buy_yes' = underround, 'buy_no' = overround).
 
     Returns None when either leg lacks a firm price for that side (so the direction can't be priced).
-    `gap_c` (= 100 − cost) is the per-unit locked profit; positive means a dutch book exists.
+    `gap_c` (= 100 − cost) is the per-unit gross gap; positive means a dutch book exists.
     """
     if side == "buy_yes":
         pa, pb = _firm_yes_ask_c(a), _firm_yes_ask_c(b)
@@ -178,7 +180,8 @@ def _detect_pair(event_ticker: str, markets: list[dict[str, Any]]) -> dict[str, 
     gap_c, min_size = best["gap_c"], best["min_size"]
 
     # Tradable now: a real, executable edge needs positive size on both legs and both markets open.
-    # Dutch books carry NO rule caveat (same event, settle together), so it's a plain Yes/No.
+    # The settlement caveat (a postponement note on per-game books; see `_settlement_caveat`) is a
+    # NON-blocking advisory — it never changes tradability, so this stays a plain Yes/No.
     both_active = _is_active(a) and _is_active(b)
     tradable_now = "Yes" if (min_size is not None and both_active) else "No"
 
@@ -197,13 +200,15 @@ def _detect_pair(event_ticker: str, markets: list[dict[str, Any]]) -> dict[str, 
 
     reason = (
         f"{direction}: {side.replace('_', ' ')} both legs costs {best['cost_c']}¢ < 100¢ "
-        f"→ {gap_c}¢ locked per unit ({label_a} {best['price_a']}¢ + {label_b} {best['price_b']}¢)"
+        f"→ {gap_c}¢ gross per unit, under normal one-winner settlement "
+        f"({label_a} {best['price_a']}¢ + {label_b} {best['price_b']}¢)"
     )
 
     # Stage-1 schema: stable opportunity_id + relationship_type + dashboard bucket + REQUIRED
     # blocked_reason. Id recipe = the check type + the event + the SORTED participant keys, so it is
     # leg-order-independent and unique per event (one finding per event). A dutch book is actionable
-    # when tradable (carries no rule caveat), else blocked; blocked_reason is non-empty IFF blocked.
+    # when tradable (the settlement caveat is advisory, not a blocker), else blocked; blocked_reason is
+    # non-empty IFF blocked.
     keys = sorted([str(a.get("player_key") or ""), str(b.get("player_key") or "")])
     oid = data.opportunity_id(CHECK_TYPE, event_ticker, keys[0], keys[1])
     bucket = "actionable" if tradable_now.startswith("Yes") else "blocked"
@@ -257,7 +262,7 @@ def _detect_pair(event_ticker: str, markets: list[dict[str, Any]]) -> dict[str, 
 # without exactly 2 markets) can't see them. `find_dutch_books` dispatches the soccer `game` family to
 # `_detect_n_way`; every other 2-way sport keeps `_detect_pair` byte-identical.
 #   - Underround -> Buy YES all n. One outcome wins -> pays 100c. Fires if sum(yes_ask) < 100c (needs
-#     EXHAUSTIVE). Locked = 100 - cost.
+#     EXHAUSTIVE). Gross gap = 100 - cost.
 #   - Overround -> Buy NO all n. Exactly one outcome wins -> the other (n-1) NOs each pay 100c, so the
 #     payout floor is (n-1)*100c (needs MUTUALLY EXCLUSIVE). Fires if sum(no_ask) < (n-1)*100c.
 # (n=2 reduces to `_detect_pair`'s 100c floor.) Exact integer cents throughout.
@@ -381,7 +386,7 @@ def _detect_n_way(event_ticker: str, rows: list[dict[str, Any]], cfg: Any,
     pb = team_rows[1] if len(team_rows) > 1 else team_rows[0]
     times = [t for t in (r.get("time_value") for r in rows) if t]
     reason = (f"{direction}: {word} all {n} legs costs {cost}c < {floor}c payout floor "
-              f"-> {gap_c}c locked per unit")
+              f"-> {gap_c}c gross per unit, under normal one-winner settlement")
 
     return {
         "check_type": CHECK_TYPE,
@@ -455,6 +460,6 @@ def find_dutch_books(rows: list[dict[str, Any]],
             finding = _detect_pair(event_ticker, markets)
         if finding is not None:
             out.append(finding)
-    # Strongest edge first (largest locked gap), deterministic tiebreak on event ticker.
+    # Strongest edge first (largest gross gap), deterministic tiebreak on event ticker.
     out.sort(key=lambda f: (-f["exec_gap_c"], f["event_ticker"]))
     return out
