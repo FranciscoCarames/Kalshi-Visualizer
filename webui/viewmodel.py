@@ -16,7 +16,10 @@ from datetime import datetime, timezone
 from typing import Any, Iterable
 
 import config
+import consistency
 import data
+import sports
+import viz
 
 
 # --- display-row builders (moved from dashboard.py; the canonical, testable home) -----
@@ -208,3 +211,116 @@ def active_filter_chips(state: dict[str, Any], options: dict[str, Any] | None = 
     if state.get("active_only"):
         chips.append("active only")
     return chips
+
+
+# --- participant detail (PR 24) — pure builders over a participant's STORED contract rows ----------
+def _num(v: Any) -> Any:
+    return None if v is None or (isinstance(v, float) and v != v) else v
+
+
+def detail_chain(prows: list[dict[str, Any]], sport: str) -> list[dict[str, Any]]:
+    """The containment progression chain (broad → deep) for one participant, mirroring the Streamlit
+    detail (app.py): one row per ladder node with its representative price. [] for a sport with no
+    ladder (e.g. golf-less / unknown). Reuses consistency.build_player_nodes + representative."""
+    cfg = sports.get_sport(sport)
+    order = getattr(cfg.ladder, "node_order", ()) if cfg.ladder else ()
+    if not order:
+        return []
+    nodes = consistency.build_player_nodes(list(prows or []))
+    out: list[dict[str, Any]] = []
+    for node in order:
+        src = nodes.get(node, {})
+        primary = consistency.representative(src)
+        if primary is None:
+            out.append({"layer": node, "source": "— missing —", "display_pct": None,
+                        "bid_pct": None, "ask_pct": None, "quote": ""})
+        else:
+            out.append({"layer": node,
+                        "source": "advance/winner" if "market" in src else "match-implied",
+                        "display_pct": _num(primary.get("display_pct")),
+                        "bid_pct": _num(primary.get("yes_bid_pct")), "ask_pct": _num(primary.get("yes_ask_pct")),
+                        "quote": primary.get("quote_quality") or ""})
+    return out
+
+
+def detail_spreads(prows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Raw adjacent-layer stage-ladder spreads (broader − deeper). Reuses consistency.layer_spreads."""
+    return consistency.layer_spreads(list(prows or []))
+
+
+def detail_expected(prows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Expected-vs-found ladder checklist (Layer / found / source). Reuses consistency.expected_nodes."""
+    return consistency.expected_nodes(list(prows or []))
+
+
+def detail_contracts(prows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """All of a participant's contracts, sorted by stage_rank, with the display columns."""
+    def _rank(r: dict[str, Any]) -> float:
+        v = r.get("stage_rank")
+        return v if isinstance(v, (int, float)) and v == v else 1e9
+    return [{
+        "contract": r.get("contract") or "", "category": r.get("category") or "",
+        "stage": r.get("stage") or "", "opponent": r.get("opponent") or "",
+        "display_pct": _num(r.get("display_pct")), "quote": r.get("quote_quality") or "",
+        "bid_pct": _num(r.get("yes_bid_pct")), "ask_pct": _num(r.get("yes_ask_pct")),
+        "volume": _num(r.get("volume")), "status": r.get("status") or "", "url": r.get("kalshi_url") or "",
+    } for r in sorted(list(prows or []), key=_rank)]
+
+
+_REL_EXPLAIN = {
+    "containment": "Containment ladder: a deeper outcome (e.g. Win Tournament) is contained in a broader "
+                   "one (e.g. Reach Final), so it must never price higher. The trade is Buy YES the broader "
+                   "leg + Buy NO the deeper leg.",
+    "dutch_book": "Dutch book: cover every outcome of a mutually-exclusive set for under the payout floor — "
+                  "a gross two-way pricing discrepancy under normal one-winner settlement (a per-game book "
+                  "carries a postponement caveat).",
+    "synthetic_bundle": "Synthetic bundle: a player's exact-set-score contracts together replicate 'they "
+                        "win', priced against their match-winner — settlement-caveated, shown review-only.",
+}
+
+
+def relationship_explanation(opp: dict[str, Any]) -> str:
+    """Plain-English meaning of an opportunity's relationship type, with a SAFE fallback for an unknown
+    type (never raises on a future relationship)."""
+    rel = str(opp.get("relationship_type") or opp.get("source") or "")
+    if opp.get("rule_flag") and rel.startswith("containment"):
+        return ("Match-alignment equivalence: two DIFFERENT markets that should settle the same — "
+                "rule-dependent, so it isn't guaranteed arbitrage (review the settlement rules).")
+    return _REL_EXPLAIN.get(rel, f"Relationship: {rel or 'unknown'} — see the legs above.")
+
+
+def ladder_chart_option(chain_rows: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """An ECharts horizontal-bar `option` for the containment ladder (red bar = inverted), or None when
+    fewer than 2 layers are priced (nothing to plot / non-containment)."""
+    # viz.ladder_prices wants the Streamlit-style "Layer"/"Display %" keys; adapt the detail_chain rows.
+    adapted = [{"Layer": r.get("layer", ""), "Display %": r.get("display_pct")} for r in (chain_rows or [])]
+    recs = [r for r in viz.ladder_prices(adapted).to_dict("records") if r["display_pct"] is not None]
+    if len(recs) < 2:
+        return None
+    return {
+        "tooltip": {"trigger": "axis"},
+        "xAxis": {"type": "value", "name": "Display %", "max": 100},
+        "yAxis": {"type": "category", "data": [r["layer"] for r in recs]},
+        "series": [{"type": "bar", "data": [
+            {"value": r["display_pct"], "itemStyle": {"color": "#c62828" if r["inverted"] else "#1565c0"}}
+            for r in recs]}],
+    }
+
+
+def payoff_chart_option(pay: dict[str, Any] | None) -> dict[str, Any] | None:
+    """An ECharts bar `option` for the per-unit payoff (Floor/Bonus bars + a dashed cost line), or None
+    for a None / non-containment payoff (the 'Risk' rows carry no payout and are dropped)."""
+    recs = [r for r in viz.payoff_chart_data(pay).to_dict("records")
+            if r["role"] != "Risk" and r["payout_c"] is not None]
+    if not recs:
+        return None
+    colors = {"Floor": "#2e7d32", "Bonus": "#1565c0"}
+    series: dict[str, Any] = {"type": "bar", "data": [
+        {"value": r["payout_c"], "itemStyle": {"color": colors.get(r["role"], "#888")}} for r in recs]}
+    cost = (pay or {}).get("cost_c")
+    if cost is not None:
+        series["markLine"] = {"symbol": "none", "lineStyle": {"color": "#c62828", "type": "dashed"},
+                              "data": [{"yAxis": cost, "name": "cost"}]}
+    return {"tooltip": {"trigger": "axis"},
+            "xAxis": {"type": "category", "data": [r["scenario"] for r in recs]},
+            "yAxis": {"type": "value", "name": "Payout ¢"}, "series": [series]}

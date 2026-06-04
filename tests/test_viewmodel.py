@@ -104,3 +104,92 @@ def test_active_filter_chips_labels():
     assert "sport: Tennis" in chips and "participant: “Alc”" in chips
     assert "min size ≥ 50" in chips and "active only" in chips
     assert vm.active_filter_chips({}) == []
+
+
+# --- participant detail builders (PR 24) — pure over a single participant's contract rows ----------
+import consistency  # noqa: E402  — used by the payoff-chart test
+
+
+def _contract(node, kind, *, pct=None, bid=None, ask=None, quote="OK", rank=0, contract="C",
+              category="Cat", stage="", opp="", vol=10, status="active", url="u", series="KXATPADVANCE"):
+    """A minimal build_contracts-shaped row for one ladder node (tennis fixture; no series → TENNIS)."""
+    return {"ladder_node": node, "kind": kind, "player_key": "p1", "series": series,
+            "display_pct": pct, "display_c": None if pct is None else int(round(pct)),
+            "yes_bid_pct": bid, "yes_ask_pct": ask, "quote_quality": quote, "stage_rank": rank,
+            "contract": contract, "category": category, "stage": stage, "opponent": opp,
+            "volume": vol, "status": status, "kalshi_url": url}
+
+
+def _tennis_prows():
+    # Reach Semifinal via a match row (match-implied), Reach Final via advance, Win Tournament via winner.
+    return [
+        _contract("Reach Semifinal", "match", pct=60, bid=58, ask=62, quote="Tight", rank=1,
+                  contract="SF", series="KXATPMATCH"),
+        _contract("Reach Final", "advance", pct=40, bid=38, ask=42, quote="OK", rank=2, contract="Final"),
+        _contract("Win Tournament", "winner", pct=50, bid=48, ask=52, quote="Wide", rank=3,
+                  contract="Win", series="KXFOMEN"),  # 50 > 40 → inverted vs Reach Final
+    ]
+
+
+def test_detail_chain_orders_nodes_and_labels_source():
+    chain = vm.detail_chain(_tennis_prows(), "tennis")
+    assert [r["layer"] for r in chain] == ["Reach Semifinal", "Reach Final", "Win Tournament"]
+    assert [r["source"] for r in chain] == ["match-implied", "advance/winner", "advance/winner"]
+    assert [r["display_pct"] for r in chain] == [60, 40, 50]
+
+
+def test_detail_chain_marks_missing_layers():
+    chain = vm.detail_chain([_contract("Win Tournament", "winner", pct=30, series="KXFOMEN")], "tennis")
+    by = {r["layer"]: r for r in chain}
+    assert by["Reach Final"]["source"] == "— missing —" and by["Reach Final"]["display_pct"] is None
+    assert by["Win Tournament"]["display_pct"] == 30
+
+
+def test_detail_chain_empty_for_unknown_sport():
+    assert vm.detail_chain(_tennis_prows(), "unknown") == []
+
+
+def test_detail_spreads_and_expected_and_contracts():
+    prows = _tennis_prows()
+    spreads = vm.detail_spreads(prows)
+    pair = {(s["from_layer"], s["to_layer"]): s for s in spreads}
+    assert pair[("Reach Semifinal", "Reach Final")]["spread_pct"] == 20.0
+    rf_win = pair[("Reach Final", "Win Tournament")]
+    assert rf_win["spread_pct"] == -10.0 and rf_win["inverted"] is True
+
+    expected = vm.detail_expected(prows)
+    assert {e["layer"]: e["found"] for e in expected} == {
+        "Reach Semifinal": True, "Reach Final": True, "Win Tournament": True}
+
+    contracts = vm.detail_contracts(prows)
+    assert [c["contract"] for c in contracts] == ["SF", "Final", "Win"]   # sorted by stage_rank
+
+
+def test_relationship_explanation_branches_and_safe_fallback():
+    assert "Containment ladder" in vm.relationship_explanation({"relationship_type": "containment"})
+    assert "Dutch book" in vm.relationship_explanation({"source": "dutch_book"})
+    assert "Synthetic bundle" in vm.relationship_explanation({"relationship_type": "synthetic_bundle"})
+    assert "equivalence" in vm.relationship_explanation(
+        {"relationship_type": "containment", "rule_flag": "RULE_CHECK_REQUIRED"}).lower()
+    # Unknown / future relationship type must never raise — safe fallback.
+    assert "weird_future" in vm.relationship_explanation({"relationship_type": "weird_future"})
+    assert vm.relationship_explanation({}) == "Relationship: unknown — see the legs above."
+
+
+def test_ladder_chart_option_none_for_empty_dict_for_real_chain():
+    assert vm.ladder_chart_option([]) is None
+    opt = vm.ladder_chart_option(vm.detail_chain(_tennis_prows(), "tennis"))
+    assert opt is not None and opt["series"][0]["type"] == "bar"
+    # The Win Tournament bar (50 > Reach Final 40) is flagged inverted → red.
+    colors = [d["itemStyle"]["color"] for d in opt["series"][0]["data"]]
+    assert "#c62828" in colors
+
+
+def test_payoff_chart_option_none_for_none_dict_for_real_payoff():
+    assert vm.payoff_chart_option(None) is None
+    check = {"status": "EXECUTABLE_VIOLATION", "action_1_side": "buy_yes", "action_2_side": "buy_no",
+             "action_1_price_c": 40, "action_2_price_c": 55,
+             "parent_node": "Reach Final", "child_node": "Win Tournament"}
+    pay = consistency.scenario_payoffs(check, 10)
+    opt = vm.payoff_chart_option(pay)
+    assert opt is not None and opt["series"][0]["markLine"]["data"][0]["yAxis"] == 95   # cost line at 95¢
