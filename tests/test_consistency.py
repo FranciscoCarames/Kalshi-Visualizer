@@ -655,3 +655,32 @@ def test_blocked_reason_nonempty_iff_bucket_blocked():
         blocked = r["bucket"] == "blocked"
         assert bool(r["blocked_reason"]) == blocked         # iff invariant, every row
     assert (checks["bucket"] == "blocked").any()            # the scenario actually produced a blocked row
+
+
+# --- transitive containment: bridge a missing middle rung (PR 4) ---------------------
+def test_transitive_containment_bridges_missing_middle():
+    """Reach Semifinal (broad) + Win Tournament (deep) present, Reach Final ABSENT. The adjacent loop
+    can't compare them, so the deep-above-broad cross would be missed without the transitive bridge."""
+    import pandas as pd
+    semi = _ckey_row("P", "uuid-p", "advance", "Semifinal", 40)   # Reach Semifinal -> ask 41
+    champ = _ckey_row("P", "uuid-p", "winner", "Champion", 70)    # Win Tournament  -> bid 69
+    checks = consistency.build_checks(pd.DataFrame([semi, champ]))
+    by_chain = {c["chain"]: c for _, c in checks.iterrows()}
+    assert "Win Tournament ≤ Reach Semifinal" in by_chain         # the transitive bridge exists
+    row = by_chain["Win Tournament ≤ Reach Semifinal"]
+    assert row["relationship_type"] == "containment_transitive"
+    assert row["status"] == "EXECUTABLE_VIOLATION"                # bid 69 > ask 41
+    # the missing middle is still surfaced as a data-quality signal, not hidden by the bridge
+    assert "MISSING_LAYER" in {c["status"] for _, c in checks.iterrows()}
+
+
+def test_transitive_not_emitted_when_all_nodes_present():
+    """All three rungs present -> the adjacent chain already covers it; no duplicate transitive row."""
+    import pandas as pd
+    rows = [
+        _ckey_row("P", "uuid-p", "advance", "Semifinal", 60),
+        _ckey_row("P", "uuid-p", "advance", "Final", 40),
+        _ckey_row("P", "uuid-p", "winner", "Champion", 20),
+    ]
+    checks = consistency.build_checks(pd.DataFrame(rows))
+    assert "containment_transitive" not in [c["relationship_type"] for _, c in checks.iterrows()]

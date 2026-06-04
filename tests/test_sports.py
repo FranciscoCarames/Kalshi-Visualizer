@@ -240,6 +240,22 @@ def test_nba_reach_playoffs_inversion_is_flagged():
     assert row["exec_gap_c"] == 5                                # child bid 60 − parent ask 55
 
 
+def test_nba_transitive_containment_bridges_missing_conference():
+    """PR 4: Reach Playoffs + Win Championship present, Win Conference ABSENT -> the broad-vs-deep cross
+    still fires via the transitive bridge (it would be missed by adjacent-only comparisons)."""
+    pf = _nba_event("KXNBAPLAYOFF-26", [
+        _nba_market("KXNBAPLAYOFF-26-BOS", "Boston", "uuid-bos", "0.50", "0.55",
+                    "Pro Basketball Playoff Qualifiers Winner?")])            # Reach Playoffs (broad) -> ask 55
+    champ = _nba_event("KXNBA-26", [
+        _nba_market("KXNBA-26-BOS", "Boston", "uuid-bos", "0.60", "0.62",
+                    "Will the Boston win the 2026 Pro Basketball Finals?")])  # Win Championship (deep) -> bid 60
+    rows = data.build_contracts("KXNBAPLAYOFF", [pf]) + data.build_contracts("KXNBA", [champ])
+    checks = consistency.build_checks(pd.DataFrame(rows))
+    row = next(c for _, c in checks.iterrows() if c["chain"] == "Win Championship ≤ Reach Playoffs")
+    assert row["relationship_type"] == "containment_transitive"
+    assert row["status"] == "EXECUTABLE_VIOLATION" and row["exec_gap_c"] == 5   # bid 60 − ask 55
+
+
 # --- WNBA: third sport, 4-rung reach-stage ladder, no conference ----------------------
 def _wnba_market(ticker, team, uuid, bid, ask, title="x"):
     return {"ticker": ticker, "yes_sub_title": team, "custom_strike": {"basketball_team": uuid},

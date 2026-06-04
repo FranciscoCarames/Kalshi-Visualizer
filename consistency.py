@@ -649,6 +649,27 @@ def build_checks(df: pd.DataFrame) -> pd.DataFrame:
                                 child_node=child_node, parent_node=parent_node, tournament=_tournament,
                                 relationship_type=rel, opp_id=oid))
 
+        # Transitive containment: when a MIDDLE ladder node is absent, the adjacent loop above only emits
+        # MISSING_LAYER for the gap — it never compares the present broader vs deeper nodes that span it,
+        # so a real cross can hide (a false negative). Bridge it: over node_order (broad -> deep), compare
+        # each consecutive pair of PRESENT nodes that is NOT already an adjacent pair (i.e. >=1 node
+        # between them is missing). When every node is present, each consecutive present pair IS an
+        # adjacent pair, so nothing extra is emitted (no duplicate findings). Both legs are present by
+        # construction, so this reuses the same _classify as the adjacent containment check.
+        present = [n for n in ladder.node_order if nodes.get(n, {}).get("market") is not None]
+        adjacent_set = set(ladder.adjacent_pairs)
+        for broader_node, deeper_node in zip(present, present[1:]):   # node_order is broad -> deep
+            if (deeper_node, broader_node) in adjacent_set:
+                continue                                              # already covered by the adjacent loop
+            child = nodes[deeper_node]["market"]
+            parent = nodes[broader_node]["market"]
+            chain = f"{deeper_node} ≤ {broader_node}"
+            rel = "containment_transitive"
+            oid = opportunity_id(rel, player_key, _tournament, deeper_node, broader_node)
+            out.append(_row(player, player_key, chain, child, parent, _classify(child, parent, False),
+                            child_node=deeper_node, parent_node=broader_node, tournament=_tournament,
+                            relationship_type=rel, opp_id=oid))
+
         # Match-alignment (equivalence) rows where both a market and a confident match exist. One
         # equivalence per node (build_player_nodes keeps a single representative per source), so the
         # node alone disambiguates within the group.
