@@ -57,15 +57,11 @@ from consistency import (
     representative,
     scenario_payoffs,
 )
-from data import build_contracts, data_age_seconds, fmt_time, is_stale, link_audit, series_for_families
+from data import data_age_seconds, fmt_time, is_stale, link_audit
+from fetch import fetch_contracts
 from filters import QUOTE_MODES, STATUS_MODES, apply_membership, apply_thresholds
 from glossary import help_for
-from kalshi_client import (
-    KalshiError,
-    discover_series_for_sport,
-    get_events_for_series,
-    get_series_titles,
-)
+from kalshi_client import KalshiError
 from viz import ladder_prices, payoff_chart_data
 
 # The selected sport drives the whole dashboard. It is held in session_state so set_page_config (which
@@ -109,31 +105,11 @@ TRADABLE_DISP = {
 }
 
 
-@st.cache_data(ttl=3600, show_spinner=False)
-def discover(sport_id: str) -> list[str]:
-    return discover_series_for_sport(sports.get_sport(sport_id))
-
-
 @st.cache_data(ttl=REFRESH_TTL, show_spinner="Fetching markets…")
 def load_contracts(families: tuple, scan_all: bool, sport_id: str) -> tuple[pd.DataFrame, str, list[tuple[str, str]], int, int, int, int]:
-    # Fetch ONLY the series for the enabled contract families (family toggles reduce API requests).
-    # Tournament/event/participant filters are client-side and do NOT change what's fetched.
-    cfg = sports.get_sport(sport_id)
-    all_series = discover(sport_id) if scan_all else list(cfg.default_series)
-    tickers = series_for_families(all_series, families)
-    # Count discovered series excluded because their family is unrecognised (never in any family list).
-    n_excluded_unknown = sum(
-        1 for s in all_series if cfg.category_labels.get(cfg.family_of(s), "Other") == "Other"
-    )
-    results, errors = get_events_for_series(tickers)
-    titles = get_series_titles([t for t, _ in results])
-    rows: list[dict] = []
-    diag: dict = {}
-    for ticker, events in results:
-        rows.extend(build_contracts(ticker, events, series_title=titles.get(ticker, ""), _diag=diag))
-    df = pd.DataFrame(rows)
-    fetched_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
-    return df, fetched_at, errors, len(tickers), len(results), diag.get("skipped_no_name", 0), n_excluded_unknown
+    # Thin Streamlit-cached wrapper over the pure fetch (fetch.py) — the API uses the same fetch path.
+    # Family toggles are the only control that changes WHAT is fetched.
+    return fetch_contracts(families, scan_all, sport_id)
 
 
 def _buy_disp(contract: str, price_c) -> str:
@@ -235,8 +211,7 @@ with st.sidebar:
     )
     cfg = sports.get_sport(st.session_state["sport_id"])
     if st.button("🔄 Refresh data"):
-        discover.clear()
-        load_contracts.clear()
+        load_contracts.clear()   # clears the cached fetch (discovery is now inside fetch_contracts)
         st.rerun()
     all_contract_types = [v for k, v in cfg.category_labels.items() if k != "other"]
     selected_types = st.multiselect(

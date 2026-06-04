@@ -211,3 +211,63 @@ def test_real_dutch_book_finding_round_trips(tmp_path):
     back = store.latest_two(db_path=db)[0]["opportunities"]
     assert back[0]["opportunity_id"] == findings[0]["opportunity_id"]
     assert back[0]["bucket"] == "actionable" and back[0]["blocked_reason"] == ""
+
+
+# --- Stage 4: schema v2 (meta) — both migration paths + latest() ----------------------
+def _table_columns(db, table):
+    con = sqlite3.connect(db)
+    try:
+        return {r[1] for r in con.execute(f"PRAGMA table_info({table})").fetchall()}
+    finally:
+        con.close()
+
+
+def test_fresh_db_is_v2_with_meta_column(tmp_path):
+    db = _db(tmp_path)
+    store.write_snapshot(1000, [_opp("a")], db_path=db)      # creates a fresh DB
+    con = sqlite3.connect(db)
+    try:
+        assert con.execute("PRAGMA user_version").fetchone()[0] == 2
+    finally:
+        con.close()
+    assert "meta" in _table_columns(db, "snapshots")
+
+
+def test_v1_db_upgrades_to_v2_via_alter(tmp_path):
+    db = _db(tmp_path)
+    # Hand-build a v1 DB: old snapshots schema WITHOUT meta, user_version=1, one snapshot + opp.
+    con = sqlite3.connect(db)
+    try:
+        con.executescript(
+            "CREATE TABLE snapshots (id INTEGER PRIMARY KEY AUTOINCREMENT, fetched_at TEXT NOT NULL, "
+            "fetched_ts REAL NOT NULL);"
+            "CREATE TABLE opportunities (snapshot_id INTEGER, opportunity_id TEXT, relationship_type TEXT, "
+            "bucket TEXT, status TEXT, blocked_reason TEXT, data TEXT NOT NULL);")
+        con.execute("INSERT INTO snapshots (fetched_at, fetched_ts) VALUES (?, ?)", ("old", 500.0))
+        con.execute("INSERT INTO opportunities (snapshot_id, opportunity_id, data) VALUES (1, 'old1', ?)",
+                    ('{"opportunity_id": "old1", "bucket": "actionable"}',))
+        con.execute("PRAGMA user_version = 1")
+        con.commit()
+    finally:
+        con.close()
+    # Any store call triggers _migrate: v1 -> v2 via ALTER.
+    snap = store.latest(db_path=db)
+    assert "meta" in _table_columns(db, "snapshots")
+    con = sqlite3.connect(db)
+    try:
+        assert con.execute("PRAGMA user_version").fetchone()[0] == 2
+    finally:
+        con.close()
+    assert snap["opportunities"][0]["opportunity_id"] == "old1"   # old row still readable
+    assert snap["meta"] is None                                   # old snapshot has no meta
+
+
+def test_write_snapshot_meta_roundtrips_and_latest(tmp_path):
+    db = _db(tmp_path)
+    store.write_snapshot(1000, [_opp("a")], db_path=db)
+    store.write_snapshot(2000, [_opp("b")], meta={"scanned": 7, "failed": 1}, db_path=db)
+    latest = store.latest(db_path=db)
+    assert latest["fetched_ts"] == 2000.0                         # newest
+    assert latest["meta"] == {"scanned": 7, "failed": 1}
+    # an earlier snapshot without meta reads back None
+    assert store.snapshots_since(10 ** 9, db_path=db)[0]["meta"] is None

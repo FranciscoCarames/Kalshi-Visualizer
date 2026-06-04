@@ -146,3 +146,46 @@ def unified_opportunities(
     if store_writer is not None:
         store_writer(fetched_at, unified)
     return unified, errors
+
+
+def run_scan(fetch_fn: Callable[[str], tuple], *, fetched_at: Any = None
+             ) -> tuple[pd.DataFrame, dict[str, Any]]:
+    """Fetch every sport, aggregate coverage, and produce the unified ranked frame — the service entry.
+
+    `fetch_fn(sport_id)` returns the `fetch.fetch_contracts` 7-tuple
+    `(df, _fetched_at, errors, n_scanned, n_loaded, skipped_no_name, n_excluded_unknown)`. Returns
+    `(unified_df, coverage)` where `coverage` carries the scan-wide counts + per-series / per-sport
+    errors (so `/coverage` is honest). Pure: fetch injected, no store, no network. A per-sport fetch
+    failure is recorded and that sport contributes nothing — never blanks the rest.
+    """
+    dfs: dict[str, Any] = {}
+    scanned = loaded = skipped = excluded = 0
+    series_errors: list[dict[str, Any]] = []
+    fetch_errors: list[dict[str, Any]] = []
+    for cfg in sports.all_sports():
+        sid = cfg.sport_id
+        try:
+            df, _fa, errors, n_scanned, n_loaded, skipped_no_name, n_excluded = fetch_fn(sid)
+        except Exception as exc:   # a single sport's fetch failure must not blank the scan
+            fetch_errors.append({"sport": sid, "error": str(exc)})
+            continue
+        dfs[sid] = df
+        scanned += n_scanned
+        loaded += n_loaded
+        skipped += skipped_no_name
+        excluded += n_excluded
+        for s, msg in (errors or []):
+            series_errors.append({"sport": sid, "series": s, "error": str(msg)})
+
+    # Reuse the pure aggregator over the already-fetched per-sport frames (it adds its own
+    # per-sport PROCESSING errors — build_checks/find_dutch_books failures — to the set).
+    unified, processing_errors = unified_opportunities(lambda sid: dfs.get(sid), fetched_at=fetched_at)
+
+    coverage = {
+        "fetched_at": fetched_at,
+        "scanned": scanned, "loaded": loaded, "failed": len(series_errors), "excluded": excluded,
+        "skipped_no_name": skipped,
+        "sport_errors": fetch_errors + processing_errors,   # fetch-level + processing-level
+        "series_errors": series_errors,
+    }
+    return unified, coverage
