@@ -1,20 +1,21 @@
 """Opportunity-first cross-sport dashboard (Stage 5) — NiceGUI, mounted on the FastAPI app.
 
-A single `@ui.page('/')` that reads the engine in-process (via `webui.engine`): a per-second
-data-freshness strip, sortable Actionable/Blocked tables, a recently-actionable backlog, a clickable
-explanation panel, new-actionable + blocked-change alerts (polling), and a manual "Scan now" button
-(core series — labelled honestly). Detection lives in the engine; this module is presentation only.
+A single `@ui.page('/')` that reads the engine in-process (via `webui.engine`) and renders it through the
+pure `webui.viewmodel` builders: a scope/freshness banner, **membership + threshold filters** that narrow
+the STORED snapshot (no control ever triggers a fetch), sortable Actionable / Review / Blocked tables, a
+recently-actionable backlog, a clickable explanation panel, new-actionable + blocked-change alerts
+(polling), filter chips + URL state, and a manual "Scan now" button. Detection + filtering logic live in
+the engine / `viewmodel`; this module is the thin NiceGUI shell.
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
 from typing import Any
 
 from nicegui import run, ui
 
 import config
-import data
 from webui import engine
+from webui import viewmodel as vm
 
 _OPP_COLUMNS = [
     {"name": "new", "label": "", "field": "new", "align": "center"},
@@ -40,76 +41,19 @@ _BACKLOG_COLUMNS = [
 ]
 
 
-def _opp_row(o: dict[str, Any], new_ids: set[str]) -> dict[str, Any]:
-    return {
-        "opportunity_id": o.get("opportunity_id"),
-        "new": "🆕" if o.get("opportunity_id") in new_ids else "",
-        "sport": o.get("sport_label") or o.get("sport") or "",
-        "name": o.get("name") or "", "detail": o.get("detail") or "",
-        "edge": o.get("exec_gap_c"), "roi": o.get("roi_pct"), "units": o.get("exec_min_size"),
-        "profit": o.get("exec_max_profit_dollars"),
-        "tradable": o.get("tradable_now") or "",
-        # The non-blocking per-game settlement caveat (PR 6) shows alongside any blocked_reason, so an
-        # actionable game book still surfaces its postponement risk.
-        "caveat": "; ".join(p for p in (o.get("settlement_caveat"), o.get("blocked_reason"))
-                            if isinstance(p, str) and p),
-    }
-
-
-def _ts_disp(ts: Any, tz: str) -> str:
-    return data.fmt_time(datetime.fromtimestamp(ts, timezone.utc), tz, fmt="%H:%M:%S %Z") if ts else "—"
-
-
-def explanation_lines(opp: dict[str, Any], *, show_ids: bool = False) -> list[str]:
-    """The text content of the explanation panel for one opportunity (pure → unit-testable).
-    open_panel() renders these as labels and adds the leg links separately."""
-    lines = [
-        f"{opp.get('sport_label') or opp.get('sport')} · {opp.get('name')}",
-        f"{opp.get('source')} · {opp.get('detail')} · {opp.get('tournament')}",
-    ]
-    legs = opp.get("legs")
-    if isinstance(legs, list) and legs:                      # N-leg (synthetic bundle): list every leg
-        lines += [f"Leg {i + 1}: {leg.get('text') or '—'}" for i, leg in enumerate(legs)]
-    else:                                                     # 2-leg shapes use the positional fields
-        lines += [f"Leg 1: {opp.get('action_1_text') or '—'}", f"Leg 2: {opp.get('action_2_text') or '—'}"]
-    _roi = opp.get("roi_pct")
-    _floor = opp.get("payout_floor_c")
-    lines += [
-        f"Cost: {opp.get('cost_c')}¢   ·   Floor: {_floor}¢   ·   Gross edge: {opp.get('exec_gap_c')}¢"
-        + (f"   ·   ROI: {_roi}%" if _roi is not None else "")
-        + f"   ·   Max units: {opp.get('exec_min_size')}   ·   Gross profit: ${opp.get('exec_max_profit_dollars')}",
-        f"Tradable now: {opp.get('tradable_now')}   ·   Relationship: {opp.get('relationship_type')}"
-        f"   ·   Market: {opp.get('market_status')}",
-    ]
-    if opp.get("settlement_caveat"):
-        lines.append(f"Settlement caveat: {opp.get('settlement_caveat')}")
-    if opp.get("blocked_reason"):
-        lines.append(f"Caveat: {opp.get('blocked_reason')}")
-    if show_ids:
-        lines.append(f"id {opp.get('opportunity_id')} · {opp.get('ticker_1')} / {opp.get('ticker_2')}")
-    return lines
-
-
-def _backlog_row(b: dict[str, Any], tz: str) -> dict[str, Any]:
-    dur = b.get("duration_s")
-    return {
-        "sport": b.get("sport") or "", "name": b.get("name") or "",
-        "became": _ts_disp(b.get("became_ts"), tz), "left": _ts_disp(b.get("left_ts"), tz),
-        "mins": round(dur / 60, 1) if isinstance(dur, (int, float)) else None,
-        "reason": b.get("reason_left") or "", "last_edge": b.get("last_edge_c"),
-        "current": b.get("current_status") or b.get("current_bucket") or "gone",
-    }
-
-
 @ui.page("/")
-def dashboard() -> None:
-    state: dict[str, Any] = {"opps": {}, "seen_new": set(), "first": True}
+def dashboard(sport: str = "", tournament: str = "", participant: str = "",
+              min_size: str = "", active: str = "") -> None:
+    # Compact URL state -> initial control values (validated against the snapshot in `_seed`).
+    query = {"sport": sport, "tournament": tournament, "participant": participant,
+             "min_size": min_size, "active": active}
+    state: dict[str, Any] = {"opps": {}, "seen_new": set(), "first": True, "options": {}}
 
     ui.label("🎯 Kalshi opportunity engine — cross-sport").classes("text-2xl font-bold")
     ui.label("Opportunities across all sports, ranked best→worst. Core series, gross of fees — "
              "NOT all of Kalshi.").classes("text-sm text-gray-500")
 
-    # --- controls ---
+    # --- display + scan controls ---
     with ui.row().classes("items-end gap-4 flex-wrap"):
         tz_select = ui.select(config.TIMEZONE_OPTIONS, value=config.TIMEZONE_DEFAULT, label="Time zone")
         persist_select = ui.select(list(config.ALERT_PERSISTENCE_OPTIONS), label="New-actionable banner",
@@ -119,6 +63,18 @@ def dashboard() -> None:
         show_ids = ui.switch("Show IDs & codes", value=False)
         scan_btn = ui.button("⟳ Scan now (core series)")
 
+    # --- filters (narrow the STORED snapshot — NONE of these fetches) ---
+    with ui.row().classes("items-end gap-4 flex-wrap"):
+        sport_sel = ui.select({}, multiple=True, label="Sport").classes("min-w-[8rem]").props("dense")
+        tour_sel = ui.select([], multiple=True, label="Tournament").classes("min-w-[10rem]").props("dense")
+        participant_in = ui.input("Participant / match contains").classes("min-w-[12rem]")
+        min_size_in = ui.number("Min size", min=0, format="%.0f").classes("w-28")
+        active_sw = ui.switch("Active only")
+        show_review_sw = ui.switch("Review", value=True)
+        show_blocked_sw = ui.switch("Blocked", value=True)
+        ui.button("Clear filters", on_click=lambda: _clear_filters())
+    chips = ui.row().classes("gap-2 flex-wrap")
+
     freshness = ui.label().classes("text-sm")
     banner = ui.label().classes("text-sm font-medium")
 
@@ -127,7 +83,7 @@ def dashboard() -> None:
 
     def open_panel(opp: dict[str, Any]) -> None:
         dialog.clear()
-        lines = explanation_lines(opp, show_ids=show_ids.value)
+        lines = vm.explanation_lines(opp, show_ids=show_ids.value)
         with dialog, ui.card().classes("w-[36rem]"):
             ui.label(lines[0]).classes("text-lg font-bold")
             ui.label(lines[1]).classes("text-sm text-gray-500")
@@ -164,13 +120,13 @@ def dashboard() -> None:
                           selection="single", pagination=15).classes("w-full")
     actionable.on_select(_on_select(actionable))
 
-    ui.label("🔎 Review signal (settlement-caveated — review the rules, never auto-tradable)").classes(
-        "text-lg font-bold")
+    review_label = ui.label("🔎 Review signal (settlement-caveated — review the rules, never auto-tradable)"
+                            ).classes("text-lg font-bold")
     review = ui.table(columns=_OPP_COLUMNS, rows=[], row_key="opportunity_id",
                       selection="single", pagination=10).classes("w-full")
     review.on_select(_on_select(review))
 
-    ui.label("⛔ Blocked").classes("text-lg font-bold")
+    blocked_label = ui.label("⛔ Blocked").classes("text-lg font-bold")
     blocked = ui.table(columns=_OPP_COLUMNS, rows=[], row_key="opportunity_id",
                        selection="single", pagination=10).classes("w-full")
     blocked.on_select(_on_select(blocked))
@@ -181,20 +137,49 @@ def dashboard() -> None:
     changed = ui.label().classes("text-sm text-orange-700")
     empty = ui.label("No scan yet — press “Scan now (core series)”.").classes("text-gray-500")
 
-    # --- refresh (poll the store) ---
+    # --- filter state plumbing ---
+    def _current_filters() -> dict[str, Any]:
+        s: dict[str, Any] = {}
+        if sport_sel.value:
+            s["sports"] = list(sport_sel.value)
+        if tour_sel.value:
+            s["tournaments"] = list(tour_sel.value)
+        if (participant_in.value or "").strip():
+            s["participant"] = participant_in.value.strip()
+        if min_size_in.value:
+            s["min_size"] = float(min_size_in.value)
+        if active_sw.value:
+            s["active_only"] = True
+        return s
+
+    def _clear_filters() -> None:
+        sport_sel.value, tour_sel.value, participant_in.value = [], [], ""
+        min_size_in.value, active_sw.value = None, False
+        refresh()
+
+    def _sync_url(filters: dict[str, Any]) -> None:
+        q = vm.query_from_state(filters)
+        qs = "?" + "&".join(f"{k}={v}" for k, v in q.items()) if q else ""
+        ui.run_javascript(f"history.replaceState(null, '', location.pathname + {qs!r})")
+
+    # --- refresh (poll the store; re-render only — NEVER fetches) ---
     def refresh() -> None:
         tz = tz_select.value
         cov = engine.coverage()
-        if not cov["meta_present"] and cov["opportunities"] == 0 and cov["fetched_at"] is None:
-            empty.set_visibility(True)
-        else:
-            empty.set_visibility(False)
         opps = engine.latest_opportunities()
         state["opps"] = {o.get("opportunity_id"): o for o in opps}
+        state["options"] = vm.derive_options(opps)
+        sport_sel.options = state["options"]["sports"]
+        tour_sel.options = state["options"]["tournaments"]
+        sport_sel.update()
+        tour_sel.update()
+
+        empty.set_visibility(cov["fetched_at"] is None)
+        filters = _current_filters()
+        view = vm.filter_opps(opps, **filters)
 
         al = engine.alerts(config.ALERT_PERSISTENCE_OPTIONS[persist_select.value])
         new_ids = {r.get("opportunity_id") for r in al["new_actionable"]}
-        # toast only on genuinely-new ids since last poll (suppress the very first load)
         fresh = new_ids - state["seen_new"]
         if fresh and not state["first"]:
             ui.notify(f"🆕 {len(fresh)} newly actionable", type="positive")
@@ -204,28 +189,43 @@ def dashboard() -> None:
         n_ch = len(al["blocked_changes"])
         changed.set_text(f"🔁 {n_ch} changed while blocked" if n_ch else "")
 
-        actionable.rows = [_opp_row(o, new_ids) for o in opps if o.get("bucket") == "actionable"]
-        review.rows = [_opp_row(o, new_ids) for o in opps if o.get("bucket") == "review_signal"]
-        blocked.rows = [_opp_row(o, new_ids) for o in opps if o.get("bucket") == "blocked"]
+        actionable.rows = [vm.opp_row(o, new_ids) for o in view if o.get("bucket") == "actionable"]
+        review.rows = [vm.opp_row(o, new_ids) for o in view if o.get("bucket") == "review_signal"]
+        blocked.rows = [vm.opp_row(o, new_ids) for o in view if o.get("bucket") == "blocked"]
+        for lbl, tbl, sw in ((review_label, review, show_review_sw), (blocked_label, blocked, show_blocked_sw)):
+            lbl.set_visibility(sw.value)
+            tbl.set_visibility(sw.value)
+
         win_s = config.BACKLOG_WINDOWS[window_select.value]
         bl = engine.backlog(win_s if win_s is not None else config.SNAPSHOT_RETENTION_SECONDS)
-        backlog.rows = [_backlog_row(b, tz) for b in bl]
+        backlog.rows = [vm.backlog_row(b, tz) for b in bl]
+
+        # scope banner (with the PR 21a counters) + filter chips + URL state
+        freshness.set_text(vm.scope_banner(cov, tz))
+        chips.clear()
+        with chips:
+            for chip in vm.active_filter_chips(filters, state["options"]):
+                ui.badge(chip).props("color=grey-7")
+        _sync_url(filters)
         state["cov"] = cov
 
-    def tick_age() -> None:
-        cov = state.get("cov")
-        if not cov or cov.get("fetched_at") is None:
-            freshness.set_text("No data yet.")
-            return
-        age = data.data_age_seconds(cov["fetched_at"])
-        stale = "  ⚠ STALE" if data.is_stale(age, config.STALE_AFTER_SECONDS) else ""
-        when = data.fmt_time(cov["fetched_at"], tz_select.value, fmt="%H:%M:%S %Z")
-        scope = f"{cov['scanned']} series · {cov['failed']} failed" if cov["meta_present"] else "no coverage meta"
-        freshness.set_text(f"Data {when} · age {int(age) if age is not None else '—'}s{stale} · "
-                           f"{cov['opportunities']} opportunities · {scope}")
+    def _seed() -> None:
+        """First load: derive options from the snapshot, then seed the controls from the URL query with a
+        graceful reset of any sport/tournament not present in the current snapshot."""
+        opps = engine.latest_opportunities()
+        options = vm.derive_options(opps)
+        sport_sel.options = options["sports"]
+        tour_sel.options = options["tournaments"]
+        seeded = vm.state_from_query(query, options=options)
+        sport_sel.value = seeded.get("sports", [])
+        tour_sel.value = seeded.get("tournaments", [])
+        participant_in.value = seeded.get("participant", "")
+        min_size_in.value = seeded.get("min_size")
+        active_sw.value = bool(seeded.get("active_only"))
+        refresh()
 
     async def do_scan() -> None:
-        scan_btn.disable()
+        scan_btn.disable()        # stale-while-scanning: only the Scan button is disabled; filters keep working
         n = ui.notification("Scanning (core series)…", spinner=True, timeout=None)
         try:
             cov = await run.io_bound(engine.run_scan_now)   # network I/O off the event loop
@@ -238,9 +238,15 @@ def dashboard() -> None:
             scan_btn.enable()
 
     scan_btn.on_click(do_scan)
-    for ctrl in (tz_select, persist_select, window_select, show_ids):
+    # Every control re-renders from the stored snapshot — none of them fetches.
+    for ctrl in (tz_select, persist_select, window_select, show_ids, sport_sel, tour_sel,
+                 participant_in, min_size_in, active_sw, show_review_sw, show_blocked_sw):
         ctrl.on_value_change(lambda _=None: refresh())
 
-    refresh()
+    def tick_age() -> None:
+        # Re-render only the freshness/scope line each second (scope_banner recomputes the age live).
+        freshness.set_text(vm.scope_banner(state.get("cov"), tz_select.value))
+
+    _seed()
     ui.timer(config.UI_REFRESH_SECONDS, refresh)
     ui.timer(1.0, tick_age)
