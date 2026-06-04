@@ -13,9 +13,11 @@ env/
 # Snapshot store (Stage 1) — local opportunity-history SQLite DB
 *.db
 snapshots.db
-*.db-wal             # WAL sidecar files (v3 enables WAL mode)
+# WAL sidecar files (v3 enables WAL mode) — gitignore has no inline comments, so keep these bare:
+*.db-wal
 *.db-shm
-*.pre-v*-backup      # pre-migration backups (store._backup_before_migration)
+# pre-migration backups (store._backup_before_migration)
+*.pre-v*-backup
 
 # OS / editor
 .DS_Store

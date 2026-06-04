@@ -16,6 +16,7 @@ wall-clock ``now``), so behaviour is reproducible in tests and independent of wh
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -240,6 +241,91 @@ def _apply_retention(conn: sqlite3.Connection, retention_seconds: float | None =
     return len(old)
 
 
+def _db_size_bytes(db_path: str) -> int | None:
+    """On-disk size of the DB file, or None for in-memory / not-yet-flushed databases."""
+    if not db_path or db_path == ":memory:":
+        return None
+    try:
+        return os.path.getsize(db_path)
+    except OSError:
+        return None
+
+
+def _frame_bearing_snapshots(conn: sqlite3.Connection) -> list[int]:
+    """Snapshot ids that currently have at least one frame, NEWEST first (by snapshot id)."""
+    return [r["snapshot_id"] for r in conn.execute(
+        "SELECT DISTINCT snapshot_id FROM snapshot_frames ORDER BY snapshot_id DESC").fetchall()]
+
+
+def _frame_bytes(conn: sqlite3.Connection) -> int:
+    """Total logical size of all retained frame blobs (sum of rows_json lengths)."""
+    return conn.execute("SELECT COALESCE(SUM(LENGTH(rows_json)), 0) AS b FROM snapshot_frames").fetchone()["b"]
+
+
+def _apply_frame_retention(conn: sqlite3.Connection, db_path: str) -> dict[str, Any]:
+    """Heavy-frame tier (v3 size-tier): keep frames only for the latest ``SNAPSHOT_FRAME_RETENTION_N``
+    snapshots, then, while the retained frame bytes still exceed ``SNAPSHOT_FRAME_DB_BUDGET_BYTES`` and more
+    than one frame-bearing snapshot remains, evict the OLDEST remaining frame-snapshot. Only frames are
+    dropped — the snapshots + their lean opportunities stay (the evicted ones report
+    ``frame_status == "expired"``).
+
+    Budgeting is on the logical blob length, not the file size: SQLite reuses freed pages, so a DELETE does
+    not shrink the file (reported as ``db_size_bytes`` for observability, never the loop condition).
+    Returns ``{frame_snapshots_evicted, frame_bytes, db_size_bytes}``."""
+    keepers = _frame_bearing_snapshots(conn)                    # newest -> oldest
+    kept = keepers[:config.SNAPSHOT_FRAME_RETENTION_N]
+    evict = list(keepers[config.SNAPSHOT_FRAME_RETENTION_N:])   # tier 1: everything past the latest N
+
+    budget = config.SNAPSHOT_FRAME_DB_BUDGET_BYTES
+    if budget is not None and kept:
+        sizes = {sid: conn.execute(
+            "SELECT COALESCE(SUM(LENGTH(rows_json)),0) AS b FROM snapshot_frames WHERE snapshot_id = ?",
+            (sid,)).fetchone()["b"] for sid in kept}
+        retained = sum(sizes.values())
+        while retained > budget and len(kept) > 1:             # tier 2: drop the oldest kept until ≤ budget
+            sid = kept.pop()                                   # `kept` is newest->oldest, so pop() = oldest
+            evict.append(sid)
+            retained -= sizes[sid]
+
+    if evict:
+        marks = ",".join("?" * len(evict))
+        conn.execute(f"DELETE FROM snapshot_frames WHERE snapshot_id IN ({marks})", evict)
+
+    stats = {"frame_snapshots_evicted": len(evict), "frame_bytes": _frame_bytes(conn),
+             "db_size_bytes": _db_size_bytes(db_path)}
+    if evict:
+        print(f"snapshot frame retention: evicted {len(evict)} frame-snapshot(s); "
+              f"retained frame bytes={stats['frame_bytes']}, db size={stats['db_size_bytes']} bytes")
+    return stats
+
+
+def frame_status(snapshot_id: int, *, db_path: str | None = None) -> str:
+    """Honest availability of a snapshot's heavy evidence frames (for the detail UI, PR 24):
+
+    - ``"present"`` — the snapshot has frames.
+    - ``"expired"`` — no frames AND the snapshot is older than the latest ``SNAPSHOT_FRAME_RETENTION_N``
+      frame-bearing snapshots → its evidence was aged out by retention.
+    - ``"absent"``  — no frames AND it is within the latest-N window → evidence was never captured for this
+      scan (an opps-only write, or a scan from before frame persistence existed).
+    """
+    conn = _connect(db_path)
+    try:
+        has = conn.execute(
+            "SELECT 1 FROM snapshot_frames WHERE snapshot_id = ? LIMIT 1", (snapshot_id,)).fetchone()
+        if has is not None:
+            return "present"
+        recent = {r["snapshot_id"] for r in conn.execute(
+            "SELECT DISTINCT snapshot_id FROM snapshot_frames "
+            "ORDER BY snapshot_id DESC LIMIT ?", (config.SNAPSHOT_FRAME_RETENTION_N,)).fetchall()}
+        newest_kept = min(recent) if recent else None
+    finally:
+        conn.close()
+    # Older than the oldest still-kept frame-snapshot -> its frames were aged out.
+    if newest_kept is not None and snapshot_id < newest_kept:
+        return "expired"
+    return "absent"
+
+
 def _load(conn: sqlite3.Connection, clause: str, params: tuple = ()) -> list[dict[str, Any]]:
     """Read snapshots (+ their opportunity rows, JSON-expanded) matching an ORDER/WHERE clause."""
     snaps = conn.execute(
@@ -312,7 +398,8 @@ def write_snapshot(fetched_at: Any, opps: Any, *, meta: Any = None, frames: Any 
                 "VALUES (?, ?, ?, ?, ?, ?)",
                 [(sid, *_frame_rows(f)) for f in frames],
             )
-        _apply_retention(conn)
+        _apply_retention(conn)                                   # lean tier: time-based whole-snapshot drop
+        _apply_frame_retention(conn, db_path or config.SNAPSHOT_DB_PATH)   # heavy tier: latest-N + size budget
         conn.commit()
         return sid
     finally:
