@@ -138,3 +138,11 @@ API_PORT = 8000
 # latest result marked skipped, writes nothing) when the newest snapshot is younger than this, unless
 # ?force=true. Sane after a restart because the guard reads the store, not process memory.
 SCAN_MIN_INTERVAL_SECONDS = REFRESH_TTL   # 30s
+
+# --- NiceGUI dashboard (Stage 5) -----------------------------------------------------
+# NiceGUI needs a storage secret to sign its per-user session cookie. There is NO auth/multi-user here,
+# so this is not a real secret — the REAL value comes from the NICEGUI_STORAGE_SECRET env var (read in
+# serve.py, which may import os); this is only a clearly-labeled dev-only fallback. (config stays
+# import-free per the project convention, so the env read lives in serve.py, not here.)
+NICEGUI_STORAGE_SECRET_FALLBACK = "dev-only-not-a-secret-set-NICEGUI_STORAGE_SECRET-in-prod"
+UI_REFRESH_SECONDS = REFRESH_DEFAULT_SECONDS   # NiceGUI poll cadence for re-reading the store (120s)

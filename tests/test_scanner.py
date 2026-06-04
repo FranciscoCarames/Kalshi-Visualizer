@@ -155,3 +155,24 @@ def test_run_scan_records_sport_fetch_failure_without_blanking():
     unified, cov = scanner.run_scan(fetch_fn, fetched_at="FA")
     assert any(e["sport"] == "tennis" and "down" in e["error"] for e in cov["sport_errors"])
     assert set(unified["sport"]) <= {"nba"}                      # tennis failed; others still scanned
+
+
+# --- Stage 5 §0: explanation-panel enrichment fields ---------------------------------
+def test_unified_columns_include_explanation_fields():
+    for col in ("action_1_price_c", "action_2_price_c", "cost_c", "ticker_1", "ticker_2", "url_2"):
+        assert col in scanner.UNIFIED_COLUMNS
+
+
+def test_explanation_fields_populated_per_source():
+    unified, _ = scanner.unified_opportunities(_fetch)
+    for col in ("action_1_price_c", "action_2_price_c", "cost_c", "ticker_1", "ticker_2", "url_2"):
+        assert col in unified.columns
+    db = unified[unified["source"] == "dutch_book"].iloc[0]
+    assert db["cost_c"] is not None and db["action_1_price_c"] is not None
+    assert db["ticker_1"] and db["ticker_2"]          # both leg tickers present
+    cont = unified[unified["source"] == "containment"]
+    # the actionable containment row carries numeric leg prices + both leg tickers
+    act = cont[cont["bucket"] == "actionable"]
+    if not act.empty:
+        r = act.iloc[0]
+        assert r["action_1_price_c"] is not None and r["ticker_1"] and r["ticker_2"]
