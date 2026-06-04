@@ -384,3 +384,55 @@ def test_opportunity_id_distinguishes_different_recipes():
     assert data.opportunity_id(*base) != data.opportunity_id(*base[:-1], "Reach Semifinal")
     # A None part is positional (normalizes to "") and does not collide with the empty-token recipe.
     assert data.opportunity_id("dutch_book", "EVT", None, "k") != data.opportunity_id("dutch_book", "EVT", "k")
+
+
+# --- exact-score data capture + identity hardening (synthetic-bundle gates) -----------
+def _exact_score_event():
+    """A BO5 exact-score event: one player's 3 win-states, with the binary/settlement fields a real
+    KXATPEXACTMATCH market carries (verified live: market_type=binary, strike_type=custom,
+    fractional_trading_enabled=True, Set Score in custom_strike)."""
+    def market(score, ask):
+        return {
+            "ticker": f"KXATPEXACTMATCH-26JUN05MENZVE-MEN{score.replace('-', '')}",
+            "yes_sub_title": f"Jakub Mensik wins {score}",
+            "custom_strike": {"Set Score": score, "tennis_competitor": "uuid-men"},
+            "market_type": "binary", "strike_type": "custom", "fractional_trading_enabled": True,
+            "price_ranges": [{"start": "0.0000", "end": "1.0000", "step": "0.0100"}],
+            "rules_secondary": "The following market refers to the Mensik vs Zverev match.",
+            "close_time": "2026-06-19T12:30:00Z", "expiration_time": "2026-06-19T12:30:00Z",
+            "yes_bid_dollars": "0.10", "yes_ask_dollars": ask, "last_price_dollars": ask,
+            "yes_bid_size_fp": "100", "yes_ask_size_fp": "100", "status": "active",
+            "title": f"Mensik vs Zverev exact score {score}?",
+        }
+    return {
+        "event_ticker": "KXATPEXACTMATCH-26JUN05MENZVE", "title": "Mensik vs Zverev",
+        "mutually_exclusive": True, "product_metadata": {"competition": "ATP Wimbledon"},
+        "markets": [market("3-0", "0.12"), market("3-1", "0.14"), market("3-2", "0.16")],
+    }
+
+
+def test_build_contracts_captures_exact_score_settlement_metadata():
+    rows = data.build_contracts("KXATPEXACTMATCH", [_exact_score_event()])
+    assert len(rows) == 3
+    r = next(x for x in rows if x["score_state"] == "3-0")
+    assert r["kind"] == "exact_score"
+    assert r["market_type"] == "binary" and r["strike_type"] == "custom"
+    assert r["fractional_trading_enabled"] is True              # NORMAL: order-size granularity, not scalar
+    assert r["rules_secondary"].startswith("The following market")
+    assert r["close_time"] == "2026-06-19T12:30:00Z" and r["expiration_time"] == "2026-06-19T12:30:00Z"
+    assert isinstance(r["price_ranges"], list)
+    assert {x["score_state"] for x in rows} == {"3-0", "3-1", "3-2"}     # the BO5 win-state set
+
+
+def test_exact_score_rows_key_on_uuid_not_scoreline():
+    # Identity hardening (#27): a player's 3 score-states share the stable tennis_competitor UUID, so the
+    # synthetic detector groups them correctly and is never split by the scoreline display text.
+    rows = data.build_contracts("KXATPEXACTMATCH", [_exact_score_event()])
+    assert {r["player_key"] for r in rows} == {"uuid-men"}
+
+
+def test_score_state_helper_normalizes_and_blank_for_non_exact_score():
+    assert data.score_state({"Set Score": "3 - 0"}) == "3-0"
+    assert data.score_state({"Set Score": "2-1"}) == "2-1"
+    assert data.score_state({"tennis_competitor": "x"}) == ""           # no Set Score → blank
+    assert data.score_state(None) == ""
