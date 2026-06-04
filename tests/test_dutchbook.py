@@ -8,6 +8,7 @@ from __future__ import annotations
 import pandas as pd
 
 import dutchbook
+import sports
 
 BLOCKERS_size = "0 contracts are available"  # substring of glossary BLOCKERS["size_missing"]
 NAN = float("nan")
@@ -409,3 +410,118 @@ def test_golf_rows_produce_no_dutch_books():
     a["kind"] = "advance"
     b["kind"] = "advance"
     assert dutchbook.find_dutch_books([a, b]) == []
+
+
+# --- n-outcome (soccer 3-way Home/Away/Tie) dutch book -------------------------------------
+_EV = "KXWCGAME-26JUN11MEXRSA"
+
+
+def _soccer_leg(name, key, *, yes_ask_c, yes_bid_c, is_participant=True, status="active",
+                quality="Tight", me=True, draw=True, rules_extra="", ask_size=100, bid_size=100):
+    rules = "Team wins after 90 minutes plus stoppage time"
+    rules += " (does not include extra time or penalties)" if draw else ""
+    rules += rules_extra
+    return {
+        "series": "KXWCGAME", "event_ticker": _EV, "kind": "game",
+        "player": name, "player_key": key, "is_participant": is_participant,
+        "participant_type": "participant" if is_participant else "tie",
+        "mutually_exclusive": me, "rules_primary": rules,
+        "yes_ask_c": yes_ask_c, "yes_bid_c": yes_bid_c, "no_ask_c": None,
+        "yes_ask_size": ask_size, "yes_bid_size": bid_size, "quote_quality": quality,
+        "status": status, "market_ticker": f"{_EV}-{name[:3].upper()}",
+        "kalshi_url": "https://kalshi.com/markets/kxwcgame", "event_title": "Mexico vs South Africa",
+        "tournament": "2026 FIFA World Cup", "tour": "",
+    }
+
+
+def _wc3(asks, bids=None, **kw):
+    bids = bids if bids is not None else [a - 2 for a in asks]
+    return [_soccer_leg("Mexico", "u-mex", yes_ask_c=asks[0], yes_bid_c=bids[0], **kw),
+            _soccer_leg("South Africa", "u-rsa", yes_ask_c=asks[1], yes_bid_c=bids[1], **kw),
+            _soccer_leg("Tie", f"tie::{_EV}", yes_ask_c=asks[2], yes_bid_c=bids[2],
+                        is_participant=False, **kw)]
+
+
+def test_soccer_3way_underround_fires():
+    # Buy YES all 3: 40 + 30 + 25 = 95 < 100 -> underround, 5c locked.
+    f = dutchbook.find_dutch_books(_wc3([40, 30, 25]))
+    assert len(f) == 1
+    g = f[0]
+    assert g["direction"] == "underround" and g["exec_gap_c"] == 5 and g["payout_floor_c"] == 100
+    assert g["n_legs"] == 3 and [lg["side"] for lg in g["legs"]] == ["buy_yes", "buy_yes", "buy_yes"]
+    assert g["tradable_now"] == "Yes" and g["bucket"] == "actionable" and g["blocked_reason"] == ""
+    assert g["status"] == "EXECUTABLE_DUTCH_BOOK"
+
+
+def test_soccer_3way_overround_fires_with_n_minus_1_floor():
+    # Buy NO all 3 via no_ask = 100 - yes_bid: (100-40)+(100-40)+(100-30)=190 < (3-1)*100=200 -> 10c.
+    f = dutchbook.find_dutch_books(_wc3([42, 42, 32], bids=[40, 40, 30]))
+    g = f[0]
+    assert g["direction"] == "overround" and g["payout_floor_c"] == 200 and g["exec_gap_c"] == 10
+    assert all(lg["side"] == "buy_no" for lg in g["legs"])
+
+
+def test_soccer_3way_no_arb_is_eligible_non_firing():
+    # asks sum 101 (>100) and bids sum 95 (no_ask sum 205 > 200): proof passes but neither direction fires.
+    rows = _wc3([42, 32, 27], bids=[38, 28, 23])
+    diag = {}
+    assert dutchbook.find_dutch_books(rows, diag) == []
+    assert diag.get("eligible_non_firing")
+    audit = dutchbook.proof_audit(rows, sports.SOCCER)
+    assert audit["proof"].ok is True
+    assert audit["underround"]["gap_c"] <= 0 and audit["overround"]["gap_c"] <= 0
+
+
+def test_soccer_tie_is_a_leg_not_a_participant():
+    g = dutchbook.find_dutch_books(_wc3([40, 30, 25]))[0]
+    contracts = [lg["contract"] for lg in g["legs"]]
+    assert "Tie" in contracts                                   # the Tie IS a leg
+    assert {g["player_key_a"], g["player_key_b"]} == {"u-mex", "u-rsa"}   # but not a named participant
+
+
+def test_soccer_reject_missing_tie():
+    # Two team markets only (no Tie) -> not a provable 3-way MECE.
+    rows = _wc3([40, 30, 25])[:2]
+    diag = {}
+    assert dutchbook.find_dutch_books(rows, diag) == []
+    assert any("2 participants + 1 tie" in r["reason"] for r in diag.get("rejected", []))
+
+
+def test_soccer_reject_not_mutually_exclusive():
+    diag = {}
+    assert dutchbook.find_dutch_books(_wc3([40, 30, 25], me=False), diag) == []
+    assert any("mutually_exclusive" in r["reason"] for r in diag["rejected"])
+
+
+def test_soccer_reject_missing_draw_phrase():
+    diag = {}
+    assert dutchbook.find_dutch_books(_wc3([40, 30, 25], draw=False), diag) == []
+    assert any("draw-excluded" in r["reason"] for r in diag["rejected"])
+
+
+def test_soccer_reject_settlement_basis_mismatch():
+    # One leg carries a rule token (walkover) the others don't -> divergent settlement basis.
+    rows = _wc3([40, 30, 25])
+    rows[0]["rules_primary"] += " market voids on a walkover"
+    diag = {}
+    assert dutchbook.find_dutch_books(rows, diag) == []
+    assert any("settlement basis" in r["reason"] for r in diag["rejected"])
+
+
+def test_soccer_3way_id_is_order_independent():
+    a = dutchbook.find_dutch_books(_wc3([40, 30, 25]))[0]["opportunity_id"]
+    rows = _wc3([40, 30, 25])
+    b = dutchbook.find_dutch_books(list(reversed(rows)))[0]["opportunity_id"]
+    assert a == b
+
+
+def test_nba_2way_book_unchanged_by_n_outcome_path():
+    # Regression: NBA playoff-series 2-way book still fires identically, 2-leg shape (legs None).
+    a = market("Boston", series="KXNBASERIES", event="KXNBASERIES-26FIN", player_key="bos",
+               yes_ask_c=45, yes_bid_c=43)
+    b = market("Denver", series="KXNBASERIES", event="KXNBASERIES-26FIN", player_key="den",
+               yes_ask_c=48, yes_bid_c=46)
+    a["kind"] = b["kind"] = "match"
+    g = dutchbook.find_dutch_books([a, b])[0]
+    assert g["direction"] == "underround" and g["exec_gap_c"] == 7
+    assert g.get("legs") is None and g.get("n_legs") is None     # 2-leg shape unchanged
