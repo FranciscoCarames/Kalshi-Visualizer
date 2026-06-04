@@ -14,7 +14,7 @@ from typing import Any
 from nicegui import run, ui
 
 import config
-from webui import engine
+from webui import engine, export
 from webui import viewmodel as vm
 
 _OPP_COLUMNS = [
@@ -62,6 +62,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                                    label="Backlog window")
         show_ids = ui.switch("Show IDs & codes", value=False)
         scan_btn = ui.button("⟳ Scan now (core series)")
+        export_btn = ui.button("⬇ Export (ZIP)")
 
     # --- filters (narrow the STORED snapshot — NONE of these fetches) ---
     with ui.row().classes("items-end gap-4 flex-wrap"):
@@ -237,7 +238,26 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             n.dismiss()
             scan_btn.enable()
 
+    def do_export() -> None:
+        """Build the snapshot ZIP (filtered opportunities + persisted frames + backlog + manifest) and hand
+        it to the browser. Reads the STORED snapshot only — no fetch."""
+        cov = engine.coverage()
+        if cov.get("snapshot_id") is None:
+            ui.notify("Nothing to export yet — run a scan first.", type="warning")
+            return
+        filters = _current_filters()
+        view = vm.filter_opps(engine.latest_opportunities(), **filters)
+        win_label = window_select.value
+        win_s = config.BACKLOG_WINDOWS[win_label]
+        backlog = engine.backlog(win_s if win_s is not None else config.SNAPSHOT_RETENTION_SECONDS)
+        blob = export.build_export_zip(
+            snapshot_id=cov["snapshot_id"], fetched_at=cov.get("fetched_at"), opportunities=view,
+            coverage=cov, frames=engine.frames(), backlog=backlog, backlog_window=win_label, filters=filters)
+        ui.download.content(blob, f"kalshi-snapshot-{cov['snapshot_id']}.zip", "application/zip")
+        ui.notify(f"Exported snapshot {cov['snapshot_id']} · {len(view)} opportunities", type="positive")
+
     scan_btn.on_click(do_scan)
+    export_btn.on_click(do_export)
     # Every control re-renders from the stored snapshot — none of them fetches.
     for ctrl in (tz_select, persist_select, window_select, show_ids, sport_sel, tour_sel,
                  participant_in, min_size_in, active_sw, show_review_sw, show_blocked_sw):
