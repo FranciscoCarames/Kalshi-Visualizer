@@ -390,3 +390,76 @@ def test_retention_drops_frames_with_their_snapshot(tmp_path):
     # A newer snapshot far beyond the retention window evicts the old one (+ its frames).
     store.write_snapshot(1000 + config.SNAPSHOT_RETENTION_SECONDS + 10, [_opp("b")], db_path=db)
     assert store.load_frames(old, db_path=db) == []             # the old snapshot's frames are gone
+
+
+# --- PR 20: heavy-frame retention size-tiers + "evidence expired" honesty --------------
+def _frame(sport="tennis", ftype="contracts", n=1, pad=""):
+    """A frame spec with `n` rows; `pad` inflates rows_json for the size-budget test."""
+    return {"sport": sport, "frame_type": ftype, "schema_version": 1,
+            "rows": [{"i": i, "pad": pad} for i in range(n)]}
+
+
+def test_heavy_frames_kept_only_for_latest_n(tmp_path, monkeypatch):
+    monkeypatch.setattr(config, "SNAPSHOT_FRAME_RETENTION_N", 3)
+    db = _db(tmp_path)
+    sids = []
+    for t in range(5):                       # 5 snapshots, all within the 30h lean window
+        sids.append(store.write_snapshot(1000 + t, [_opp(f"o{t}")], frames=[_frame()], db_path=db))
+
+    # Lean tier untouched: every snapshot + its opportunities still load.
+    assert len(store.snapshots_since(10 ** 9, db_path=db)) == 5
+    # Heavy tier: only the latest 3 retain frames; the 2 oldest lost theirs but keep their opps.
+    kept = [s for s in sids if store.load_frames(s, db_path=db)]
+    assert kept == sids[-3:]
+    for s in sids[:2]:
+        assert store.load_frames(s, db_path=db) == []
+        assert store.frame_status(s, db_path=db) == "expired"      # aged out by retention
+    for s in sids[-3:]:
+        assert store.frame_status(s, db_path=db) == "present"
+
+
+def test_frame_status_absent_for_recent_opps_only_snapshot(tmp_path):
+    db = _db(tmp_path)
+    store.write_snapshot(1000, [_opp("a")], frames=[_frame()], db_path=db)   # has frames
+    sid2 = store.write_snapshot(2000, [_opp("b")], db_path=db)               # recent, NO frames
+    # Within the latest-N window with no frames -> "absent" (never captured), not "expired".
+    assert store.frame_status(sid2, db_path=db) == "absent"
+
+
+def test_frame_size_budget_evicts_oldest_past_n(tmp_path, monkeypatch):
+    monkeypatch.setattr(config, "SNAPSHOT_FRAME_RETENTION_N", 10)   # latest-N won't bind; the budget will
+    db = _db(tmp_path)
+    big = "x" * 2000
+    sids = [store.write_snapshot(1000 + t, [_opp(f"o{t}")], frames=[_frame(n=1, pad=big)], db_path=db)
+            for t in range(5)]
+    # A budget smaller than 5 frames but >= 1 forces eviction down toward the newest.
+    one_frame_bytes = len(store.load_frames(sids[-1], db_path=db)[0]["rows"][0]["pad"])  # ~2000
+    monkeypatch.setattr(config, "SNAPSHOT_FRAME_DB_BUDGET_BYTES", 2500)
+    newest = store.write_snapshot(2000, [_opp("new")], frames=[_frame(n=1, pad=big)], db_path=db)  # triggers retention
+    assert store.load_frames(newest, db_path=db)                 # the newest frame-snapshot always survives
+    con = sqlite3.connect(db)
+    try:
+        retained = con.execute("SELECT COALESCE(SUM(LENGTH(rows_json)),0) FROM snapshot_frames").fetchone()[0]
+        n_frame_snaps = con.execute("SELECT COUNT(DISTINCT snapshot_id) FROM snapshot_frames").fetchone()[0]
+    finally:
+        con.close()
+    assert retained <= config.SNAPSHOT_FRAME_DB_BUDGET_BYTES or n_frame_snaps == 1
+    assert one_frame_bytes >= 2000 and n_frame_snaps < 6         # eviction happened (6 frame-snaps written)
+
+
+def test_frame_retention_stats_and_no_op(tmp_path):
+    db = _db(tmp_path)
+    # A no-frame DB evicts nothing.
+    con = store._connect(db)
+    try:
+        stats = store._apply_frame_retention(con, db)
+    finally:
+        con.close()
+    assert stats["frame_snapshots_evicted"] == 0 and stats["frame_bytes"] == 0
+    assert isinstance(stats["db_size_bytes"], int)               # real file -> a size in bytes
+
+
+def test_no_frames_write_and_unknown_id_are_safe(tmp_path):
+    db = _db(tmp_path)
+    store.write_snapshot(1000, [_opp("a")], db_path=db)          # no frames kwarg
+    assert store.frame_status(999, db_path=db) == "absent"       # unknown id -> safe (no frames anywhere)

@@ -113,6 +113,12 @@ SNAPSHOT_RETENTION_SECONDS = 30 * 60 * 60   # 30 hours
 # SQLite busy-timeout (ms): how long a connection waits on a held lock before raising. With WAL mode
 # (set per-connect in store._connect) this lets a reader proceed during a scan write instead of erroring.
 SNAPSHOT_BUSY_TIMEOUT_MS = 5000
+# Heavy-frame retention (v3 size-tier, store._apply_frame_retention): the lean opportunity history keeps
+# the 30h window above, but the heavy per-sport evidence frames (contracts/checks/dutchbooks) are capped to
+# the latest N snapshots under a logical-byte budget — older snapshots keep their opportunities but their
+# evidence is evicted ("evidence expired"). Tune once PR 21 lets us measure real frame sizes.
+SNAPSHOT_FRAME_RETENTION_N = 12                      # keep heavy frames for the latest 12 snapshots
+SNAPSHOT_FRAME_DB_BUDGET_BYTES = 500 * 1024 * 1024   # hard cap on retained frame data (~500 MB)
 
 # --- Lifecycle (Stage 3 — alerts + recently-actionable backlog) ----------------------
 # Recently-actionable backlog windows (§10): label -> seconds. "This session" is a sentinel the app
