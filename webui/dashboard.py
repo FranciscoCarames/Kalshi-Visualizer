@@ -11,11 +11,30 @@ from __future__ import annotations
 
 from typing import Any
 
-from nicegui import run, ui
+from nicegui import app, run, ui
 
 import config
+import presence
 from webui import engine, export
 from webui import viewmodel as vm
+
+# Best-effort live viewer count (PR 25b): NiceGUI fires these on websocket connect/disconnect; the count
+# feeds /metrics + the dashboard's own diagnostics heartbeat. Registered once at import (module load).
+app.on_connect(lambda *_: presence.connect())
+app.on_disconnect(lambda *_: presence.disconnect())
+
+
+def _aggrid_options(rows: list[dict[str, Any]], fields: list[tuple[str, str]]) -> dict[str, Any]:
+    """Client-side AG-Grid options (pagination + per-column filter/sort) over already-in-memory rows.
+    `fields` is a list of (field, header) pairs. The grid does the paging/filtering/sorting in the browser,
+    so this is just a column spec + the row data."""
+    return {
+        "columnDefs": [{"headerName": h, "field": f, "filter": True, "sortable": True, "resizable": True}
+                       for f, h in fields],
+        "rowData": rows,
+        "pagination": True,
+        "paginationPageSize": 20,
+    }
 
 _OPP_COLUMNS = [
     {"name": "new", "label": "", "field": "new", "align": "center"},
@@ -178,6 +197,31 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             if not (chain or spreads or expected or contracts):
                 ui.label("No stored contracts for this participant in the latest snapshot."
                          ).classes("text-gray-500 mt-2")
+            # Raw fields / link audit / duplicate sources — debug detail, only when "Show IDs & codes" is on.
+            if show_ids.value and prows:
+                with ui.expansion("🔧 Raw fields · link audit · duplicates").classes("w-full mt-2"):
+                    raw = vm.raw_fields_rows(prows)
+                    if raw:
+                        ui.label("Raw contract fields (incl. tournament source + mapping confidence)"
+                                 ).classes("text-sm font-medium")
+                        ui.aggrid(_aggrid_options(raw, [
+                            ("series", "Series"), ("event_ticker", "Event"), ("tournament", "Tournament"),
+                            ("tournament_source", "T-source"), ("kind", "Kind"), ("stage", "Stage"),
+                            ("player_key", "Player key"), ("player_key_source", "Key source"),
+                            ("mapping_confidence", "Map conf"), ("raw_yes_bid", "y-bid"),
+                            ("raw_yes_ask", "y-ask"), ("raw_no_bid", "n-bid"), ("raw_no_ask", "n-ask"),
+                        ])).classes("w-full h-72")
+                    audit = vm.link_audit_rows(prows)
+                    if audit:
+                        ui.label("Link audit — each URL vs the contract identifiers it encodes"
+                                 ).classes("text-sm font-medium mt-2")
+                        ui.aggrid(_aggrid_options(audit, [(k, k) for k in audit[0]])).classes("w-full h-60")
+                    dups = vm.duplicate_rows(prows)
+                    if dups:
+                        ui.label("Duplicate node/source rows (representative chosen deterministically)"
+                                 ).classes("text-sm font-medium mt-2")
+                        ui.table(columns=[{"name": k, "label": k, "field": k} for k in dups[0]],
+                                 rows=dups).classes("w-full")
             # Charts are optional/last — guarded to render only when the builder returns a non-None option
             # (containment shape only; dutch-book / game / missing-price rows yield None → skipped).
             ladder_opt = vm.ladder_chart_option(chain)
@@ -226,6 +270,10 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
     with detail_expansion:
         detail_box = ui.column().classes("w-full")
 
+    # Diagnostics & debug (PR 25b) — observability over the STORED snapshot (no fetch); collapsed by default.
+    with ui.expansion("🔧 Diagnostics & debug").classes("w-full"):
+        diagnostics_box = ui.column().classes("w-full")
+
     changed = ui.label().classes("text-sm text-orange-700")
     empty = ui.label("No scan yet — press “Scan now (core series)”.").classes("text-gray-500")
 
@@ -253,6 +301,67 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         q = vm.query_from_state(filters)
         qs = "?" + "&".join(f"{k}={v}" for k, v in q.items()) if q else ""
         ui.run_javascript(f"history.replaceState(null, '', location.pathname + {qs!r})")
+
+    def render_diagnostics(view: list[dict[str, Any]]) -> None:
+        """Rebuild the Diagnostics & debug section from the STORED snapshot (no fetch): heartbeat + the
+        honest 'Sum of independent row maxima' + category honesty + scan failures + the full-diagnostics
+        and non-laddered AG-Grids. `view` is the already-filtered opportunity list (for the sum)."""
+        diagnostics_box.clear()
+        with diagnostics_box:
+            m = engine.metrics()
+            ui.label(
+                f"scan: {m['scan_status']} · age {m['snapshot_age_seconds'] if m['snapshot_age_seconds'] is None else int(m['snapshot_age_seconds'])}s"
+                f" · {m['kalshi_requests']} Kalshi req · {m['opportunities']} opps · viewers {m['viewer_count']}"
+            ).classes("text-sm font-mono")
+            ui.label(f"Sum of independent row maxima (actionable): ${vm.sum_row_maxima(view):,.2f}"
+                     ).classes("text-sm font-medium mt-1")
+            ui.label("Independent per-opportunity maxima — NOT a guaranteed simultaneous total (you can't "
+                     "necessarily capture every maximum at once). Gross, before fees.").classes(
+                "text-xs text-gray-500")
+
+            cb = engine.category_breakdown()
+            ui.label("Category honesty").classes("text-sm font-medium mt-3")
+            ui.table(columns=[{"name": "k", "label": "Axis", "field": "k"},
+                              {"name": "v", "label": "Count", "field": "v"}],
+                     rows=[{"k": k, "v": cb[k]} for k in ("total", "laddered", "non_laddered",
+                                                          "low_confidence", "unsupported")]).classes("w-full")
+            ui.label("Non-laddered counts are transparency, not failures; low-confidence = name-fallback "
+                     "identity; unsupported = no SportConfig owns the series.").classes("text-xs text-gray-500")
+
+            failures = engine.diagnostics()
+            ui.label("Scan failures").classes("text-sm font-medium mt-3")
+            if failures["sport_errors"] or failures["series_errors"]:
+                if failures["series_errors"]:
+                    ui.aggrid(_aggrid_options(failures["series_errors"],
+                                              [("sport", "Sport"), ("series", "Series"), ("error", "Error")]
+                                              )).classes("w-full h-60")
+                if failures["sport_errors"]:
+                    ui.aggrid(_aggrid_options(failures["sport_errors"],
+                                              [("sport", "Sport"), ("error", "Error")])).classes("w-full h-40")
+            else:
+                ui.label("All requested series loaded — no failures.").classes("text-sm text-green-700")
+
+            checks = vm.diagnostics_rows(engine.all_checks())
+            ui.label(f"Full diagnostics — all comparisons ({len(checks)})").classes("text-sm font-medium mt-3")
+            if checks:
+                ui.aggrid(_aggrid_options(checks, [
+                    ("player", "Participant"), ("chain", "Chain"), ("tournament", "Tournament"),
+                    ("status", "Status"), ("status_group", "Group"), ("rule_flag", "Rule"),
+                    ("executable_gap", "Exec gap ¢"), ("display_gap", "Disp gap ¢"), ("reason", "Reason"),
+                ])).classes("w-full h-96")
+            else:
+                ui.label("No comparisons in the latest snapshot.").classes("text-sm text-gray-500")
+
+            unmapped = vm.non_laddered_rows(engine.all_contracts())
+            ui.label(f"Non-laddered / unmapped contracts ({len(unmapped)})").classes("text-sm font-medium mt-3")
+            if unmapped:
+                ui.aggrid(_aggrid_options(unmapped, [
+                    ("player", "Participant"), ("contract", "Contract"), ("market_family", "Family"),
+                    ("category", "Type"), ("classification_reason", "Why not laddered"),
+                    ("display_pct", "Display %"), ("volume", "Volume"), ("status", "Status"),
+                ])).classes("w-full h-96")
+            else:
+                ui.label("Every loaded contract maps to a ladder.").classes("text-sm text-gray-500")
 
     # --- refresh (poll the store; re-render only — NEVER fetches) ---
     def refresh() -> None:
@@ -299,6 +408,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             for chip in vm.active_filter_chips(filters, state["options"]):
                 ui.badge(chip).props("color=grey-7")
         _sync_url(filters)
+        render_diagnostics(view)
         state["cov"] = cov
 
     def _seed() -> None:

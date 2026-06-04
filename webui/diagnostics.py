@@ -22,7 +22,7 @@ def _meta(snapshot: dict[str, Any] | None) -> dict[str, Any]:
 
 def build_metrics(*, snapshot: dict[str, Any] | None, scan_status: dict[str, Any] | None,
                   now_age: float | None = None, stale: bool | None = None,
-                  now: float | None = None) -> dict[str, Any]:
+                  now: float | None = None, viewer_count: int | None = None) -> dict[str, Any]:
     """A low-cardinality monitoring payload (no per-row data, no unbounded lists) assembled from the latest
     snapshot + the scan-manager status. Honest (zeros / None, never raises) when either input is empty.
 
@@ -55,8 +55,9 @@ def build_metrics(*, snapshot: dict[str, Any] | None, scan_status: dict[str, Any
         "scan_in_progress_seconds": elapsed,
         # On a failed scan the manager stores {"error": …} as last_result; on success it's the coverage dict.
         "last_scan_error": last_result.get("error"),
-        # The live viewer count is a NiceGUI client concept; the UI layer populates it in PR 25b.
-        "viewer_count": None,
+        # Best-effort live viewer count (PR 25b) — supplied by the caller from `presence.count()`; None
+        # when the caller can't observe it (e.g. a pure test).
+        "viewer_count": viewer_count,
     }
 
 

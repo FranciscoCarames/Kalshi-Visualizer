@@ -16,6 +16,7 @@ import config
 import consistency
 import data
 import lifecycle
+import presence
 import scan_manager
 import store
 from api import _scan_run_fn, _scan_write_fn, fetch_dep
@@ -141,23 +142,40 @@ def diagnostics(db_path: str | None = None) -> dict[str, Any]:
     return diagnostics_mod.build_failures(store.latest(db_path=db_path))
 
 
+def _all_frame_rows(frame_type: str, db_path: str | None) -> list[dict[str, Any]]:
+    """Concat the latest snapshot's frames of one type across all sports."""
+    rows: list[dict[str, Any]] = []
+    for f in frames(db_path=db_path):
+        if f.get("frame_type") == frame_type:
+            rows.extend(f.get("rows") or [])
+    return rows
+
+
+def all_checks(db_path: str | None = None) -> list[dict[str, Any]]:
+    """Every stored consistency-check row in the latest snapshot (all sports) — the full-diagnostics grid."""
+    return _all_frame_rows("checks", db_path)
+
+
+def all_contracts(db_path: str | None = None) -> list[dict[str, Any]]:
+    """Every stored contract row in the latest snapshot (all sports) — the non-laddered/category surfaces."""
+    return _all_frame_rows("contracts", db_path)
+
+
 def category_breakdown(db_path: str | None = None) -> dict[str, Any]:
     """Honest contract-category counts over the latest snapshot's stored contracts frames (all sports):
     non-laddered vs low-confidence vs unsupported as separate axes, plus per-family counts."""
-    rows: list[dict[str, Any]] = []
-    for f in frames(db_path=db_path):
-        if f.get("frame_type") == "contracts":
-            rows.extend(f.get("rows") or [])
-    return diagnostics_mod.build_category_breakdown(rows)
+    return diagnostics_mod.build_category_breakdown(all_contracts(db_path=db_path))
 
 
 def metrics(db_path: str | None = None) -> dict[str, Any]:
-    """The low-cardinality monitoring payload (counters + scan heartbeat) for the latest snapshot."""
+    """The low-cardinality monitoring payload (counters + scan heartbeat + live viewer count) for the
+    latest snapshot."""
     snap = store.latest(db_path=db_path)
     age = data.data_age_seconds(snap["fetched_at"]) if snap else None
     return diagnostics_mod.build_metrics(
         snapshot=snap, scan_status=scan_manager.manager.status(), now_age=age,
-        stale=data.is_stale(age, config.STALE_AFTER_SECONDS), now=time.time())
+        stale=data.is_stale(age, config.STALE_AFTER_SECONDS), now=time.time(),
+        viewer_count=presence.count())
 
 
 def run_scan_now(db_path: str | None = None) -> dict[str, Any]:

@@ -193,3 +193,50 @@ def test_payoff_chart_option_none_for_none_dict_for_real_payoff():
     pay = consistency.scenario_payoffs(check, 10)
     opt = vm.payoff_chart_option(pay)
     assert opt is not None and opt["series"][0]["markLine"]["data"][0]["yAxis"] == 95   # cost line at 95¢
+
+
+# --- diagnostics / debug display builders (PR 25b) ------------------------------------
+def test_diagnostics_rows_projection_nan_safe():
+    rows = vm.diagnostics_rows([
+        {"player": "Alcaraz", "chain": "Final⊇Win", "tournament": "FO", "status": "EXECUTABLE_VIOLATION",
+         "status_group": "Broken", "rule_flag": "", "executable_gap": 3, "display_gap": None,
+         "reason": "cross"},
+    ])
+    r = rows[0]
+    assert r["player"] == "Alcaraz" and r["status_group"] == "Broken" and r["executable_gap"] == 3
+    assert r["display_gap"] is None
+    assert vm.diagnostics_rows(None) == []
+
+
+def test_non_laddered_rows_filters_and_sorts():
+    contracts = [
+        {"contract": "Ladder", "ladder_eligible": True, "market_family": "advance"},
+        {"contract": "GameA", "ladder_eligible": False, "market_family": "game", "volume": 5},
+        {"contract": "GameB", "ladder_eligible": False, "market_family": "game", "volume": 50},
+        {"contract": "Prop", "ladder_eligible": False, "market_family": "props", "volume": 1},
+    ]
+    out = vm.non_laddered_rows(contracts)
+    assert [r["contract"] for r in out] == ["GameB", "GameA", "Prop"]   # family asc, volume desc
+    assert all(not c.get("contract") == "Ladder" for c in out)         # eligible row excluded
+
+
+def test_raw_fields_rows_and_passthroughs():
+    prows = [{"series": "KXATPADVANCE", "event_ticker": "EV", "tournament": "FO",
+              "tournament_source": "competition", "kind": "advance", "player_key": "p1",
+              "mapping_confidence": "high", "raw_yes_bid": "0.40", "raw_yes_ask": "0.42",
+              "market_ticker": "T-1", "kalshi_url": "u"}]
+    rf = vm.raw_fields_rows(prows)
+    assert rf[0]["tournament_source"] == "competition" and rf[0]["raw_yes_bid"] == "0.40"
+    assert isinstance(vm.link_audit_rows(prows), list)                 # delegates to data.link_audit
+    assert isinstance(vm.duplicate_rows(prows), list)                  # delegates to consistency
+
+
+def test_sum_row_maxima_only_actionable_nan_safe():
+    opps = [
+        {"bucket": "actionable", "exec_max_profit_dollars": 7.5},
+        {"bucket": "actionable", "exec_max_profit_dollars": 2.5},
+        {"bucket": "blocked", "exec_max_profit_dollars": 100.0},      # not actionable → excluded
+        {"bucket": "actionable", "exec_max_profit_dollars": None},    # NaN-safe → skipped
+    ]
+    assert vm.sum_row_maxima(opps) == 10.0
+    assert vm.sum_row_maxima(None) == 0.0

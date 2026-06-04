@@ -213,3 +213,12 @@ def test_metrics_reflects_scan_status_after_scan(client):
     assert c.post("/scan?wait=true").status_code == 202
     body = c.get("/metrics").json()
     assert body["snapshot_id"] is not None and body["scan_status"] in ("done", "in_progress")
+
+
+def test_metrics_viewer_count_present(client):
+    c, db = client
+    import presence
+    presence.reset()
+    body = c.get("/metrics").json()
+    assert body["viewer_count"] == 0          # no websocket clients in the test client
+    presence.reset()

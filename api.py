@@ -21,6 +21,7 @@ import data
 import fetch
 import kalshi_client
 import lifecycle
+import presence
 import scan_manager
 import scanner
 import sports
@@ -242,7 +243,7 @@ def get_metrics(db_path: str | None = Depends(db_path_dep)):
     stale = data.is_stale(age, config.STALE_AFTER_SECONDS) if age is not None else None
     return Metrics(**diagnostics.build_metrics(
         snapshot=snap, scan_status=scan_manager.manager.status(), now_age=age,
-        stale=stale, now=time.time()))
+        stale=stale, now=time.time(), viewer_count=presence.count()))
 
 
 @app.get("/alerts", response_model=Alerts)
