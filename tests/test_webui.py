@@ -9,8 +9,9 @@ import pytest
 
 import config
 import store
-from webui import dashboard as dash
+from webui import dashboard as dash  # noqa: F401  — kept for the import-and-registers smoke test
 from webui import engine
+from webui import viewmodel as vm
 
 
 def op(oid, *, sport="tennis", bucket="actionable", **kw):
@@ -90,35 +91,35 @@ def test_dashboard_imports_and_registers_page():
 # --- dashboard pure builders (no NiceGUI runtime needed) ------------------------------
 def test_opp_row_new_marker_and_fields():
     o = op("AAA", bucket="actionable")
-    r = dash._opp_row(o, {"AAA"})
+    r = vm.opp_row(o, {"AAA"})
     assert r["new"] == "🆕" and r["opportunity_id"] == "AAA"
     assert r["sport"] == "Tennis" and r["edge"] == 7 and r["units"] == 100 and r["profit"] == 7.0
-    assert dash._opp_row(o, set())["new"] == ""            # not new -> blank marker
+    assert vm.opp_row(o, set())["new"] == ""            # not new -> blank marker
 
 
 def test_opp_row_handles_none_numbers():
     o = op("Z", bucket="blocked")
     o["exec_gap_c"] = o["exec_min_size"] = o["exec_max_profit_dollars"] = None
-    r = dash._opp_row(o, set())
+    r = vm.opp_row(o, set())
     assert r["edge"] is None and r["units"] is None and r["profit"] is None   # no crash on None
 
 
 def test_ts_disp_and_backlog_row():
-    assert dash._ts_disp(None, "UTC") == "—"
-    assert dash._ts_disp(1000.0, "UTC") != "—"             # formats an epoch
+    assert vm.ts_disp(None, "UTC") == "—"
+    assert vm.ts_disp(1000.0, "UTC") != "—"             # formats an epoch
     b = {"sport": "nba", "name": "X vs Y", "became_ts": 1000.0, "left_ts": 1180.0,
          "duration_s": 180.0, "reason_left": "went blocked", "last_edge_c": 4,
          "current_status": "blocked"}
-    row = dash._backlog_row(b, "UTC")
+    row = vm.backlog_row(b, "UTC")
     assert row["mins"] == 3.0 and row["reason"] == "went blocked" and row["last_edge"] == 4
     # None duration / timestamps are safe
-    safe = dash._backlog_row({"became_ts": None, "left_ts": None, "duration_s": None}, "UTC")
+    safe = vm.backlog_row({"became_ts": None, "left_ts": None, "duration_s": None}, "UTC")
     assert safe["became"] == "—" and safe["left"] == "—" and safe["mins"] is None
 
 
 def test_explanation_lines_content():
     o = op("AAA", bucket="blocked", blocked_reason="leg inactive")
-    lines = dash.explanation_lines(o, show_ids=True)
+    lines = vm.explanation_lines(o, show_ids=True)
     blob = "\n".join(lines)
     assert "Leg 1: Buy YES — A @ 45¢" in blob and "Leg 2:" in blob
     assert "Cost: 93¢" in blob and "Gross edge: 7¢" in blob and "Gross profit: $7.0" in blob
@@ -126,7 +127,7 @@ def test_explanation_lines_content():
     assert "Caveat: leg inactive" in blob                 # blocked_reason surfaced
     assert any("T-a / T-b" in line for line in lines)      # show_ids -> tickers
     # without show_ids and without a caveat, those lines are omitted
-    plain = dash.explanation_lines(op("BBB", bucket="actionable"), show_ids=False)
+    plain = vm.explanation_lines(op("BBB", bucket="actionable"), show_ids=False)
     assert not any("T-a / T-b" in line for line in plain) and not any(line.startswith("Caveat") for line in plain)
 
 
@@ -140,9 +141,9 @@ def test_explanation_lines_iterates_n_legs_for_synthetic_bundle():
         {"text": "Buy YES — P wins 3-2 @ 2¢", "url": "u32"},
         {"text": "Buy NO — P @ 90¢", "url": "uw"},
     ]
-    blob = "\n".join(dash.explanation_lines(o))
+    blob = "\n".join(vm.explanation_lines(o))
     assert "Leg 1: Buy YES — P wins 3-0 @ 2¢" in blob
     assert "Leg 4: Buy NO — P @ 90¢" in blob          # ALL four legs listed, not just two
     assert "Tradable now: Review rules" in blob and "Caveat: settlement caveat" in blob
     # 2-leg shapes (no `legs` list) keep the positional fallback.
-    assert "Leg 2: Buy YES — B @ 48¢" in "\n".join(dash.explanation_lines(op("DB")))
+    assert "Leg 2: Buy YES — B @ 48¢" in "\n".join(vm.explanation_lines(op("DB")))

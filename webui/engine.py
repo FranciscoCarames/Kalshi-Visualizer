@@ -63,6 +63,9 @@ def coverage(db_path: str | None = None) -> dict[str, Any]:
         "opportunities": len(snap.get("opportunities") or []),
         "scanned": meta.get("scanned", 0), "loaded": meta.get("loaded", 0),
         "failed": meta.get("failed", 0), "excluded": meta.get("excluded", 0),
+        # Volume counters + Kalshi requests (PR 21a) — distinct from the opportunity count.
+        "contracts_scanned": meta.get("contracts_scanned", 0), "checks_tested": meta.get("checks_tested", 0),
+        "kalshi_requests": meta.get("kalshi_requests"),
     }
 
 
