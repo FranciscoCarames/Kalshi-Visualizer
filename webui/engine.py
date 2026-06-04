@@ -124,6 +124,12 @@ def frame_availability(db_path: str | None = None) -> str:
     return store.frame_status(snap["snapshot_id"], db_path=db_path) if snap else "absent"
 
 
+def scan_status(db_path: str | None = None) -> dict[str, Any]:
+    """The scan-manager heartbeat (status / since / last_result / reason) — read by the dashboard for the
+    truthful empty states (PR 26a) without it importing scan_manager."""
+    return scan_manager.manager.status()
+
+
 def payoff_for_opp(opp: dict[str, Any], db_path: str | None = None) -> dict[str, Any] | None:
     """The per-state scenario payoff for an opportunity, from its matched STORED checks row (by
     opportunity_id), or None for a non-containment / dutch-book / unmatched row (so the chart is guarded).

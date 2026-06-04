@@ -240,3 +240,28 @@ def test_sum_row_maxima_only_actionable_nan_safe():
     ]
     assert vm.sum_row_maxima(opps) == 10.0
     assert vm.sum_row_maxima(None) == 0.0
+
+
+# --- truthful empty states (PR 26a) ---------------------------------------------------
+def test_empty_state_no_scan_and_scanning():
+    assert vm.empty_state(cov=None, total_opps=0, shown_opps=0) == \
+        "No scan yet — press “Scan now (core series)”."
+    assert vm.empty_state(cov={"fetched_at": None}, total_opps=0, shown_opps=0,
+                          scan_status={"status": "in_progress"}) == "Scanning… results will appear here."
+
+
+def test_empty_state_no_opportunities_vs_scan_failed():
+    cov = {"fetched_at": 1000}
+    assert vm.empty_state(cov=cov, total_opps=0, shown_opps=0) == \
+        "Scan complete — no opportunities right now (between rounds, this is normal)."
+    failed = vm.empty_state(cov=cov, total_opps=0, shown_opps=0,
+                            scan_status={"status": "error", "last_result": {"error": "boom"}})
+    assert "Last scan failed: boom" in failed
+
+
+def test_empty_state_filter_hid_all_and_has_content():
+    cov = {"fetched_at": 1000}
+    assert vm.empty_state(cov=cov, total_opps=7, shown_opps=0) == \
+        "All 7 opportunities are hidden by the current filters — clear filters to see them."
+    # Content present → no message at all.
+    assert vm.empty_state(cov=cov, total_opps=7, shown_opps=3) is None

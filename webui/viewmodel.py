@@ -391,3 +391,24 @@ def duplicate_rows(rows: list[dict[str, Any]] | None) -> list[dict[str, Any]]:
     """Thin pass-through to consistency.duplicate_node_sources (where a representative was chosen among
     duplicates), for the debug sub-panel."""
     return consistency.duplicate_node_sources(list(rows or []))
+
+
+# --- truthful empty states (PR 26a) — one honest message per empty scope, or None when there's content ---
+def empty_state(*, cov: dict[str, Any] | None, total_opps: int, shown_opps: int,
+                scan_status: dict[str, Any] | None = None) -> str | None:
+    """The honest message to show when the opportunity area is empty, distinguishing WHY it's empty — or
+    None when there is content (`shown_opps > 0`). Scopes: no-scan / scanning / scan-failed /
+    no-opportunities / filter-hid-all. Never raises on missing keys (NaN/None-safe)."""
+    if shown_opps > 0:
+        return None
+    status = (scan_status or {}).get("status")
+    err = ((scan_status or {}).get("last_result") or {}).get("error")
+    if not cov or cov.get("fetched_at") is None:
+        if status == "in_progress":
+            return "Scanning… results will appear here."
+        return "No scan yet — press “Scan now (core series)”."
+    if total_opps == 0:
+        if status == "error" and err:
+            return f"Last scan failed: {err}. Showing the last good snapshot (no opportunities)."
+        return "Scan complete — no opportunities right now (between rounds, this is normal)."
+    return f"All {total_opps} opportunities are hidden by the current filters — clear filters to see them."

@@ -247,23 +247,26 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
 
     ui.separator()
     ui.label("✅ Actionable now").classes("text-lg font-bold")
+    # `overflow-x-auto` (PR 26a responsive pass): the wide opportunity tables scroll horizontally on a
+    # narrow screen instead of overflowing the viewport. The control rows already wrap (flex-wrap).
     actionable = ui.table(columns=_OPP_COLUMNS, rows=[], row_key="opportunity_id",
-                          selection="single", pagination=15).classes("w-full")
+                          selection="single", pagination=15).classes("w-full overflow-x-auto")
     actionable.on_select(_on_select(actionable))
 
     review_label = ui.label("🔎 Review signal (settlement-caveated — review the rules, never auto-tradable)"
                             ).classes("text-lg font-bold")
     review = ui.table(columns=_OPP_COLUMNS, rows=[], row_key="opportunity_id",
-                      selection="single", pagination=10).classes("w-full")
+                      selection="single", pagination=10).classes("w-full overflow-x-auto")
     review.on_select(_on_select(review))
 
     blocked_label = ui.label("⛔ Blocked").classes("text-lg font-bold")
     blocked = ui.table(columns=_OPP_COLUMNS, rows=[], row_key="opportunity_id",
-                       selection="single", pagination=10).classes("w-full")
+                       selection="single", pagination=10).classes("w-full overflow-x-auto")
     blocked.on_select(_on_select(blocked))
 
     with ui.expansion("📉 Recently actionable (left the actionable set)").classes("w-full"):
-        backlog = ui.table(columns=_BACKLOG_COLUMNS, rows=[], row_key="name", pagination=10).classes("w-full")
+        backlog = ui.table(columns=_BACKLOG_COLUMNS, rows=[], row_key="name",
+                           pagination=10).classes("w-full overflow-x-auto")
 
     # Participant/team detail (PR 24) — populated on opp row-click from the STORED frames (no fetch).
     detail_expansion = ui.expansion("🔬 Selected participant detail (click an opportunity)").classes("w-full")
@@ -275,7 +278,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         diagnostics_box = ui.column().classes("w-full")
 
     changed = ui.label().classes("text-sm text-orange-700")
-    empty = ui.label("No scan yet — press “Scan now (core series)”.").classes("text-gray-500")
+    empty = ui.label().classes("text-gray-500")   # truthful empty state (PR 26a) — text set in refresh()
 
     # --- filter state plumbing ---
     def _current_filters() -> dict[str, Any]:
@@ -375,9 +378,14 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         sport_sel.update()
         tour_sel.update()
 
-        empty.set_visibility(cov["fetched_at"] is None)
         filters = _current_filters()
         view = vm.filter_opps(opps, **filters)
+        # Truthful empty state by scope (PR 26a): no-scan / scanning / scan-failed / no-opportunities /
+        # filter-hid-all — or hidden when there's content to show.
+        msg = vm.empty_state(cov=cov, total_opps=len(opps), shown_opps=len(view),
+                             scan_status=engine.scan_status())
+        empty.set_text(msg or "")
+        empty.set_visibility(msg is not None)
 
         al = engine.alerts(config.ALERT_PERSISTENCE_OPTIONS[persist_select.value])
         new_ids = {r.get("opportunity_id") for r in al["new_actionable"]}
