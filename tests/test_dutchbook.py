@@ -8,6 +8,7 @@ from __future__ import annotations
 import pandas as pd
 
 import dutchbook
+import glossary
 import sports
 
 BLOCKERS_size = "0 contracts are available"  # substring of glossary BLOCKERS["size_missing"]
@@ -536,3 +537,44 @@ def test_nba_2way_book_unchanged_by_n_outcome_path():
     g = dutchbook.find_dutch_books([a, b])[0]
     assert g["direction"] == "underround" and g["exec_gap_c"] == 7
     assert g.get("legs") is None and g.get("n_legs") is None     # 2-leg shape unchanged
+
+
+# --- Per-game settlement caveat (Phase B PR 6) --------------------------------------------
+def _nba_game(name, key, yes_ask_c, **kw):
+    g = market(name, series="KXNBAGAME", event="KXNBAGAME-26JUN03", player_key=key, yes_ask_c=yes_ask_c, **kw)
+    g["kind"] = "game"
+    return g
+
+
+def test_game_book_carries_settlement_caveat():
+    # An NBA per-game (KX*GAME) 2-way book can be postponed/abandoned -> non-blocking settlement caveat.
+    g = dutchbook.find_dutch_books([_nba_game("Celtics", "bos", 45), _nba_game("Pacers", "ind", 48)])[0]
+    assert g["settlement_caveat"] == glossary.BLOCKERS["game_settlement"]   # single-sourced, not inlined
+    assert g["settlement_caveat"]                                            # non-empty
+
+
+def test_actionable_game_book_stays_actionable_despite_caveat():
+    import consistency
+    # Firm sizes + active legs -> tradable, even though it carries the postponement caveat (advisory only).
+    g = dutchbook.find_dutch_books([_nba_game("Celtics", "bos", 45), _nba_game("Pacers", "ind", 48)])[0]
+    assert g["tradable_now"].startswith("Yes")
+    assert consistency.bucket_of(g) == "actionable"
+    assert g["blocked_reason"] == ""                 # the caveat does NOT enter blocked_reason (invariant)
+    assert g["settlement_caveat"]                     # ...but the caveat is still present/visible
+
+
+def test_match_and_series_books_have_no_settlement_caveat():
+    # Tennis match (kind 'match') and NBA playoff series (kind 'match') settle together -> no game caveat.
+    m = dutchbook.find_dutch_books([market("A", player_key="a", yes_ask_c=45),
+                                    market("B", player_key="b", yes_ask_c=48)])[0]
+    assert m["settlement_caveat"] == ""
+    s = dutchbook.find_dutch_books([
+        market("Boston", series="KXNBASERIES", event="KXNBASERIES-26FIN", player_key="bos", yes_ask_c=45),
+        market("Denver", series="KXNBASERIES", event="KXNBASERIES-26FIN", player_key="den", yes_ask_c=48)])[0]
+    assert s["settlement_caveat"] == ""
+
+
+def test_soccer_3way_game_carries_settlement_caveat():
+    # The n-way (soccer 3-way) game path also attaches the per-game caveat.
+    g = dutchbook.find_dutch_books(_wc3([40, 30, 25]))[0]
+    assert g["settlement_caveat"] == glossary.BLOCKERS["game_settlement"]

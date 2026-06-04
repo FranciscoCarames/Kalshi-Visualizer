@@ -131,6 +131,14 @@ def dutch_plan_text(row: dict) -> str:
     return "   ·   ".join(t for t in (row.get("action_1_text"), row.get("action_2_text")) if t)
 
 
+def dutch_caveat_text(row: dict) -> str:
+    """The dutch-book Caveat cell: the non-blocking settlement caveat (per-game books) joined with any
+    execution blockers. '—' when there's nothing to flag. Kept separate from blockers so the caveat
+    shows even on an actionable game book (where `blockers` is empty)."""
+    parts = [p for p in (row.get("settlement_caveat"), row.get("blockers")) if isinstance(p, str) and p]
+    return "; ".join(parts) or "—"
+
+
 def _payoff_block(check_row: dict, units=None) -> None:
     """Render one opportunity's settlement-scenario payoff table + cost/floor/ROC/capital.
 
@@ -780,7 +788,7 @@ def render_dashboard() -> None:
         DIR_LABEL = {"underround": "Buy YES all legs (underround)", "overround": "Buy NO all legs (overround)"}
         d = db_df.assign(
             dir_disp=db_df["direction"].map(DIR_LABEL).fillna(db_df["direction"]),
-            caveat_disp=db_df["blockers"].replace("", "—").fillna("—"),
+            caveat_disp=db_df.apply(dutch_caveat_text, axis=1),
             plan=db_df.apply(dutch_plan_text, axis=1),
         )
         st.dataframe(

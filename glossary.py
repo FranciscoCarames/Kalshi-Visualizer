@@ -218,6 +218,9 @@ BLOCKERS: dict[str, str] = {
                             "hedge are different markets. On a retirement / no-ball-played the score legs "
                             "resolve to Fair Market Price while the hedge settles cleanly — review the "
                             "settlement rules before trading.",
+    "game_settlement": "Per-game settlement risk: if the game is postponed, abandoned, ruled no-contest, "
+                       "or not played as originally scheduled, the legs may not settle together and the "
+                       "gross gap need not hold — review the settlement rules before trading.",
 }
 
 WATCHLIST_NOTE = (
