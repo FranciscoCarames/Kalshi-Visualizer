@@ -494,7 +494,9 @@ def render_dashboard() -> None:
     # A SEPARATE family (synthetic_bundle.py): a player's MECE exact-score set replicates "they win the
     # match", priced against their match-winner. Always settlement-caveated (review-only, never tradable
     # as arbitrage). Narrowed by the same tournament / event / participant membership as the rest.
-    sb_df = pd.DataFrame(synthetic_bundle.find_synthetic_bundles(df.to_dict("records")) if not df.empty else [])
+    sb_diag: dict = {}
+    sb_df = pd.DataFrame(
+        synthetic_bundle.find_synthetic_bundles(df.to_dict("records"), sb_diag) if not df.empty else [])
     if not sb_df.empty:
         if sel_tournaments:
             sb_df = sb_df[sb_df["tournament"].isin(set(sel_tournaments))]
@@ -853,6 +855,12 @@ def render_dashboard() -> None:
         )
         st.caption(f"{len(sb_df)} found · all review-only (settlement-caveated, never riskless). "
                    "Gross, before fees and partial-fill risk.")
+    _suppressed = sb_diag.get("suppressed") or []
+    if _suppressed:
+        with st.expander(f"🚫 Suppressed bundles — failed a hard safety gate ({len(_suppressed)})"):
+            st.caption("These priced bundles were withheld because a leg cannot settle as a clean 0-or-100¢ "
+                       "MECE set (non-binary leg, split close-time, or divergent settlement rules).")
+            st.dataframe(pd.DataFrame(_suppressed), hide_index=True, width="stretch")
 
     # (Removed) The gross-edge ranking bar chart was misleading. The Actionable-now table above is
     # already sorted by gross edge and is the ranking surface; Stage 2 replaces it with a unified,
