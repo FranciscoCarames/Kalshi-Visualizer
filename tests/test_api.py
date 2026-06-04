@@ -144,3 +144,14 @@ def test_scan_ttl_guard_skip_and_force(client):
     forced = c.post("/scan?force=true").json()
     assert forced["skipped"] is False
     assert len(store.snapshots_since(10 ** 9, db_path=db)) == before + 1   # force scanned + wrote
+
+
+def test_empty_store_endpoints_are_honest(client):
+    # No snapshot yet: read endpoints return empty/None — never error, never fake data.
+    c, _ = client
+    assert c.get("/opportunities").json() == []
+    assert c.get("/opportunities/anything").status_code == 404
+    assert c.get("/backlog?window_s=3600").json() == []
+    assert c.get("/alerts").json() == {"new_actionable": [], "blocked_changes": []}
+    cov = c.get("/coverage").json()
+    assert cov["meta_present"] is False and cov["fetched_at"] is None and cov["scanned"] == 0
