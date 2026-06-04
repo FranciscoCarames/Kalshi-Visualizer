@@ -1,10 +1,13 @@
 """Unit tests for the rate-limit throttle and retry/backoff in kalshi_client (no network)."""
 from __future__ import annotations
 
+import dataclasses
+
 import pytest
 
 import config
 import kalshi_client as kc
+import sports
 
 
 # --- throttle scheduling (pure) ------------------------------------------------------
@@ -84,3 +87,24 @@ def test_get_4xx_raises_without_retry(monkeypatch):
     with pytest.raises(kc.KalshiError):
         kc._get("/x", {})
     assert len(calls) == 1   # a non-429 4xx is fatal immediately (no retry)
+
+
+# --- discover_series_for_sport: exact_series support (PR 2) ---------------------------
+def test_discover_exact_only_short_circuits(monkeypatch):
+    """An exact-only sport (no prefixes/winners) returns its exact tickers sorted, WITHOUT scanning
+    /series (golf's 4 tickers don't need ~53 pages of GETs)."""
+    def boom(*a, **k):
+        raise AssertionError("get_paginated must not be called for an exact-only sport")
+    monkeypatch.setattr(kc, "get_paginated", boom)
+    cfg = dataclasses.replace(sports.TENNIS, sport_id="golfish", series_prefixes=(),
+                              winner_tickers=frozenset(), exact_series=frozenset({"KXB", "KXA", "KXC"}))
+    assert kc.discover_series_for_sport(cfg) == ["KXA", "KXB", "KXC"]
+
+
+def test_discover_includes_exact_alongside_prefix(monkeypatch):
+    """A sport with both a prefix and exact tickers discovers both; unrelated series are excluded."""
+    monkeypatch.setattr(kc, "get_paginated",
+                        lambda *a, **k: [{"ticker": "KXNBA"}, {"ticker": "KXEXTRA"}, {"ticker": "KXFOO"}])
+    cfg = dataclasses.replace(sports.NBA, exact_series=frozenset({"KXEXTRA"}))
+    got = kc.discover_series_for_sport(cfg)
+    assert "KXNBA" in got and "KXEXTRA" in got and "KXFOO" not in got
