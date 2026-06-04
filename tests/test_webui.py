@@ -241,3 +241,25 @@ def test_engine_metrics_honest_when_empty(tmpdb):
     m = engine.metrics()
     assert m["snapshot_id"] is None and m["opportunities"] == 0 and m["scan_status"] == "idle"
     assert engine.diagnostics()["sport_errors"] == [] and engine.category_breakdown()["total"] == 0
+
+
+def test_engine_all_checks_all_contracts_and_viewer_count(tmpdb):
+    import presence
+    engine._FRAME_CACHE.clear()
+    scan_manager.manager.reset()
+    presence.reset()
+    store.write_snapshot("2026-06-04 12:00:00 UTC", [op("a")],
+                         frames=[
+                             {"sport": "tennis", "frame_type": "contracts", "schema_version": 1,
+                              "rows": [{"player_key": "p1"}, {"player_key": "p2"}]},
+                             {"sport": "tennis", "frame_type": "checks", "schema_version": 1,
+                              "rows": [{"opportunity_id": "c1"}]},
+                             {"sport": "nba", "frame_type": "checks", "schema_version": 1,
+                              "rows": [{"opportunity_id": "c2"}]},
+                         ])
+    assert len(engine.all_contracts()) == 2
+    assert {c["opportunity_id"] for c in engine.all_checks()} == {"c1", "c2"}   # concat across sports
+    assert engine.metrics()["viewer_count"] == 0
+    presence.connect()
+    assert engine.metrics()["viewer_count"] == 1
+    presence.reset()

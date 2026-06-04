@@ -324,3 +324,70 @@ def payoff_chart_option(pay: dict[str, Any] | None) -> dict[str, Any] | None:
     return {"tooltip": {"trigger": "axis"},
             "xAxis": {"type": "category", "data": [r["scenario"] for r in recs]},
             "yAxis": {"type": "value", "name": "Payout ¢"}, "series": [series]}
+
+
+# --- diagnostics / debug display builders (PR 25b) — pure projections over STORED frames ----------
+def diagnostics_rows(check_rows: list[dict[str, Any]] | None) -> list[dict[str, Any]]:
+    """Project the stored consistency-check rows (all sports) to the full-diagnostics grid columns. The
+    grid pages/filters/sorts client-side, so this is just a NaN-safe column projection."""
+    return [{
+        "player": r.get("player") or "", "chain": r.get("chain") or "",
+        "tournament": r.get("tournament") or "", "status": r.get("status") or "",
+        "status_group": r.get("status_group") or "", "rule_flag": r.get("rule_flag") or "",
+        "executable_gap": _num(r.get("executable_gap")), "display_gap": _num(r.get("display_gap")),
+        "reason": r.get("reason") or "",
+    } for r in (check_rows or [])]
+
+
+def non_laddered_rows(contract_rows: list[dict[str, Any]] | None) -> list[dict[str, Any]]:
+    """The contracts that aren't part of a containment ladder (per-game, props, awards, …) — shown for
+    transparency, never silently dropped. Sorted by family then volume desc (mirrors the Streamlit app)."""
+    out = [{
+        "player": r.get("player") or "", "contract": r.get("contract") or "",
+        "market_family": r.get("market_family") or "—", "category": r.get("category") or "",
+        "classification_reason": r.get("classification_reason") or "",
+        "display_pct": _num(r.get("display_pct")), "volume": _num(r.get("volume")),
+        "status": r.get("status") or "", "url": r.get("kalshi_url") or "",
+    } for r in (contract_rows or []) if not r.get("ladder_eligible")]
+    out.sort(key=lambda r: (r["market_family"], -(r["volume"] or 0)))
+    return out
+
+
+def raw_fields_rows(contract_rows: list[dict[str, Any]] | None) -> list[dict[str, Any]]:
+    """Per-participant raw contract fields (incl. the tournament grouping source + mapping confidence) for
+    the debug sub-panel — the NiceGUI twin of the Streamlit raw-fields table."""
+    return [{
+        "series": r.get("series") or "", "event_ticker": r.get("event_ticker") or "",
+        "event_title": r.get("event_title") or "", "tournament": r.get("tournament") or "",
+        "tournament_source": r.get("tournament_source") or "", "kind": r.get("kind") or "",
+        "stage": r.get("stage") or "", "player_key": r.get("player_key") or "",
+        "player_key_source": r.get("player_key_source") or "",
+        "mapping_confidence": r.get("mapping_confidence") or "",
+        "raw_yes_bid": r.get("raw_yes_bid"), "raw_yes_ask": r.get("raw_yes_ask"),
+        "raw_no_bid": r.get("raw_no_bid"), "raw_no_ask": r.get("raw_no_ask"),
+    } for r in (contract_rows or [])]
+
+
+def sum_row_maxima(opps: Iterable[dict[str, Any]] | None) -> float:
+    """The sum of per-opportunity max gross profit over the ACTIONABLE rows. Labelled "Sum of independent
+    row maxima" in the UI, NOT "gross profit": each opportunity's max is independent, so the sum is not a
+    guaranteed simultaneous total (you can't necessarily capture every maximum at once). NaN-safe."""
+    total = 0.0
+    for o in (opps or []):
+        if o.get("bucket") == "actionable":
+            v = o.get("exec_max_profit_dollars")
+            if not _isna(v):
+                total += float(v)
+    return round(total, 2)
+
+
+def link_audit_rows(rows: list[dict[str, Any]] | None) -> list[dict[str, Any]]:
+    """Thin pass-through to data.link_audit (URL ↔ contract-identifier correctness), so the dashboard keeps
+    importing only the viewmodel."""
+    return data.link_audit(list(rows or []))
+
+
+def duplicate_rows(rows: list[dict[str, Any]] | None) -> list[dict[str, Any]]:
+    """Thin pass-through to consistency.duplicate_node_sources (where a representative was chosen among
+    duplicates), for the debug sub-panel."""
+    return consistency.duplicate_node_sources(list(rows or []))

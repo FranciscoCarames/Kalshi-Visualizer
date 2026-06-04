@@ -82,3 +82,9 @@ def test_category_breakdown_empty():
     b = dg.build_category_breakdown(None)
     assert b == {"total": 0, "laddered": 0, "non_laddered": 0, "low_confidence": 0,
                  "unsupported": 0, "by_family": {}}
+
+
+def test_build_metrics_emits_viewer_count():
+    m = dg.build_metrics(snapshot=_snapshot(), scan_status={"status": "done"}, viewer_count=3)
+    assert m["viewer_count"] == 3
+    assert dg.build_metrics(snapshot=None, scan_status=None)["viewer_count"] is None
