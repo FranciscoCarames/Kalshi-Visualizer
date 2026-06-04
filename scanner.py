@@ -88,9 +88,10 @@ def _to_unified_consistency(r: dict[str, Any], cfg) -> dict[str, Any]:
         "tradable_now": r.get("tradable_now") or "", "blocked_reason": r.get("blocked_reason") or "",
         "market_status": _market_status_consistency(r), "rule_flag": r.get("rule_flag") or "",
         "relationship_type": r.get("relationship_type") or "", "opportunity_id": r.get("opportunity_id") or "",
-        # Leg 1 = broader/parent (Buy YES), leg 2 = deeper/child (Buy NO).
+        # Leg 1 = broader/parent (Buy YES), leg 2 = deeper/child (Buy NO). Links must follow the legs:
+        # url -> parent (leg 1), url_2 -> child (leg 2). (Was reversed: url pointed at the child.)
         "ticker_1": r.get("parent_ticker") or "", "ticker_2": r.get("child_ticker") or "",
-        "url": r.get("child_url") or r.get("parent_url") or "", "url_2": r.get("parent_url") or "",
+        "url": r.get("parent_url") or r.get("child_url") or "", "url_2": r.get("child_url") or r.get("parent_url") or "",
         "legs": None, "n_legs": None,  # 2-leg shape — the positional action_1/2 fields carry it
     }
 
