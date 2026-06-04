@@ -100,7 +100,7 @@ data.py            # NO streamlit/pandas: parsing, to_cents(), classify_kind/tou
 consistency.py     # NO streamlit: node_of, build_player_nodes, representative, expected_nodes,
                    #   layer_spreads, build_checks (groups by [player_key, tournament]); buy-only action
                    #   plan + tradable_now + blockers; bucket_of (dashboard routing, incl. dutch-book)
-dutchbook.py       # NO streamlit: find_dutch_books() — 2-outcome MECE arbitrage detector (a check family
+dutchbook.py       # NO streamlit: find_dutch_books() — MECE dutch-book detector, 2-outcome + n-outcome (soccer 3-way via prove_mece/_detect_n_way); a check family
                    #   SEPARATE from the containment ladder); covers match/series AND per-game (game family);
                    #   status EXECUTABLE_DUTCH_BOOK; see section below
 synthetic_bundle.py# NO streamlit/pandas: find_synthetic_bundles() — N-leg exact-score / state-bundle
@@ -191,10 +191,14 @@ empty books → `MISSING_QUOTE`. (For repeatable assertions use the unit tests, 
 ## Dutch-book / MECE detector — `dutchbook.py` (do not regress)
 
 A **separate check family** from the containment ladder, in its own module (`dutchbook.py`, NO streamlit).
-A dutch book is an executable arbitrage on a **mutually-exclusive-and-exhaustive** set of binary markets:
-cover EVERY outcome for under the guaranteed 100¢ payout. Currently the **2-outcome case only** — a
-head-to-head event with **exactly two** distinct-participant markets (one wins, no draw → MECE by
-construction). `find_dutch_books(rows)` groups match-family rows by `event_ticker` and emits ≤1 finding/event.
+A dutch book is an executable edge on a **mutually-exclusive-and-exhaustive** set of binary markets:
+cover EVERY outcome for under the guaranteed payout floor. **2-outcome** case = a head-to-head match/game
+(two distinct-participant markets; floor 100¢). **n-outcome** case = a soccer World Cup 3-way game
+(Home/Away/Tie; `prove_mece` requires 2 participants + 1 Tie via `is_participant`, the `mutually_exclusive`
+flag, the draw-excluded phrase, and a shared settlement basis). Underround = Buy YES all (`Σ yes_ask <
+100`); overround = Buy NO all (`Σ no_ask < (n−1)·100` — the generalized payout floor). `find_dutch_books`
+dispatches soccer to `_detect_n_way` (emitting the N-leg `legs` schema) and every other sport to the
+unchanged 2-way `_detect_pair`; ≤1 finding/event.
 
 - **Two directions, both pairs of BUYS** (never "sell"): **underround** → Buy YES both (`yes_ask_A +
   yes_ask_B < 100`); **overround** → Buy NO both (`no_ask_A + no_ask_B < 100`, with the `100 − yes_bid`

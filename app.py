@@ -122,6 +122,15 @@ def _buy_disp(contract: str, price_c) -> str:
     return f"{contract} @ {price}"
 
 
+def dutch_plan_text(row: dict) -> str:
+    """The full buy-every-leg plan for a dutch-book finding. Lists ALL legs for an n-outcome (e.g. soccer
+    3-way) finding from its `legs` list; falls back to the positional action_1/2 fields for 2-leg books."""
+    legs = row.get("legs")
+    if isinstance(legs, list) and legs:
+        return "   ·   ".join(str(lg.get("text") or "—") for lg in legs)
+    return "   ·   ".join(t for t in (row.get("action_1_text"), row.get("action_2_text")) if t)
+
+
 def _payoff_block(check_row: dict, units=None) -> None:
     """Render one opportunity's settlement-scenario payoff table + cost/floor/ROC/capital.
 
@@ -756,21 +765,23 @@ def render_dashboard() -> None:
     # 3b. Dutch-book arbitrage (2-outcome match books) — a check family separate from
     #     the containment ladder. Both legs are the SAME side, so it gets its own table.
     # ================================================================================
-    st.subheader("🎯 Dutch-book arbitrage — match & game books")
-    st.caption("Two-way books (a head-to-head match/series **or** a single game) that can be fully covered "
-               "for under the guaranteed 100¢ payout — a locked edge needing no model. Both legs are the "
-               "**same** side (Buy YES on both, or Buy NO on both). Distinct from the containment ladder "
-               "above; thresholds do not filter this.")
+    st.subheader("🎯 Dutch-book arbitrage — match, game & 3-way books")
+    st.caption("Books where you can cover EVERY outcome for under the guaranteed payout floor (100¢ for a "
+               "two-way match/game; **(n−1)×100¢** for an n-way overround) — a locked edge needing no model. "
+               "Every leg is the **same** side (Buy YES on all, or Buy NO on all). Includes 3-way soccer "
+               "World Cup games (Home / Away / Tie). Distinct from the containment ladder above; thresholds "
+               "do not filter this.")
     if db_df.empty:
-        st.success("No two-way dutch books right now (each event's prices sum to ≥ 100¢).")
+        st.success("No dutch books right now (each event's prices sum to ≥ its payout floor).")
     else:
-        DIR_LABEL = {"underround": "Buy YES both (underround)", "overround": "Buy NO both (overround)"}
+        DIR_LABEL = {"underround": "Buy YES all legs (underround)", "overround": "Buy NO all legs (overround)"}
         d = db_df.assign(
             dir_disp=db_df["direction"].map(DIR_LABEL).fillna(db_df["direction"]),
             caveat_disp=db_df["blockers"].replace("", "—").fillna("—"),
+            plan=db_df.apply(dutch_plan_text, axis=1),
         )
         st.dataframe(
-            d[["match", "tournament", "dir_disp", "action_1_text", "action_2_text", "cost_c",
+            d[["match", "tournament", "dir_disp", "plan", "cost_c",
                "exec_gap_c", "exec_min_size", "exec_max_profit_dollars", "tradable_disp",
                "caveat_disp", "url"]],
             hide_index=True, width="stretch",
@@ -778,12 +789,14 @@ def render_dashboard() -> None:
                 "match": "Match",
                 "tournament": "Tournament",
                 "dir_disp": st.column_config.TextColumn(
-                    "Trade", help="Both legs are the same side: Buy YES on both players (underround) "
-                                  "or Buy NO on both (overround)."),
-                "action_1_text": st.column_config.TextColumn("Leg 1"),
-                "action_2_text": st.column_config.TextColumn("Leg 2"),
+                    "Trade", help="Every leg is the SAME side: Buy YES on all (underround) or Buy NO on "
+                                  "all (overround). Covers 2-way match/game books AND 3-way soccer games."),
+                "plan": st.column_config.TextColumn(
+                    "Plan (all legs)", help="Buy every listed leg the same side; the locked edge holds "
+                                            "whichever single outcome wins."),
                 "cost_c": st.column_config.NumberColumn(
-                    "Cost (¢)", format="%.0f", help="Combined cost of both legs; the pair pays a guaranteed 100¢."),
+                    "Cost (¢)", format="%.0f", help="Combined cost of all legs. Payout floor = 100¢ "
+                                                    "(underround) or (n−1)×100¢ (n-way overround)."),
                 "exec_gap_c": st.column_config.NumberColumn(
                     "Locked edge (¢)", format="%.0f", help=help_for("Locked edge (¢)")),
                 "exec_min_size": st.column_config.NumberColumn("Max units", format="%.0f"),
