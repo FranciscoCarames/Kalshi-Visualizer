@@ -11,8 +11,8 @@ Filtering model:
     narrow EVERY section (incl. Actionable now) but do not change fetching.
   - Min-size / Quote / Market-status are THRESHOLD filters — they narrow every section EXCEPT
     Actionable now (which always shows every executable edge in the membership universe).
-  - Full diagnostics is built from the membership universe (NOT thresholds), so finalized markets stay
-    visible there even though "Active only" is the default elsewhere.
+  - Full diagnostics is built from the membership universe (NOT thresholds), so finalized-within-open-events
+    markets stay visible there even though "Active only" is the default elsewhere.
 
 Auto-refreshes via st.fragment(run_every); request rate is bounded by the kalshi_client throttle.
 Consistency/arbitrage math lives in consistency.py and is unchanged here (grouping is per
@@ -1233,13 +1233,15 @@ def render_dashboard() -> None:
 
     # ================================================================================
     # 8. Full diagnostics: all comparisons (collapsed) — from the membership universe
-    #    (NOT thresholds), so finalized markets stay visible here. Outcome-status filter lives here.
+    #    (NOT thresholds), so finalized-within-open-events markets stay visible here. Outcome-status
+    #    filter lives here.
     # ================================================================================
     with st.expander("🧪 Full diagnostics: all comparisons", expanded=False):
         status_choice = st.selectbox(
             "Outcome status", STATUS_GROUPS, index=0,
             format_func=lambda g: STATUS_GROUP_LABELS.get(g, g), key="full_diag_status",
-            help="Diagnostic filter for this table only. Finalized markets remain visible here.",
+            help="Diagnostic filter for this table only. Finalized-within-open-events markets remain "
+                 "visible here (fully-closed events are excluded at the API level, not shown anywhere).",
         )
         view = universe.copy()
         if not view.empty and status_choice != "All":
