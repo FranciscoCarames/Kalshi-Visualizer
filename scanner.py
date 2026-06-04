@@ -54,6 +54,7 @@ UNIFIED_COLUMNS = [
     "legs", "n_legs",                          # N-leg plan (synthetic bundles); synthesized 2-leg otherwise
     "payout_floor_c", "roi_pct",               # guaranteed payout floor + gross ROI on cost (PR 13)
     "snapshot_id",                             # stamped by store.write_snapshot at write time (PR 21a)
+    "participant_key",                         # the participant's stable key, for the detail panel (PR 24)
 ]
 
 
@@ -142,6 +143,7 @@ def _to_unified_consistency(r: dict[str, Any], cfg) -> dict[str, Any]:
         "tradable_now": r.get("tradable_now") or "", "blocked_reason": r.get("blocked_reason") or "",
         "market_status": _market_status_consistency(r), "rule_flag": r.get("rule_flag") or "",
         "settlement_caveat": "",  # containment ladders aren't per-game books
+        "participant_key": r.get("player_key") or "",   # for the detail panel (PR 24)
         "relationship_type": r.get("relationship_type") or "", "opportunity_id": r.get("opportunity_id") or "",
         # Leg 1 = broader/parent (Buy YES), leg 2 = deeper/child (Buy NO). Links must follow the legs:
         # url -> parent (leg 1), url_2 -> child (leg 2). (Was reversed: url pointed at the child.)
@@ -168,6 +170,8 @@ def _to_unified_dutchbook(r: dict[str, Any], cfg) -> dict[str, Any]:
         "tradable_now": r.get("tradable_now") or "", "blocked_reason": r.get("blocked_reason") or "",
         "market_status": r.get("market_status") or "active", "rule_flag": "",  # dutch books carry no rule flag
         "settlement_caveat": r.get("settlement_caveat") or "",  # non-blocking per-game caveat (PR 6)
+        # The primary participant (player A); both legs' links stay in the action summary (PR 24).
+        "participant_key": r.get("player_key_a") or "",
         "relationship_type": r.get("relationship_type") or "", "opportunity_id": r.get("opportunity_id") or "",
         # Two legs of the same event; one event link (no second link).
         "ticker_1": r.get("ticker_a") or "", "ticker_2": r.get("ticker_b") or "",

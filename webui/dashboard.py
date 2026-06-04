@@ -39,6 +39,38 @@ _BACKLOG_COLUMNS = [
     {"name": "last_edge", "label": "Last edge ¢", "field": "last_edge"},
     {"name": "current", "label": "Now", "field": "current"},
 ]
+# Participant-detail tables (PR 24) — built by the pure viewmodel detail builders.
+_CHAIN_COLUMNS = [
+    {"name": "layer", "label": "Layer (broad → deep)", "field": "layer"},
+    {"name": "source", "label": "Source", "field": "source"},
+    {"name": "display_pct", "label": "Display %", "field": "display_pct", "sortable": True},
+    {"name": "bid_pct", "label": "Bid %", "field": "bid_pct"},
+    {"name": "ask_pct", "label": "Ask %", "field": "ask_pct"},
+    {"name": "quote", "label": "Quote", "field": "quote"},
+]
+_SPREAD_COLUMNS = [
+    {"name": "from_layer", "label": "Broader", "field": "from_layer"},
+    {"name": "to_layer", "label": "Deeper", "field": "to_layer"},
+    {"name": "spread_pct", "label": "Spread (pp)", "field": "spread_pct", "sortable": True},
+    {"name": "spread_cents", "label": "Spread ¢", "field": "spread_cents"},
+    {"name": "status", "label": "Status", "field": "status"},
+    {"name": "quote", "label": "Quote", "field": "quote"},
+]
+_EXPECTED_COLUMNS = [
+    {"name": "layer", "label": "Layer", "field": "layer"},
+    {"name": "found", "label": "Found", "field": "found"},
+    {"name": "source", "label": "Source", "field": "source"},
+]
+_DETAIL_CONTRACT_COLUMNS = [
+    {"name": "contract", "label": "Contract", "field": "contract"},
+    {"name": "category", "label": "Category", "field": "category"},
+    {"name": "stage", "label": "Stage", "field": "stage"},
+    {"name": "opponent", "label": "Opponent", "field": "opponent"},
+    {"name": "display_pct", "label": "Display %", "field": "display_pct", "sortable": True},
+    {"name": "quote", "label": "Quote", "field": "quote"},
+    {"name": "volume", "label": "Volume", "field": "volume", "sortable": True},
+    {"name": "status", "label": "Status", "field": "status"},
+]
 
 
 @ui.page("/")
@@ -105,6 +137,59 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             ui.button("Close", on_click=dialog.close)
         dialog.open()
 
+    def render_detail(opp: dict[str, Any]) -> None:
+        """Populate the '🔬 Selected participant detail' section from the STORED frames (no fetch): lead with
+        the dense 2-leg action summary + relationship explanation, then chain / spreads / expected /
+        all-contracts tables, then the optional/last guarded charts."""
+        detail_box.clear()
+        sport = opp.get("sport") or ""
+        pkey = opp.get("participant_key") or ""
+        with detail_box:
+            ui.label(f"{opp.get('sport_label') or sport} · {opp.get('name')}").classes("text-lg font-bold")
+            ui.label(vm.relationship_explanation(opp)).classes("text-sm text-gray-600")
+            for line in vm.explanation_lines(opp, show_ids=show_ids.value)[2:]:
+                ui.label(line).classes("text-sm")
+            avail = engine.frame_availability()
+            if avail != "present" or not pkey:
+                ui.label("Evidence frames not captured for this snapshot — detail tables unavailable."
+                         if avail != "present" else
+                         "No participant key on this opportunity — detail tables unavailable."
+                         ).classes("text-orange-700 mt-2")
+                detail_expansion.open()
+                return
+            prows = engine.participant_contracts(sport, pkey)
+            chain = vm.detail_chain(prows, sport)
+            if chain:
+                ui.label("Containment chain (broad → deep)").classes("font-medium mt-3")
+                ui.table(columns=_CHAIN_COLUMNS, rows=chain, row_key="layer").classes("w-full")
+            spreads = vm.detail_spreads(prows)
+            if spreads:
+                ui.label("Raw stage-ladder spreads").classes("font-medium mt-3")
+                ui.table(columns=_SPREAD_COLUMNS, rows=spreads, row_key="to_layer").classes("w-full")
+            expected = vm.detail_expected(prows)
+            if expected:
+                ui.label("Expected vs found").classes("font-medium mt-3")
+                ui.table(columns=_EXPECTED_COLUMNS, rows=expected, row_key="layer").classes("w-full")
+            contracts = vm.detail_contracts(prows)
+            if contracts:
+                ui.label(f"All contracts ({len(contracts)})").classes("font-medium mt-3")
+                ui.table(columns=_DETAIL_CONTRACT_COLUMNS, rows=contracts, row_key="contract",
+                         pagination=15).classes("w-full")
+            if not (chain or spreads or expected or contracts):
+                ui.label("No stored contracts for this participant in the latest snapshot."
+                         ).classes("text-gray-500 mt-2")
+            # Charts are optional/last — guarded to render only when the builder returns a non-None option
+            # (containment shape only; dutch-book / game / missing-price rows yield None → skipped).
+            ladder_opt = vm.ladder_chart_option(chain)
+            payoff_opt = vm.payoff_chart_option(engine.payoff_for_opp(opp))
+            if ladder_opt:
+                ui.label("Ladder prices").classes("font-medium mt-3")
+                ui.echart(ladder_opt).classes("w-full h-64")
+            if payoff_opt:
+                ui.label("Per-unit payoff by settlement scenario").classes("font-medium mt-3")
+                ui.echart(payoff_opt).classes("w-full h-64")
+        detail_expansion.open()
+
     def _on_select(table):
         def handler(e: Any) -> None:
             sel = e.selection if hasattr(e, "selection") else None
@@ -112,6 +197,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                 opp = state["opps"].get(sel[0].get("opportunity_id"))
                 if opp:
                     open_panel(opp)
+                    render_detail(opp)
                 table.selected = []   # allow re-selecting the same row
         return handler
 
@@ -134,6 +220,11 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
 
     with ui.expansion("📉 Recently actionable (left the actionable set)").classes("w-full"):
         backlog = ui.table(columns=_BACKLOG_COLUMNS, rows=[], row_key="name", pagination=10).classes("w-full")
+
+    # Participant/team detail (PR 24) — populated on opp row-click from the STORED frames (no fetch).
+    detail_expansion = ui.expansion("🔬 Selected participant detail (click an opportunity)").classes("w-full")
+    with detail_expansion:
+        detail_box = ui.column().classes("w-full")
 
     changed = ui.label().classes("text-sm text-orange-700")
     empty = ui.label("No scan yet — press “Scan now (core series)”.").classes("text-gray-500")

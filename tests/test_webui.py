@@ -147,3 +147,58 @@ def test_explanation_lines_iterates_n_legs_for_synthetic_bundle():
     assert "Tradable now: Review rules" in blob and "Caveat: settlement caveat" in blob
     # 2-leg shapes (no `legs` list) keep the positional fallback.
     assert "Leg 2: Buy YES — B @ 48¢" in "\n".join(vm.explanation_lines(op("DB")))
+
+
+# --- participant detail engine accessors + frame cache (PR 24) -------------------------
+def _frame(sport, ftype, rows):
+    return {"sport": sport, "frame_type": ftype, "schema_version": 1, "rows": rows}
+
+
+def test_participant_contracts_and_checks_filter_by_player_key(tmpdb):
+    engine._FRAME_CACHE.clear()
+    contracts = [{"player_key": "p1", "contract": "Final"}, {"player_key": "p2", "contract": "Other"}]
+    checks = [{"player_key": "p1", "opportunity_id": "o1", "status": "EXECUTABLE_VIOLATION"}]
+    store.write_snapshot("2026-06-04 12:00:00 UTC", [op("o1")],
+                         frames=[_frame("tennis", "contracts", contracts),
+                                 _frame("tennis", "checks", checks)])
+    assert [r["contract"] for r in engine.participant_contracts("tennis", "p1")] == ["Final"]
+    assert engine.participant_contracts("tennis", "p2")[0]["contract"] == "Other"
+    assert [c["opportunity_id"] for c in engine.participant_checks("tennis", "p1")] == ["o1"]
+    assert engine.participant_contracts("tennis", "") == []          # no key → empty (no crash)
+
+
+def test_frame_cache_avoids_reread_and_invalidates_on_new_snapshot(tmpdb, monkeypatch):
+    engine._FRAME_CACHE.clear()
+    store.write_snapshot(1000, [op("o1")],
+                         frames=[_frame("tennis", "contracts", [{"player_key": "p1", "contract": "v1"}])])
+    calls = {"n": 0}
+    real = store.load_frames
+
+    def counting(*a, **k):
+        calls["n"] += 1
+        return real(*a, **k)
+    monkeypatch.setattr(store, "load_frames", counting)
+    engine.participant_contracts("tennis", "p1")
+    engine.participant_contracts("tennis", "p1")                     # second call served from the cache
+    assert calls["n"] == 1
+    # A newer snapshot invalidates the whole cache → a fresh read returns the new rows.
+    store.write_snapshot(2000, [op("o1")],
+                         frames=[_frame("tennis", "contracts", [{"player_key": "p1", "contract": "v2"}])])
+    assert engine.participant_contracts("tennis", "p1")[0]["contract"] == "v2"
+    assert calls["n"] == 2
+
+
+def test_frame_availability_and_payoff_for_opp(tmpdb):
+    engine._FRAME_CACHE.clear()
+    assert engine.frame_availability() == "absent"                  # honest when the store is empty
+    check = {"player_key": "p1", "opportunity_id": "o1", "status": "EXECUTABLE_VIOLATION",
+             "action_1_side": "buy_yes", "action_2_side": "buy_no",
+             "action_1_price_c": 40, "action_2_price_c": 55,
+             "parent_node": "Reach Final", "child_node": "Win Tournament"}
+    store.write_snapshot("2026-06-04 12:00:00 UTC", [op("o1")], frames=[_frame("tennis", "checks", [check])])
+    assert engine.frame_availability() == "present"
+    pay = engine.payoff_for_opp({"opportunity_id": "o1", "sport": "tennis",
+                                 "participant_key": "p1", "exec_min_size": 10})
+    assert pay and pay["cost_c"] == 95
+    # An unmatched / dutch-book opp has no matched checks row → None (so the dashboard guards the chart).
+    assert engine.payoff_for_opp({"opportunity_id": "zzz", "sport": "tennis", "participant_key": "p1"}) is None

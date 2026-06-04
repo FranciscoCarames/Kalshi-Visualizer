@@ -12,6 +12,7 @@ from __future__ import annotations
 from typing import Any
 
 import config
+import consistency
 import data
 import lifecycle
 import scan_manager
@@ -77,6 +78,58 @@ def frames(db_path: str | None = None) -> list[dict[str, Any]]:
     if snap is None:
         return []
     return store.load_frames(snap["snapshot_id"], db_path=db_path)
+
+
+# --- per-(snapshot, sport, frame) frame cache (PR 24) — the detail panel reads frames repeatedly --------
+# A process-local cache keyed (snapshot_id, sport, frame_type); cleared whenever the latest snapshot_id
+# changes (a new scan), so it never serves stale evidence. The detail panel opens the same frame many
+# times (chain/spreads/expected/all-contracts), so caching avoids re-reading + re-JSON-parsing the DB.
+_FRAME_CACHE: dict[tuple, list[dict[str, Any]]] = {}
+
+
+def _cached_frame_rows(snapshot_id: int, sport: str, frame_type: str, db_path: str | None) -> list[dict[str, Any]]:
+    if _FRAME_CACHE and any(k[0] != snapshot_id for k in _FRAME_CACHE):
+        _FRAME_CACHE.clear()                              # a newer snapshot — drop the whole cache
+    key = (snapshot_id, sport, frame_type)
+    if key not in _FRAME_CACHE:
+        loaded = store.load_frames(snapshot_id, sport=sport, frame_type=frame_type, db_path=db_path)
+        _FRAME_CACHE[key] = loaded[0]["rows"] if loaded else []
+    return _FRAME_CACHE[key]
+
+
+def participant_contracts(sport: str, player_key: str, db_path: str | None = None) -> list[dict[str, Any]]:
+    """A participant's stored contract rows for the latest snapshot (cached), or [] when absent."""
+    snap = store.latest(db_path=db_path)
+    if snap is None or not player_key:
+        return []
+    rows = _cached_frame_rows(snap["snapshot_id"], sport, "contracts", db_path)
+    return [r for r in rows if r.get("player_key") == player_key]
+
+
+def participant_checks(sport: str, player_key: str, db_path: str | None = None) -> list[dict[str, Any]]:
+    """A participant's stored consistency-check rows for the latest snapshot (cached), or []."""
+    snap = store.latest(db_path=db_path)
+    if snap is None or not player_key:
+        return []
+    rows = _cached_frame_rows(snap["snapshot_id"], sport, "checks", db_path)
+    return [r for r in rows if r.get("player_key") == player_key]
+
+
+def frame_availability(db_path: str | None = None) -> str:
+    """Whether the latest snapshot's evidence frames are present / expired / absent (PR 20 honesty)."""
+    snap = store.latest(db_path=db_path)
+    return store.frame_status(snap["snapshot_id"], db_path=db_path) if snap else "absent"
+
+
+def payoff_for_opp(opp: dict[str, Any], db_path: str | None = None) -> dict[str, Any] | None:
+    """The per-state scenario payoff for an opportunity, from its matched STORED checks row (by
+    opportunity_id), or None for a non-containment / dutch-book / unmatched row (so the chart is guarded).
+    Reuses `consistency.scenario_payoffs` — no recomputation."""
+    sport = opp.get("sport") or ""
+    pkey = opp.get("participant_key") or ""
+    oid = opp.get("opportunity_id")
+    match = next((c for c in participant_checks(sport, pkey, db_path) if c.get("opportunity_id") == oid), None)
+    return consistency.scenario_payoffs(match, opp.get("exec_min_size")) if match else None
 
 
 def run_scan_now(db_path: str | None = None) -> dict[str, Any]:
