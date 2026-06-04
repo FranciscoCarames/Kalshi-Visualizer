@@ -64,6 +64,22 @@ def rule_tokens(text: Any) -> set[str]:
     return {tok for tok in RULE_TOKENS if tok in t}
 
 
+_SCORE_STATE_RE = re.compile(r"(\d+)\s*[-–]\s*(\d+)")
+
+
+def score_state(custom_strike: Any) -> str:
+    """Normalized set-score (e.g. ``"3-0"``) from an exact-score market's ``custom_strike["Set Score"]``;
+    ``""`` for non-exact-score markets. Stamped onto rows so the synthetic-bundle detector + its safety
+    gates can read the win-state without re-parsing raw metadata."""
+    if not isinstance(custom_strike, dict):
+        return ""
+    raw = custom_strike.get("Set Score")
+    if not raw:
+        return ""
+    m = _SCORE_STATE_RE.search(str(raw))
+    return f"{m.group(1)}-{m.group(2)}" if m else str(raw).strip()
+
+
 # --- Display-time helpers (timezone formatting; DISPLAY-ONLY — never used in cents/comparison logic) -
 _FETCHED_AT_FMT = "%Y-%m-%d %H:%M:%S UTC"
 
@@ -652,6 +668,18 @@ def build_contracts(
                     "is_participant": is_participant,
                     "participant_type": participant_type,
                     "mutually_exclusive": bool(event.get("mutually_exclusive", False)),
+                    # Exact-score / settlement metadata for the synthetic-bundle safety gates (additive).
+                    # NOTE: fractional_trading_enabled is True for normal exact-score markets (it's order-
+                    # size granularity, NOT scalar settlement) — the binary-settlement gate keys on
+                    # market_type, not this. close_time/expiration_time are raw (time_value is derived).
+                    "score_state": score_state(market.get("custom_strike")),
+                    "market_type": market.get("market_type", ""),
+                    "strike_type": market.get("strike_type", ""),
+                    "fractional_trading_enabled": bool(market.get("fractional_trading_enabled", False)),
+                    "price_ranges": market.get("price_ranges"),
+                    "rules_secondary": market.get("rules_secondary", ""),
+                    "close_time": market.get("close_time", ""),
+                    "expiration_time": market.get("expiration_time", ""),
                 }
             )
     return rows
