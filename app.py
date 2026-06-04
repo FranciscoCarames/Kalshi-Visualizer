@@ -269,7 +269,10 @@ with st.sidebar:
 
     # Participant + event option maps (from the tour-filtered data).
     if not df.empty:
-        uniq = df.drop_duplicates("player_key")[["player_key", "player"]]
+        # Only real competitors are selectable (soccer's Tie / non-participant outcomes carry
+        # is_participant=False and must never appear as a participant). Guard the column for back-compat.
+        _sel = df[df["is_participant"]] if "is_participant" in df.columns else df
+        uniq = _sel.drop_duplicates("player_key")[["player_key", "player"]]
         name_counts = uniq["player"].value_counts()
         label_to_key = {}
         for _, r in uniq.iterrows():

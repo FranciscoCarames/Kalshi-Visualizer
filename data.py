@@ -508,6 +508,15 @@ def build_contracts(
             mapping_confidence = ident.confidence
             mapping_reason = ident.reason
             competitor = ident.raw_value if ident.confidence == "high" else ""
+            # Participant typing (drives the participant selector + the n-outcome detector). A real
+            # competitor is selectable; a synthetic non-participant outcome (e.g. soccer's Tie) gets a
+            # per-event key so it never merges across events and is never selectable. Sport-agnostic via
+            # cfg.tie_fn (None for sports with no such outcome → everything is a participant).
+            if cfg.tie_fn is not None and cfg.tie_fn(cfg, market):
+                player_key = f"tie::{event.get('event_ticker', '')}"
+                participant_type, is_participant = "tie", False
+            else:
+                participant_type, is_participant = "participant", True
             # Clean, user-facing name via the single shared helper (alias > source > titleized
             # fallback). Internal identifiers are kept as separate fields for debug/export.
             display = display_player_name({"player_key": player_key, "player_name_raw": name})
@@ -627,6 +636,10 @@ def build_contracts(
                     # Raw metadata preserved for debugging / downloads (identity + settlement context).
                     "raw_custom_strike": market.get("custom_strike"),
                     "raw_product_metadata": event.get("product_metadata"),
+                    # Participant typing + the event MECE flag (selector gating + n-outcome detector).
+                    "is_participant": is_participant,
+                    "participant_type": participant_type,
+                    "mutually_exclusive": bool(event.get("mutually_exclusive", False)),
                 }
             )
     return rows

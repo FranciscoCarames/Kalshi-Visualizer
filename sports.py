@@ -126,6 +126,10 @@ class SportConfig:
     # prefix/winner match (exact is the most specific signal). Lets a sport own specific tickers without a
     # broad prefix that would swallow unrelated series. Empty for prefix-owned sports -> no behavior change.
     exact_series: frozenset[str] = field(default_factory=frozenset)
+    # Optional "non-participant outcome" detector (e.g. soccer's Tie/draw market). Returns True for a
+    # market that is NOT a real competitor; build_contracts then gives it a per-event synthetic key
+    # (never selectable, never merges across events). None (default) → every outcome is a participant.
+    tie_fn: Callable[["SportConfig", dict], bool] | None = None
 
     # ---- convenience API (engine calls these) --------------------------------------------
     def family_of(self, series_ticker: str) -> str:
@@ -642,4 +646,92 @@ GOLF = register(SportConfig(
     node_fn=_golf_node,
     division_fn=_golf_division,
     exact_series=_GOLF_EXACT,
+))
+
+
+# --- Soccer (6th sport): 2026 World Cup ---------------------------------------------------------------
+# Owns KXWCGAME (3-way group game Home/Away/Tie — `game` family, the n-outcome dutch book) + KXWCROUND
+# (per-team reach-stage — `advance` ladder) via exact_series. The Tie market reuses a CONSTANT soccer_team
+# UUID across all games, so it's a non-participant draw leg with a per-event synthetic key (tie_fn). No
+# head-to-head series (match_family=""). Values confirmed live (kss research-gates note, 2026-06-04).
+SOCCER_TIE_UUID = "111193d4-9b1f-4bd8-ab7c-9de252737f05"
+_SOCCER_EXACT = frozenset({"KXWCGAME", "KXWCROUND"})
+_SOCCER_CATEGORY = {"game": "Match (3-way)", "advance": "Stage advancement",
+                    "winner": "Tournament winner", "other": "Other"}
+_SOCCER_STAGE_RANK = {"Round of 16": 1, "Quarterfinals": 2, "Semifinals": 3, "Finals": 4}
+_SOCCER_LADDER = LadderSpec(
+    node_order=("Reach Round of 16", "Reach Quarterfinals", "Reach Semifinals", "Reach Finals"),
+    adjacent_pairs=(("Reach Finals", "Reach Semifinals"),
+                    ("Reach Semifinals", "Reach Quarterfinals"),
+                    ("Reach Quarterfinals", "Reach Round of 16")),
+    match_stage_to_node={},                    # no head-to-head
+    advance_stage_to_node={"Round of 16": "Reach Round of 16", "Quarterfinals": "Reach Quarterfinals",
+                           "Semifinals": "Reach Semifinals", "Finals": "Reach Finals"},
+)
+
+
+def _soccer_family(cfg, series_ticker):
+    t = (series_ticker or "").upper()
+    if t == "KXWCGAME":
+        return "game"                                                # 3-way group game (n-outcome dutch book)
+    if t == "KXWCROUND":
+        return "advance"                                             # per-team reach-stage
+    return "other"
+
+
+def _soccer_stage(cfg, family, market):
+    if family != "advance":
+        return ""
+    # The round lives in the market ticker segment (e.g. KXWCROUND-26RO16-PAR) and/or the title. Check
+    # most-specific first so "Semifinals"/"Quarterfinals" never collapse to "Finals".
+    blob = ((market.get("ticker") or "") + " " + (market.get("title") or "")).upper()
+    if "RO16" in blob or "ROUND OF 16" in blob:
+        return "Round of 16"
+    if "QUAR" in blob:
+        return "Quarterfinals"
+    if "SEMI" in blob:
+        return "Semifinals"
+    if "FINAL" in blob:
+        return "Finals"
+    return ""
+
+
+def _soccer_node(cfg, family, stage):
+    if family == "winner":
+        return "Win Tournament"                                      # declared for the future outright series
+    if family == "advance":
+        return cfg.ladder.advance_stage_to_node.get(stage)
+    return None                                                      # game is dutch-only, not laddered
+
+
+def _soccer_division(cfg, series_ticker):
+    return ""
+
+
+def _soccer_tie(cfg, market):
+    """True for the soccer draw outcome — the constant Tie UUID or a 'Tie' display title."""
+    cs = market.get("custom_strike") or {}
+    return cs.get("soccer_team") == SOCCER_TIE_UUID or \
+        str(market.get("yes_sub_title") or "").strip().lower() == "tie"
+
+
+SOCCER = register(SportConfig(
+    sport_id="soccer", label="Soccer (World Cup)", emoji="⚽",
+    series_prefixes=(), default_series=tuple(sorted(_SOCCER_EXACT)),
+    winner_tickers=frozenset(),
+    identity=IdentityResolver(candidate_paths=("custom_strike.soccer_team",), id_label="soccer_team"),
+    ladder=_SOCCER_LADDER,
+    category_labels=_SOCCER_CATEGORY,
+    round_patterns=(),
+    stage_rank=_SOCCER_STAGE_RANK,
+    ladder_families=frozenset({"advance", "winner"}),
+    match_family="",                           # no 2-way head-to-head; the 3-way game rides the "game" family
+    divisions={},
+    division_label="",
+    family_fn=_soccer_family,
+    stage_fn=_soccer_stage,
+    node_fn=_soccer_node,
+    division_fn=_soccer_division,
+    exact_series=_SOCCER_EXACT,
+    tie_fn=_soccer_tie,
 ))

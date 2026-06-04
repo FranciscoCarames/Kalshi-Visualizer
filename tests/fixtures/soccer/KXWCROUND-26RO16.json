@@ -1,0 +1,21 @@
+{
+  "_fixture_meta": {"captured": "2026-06-04", "ticker": "KXWCROUND-26RO16", "source": "research-gates live probe", "note": "per-team reach-stage (mutually_exclusive=false); 'qualify' phrasing; one sample team market"},
+  "event_ticker": "KXWCROUND-26RO16",
+  "title": "World Cup Round of 16 Qualifiers",
+  "mutually_exclusive": false,
+  "competition_scope": "Future",
+  "product_metadata": {"competition": "2026 FIFA World Cup"},
+  "markets": [
+    {
+      "ticker": "KXWCROUND-26RO16-PAR",
+      "yes_sub_title": "Paraguay",
+      "strike_type": "structured",
+      "custom_strike": {"soccer_team": "c59328da-2a2f-4c40-b28b-1ac2238c0333"},
+      "status": "active",
+      "title": "Will Paraguay qualify for FIFA World Cup Round of 16?",
+      "yes_bid_dollars": "0.58", "yes_ask_dollars": "0.60", "last_price_dollars": "0.59",
+      "yes_bid_size_fp": "100", "yes_ask_size_fp": "100", "volume_fp": "500",
+      "rules_primary": "If Paraguay is one of the teams to qualify for the Round of 16 in the 2026 FIFA World Cup, then the market resolves to Yes."
+    }
+  ]
+}

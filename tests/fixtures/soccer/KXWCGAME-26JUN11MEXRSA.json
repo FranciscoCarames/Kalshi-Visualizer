@@ -1,0 +1,43 @@
+{
+  "_fixture_meta": {"captured": "2026-06-04", "ticker": "KXWCGAME-26JUN11MEXRSA", "source": "research-gates live probe", "note": "3-way group game Home/Away/Tie; trimmed to fields build_contracts uses + prices for tests"},
+  "event_ticker": "KXWCGAME-26JUN11MEXRSA",
+  "title": "Mexico vs South Africa",
+  "mutually_exclusive": true,
+  "collateral_return_type": "MECNET",
+  "product_metadata": {"competition": "2026 FIFA World Cup"},
+  "markets": [
+    {
+      "ticker": "KXWCGAME-26JUN11MEXRSA-MEX",
+      "yes_sub_title": "Mexico",
+      "strike_type": "structured",
+      "custom_strike": {"soccer_team": "8caf91d0-aafc-4d95-8788-72947e76e667"},
+      "status": "active",
+      "title": "Will Mexico win Mexico vs South Africa?",
+      "yes_bid_dollars": "0.40", "yes_ask_dollars": "0.42", "last_price_dollars": "0.41",
+      "yes_bid_size_fp": "100", "yes_ask_size_fp": "100", "volume_fp": "500",
+      "rules_primary": "If Mexico wins the Mexico vs South Africa professional FIFA World Cup soccer game originally scheduled for Jun 11, 2026 after 90 minutes plus stoppage time (does not include extra time or penalties), then the market resolves to Yes. If the game is cancelled or rescheduled to over two weeks away, the market will resolve to a fair price in accordance with the rules."
+    },
+    {
+      "ticker": "KXWCGAME-26JUN11MEXRSA-RSA",
+      "yes_sub_title": "South Africa",
+      "strike_type": "structured",
+      "custom_strike": {"soccer_team": "9b2b4d1d-8714-4a27-8cfb-3779491bdf87"},
+      "status": "active",
+      "title": "Will South Africa win Mexico vs South Africa?",
+      "yes_bid_dollars": "0.30", "yes_ask_dollars": "0.32", "last_price_dollars": "0.31",
+      "yes_bid_size_fp": "100", "yes_ask_size_fp": "100", "volume_fp": "500",
+      "rules_primary": "If South Africa wins the Mexico vs South Africa professional FIFA World Cup soccer game originally scheduled for Jun 11, 2026 after 90 minutes plus stoppage time (does not include extra time or penalties), then the market resolves to Yes."
+    },
+    {
+      "ticker": "KXWCGAME-26JUN11MEXRSA-TIE",
+      "yes_sub_title": "Tie",
+      "strike_type": "structured",
+      "custom_strike": {"soccer_team": "111193d4-9b1f-4bd8-ab7c-9de252737f05"},
+      "status": "active",
+      "title": "Will Mexico vs South Africa be a Tie?",
+      "yes_bid_dollars": "0.25", "yes_ask_dollars": "0.27", "last_price_dollars": "0.26",
+      "yes_bid_size_fp": "100", "yes_ask_size_fp": "100", "volume_fp": "500",
+      "rules_primary": "If Tie wins the Mexico vs South Africa professional FIFA World Cup soccer game originally scheduled for Jun 11, 2026 after 90 minutes plus stoppage time (does not include extra time or penalties), then the market resolves to Yes."
+    }
+  ]
+}
