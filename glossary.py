@@ -160,6 +160,18 @@ GLOSSARY: dict[str, dict[str, str]] = {
                 "review-only, never actionable. Gross of fees; sizes are top-of-book (full-depth fill not "
                 "modeled).",
     },
+    "Review signal": {
+        "short": "A priced, sized, active discrepancy that is NOT auto-tradable because its legs are "
+                 "settlement-caveated — review the rules before trading. Sits just below Actionable.",
+        "long": "A review signal is a real, executable-looking pricing discrepancy whose legs may NOT "
+                "settle together — currently the synthetic exact-score bundle, where an exact score is not "
+                "the match-winner and a retirement / no-ball-played settles the score legs to Fair Market "
+                "Price while the hedge settles cleanly. The numbers (cost, gross gap, ROI, size) are real "
+                "and top-of-book, but the edge is conditional on the settlement rules, so the app never "
+                "calls it Actionable: it gets its own bucket directly below Actionable to be reviewed, not "
+                "executed blind. A bundle that is also un-executable now (no size / an inactive leg) drops "
+                "to Blocked instead. Gross of fees; full-depth fill not modeled.",
+    },
     "New actionable": {
         "short": "An opportunity that became actionable since the previous scan — it wasn't in the "
                  "last snapshot's actionable set. The banner keeps it flagged for the chosen window.",
@@ -240,6 +252,7 @@ COLUMN_HELP: dict[str, str] = {
     "Buy NO": "Buy YES vs Buy NO",
     "Gross edge (¢)": "Dutch book",
     "Bundle (all legs)": "Synthetic bundle",
+    "Review signal": "Review signal",
     "New actionable": "New actionable",
     "Recently actionable": "Recently actionable",
     "Changed while blocked": "Changed while blocked",

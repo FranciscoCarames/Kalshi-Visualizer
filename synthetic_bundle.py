@@ -338,7 +338,10 @@ def _build_finding(event_ticker: str, cfg: Any, player_key: str, hedge_row: dict
         "check_type": CHECK_TYPE, "relationship_type": CHECK_TYPE,
         "opportunity_id": data.opportunity_id(CHECK_TYPE, event_ticker, player_key, cand["direction"]),
         "status": EXECUTABLE_SYNTHETIC_BUNDLE,
-        "bucket": "blocked",  # review-only: every synthetic bundle is settlement-caveated, never Actionable
+        # review-only: a settlement-caveated bundle is never Actionable. Priced/sized/active ("Review rules")
+        # -> review_signal (a distinct bucket just below actionable); no-size / inactive ("No") -> blocked.
+        # Mirrors consistency.bucket_of so the persisted bucket and the router agree.
+        "bucket": "review_signal" if tradable_now == "Review rules" else "blocked",
         "direction": cand["direction"],
         "event_ticker": event_ticker, "series": hedge_row.get("series", ""),
         "tournament": hedge_row.get("tournament", ""), "tour": hedge_row.get("tour", ""),
