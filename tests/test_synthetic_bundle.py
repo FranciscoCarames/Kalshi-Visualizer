@@ -183,3 +183,20 @@ def test_nan_safe_prices_and_sizes():
     rows = _event(score_kw={"yes_ask_c": 2, "yes_ask_size": nan}, hedge_kw={"no_ask_c": 90})
     f = sb.find_synthetic_bundles(rows)
     assert len(f) == 1 and f[0]["exec_min_size"] is None  # NaN size -> blocked, not a crash
+
+
+# --- routing + API integration (Task 4) -----------------------------------------------------
+def test_status_group_and_bucket_route_to_review_blocked():
+    import consistency
+    assert consistency.STATUS_GROUP[sb.EXECUTABLE_SYNTHETIC_BUNDLE] == "Warning"
+    f = sb.find_synthetic_bundles(_event(score_kw={"yes_ask_c": 2}, hedge_kw={"no_ask_c": 90}))[0]
+    # "Review rules" never starts with "Yes" -> always blocked/review, never Actionable.
+    assert consistency.bucket_of(f) == "blocked"
+
+
+def test_opportunity_model_preserves_legs():
+    from api import Opportunity
+    f = sb.find_synthetic_bundles(_event(score_kw={"yes_ask_c": 2}, hedge_kw={"no_ask_c": 90}))[0]
+    o = Opportunity(**f)  # extra fields ignored; legs/n_legs are declared so they survive the boundary
+    assert o.n_legs == 4 and isinstance(o.legs, list) and len(o.legs) == 4
+    assert o.status == "EXECUTABLE_SYNTHETIC_BUNDLE" and o.rule_flag == "SETTLEMENT_CHECK_REQUIRED"
