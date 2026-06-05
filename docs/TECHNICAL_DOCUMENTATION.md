@@ -546,9 +546,17 @@ Same schema as containment rows: `exec_gap_c`, `exec_min_size`, `exec_max_profit
 
 Detection lives entirely in `dutchbook.py`. The only `consistency.py` touches are: one `bucket_of` branch and a `STATUS_GROUP` entry (the status string `"EXECUTABLE_DUTCH_BOOK"` is held as a literal to avoid an import cycle). The UI renders a **dedicated "Dutch-book arbitrage — match & game books" section** immediately after "Actionable now"; it cannot reuse the ladder table because both legs are the same side.
 
+#### N-outcome shapes
+
+Beyond the 2-outcome pair, `dutchbook.py` also detects:
+
+- **Soccer 3-way games** (Home/Away/Tie) via `_detect_n_way` + `prove_mece` — both directions; needs the full MECE set (the Tie leg present, `mutually_exclusive`, a shared settlement basis).
+- **Tournament-winner FIELDS** (≥ 3 "win the tournament" markets) via `_detect_field` + `prove_field_mece` — **overround only**. A field is mutually exclusive (one champion) but not provably exhaustive (a Grand Slam lists fewer markets than its draw), so underround (Buy YES all) could pay 0 and is never emitted. The overround is safe on **any priceable subset** of a mutually-exclusive set: buying NO on `k` legs pays ≥ `(k−1)·100¢`, and a winner outside the traded subset only pays more. `_field_overround_subset` selects the legs with a firm no-side price and `yes_bid > 0` (skipping empty-book longshots); `gap = Σ yes_bid(subset) − 100`. The `opportunity_id` keys on the event (stable as the priceable subset shifts between scans), and a non-blocking `field_overround` advisory caveat flags the subset/partial-fill nature.
+
 #### Out of scope
 
-- n-outcome winner fields (≥ 3 outcomes): need a field-completeness proof + multi-leg representation (planned as future stage).
+- n-outcome **advancement** fields (reach-a-stage 1-of-N): a future stage.
+- Field **underround**: needs an exhaustiveness proof we cannot derive from current data.
 - Per-game books on tennis (tennis has no `game` family and no per-game series, so it is unaffected).
 
 ### 9c. Synthetic exact-score bundle detector (`synthetic_bundle.py`)

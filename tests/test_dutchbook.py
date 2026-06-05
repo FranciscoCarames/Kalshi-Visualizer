@@ -585,3 +585,109 @@ def test_soccer_3way_game_carries_settlement_caveat():
     # The n-way (soccer 3-way) game path also attaches the per-game caveat.
     g = dutchbook.find_dutch_books(_wc3([40, 30, 25]))[0]
     assert g["settlement_caveat"] == glossary.BLOCKERS["game_settlement"]
+
+
+# --- Tournament-winner FIELD (overround-only) ---------------------------------------------------------
+def _winner(name, key, *, yes_bid_c, series="KXNBA", event="KXNBA-26", me=True,
+            quality="Tight", status="active", size=100):
+    """A 'win the tournament' field market (one per participant); a field is mutually exclusive."""
+    return {
+        "kind": "winner", "series": series, "event_ticker": event, "player": name, "player_key": key,
+        "is_participant": True, "tournament": "Pro Basketball", "tour": "",
+        "mutually_exclusive": me, "yes_bid_c": yes_bid_c,
+        "no_ask_c": (None if yes_bid_c is None else 100 - yes_bid_c),
+        "yes_bid_size": size, "yes_ask_size": size, "quote_quality": quality, "status": status,
+        "market_ticker": f"{event}-{key}", "kalshi_url": "https://kalshi.com/x", "event_title": "Field",
+    }
+
+
+def test_winner_field_overround_fires():
+    # yes_bid 40+35+30 = 105 > 100 -> overround on 3 legs: floor (3-1)*100=200, cost no_ask 195, gap 5.
+    f = dutchbook.find_dutch_books([_winner("A", "a", yes_bid_c=40), _winner("B", "b", yes_bid_c=35),
+                                    _winner("C", "c", yes_bid_c=30)])
+    assert len(f) == 1
+    g = f[0]
+    assert g["status"] == dutchbook.EXECUTABLE_DUTCH_BOOK and g["direction"] == "overround"
+    assert g["payout_floor_c"] == 200 and g["cost_c"] == 195 and g["exec_gap_c"] == 5
+    assert g["n_legs"] == 3 and g["field_size"] == 3
+    assert all(leg["side"] == "buy_no" for leg in g["legs"])
+    assert g["tradable_now"] == "Yes" and g["bucket"] == "actionable"
+    assert g["settlement_caveat"] == glossary.BLOCKERS["field_overround"]
+
+
+def test_winner_field_trades_only_priceable_subset():
+    # An empty-book longshot (No quote) is excluded; overround is computed on the priced subset {A,B}.
+    f = dutchbook.find_dutch_books([_winner("A", "a", yes_bid_c=60), _winner("B", "b", yes_bid_c=55),
+                                    _winner("C", "c", yes_bid_c=0, quality="No quote")])
+    assert len(f) == 1
+    g = f[0]
+    assert g["n_legs"] == 2 and g["field_size"] == 3            # traded subset is 2 of 3
+    assert g["payout_floor_c"] == 100 and g["exec_gap_c"] == 15  # (2-1)*100 - (40+45) = 15
+    assert "C" not in [leg["contract"] for leg in g["legs"]]
+
+
+def test_winner_field_no_overround_when_priced_below_floor():
+    # yes_bid 40+35+20 = 95 < 100 -> no overround -> eligible_non_firing, no finding.
+    diag: dict = {}
+    assert dutchbook.find_dutch_books([_winner("A", "a", yes_bid_c=40), _winner("B", "b", yes_bid_c=35),
+                                       _winner("C", "c", yes_bid_c=20)], diag) == []
+    assert any("no positive overround" in r["reason"] for r in diag["eligible_non_firing"])
+
+
+def test_winner_field_never_emits_underround():
+    # A cheap, NON-exhaustive field (sum yes_bid far below 100) must NEVER fire an underround.
+    assert dutchbook.find_dutch_books([_winner("A", "a", yes_bid_c=5), _winner("B", "b", yes_bid_c=5),
+                                       _winner("C", "c", yes_bid_c=5)]) == []
+
+
+def test_winner_field_rejects_not_mutually_exclusive():
+    diag: dict = {}
+    dutchbook.find_dutch_books([_winner("A", "a", yes_bid_c=40, me=False),
+                                _winner("B", "b", yes_bid_c=35, me=False),
+                                _winner("C", "c", yes_bid_c=30, me=False)], diag)
+    assert any("mutually_exclusive" in r["reason"] for r in diag["rejected"])
+
+
+def test_winner_field_rejects_fewer_than_three():
+    diag: dict = {}
+    dutchbook.find_dutch_books([_winner("A", "a", yes_bid_c=60), _winner("B", "b", yes_bid_c=55)], diag)
+    assert any(">=3 outcomes" in r["reason"] for r in diag["rejected"])
+
+
+def test_winner_field_rejects_duplicate_keys():
+    diag: dict = {}
+    dutchbook.find_dutch_books([_winner("A", "a", yes_bid_c=40), _winner("B", "b", yes_bid_c=35),
+                                _winner("A2", "a", yes_bid_c=30)], diag)  # duplicate key 'a'
+    assert any("duplicate" in r["reason"] for r in diag["rejected"])
+
+
+def test_winner_field_blocked_when_a_leg_has_no_size():
+    f = dutchbook.find_dutch_books([_winner("A", "a", yes_bid_c=40), _winner("B", "b", yes_bid_c=35),
+                                    _winner("C", "c", yes_bid_c=30, size=0)])
+    assert len(f) == 1 and f[0]["tradable_now"] == "No" and f[0]["bucket"] == "blocked"
+    assert BLOCKERS_size in f[0]["blocked_reason"]
+
+
+def test_winner_field_id_stable_across_subset_changes():
+    # The id keys on the EVENT (not the priceable subset), so it's stable when a leg's book fills/empties.
+    base = [_winner("A", "a", yes_bid_c=60), _winner("B", "b", yes_bid_c=55), _winner("C", "c", yes_bid_c=30)]
+    id_full = dutchbook.find_dutch_books(base)[0]["opportunity_id"]
+    base[2]["quote_quality"], base[2]["yes_bid_c"] = "No quote", 0   # C drops from the subset
+    assert dutchbook.find_dutch_books(base)[0]["opportunity_id"] == id_full
+
+
+def test_winner_field_and_match_book_coexist_without_contamination():
+    # A 2-way match underround and a winner-field overround in the same scan both surface, independently.
+    rows = [market("Alcaraz", yes_bid_c=43, yes_ask_c=45), market("Sinner", yes_bid_c=46, yes_ask_c=48)]
+    rows += [_winner("A", "a", yes_bid_c=40), _winner("B", "b", yes_bid_c=35), _winner("C", "c", yes_bid_c=30)]
+    out = dutchbook.find_dutch_books(rows)
+    assert len(out) == 2 and sorted(f["direction"] for f in out) == ["overround", "underround"]
+
+
+def test_winner_field_scanner_round_trip():
+    import scanner
+    f = dutchbook.find_dutch_books([_winner("A", "a", yes_bid_c=40), _winner("B", "b", yes_bid_c=35),
+                                    _winner("C", "c", yes_bid_c=30)])[0]
+    u = scanner._to_unified_dutchbook(f, sports.NBA)
+    assert u["source"] == "dutch_book" and u["n_legs"] == 3 and len(u["legs"]) == 3
+    assert u["bucket"] == "actionable" and u["settlement_caveat"] == glossary.BLOCKERS["field_overround"]

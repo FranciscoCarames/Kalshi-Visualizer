@@ -775,13 +775,14 @@ def render_dashboard() -> None:
     # 3b. Dutch-book arbitrage (2-outcome match books) — a check family separate from
     #     the containment ladder. Both legs are the SAME side, so it gets its own table.
     # ================================================================================
-    st.subheader("🎯 Dutch-book arbitrage — match, game & 3-way books")
-    st.caption("Books where you can cover EVERY outcome for under the guaranteed payout floor (100¢ for a "
-               "two-way match/game; **(n−1)×100¢** for an n-way overround) — a **gross pricing discrepancy** "
-               "needing no model. Holds under normal one-winner settlement (**not riskless** — a postponed / "
-               "abandoned game can break a per-game book). Every leg is the **same** side (Buy YES on all, or "
-               "Buy NO on all). Includes 3-way soccer World Cup games (Home / Away / Tie). Distinct from the "
-               "containment ladder above; thresholds do not filter this.")
+    st.subheader("🎯 Dutch-book arbitrage — match, game, 3-way & winner-field books")
+    st.caption("Books where you can cover every covered outcome for under the guaranteed payout floor (100¢ "
+               "for a two-way match/game; **(n−1)×100¢** for an n-way overround) — a **gross pricing "
+               "discrepancy** needing no model. Holds under normal one-winner settlement (**not riskless** — "
+               "a postponed / abandoned game can break a per-game book). Every leg is the **same** side (Buy "
+               "YES on all, or Buy NO on all). Includes 3-way soccer World Cup games (Home / Away / Tie) and "
+               "**tournament-winner fields** (Buy NO on the priceable subset of a one-champion field — "
+               "overround only). Distinct from the containment ladder above; thresholds do not filter this.")
     if db_df.empty:
         st.success("No dutch books right now (each event's prices sum to ≥ its payout floor).")
     else:
@@ -802,7 +803,8 @@ def render_dashboard() -> None:
                 "tournament": "Tournament",
                 "dir_disp": st.column_config.TextColumn(
                     "Trade", help="Every leg is the SAME side: Buy YES on all (underround) or Buy NO on "
-                                  "all (overround). Covers 2-way match/game books AND 3-way soccer games."),
+                                  "all (overround). Covers 2-way match/game books, 3-way soccer games, and "
+                                  "tournament-winner fields (overround on the priceable subset)."),
                 "plan": st.column_config.TextColumn(
                     "Plan (all legs)", help="Buy every listed leg the same side; the gross gap holds "
                                             "whichever single outcome wins, under normal settlement."),

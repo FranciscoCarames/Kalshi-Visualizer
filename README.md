@@ -62,9 +62,16 @@ Two directions, both expressed as pairs of BUYS (never "sell"):
 The two directions are mutually exclusive (`bid ≤ ask` always), so at most one fires per event. All
 comparisons are exact integer cents. Status `EXECUTABLE_DUTCH_BOOK`; its own dashboard section.
 
-**Sport coverage:** tennis matches + NBA/WNBA playoff series + NBA/WNBA per-game (`KX*GAME`) books.
-Props, winner fields, and advancement markets are not 2-outcome MECE → excluded. Unknown series are
-always excluded.
+Beyond the 2-outcome case the module also covers **soccer 3-way games** (Home/Away/Tie, both directions)
+and **tournament-winner fields** (≥3 "win the tournament" markets). A winner field is mutually exclusive
+(one champion) but not provably exhaustive, so it is **overround-only**: Buy NO on the priceable subset of
+entrants, which is safe because an untraded or unlisted winner only pays more (floor `(k−1)×100¢` for the
+`k` legs bought, `gap = Σ yes_bid(subset) − 100`). Empty-book longshots are skipped; many legs are illiquid
+so these are often only partly fillable.
+
+**Sport coverage:** tennis matches + NBA/WNBA playoff series + NBA/WNBA per-game (`KX*GAME`) + soccer 3-way
+games + tournament-winner fields (all sports). Props and advancement markets are excluded. Unknown series
+are always excluded.
 
 ---
 
@@ -216,8 +223,8 @@ The synthetic exact-score bundle is hedged two ways — against the **match-winn
 **advance / win-tournament** market the match implies (winning a quarterfinal ≡ reaching the semifinal),
 emitted independently and review-only.
 
-Remaining (not yet built): follow-on detectors (n-outcome FIELDs) and known-limits documentation
-(net-of-fees, position limits, full-depth execution).
+Remaining (not yet built): the advancement-field detector (n-outcome reach-a-stage fields) and
+known-limits documentation (net-of-fees, position limits, full-depth execution).
 
 ---
 
