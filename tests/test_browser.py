@@ -94,3 +94,17 @@ async def test_detail_and_diagnostics_sections_render(user: User, seeded_db) -> 
     await user.should_see("Category honesty")                # diagnostics content rendered (Labels)
     await user.should_see("Sum of independent row maxima")   # the honest metric label
     await user.should_see("Full diagnostics")                # the full-diagnostics AG-Grid section header
+
+
+# --- UX defaults (PR S5) --------------------------------------------------------------
+@pytest.mark.nicegui_main_file(MAIN)
+async def test_ux_defaults_render(user: User, seeded_db) -> None:
+    """The Dark mode toggle, the row-selection tip, and the Blocked toggle (hidden by default) render. The
+    selected-row highlight + the resolution-criteria expansion need a real row-click selection, which the
+    headless User can't drive — manual checks (docs/RELEASE_CHECKLIST.md)."""
+    _seed(seeded_db, [_actionable_opp()],
+          frames=[{"sport": "tennis", "frame_type": "contracts", "schema_version": 1, "rows": _contracts()}])
+    await user.open("/")
+    await user.should_see("Dark mode")                       # PR S5 theme toggle
+    await user.should_see("click any row to open its full breakdown")  # selection-hint copy
+    await user.should_see("Blocked")                         # toggle still present (default off)
