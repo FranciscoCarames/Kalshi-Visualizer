@@ -41,7 +41,12 @@ Before committing (same steps as CLAUDE.md, but use `python -m streamlit`):
 
 ```bash
 pytest -q
-python -m py_compile config.py kalshi_client.py data.py consistency.py filters.py viz.py app.py
+python -m py_compile config.py kalshi_client.py data.py consistency.py filters.py viz.py app.py serve.py api.py
 ruff check .
 python -m streamlit run app.py --server.headless true --server.port 8765  # then check /_stcore/health
+python serve.py  # on a NON-default port; then GET /healthz, /readyz, /metrics
 ```
+
+For the LAN deploy artifact, also smoke the builder: `python scripts/build_deploy_repo.py <tmp>
+--no-pip-compile` then `cd <tmp> && PYTHONPATH=. python -c "import serve, api, webui.dashboard"` (the
+import-graph allowlist must be complete). `serve.py` on a non-default port — never touch the shared `:8000`.

@@ -153,7 +153,7 @@ Rather than a single implied probability, each row exposes:
 | `filters.py` | `apply_membership` (tournament/family/layer/event/participant/volume) + `apply_thresholds` (size/quote/status) (no Streamlit) |
 | `viz.py` | `payoff_chart_data` + `ladder_prices` — tidy chart frames (no Streamlit) |
 | `app.py` | Streamlit UI: sidebar controls, auto-refresh fragment, dashboard sections, charts |
-| `tests/` | ~158 pytest unit tests covering all pure-logic layers (no network required) |
+| `tests/` | ~480 pytest tests — pure-logic layers, the in-process engine + REST API, and headless NiceGUI smoke (no network) |
 
 `data.py`, `consistency.py`, `dutchbook.py`, `sports.py`, `glossary.py`, `filters.py`, and `viz.py`
 are **Streamlit-free** and independently testable.
@@ -172,9 +172,14 @@ python serve.py                          # FastAPI + NiceGUI dashboard at /, RES
 ```
 
 The app opens in your browser. Auto-refresh is on by default (120 s interval; configurable in the
-sidebar). Data is public — no API key required. The REST API also serves `/coverage` and a low-cardinality
-`/metrics` (scan counters + heartbeat) for monitoring. `POST /scan` triggers a scan; on a LAN, set
-`SCAN_TOKEN` to require an `X-Scan-Token` header on it (off by default — see `docs/DEPLOYMENT.md`).
+sidebar). Data is public — no API key required. The REST API serves `/healthz` (liveness), **`/readyz`**
+(readiness — `ready`/`degraded`/`not_ready`: DB writable + a fresh snapshot), `/coverage`, and a
+low-cardinality `/metrics` (scan counters + heartbeat) for monitoring. `POST /scan` triggers a scan (the
+dashboard's own "Scan now" button is non-force — it respects the refresh TTL); on a LAN, set `SCAN_TOKEN`
+to require an `X-Scan-Token` header on `POST /scan` (off by default). `SNAPSHOT_DB_PATH` points the
+snapshot store at a writable path. For office-LAN hosting, `scripts/build_deploy_repo.py` builds a clean
+runtime-only deploy artifact and `deploy/` ships the systemd + scan-timer + `scan.sh` templates — see
+`docs/DEPLOYMENT.md`.
 
 ## Tests
 
@@ -189,7 +194,8 @@ ruff check .                             # lint
 
 Verify without a browser: `pytest -q`; `python -c "import app, serve"`; a headless Streamlit boot
 (`streamlit run app.py --server.headless true --server.port 8765` → `/_stcore/health` 200) and a `serve.py`
-boot (`GET /` and `/metrics` → 200). See `docs/RELEASE_CHECKLIST.md` for the full pre-ship checklist.
+boot (`GET /`, `/healthz`, `/metrics` → 200 and `/readyz` → ready/degraded). See
+`docs/RELEASE_CHECKLIST.md` for the full pre-ship checklist.
 
 ---
 
@@ -210,10 +216,13 @@ as a misleading number.
 
 ## Architecture (shipped) & roadmap
 
-The engine was migrated behind a **FastAPI** back-end (typed REST API: `/opportunities`, `/coverage`,
-`/metrics`, `/scan`, `/alerts`, …) with a **NiceGUI** opportunity-first dashboard mounted on the same
-server (`serve.py`). A SQLite **snapshot store** persists each scan (opportunities + per-sport evidence
-frames); a **ScanManager** singleflights scans behind a non-blocking `POST /scan`. The dashboard surfaces
+The engine was migrated behind a **FastAPI** back-end (typed REST API: `/healthz`, `/readyz`,
+`/opportunities`, `/coverage`, `/metrics`, `/scan`, `/alerts`, …) with a **NiceGUI** opportunity-first
+dashboard mounted on the same server (`serve.py`), hardened for office-LAN hosting (readiness probe,
+env-driven DB path, non-force manual scan, a Linux-first runbook, and a clean deploy-repo builder +
+`deploy/` systemd templates). A SQLite **snapshot store** persists each scan (opportunities + per-sport
+evidence frames); a **ScanManager** singleflights scans behind a non-blocking `POST /scan`. The dashboard
+surfaces
 ranked Actionable / Review / Blocked sections, a participant-detail panel, a diagnostics/debug section with
 AG-Grids, truthful empty states, snapshot export, and live freshness — all reading the engine in-process.
 The Streamlit app (`app.py`) is still shipped alongside it. See [`docs/ROADMAP.md`](docs/ROADMAP.md) for
