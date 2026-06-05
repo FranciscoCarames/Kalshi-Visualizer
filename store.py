@@ -501,3 +501,32 @@ def snapshots_since(window: Any, db_path: str | None = None) -> list[dict[str, A
         return _load(conn, "WHERE fetched_ts >= ? ORDER BY fetched_ts ASC, id ASC", (cutoff,))
     finally:
         conn.close()
+
+
+def contract_frames_since(window: Any, db_path: str | None = None) -> list[dict[str, Any]]:
+    """The CONTRACT-frame rows for each snapshot within `window` of the newest, oldest -> newest, for the
+    snapshots that still RETAIN frames (heavy frames are kept only for the latest N — `frame_status`).
+    Returns ``[{snapshot_id, fetched_ts, rows}]`` with `rows` the contracts rows concatenated across
+    sports. A lightweight blob scan (bounded by frame retention) for the 'most volatile now' message —
+    NOT a time-series store. Empty when nothing within the window still has contract frames."""
+    seconds = window.total_seconds() if isinstance(window, timedelta) else float(window)
+    conn = _connect(db_path)
+    try:
+        newest = conn.execute("SELECT MAX(fetched_ts) AS m FROM snapshots").fetchone()["m"]
+        if newest is None:
+            return []
+        rows = conn.execute(
+            "SELECT s.id AS sid, s.fetched_ts AS ts, f.rows_json AS rj FROM snapshot_frames f "
+            "JOIN snapshots s ON s.id = f.snapshot_id "
+            "WHERE f.frame_type = 'contracts' AND s.fetched_ts >= ? "
+            "ORDER BY s.fetched_ts ASC, s.id ASC, f.rowid ASC", (newest - seconds,)).fetchall()
+    finally:
+        conn.close()
+    out: list[dict[str, Any]] = []
+    for r in rows:
+        parsed = json.loads(r["rj"])
+        if out and out[-1]["snapshot_id"] == r["sid"]:     # same snapshot, another sport's frame
+            out[-1]["rows"].extend(parsed)
+        else:
+            out.append({"snapshot_id": r["sid"], "fetched_ts": r["ts"], "rows": list(parsed)})
+    return out

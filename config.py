@@ -135,6 +135,9 @@ SNAPSHOT_BUSY_TIMEOUT_MS = 5000
 # evidence is evicted ("evidence expired"). Tune once PR 21 lets us measure real frame sizes.
 SNAPSHOT_FRAME_RETENTION_N = 12                      # keep heavy frames for the latest 12 snapshots
 SNAPSHOT_FRAME_DB_BUDGET_BYTES = 500 * 1024 * 1024   # hard cap on retained frame data (~500 MB)
+# Lookback for the "most volatile now" message (#12b). Actual span is bounded by frame retention above
+# (the latest N snapshots' contract frames); this just widens the candidate window + labels the wording.
+VOLATILITY_WINDOW_SECONDS = 15 * 60
 
 # --- Lifecycle (Stage 3 — alerts + recently-actionable backlog) ----------------------
 # Recently-actionable backlog windows (§10): label -> seconds. "This session" is a sentinel the app

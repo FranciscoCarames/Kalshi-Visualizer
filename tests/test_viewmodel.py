@@ -219,6 +219,24 @@ def test_liquidity_leader_picks_deepest_two_sided_active():
     assert vm.liquidity_leader([contracts[2], contracts[3]]) is None           # only finalized/empty -> None
 
 
+# --- "most volatile now" (#12b) ----------------------------------------------------------------------
+def test_volatility_leader_max_mid_delta_two_sided():
+    frames = [
+        {"fetched_ts": 0, "rows": [
+            {"market_ticker": "X", "player": "P", "contract": "Beat", "yes_bid_c": 40, "yes_ask_c": 42},
+            {"market_ticker": "Y", "yes_bid_c": 10, "yes_ask_c": 12}]},
+        {"fetched_ts": 120, "rows": [
+            {"market_ticker": "X", "player": "P", "contract": "Beat", "yes_bid_c": 58, "yes_ask_c": 60},  # 41->59 = 18
+            {"market_ticker": "Y", "yes_bid_c": 11, "yes_ask_c": 13}]},                                   # 11->12 = 1
+    ]
+    msg = vm.volatility_leader(frames)
+    assert msg and "moved 18¢" in msg and "2 obs" in msg and "Beat" in msg     # X is the most volatile
+    assert "unavailable" in vm.volatility_leader([frames[0]])                   # <2 frames -> truthful note
+    flat = [{"fetched_ts": 0, "rows": [{"market_ticker": "Z", "yes_bid_c": 0, "yes_ask_c": 100}]},
+            {"fetched_ts": 60, "rows": [{"market_ticker": "Z", "yes_bid_c": 0, "yes_ask_c": 100}]}]
+    assert "unavailable" in vm.volatility_leader(flat)                          # empty 0/100 books -> no mid
+
+
 # --- participant detail builders (PR 24) — pure over a single participant's contract rows ----------
 import consistency  # noqa: E402  — used by the payoff-chart test
 
