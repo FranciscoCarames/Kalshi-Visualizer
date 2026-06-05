@@ -189,8 +189,11 @@ SCAN_HTTP_WINDOW_SECONDS = 60
 # serve.py, which may import os); this is only a clearly-labeled dev-only fallback. (config stays
 # import-free per the project convention, so the env read lives in serve.py, not here.)
 NICEGUI_STORAGE_SECRET_FALLBACK = "dev-only-not-a-secret-set-NICEGUI_STORAGE_SECRET-in-prod"
-UI_REFRESH_SECONDS = 10   # NiceGUI poll cadence for re-reading the STORE (cheap re-render, NOT a fetch) —
-                          # low so a fresh snapshot surfaces quickly once the auto-scan writes it.
+UI_POLL_SECONDS = 1       # dashboard poll cadence (P2): a cheap `store.latest_snapshot_id()` probe that
+                          # re-reads + re-renders ONLY when a new snapshot lands, so a completed scan
+                          # surfaces to every browser within ~1s. Idle ticks do almost nothing.
+UI_REFRESH_SECONDS = 10   # legacy heavy timed-rebuild cadence (pre-P2). Superseded by UI_POLL_SECONDS;
+                          # kept for compatibility / any external reference.
 
 # --- In-process auto-scan scheduler (scan_scheduler.py) -------------------------------
 # A single process-wide background loop that triggers the NON-force scan on a timer, so `python serve.py`

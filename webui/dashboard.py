@@ -125,7 +125,13 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
     # Compact URL state -> initial control values (validated against the snapshot in `_seed`).
     query = {"sport": sport, "tournament": tournament, "participant": participant,
              "min_size": min_size, "active": active}
-    state: dict[str, Any] = {"opps": {}, "seen_new": set(), "first": True, "options": {}}
+    # `opps` = id->opp (selection lookup); `opps_list` = the ranked list (for filtering/rerender);
+    # `rendered_snapshot_id` = the snapshot the UI currently reflects (the poll's change-guard);
+    # `new_ids`/`backlog`/`cov` are snapshot-scoped data the in-memory rerender reads without touching
+    # the store. (P2: store reads happen in reload_data; rerender is pure in-memory.)
+    state: dict[str, Any] = {"opps": {}, "opps_list": [], "seen_new": set(), "new_ids": set(),
+                             "first": True, "options": {}, "cov": {}, "backlog": [],
+                             "rendered_snapshot_id": "__unseeded__"}
 
     ui.label("🎯 Kalshi opportunity engine — cross-sport").classes("text-2xl font-bold")
     ui.label("Opportunities across all sports, ranked best→worst. Core series, gross of fees — "
@@ -363,7 +369,8 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         detail_box = ui.column().classes("w-full")
 
     # Diagnostics & debug (PR 25b) — observability over the STORED snapshot (no fetch); collapsed by default.
-    with ui.expansion("🔧 Diagnostics & debug").classes("w-full"):
+    diagnostics_expansion = ui.expansion("🔧 Diagnostics & debug").classes("w-full")
+    with diagnostics_expansion:
         diagnostics_box = ui.column().classes("w-full")
 
     changed = ui.label().classes("text-sm text-orange-700")
@@ -387,7 +394,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
     def _clear_filters() -> None:
         sport_sel.value, tour_sel.value, participant_in.value = [], [], ""
         min_size_in.value, active_sw.value = None, False
-        refresh()
+        rerender()        # membership filters are in-memory — no store read needed
 
     def _sync_url(filters: dict[str, Any]) -> None:
         q = vm.query_from_state(filters)
@@ -455,18 +462,66 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             else:
                 ui.label("Every loaded contract maps to a ladder.").classes("text-sm text-gray-500")
 
-    # --- refresh (poll the store; re-render only — NEVER fetches) ---
-    def refresh() -> None:
-        tz = tz_select.value
-        cov = engine.coverage()
-        opps = engine.latest_opportunities()
+    # --- data load vs render split (P2) -------------------------------------------------------------
+    # reload_data(): the ONLY path that touches the store — offloaded via run.io_bound so it never blocks
+    # the event loop; runs on a new snapshot (poll), a scan, first load, or a store-parameterized control.
+    # rerender(): pure in-memory re-filter + push to the VISIBLE tables — no store access. poll(): a cheap
+    # 1s tick that reloads ONLY when a new snapshot id lands. This makes filter changes instant (in-memory)
+    # and a completed scan surface within ~1s, with idle ticks doing almost nothing.
+    def _read_bundle(persist_s: float | None, win_s: float) -> dict[str, Any]:
+        """All store reads for one render (snapshot + persistence-scoped alerts + windowed backlog),
+        gathered off the event loop. Pure reads — NO UI here. (Engine reads share the P1 latest-snapshot
+        cache, so concurrent clients deserialize a given snapshot once.)"""
+        return {"cov": engine.coverage(), "opps": engine.latest_opportunities(),
+                "alerts": engine.alerts(persist_s), "backlog": engine.backlog(win_s)}
+
+    def _read_args() -> tuple:
+        win_s = config.BACKLOG_WINDOWS[window_select.value]
+        return (config.ALERT_PERSISTENCE_OPTIONS[persist_select.value],
+                win_s if win_s is not None else config.SNAPSHOT_RETENTION_SECONDS)
+
+    def _apply_bundle(bundle: dict[str, Any]) -> None:
+        """Push a freshly-read store bundle into `state` + the snapshot-scoped UI (select options, alert
+        banner), then rerender. A snapshot change forces a diagnostics rebuild (per-filter rerenders do
+        not — that's the expensive path we keep off the hot loop). Sync, so the first paint (`_seed`) and
+        the async `reload_data` share one code path."""
+        cov, opps, al = bundle["cov"], bundle["opps"], bundle["alerts"]
+        state["cov"] = cov
+        state["opps_list"] = opps
         state["opps"] = {o.get("opportunity_id"): o for o in opps}
         state["options"] = vm.derive_options(opps)
+        state["backlog"] = bundle["backlog"]
         sport_sel.options = state["options"]["sports"]
         tour_sel.options = state["options"]["tournaments"]
         sport_sel.update()
         tour_sel.update()
+        # New-actionable toast + banner + blocked-change label (alerts are snapshot/persistence scoped).
+        new_ids = {r.get("opportunity_id") for r in al["new_actionable"]}
+        fresh = new_ids - state["seen_new"]
+        if fresh and not state["first"]:
+            ui.notify(f"🆕 {len(fresh)} newly actionable", type="positive")
+        state["seen_new"] = new_ids
+        state["new_ids"] = new_ids
+        state["first"] = False
+        banner.set_text(f"🆕 {len(new_ids)} newly actionable" if new_ids else "")
+        n_ch = len(al["blocked_changes"])
+        changed.set_text(f"🔁 {n_ch} changed while blocked" if n_ch else "")
+        state["rendered_snapshot_id"] = cov.get("snapshot_id")
+        rerender(force_diagnostics=True)
 
+    async def reload_data() -> None:
+        bundle = await run.io_bound(_read_bundle, *_read_args())   # store I/O off the event loop
+        _apply_bundle(bundle)
+
+    def rerender(force_diagnostics: bool = False) -> None:
+        """Pure in-memory re-render from `state` — NO store access. Re-filter + push only the VISIBLE
+        tables; refresh empty-state / chips / URL / freshness. Diagnostics (heavy store reads) rebuild
+        ONLY on a snapshot change (`force_diagnostics`, set by `_apply_bundle`) or while its expander is
+        open — never on an ordinary filter-change rerender."""
+        tz = tz_select.value
+        opps = state.get("opps_list") or []
+        new_ids = state.get("new_ids") or set()
+        cov = state.get("cov") or {}
         filters = _current_filters()
         view = vm.filter_opps(opps, **filters)
         # Truthful empty state by scope (PR 26a): no-scan / scanning / scan-failed / no-opportunities /
@@ -475,17 +530,6 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                              scan_status=engine.scan_status())
         empty.set_text(msg or "")
         empty.set_visibility(msg is not None)
-
-        al = engine.alerts(config.ALERT_PERSISTENCE_OPTIONS[persist_select.value])
-        new_ids = {r.get("opportunity_id") for r in al["new_actionable"]}
-        fresh = new_ids - state["seen_new"]
-        if fresh and not state["first"]:
-            ui.notify(f"🆕 {len(fresh)} newly actionable", type="positive")
-        state["seen_new"] = new_ids
-        state["first"] = False
-        banner.set_text(f"🆕 {len(new_ids)} newly actionable" if new_ids else "")
-        n_ch = len(al["blocked_changes"])
-        changed.set_text(f"🔁 {n_ch} changed while blocked" if n_ch else "")
 
         actionable.rows = [vm.opp_row(o, new_ids) for o in view if o.get("bucket") == "actionable"]
         review.rows = [vm.opp_row(o, new_ids) for o in view if o.get("bucket") == "review_signal"]
@@ -511,9 +555,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         nm_table.set_visibility(nm_switch.value)
         nm_max_over.set_enabled(nm_switch.value)
 
-        win_s = config.BACKLOG_WINDOWS[window_select.value]
-        bl = engine.backlog(win_s if win_s is not None else config.SNAPSHOT_RETENTION_SECONDS)
-        backlog.rows = [vm.backlog_row(b, tz) for b in bl]
+        backlog.rows = [vm.backlog_row(b, tz) for b in (state.get("backlog") or [])]
 
         # scope banner (with the PR 21a counters) + filter chips + URL state
         freshness.set_text(vm.scope_banner(cov, tz))
@@ -522,14 +564,20 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             for chip in vm.active_filter_chips(filters, state["options"]):
                 ui.badge(chip).props("color=grey-7")
         _sync_url(filters)
-        render_diagnostics(view)
-        state["cov"] = cov
+        if force_diagnostics or diagnostics_expansion.value:   # heavy (store reads): snapshot change or open
+            render_diagnostics(view)
+
+    async def poll() -> None:
+        """Cheap 1s tick: reload + rerender ONLY when a new snapshot id has landed. Otherwise this is a
+        single indexed id query and nothing else — no deserialize, no WebSocket push (kills idle jank)."""
+        if engine.latest_snapshot_id() != state.get("rendered_snapshot_id"):
+            await reload_data()
 
     def _seed() -> None:
-        """First load: derive options from the snapshot, then seed the controls from the URL query with a
-        graceful reset of any sport/tournament not present in the current snapshot."""
-        opps = engine.latest_opportunities()
-        options = vm.derive_options(opps)
+        """First load: seed the controls from the URL query (graceful reset of any sport/tournament absent
+        from the snapshot), then do a SYNCHRONOUS first paint so the page renders immediately (no blank
+        flash). Runs BEFORE the value-change handlers are bound, so setting these values fires no render."""
+        options = vm.derive_options(engine.latest_opportunities())
         sport_sel.options = options["sports"]
         tour_sel.options = options["tournaments"]
         seeded = vm.state_from_query(query, options=options)
@@ -538,14 +586,14 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         participant_in.value = seeded.get("participant", "")
         min_size_in.value = seeded.get("min_size")
         active_sw.value = bool(seeded.get("active_only"))
-        refresh()
+        _apply_bundle(_read_bundle(*_read_args()))   # synchronous first paint (page-build thread)
 
     async def do_scan() -> None:
         scan_btn.disable()        # stale-while-scanning: only the Scan button is disabled; filters keep working
         n = ui.notification("Scanning (core series)…", spinner=True, timeout=None)
         try:
             st = await run.io_bound(engine.run_scan_now)    # NON-force (PR S3); network I/O off the event loop
-            refresh()
+            await reload_data()                              # surface the new snapshot immediately for this client
             status = st.get("status")
             if status == "done":
                 cov = st.get("last_result") or {}
@@ -590,16 +638,21 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
 
     scan_btn.on_click(do_scan)
     export_btn.on_click(do_export)
-    # Every control re-renders from the stored snapshot — none of them fetches.
-    for ctrl in (tz_select, persist_select, window_select, show_ids, sport_sel, tour_sel,
-                 participant_in, min_size_in, active_sw, show_review_sw, show_blocked_sw,
-                 rb_switch, rb_max_loss, rb_min_ratio, nm_switch, nm_max_over):
-        ctrl.on_value_change(lambda _=None: refresh())
+    _seed()        # set control values from the URL BEFORE binding handlers (so seeding fires no render)
+
+    # Filter / display controls re-render PURELY in-memory from the cached snapshot (no store, no fetch).
+    for ctrl in (tz_select, show_ids, sport_sel, tour_sel, participant_in, min_size_in, active_sw,
+                 show_review_sw, show_blocked_sw, rb_switch, rb_max_loss, rb_min_ratio,
+                 nm_switch, nm_max_over):
+        ctrl.on_value_change(lambda _=None: rerender())
+    diagnostics_expansion.on_value_change(lambda _=None: rerender())   # render diagnostics when opened
+    # Alert-persistence + backlog-window parameterize STORE reads, so they go through reload_data.
+    for ctrl in (persist_select, window_select):
+        ctrl.on_value_change(lambda _=None: reload_data())
 
     def tick_age() -> None:
         # Re-render only the freshness/scope line each second (scope_banner recomputes the age live).
         freshness.set_text(vm.scope_banner(state.get("cov"), tz_select.value))
 
-    _seed()
-    ui.timer(config.UI_REFRESH_SECONDS, refresh)
+    ui.timer(config.UI_POLL_SECONDS, poll)        # snapshot-change watcher (cheap; reloads only on a new id)
     ui.timer(1.0, tick_age)
