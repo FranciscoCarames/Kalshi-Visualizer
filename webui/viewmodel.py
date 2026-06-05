@@ -352,6 +352,35 @@ def rank_opps(opps: Iterable[dict[str, Any]] | None, mode: str = RANK_MODE_DEFAU
     return out
 
 
+# --- "most liquid right now" (#12a) — over the stored CONTRACT rows (opportunities lack size/spread) ---
+def liquidity_leader(contracts: Iterable[dict[str, Any]] | None) -> str | None:
+    """A one-line message naming the single most liquid market RIGHT NOW, or None when nothing has a real
+    two-sided quote. Liquidity is top-of-book depth + tightness: the score is `min(bid_size, ask_size)`
+    (the depth you can actually trade on the thinner side), then a tighter spread, then all-time volume as
+    a last tiebreak. Only `active` markets with a genuine two-sided book (bid>0, ask<100, both sizes>0)
+    qualify, so a finalized / no-quote / one-sided book never wins."""
+    best = None
+    for c in contracts or []:
+        if str(c.get("status") or "") != "active":
+            continue
+        bid_sz, ask_sz = _num_or_none(c.get("yes_bid_size")), _num_or_none(c.get("yes_ask_size"))
+        bid_c, ask_c = _num_or_none(c.get("yes_bid_c")), _num_or_none(c.get("yes_ask_c"))
+        spread = _num_or_none(c.get("spread_cents"))
+        if not bid_sz or not ask_sz or spread is None:            # need firm size on BOTH sides + a spread
+            continue
+        if bid_c is None or ask_c is None or bid_c <= 0 or ask_c >= 100:   # reject the empty 0/100 book
+            continue
+        key = (min(bid_sz, ask_sz), -spread, _num_or_none(c.get("volume")) or 0)
+        if best is None or key > best[0]:
+            name = c.get("player") or ""
+            contract = c.get("contract") or c.get("market_ticker") or "?"
+            best = (key, f"{name} — {contract}" if name else contract)
+    if best is None:
+        return None
+    (size, neg_spread, _), label = best
+    return f"💧 Most liquid now: {label} — {int(size)} at the touch, {int(-neg_spread)}¢ spread"
+
+
 def derive_options(opps: Iterable[dict[str, Any]]) -> dict[str, Any]:
     """Select options sourced from the loaded snapshot, so a dropdown only offers what's present.
     `sports` is an ``{id: label}`` map (the filter matches the id); `tournaments` a sorted list."""

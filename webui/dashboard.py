@@ -174,7 +174,8 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                              "rendered_snapshot_id": "__unseeded__", "selected": None,
                              # change-signal (#3): per-opp up/down/new/returned vs the PREVIOUS snapshot,
                              # recomputed once per new snapshot; `ever_seen` distinguishes new from returned.
-                             "changes": {}, "ever_seen": set()}
+                             "changes": {}, "ever_seen": set(),
+                             "liquidity_msg": None}    # "most liquid now" (#12a), recomputed per snapshot
 
     ui.add_css(_SELECTED_ROW_CSS)        # selected-row highlight (#14) — see module note
     ui.add_css(_A11Y_CSS)                 # accessibility (#10): focus-visible ring + opt-in larger text
@@ -247,6 +248,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
     chips = ui.row().classes("gap-2 flex-wrap")
 
     freshness = ui.label().classes("text-sm")
+    liquidity = ui.label().classes("text-sm text-blue-700")   # "most liquid now" (#12a)
     banner = ui.label().classes("text-sm font-medium")
 
     # --- explanation panel (row click) ---
@@ -565,7 +567,8 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         gathered off the event loop. Pure reads — NO UI here. (Engine reads share the P1 latest-snapshot
         cache, so concurrent clients deserialize a given snapshot once.)"""
         return {"cov": engine.coverage(), "opps": engine.latest_opportunities(),
-                "alerts": engine.alerts(persist_s), "backlog": engine.backlog(win_s)}
+                "alerts": engine.alerts(persist_s), "backlog": engine.backlog(win_s),
+                "contracts": engine.all_contracts()}     # for the "most liquid now" line (#12a)
 
     def _read_args() -> tuple:
         win_s = config.BACKLOG_WINDOWS[window_select.value]
@@ -594,6 +597,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         state["ever_seen"].update(state["opps"].keys())     # after classify, so 'returned' detection works
         state["options"] = vm.derive_options(opps)
         state["backlog"] = bundle["backlog"]
+        state["liquidity_msg"] = vm.liquidity_leader(bundle["contracts"])   # #12a (snapshot-scoped)
         sport_sel.options = state["options"]["sports"]
         tour_sel.options = state["options"]["tournaments"]
         participant_sel.options = {p["value"]: p["label"] for p in state["options"]["participants"]}
@@ -665,6 +669,9 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
 
         # scope banner (with the PR 21a counters) + filter chips + URL state
         freshness.set_text(vm.scope_banner(cov, tz))
+        liq = state.get("liquidity_msg")          # "most liquid now" (#12a) — snapshot-scoped, display only
+        liquidity.set_text(liq or "")
+        liquidity.set_visibility(bool(liq))
         chips.clear()
         with chips:
             for chip in vm.active_filter_chips(filters, state["options"]):
