@@ -227,6 +227,12 @@ def all_contracts(db_path: str | None = None) -> list[dict[str, Any]]:
     return _all_frame_rows("contracts", db_path)
 
 
+def recent_contract_frames(window_s: float, db_path: str | None = None) -> list[dict[str, Any]]:
+    """Recent per-snapshot contract frames (oldest -> newest) for the 'most volatile now' message (#12b);
+    bounded by the heavy-frame retention. Thin pass-through to the store's windowed blob scan."""
+    return store.contract_frames_since(window_s, db_path=db_path)
+
+
 def category_breakdown(db_path: str | None = None) -> dict[str, Any]:
     """Honest contract-category counts over the latest snapshot's stored contracts frames (all sports):
     non-laddered vs low-confidence vs unsupported as separate axes, plus per-family counts."""

@@ -175,7 +175,8 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                              # change-signal (#3): per-opp up/down/new/returned vs the PREVIOUS snapshot,
                              # recomputed once per new snapshot; `ever_seen` distinguishes new from returned.
                              "changes": {}, "ever_seen": set(),
-                             "liquidity_msg": None}    # "most liquid now" (#12a), recomputed per snapshot
+                             "liquidity_msg": None,    # "most liquid now" (#12a), recomputed per snapshot
+                             "volatility_msg": None}   # "most volatile now" (#12b), recomputed per snapshot
 
     ui.add_css(_SELECTED_ROW_CSS)        # selected-row highlight (#14) — see module note
     ui.add_css(_A11Y_CSS)                 # accessibility (#10): focus-visible ring + opt-in larger text
@@ -249,6 +250,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
 
     freshness = ui.label().classes("text-sm")
     liquidity = ui.label().classes("text-sm text-blue-700")   # "most liquid now" (#12a)
+    volatility = ui.label().classes("text-sm text-purple-700")   # "most volatile now" (#12b)
     banner = ui.label().classes("text-sm font-medium")
 
     # --- explanation panel (row click) ---
@@ -568,7 +570,8 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         cache, so concurrent clients deserialize a given snapshot once.)"""
         return {"cov": engine.coverage(), "opps": engine.latest_opportunities(),
                 "alerts": engine.alerts(persist_s), "backlog": engine.backlog(win_s),
-                "contracts": engine.all_contracts()}     # for the "most liquid now" line (#12a)
+                "contracts": engine.all_contracts(),     # for the "most liquid now" line (#12a)
+                "vol_frames": engine.recent_contract_frames(config.VOLATILITY_WINDOW_SECONDS)}  # #12b
 
     def _read_args() -> tuple:
         win_s = config.BACKLOG_WINDOWS[window_select.value]
@@ -598,6 +601,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         state["options"] = vm.derive_options(opps)
         state["backlog"] = bundle["backlog"]
         state["liquidity_msg"] = vm.liquidity_leader(bundle["contracts"])   # #12a (snapshot-scoped)
+        state["volatility_msg"] = vm.volatility_leader(bundle["vol_frames"])   # #12b (snapshot-scoped)
         sport_sel.options = state["options"]["sports"]
         tour_sel.options = state["options"]["tournaments"]
         participant_sel.options = {p["value"]: p["label"] for p in state["options"]["participants"]}
@@ -672,6 +676,9 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         liq = state.get("liquidity_msg")          # "most liquid now" (#12a) — snapshot-scoped, display only
         liquidity.set_text(liq or "")
         liquidity.set_visibility(bool(liq))
+        vol = state.get("volatility_msg")         # "most volatile now" (#12b) — snapshot-scoped, display only
+        volatility.set_text(vol or "")
+        volatility.set_visibility(bool(vol))
         chips.clear()
         with chips:
             for chip in vm.active_filter_chips(filters, state["options"]):

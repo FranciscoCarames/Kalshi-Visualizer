@@ -381,6 +381,54 @@ def liquidity_leader(contracts: Iterable[dict[str, Any]] | None) -> str | None:
     return f"💧 Most liquid now: {label} — {int(size)} at the touch, {int(-neg_spread)}¢ spread"
 
 
+def _contract_label(c: dict[str, Any]) -> str:
+    name, contract = c.get("player") or "", c.get("contract") or c.get("market_ticker") or "?"
+    return f"{name} — {contract}" if name else contract
+
+
+def _mid(c: dict[str, Any]) -> float | None:
+    """YES midpoint in cents, ONLY for a genuine two-sided book (bid>0, ask<100, bid<=ask); else None
+    (an empty 0/100, one-sided, or crossed book has no meaningful mid)."""
+    bid, ask = _num_or_none(c.get("yes_bid_c")), _num_or_none(c.get("yes_ask_c"))
+    if bid is None or ask is None or bid <= 0 or ask >= 100 or bid > ask:
+        return None
+    return (bid + ask) / 2
+
+
+def volatility_leader(frames: list[dict[str, Any]] | None) -> str | None:
+    """A one-line 'most volatile right now' message over recent CONTRACT frames (oldest->newest, each
+    ``{fetched_ts, rows}``). Per market_ticker, the metric is the largest |Δ mid| between consecutive
+    USABLE (two-sided) observations. Reports the leader with its ACTUAL observation count + the real span
+    (so it never implies continuous sampling). Truthful when there isn't enough history or nothing moved."""
+    frames = list(frames or [])
+    if len(frames) < 2:
+        return "📈 Volatility unavailable yet — need at least two recent scans with order books."
+    series: dict[str, list[tuple[Any, float]]] = {}
+    labels: dict[str, str] = {}
+    for f in frames:
+        ts = f.get("fetched_ts")
+        for c in f.get("rows") or []:
+            mid = _mid(c)
+            tkr = c.get("market_ticker") or ""
+            if mid is None or not tkr:
+                continue
+            series.setdefault(tkr, []).append((ts, mid))
+            labels[tkr] = _contract_label(c)        # last (newest) label wins
+    best = None        # (max_delta_c, obs, ticker)
+    for tkr, obs in series.items():
+        if len(obs) < 2:
+            continue
+        obs.sort(key=lambda x: x[0])
+        max_d = max(abs(obs[i][1] - obs[i - 1][1]) for i in range(1, len(obs)))
+        if best is None or (max_d, len(obs)) > (best[0], best[1]):
+            best = (max_d, len(obs), tkr)
+    if best is None or best[0] == 0:
+        return "📈 Volatility unavailable yet — prices haven't moved across recent scans."
+    max_d, obs, tkr = best
+    span_min = max(1, round((frames[-1]["fetched_ts"] - frames[0]["fetched_ts"]) / 60))
+    return f"📈 Most volatile now: {labels[tkr]} — moved {max_d:.0f}¢ over {obs} obs in ~{span_min} min"
+
+
 def derive_options(opps: Iterable[dict[str, Any]]) -> dict[str, Any]:
     """Select options sourced from the loaded snapshot, so a dropdown only offers what's present.
     `sports` is an ``{id: label}`` map (the filter matches the id); `tournaments` a sorted list."""

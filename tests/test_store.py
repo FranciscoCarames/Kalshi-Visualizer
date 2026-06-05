@@ -473,3 +473,23 @@ def test_no_frames_write_and_unknown_id_are_safe(tmp_path):
     db = _db(tmp_path)
     store.write_snapshot(1000, [_opp("a")], db_path=db)          # no frames kwarg
     assert store.frame_status(999, db_path=db) == "absent"       # unknown id -> safe (no frames anywhere)
+
+
+def _cframe(sport, rows):
+    return {"sport": sport, "frame_type": "contracts", "schema_version": 1, "rows": rows}
+
+
+def test_contract_frames_since_orders_groups_and_windows(tmp_path):
+    db = _db(tmp_path)
+    store.write_snapshot(1000, [_opp("a")], db_path=db, frames=[
+        _cframe("tennis", [{"market_ticker": "T1", "yes_bid_c": 40}]),
+        _cframe("nba", [{"market_ticker": "N1", "yes_bid_c": 10}])])
+    store.write_snapshot(2000, [_opp("a")], db_path=db,
+                         frames=[_cframe("tennis", [{"market_ticker": "T1", "yes_bid_c": 45}])])
+    out = store.contract_frames_since(10 ** 9, db_path=db)
+    assert [f["fetched_ts"] for f in out] == [1000.0, 2000.0]                 # oldest -> newest
+    assert {r["market_ticker"] for r in out[0]["rows"]} == {"T1", "N1"}       # multi-sport grouped per snapshot
+    assert out[1]["rows"][0]["yes_bid_c"] == 45
+    near = store.contract_frames_since(500, db_path=db)                       # newest 2000, cutoff 1500
+    assert [f["fetched_ts"] for f in near] == [2000.0]                        # the old snapshot is outside it
+    assert store.contract_frames_since(10 ** 9, db_path=_db(tmp_path) + "x") == []   # empty store -> []
