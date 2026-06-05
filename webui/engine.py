@@ -184,12 +184,16 @@ def metrics(db_path: str | None = None) -> dict[str, Any]:
         viewer_count=presence.count())
 
 
-def run_scan_now(db_path: str | None = None) -> dict[str, Any]:
-    """Run a fresh scan (core series, all sports) through the shared ScanManager and return its coverage.
-    A MANUAL trigger — `force=True` overrides the TTL (the button means "scan now"), but the singleflight
-    still collapses a button click + a concurrent `POST /scan` to one upstream fetch. Bounded-waits for the
-    result so the button can report counts; returns `{}` if it's still in flight past the bound."""
-    st = scan_manager.manager.trigger(
-        run_fn=_scan_run_fn(fetch_dep()), write_fn=_scan_write_fn, force=True,
+def run_scan_now(db_path: str | None = None, *, force: bool = False) -> dict[str, Any]:
+    """Trigger a scan (core series, all sports) through the shared ScanManager and return its STATUS dict
+    (`status` ∈ idle/in_progress/done/skipped/error, plus `reason` and `last_result`).
+
+    NON-FORCE by default (PR S3): the dashboard "Scan now" button now respects the SAME TTL + budget
+    cooldown as the scheduler and `POST /scan`, so repeated clicks — or many LAN viewers each clicking —
+    can't hammer Kalshi; a click within the TTL window returns `skipped`, not a refetch. The singleflight
+    still collapses a click + a concurrent `POST /scan` into ONE upstream fetch. Force is reachable only via
+    the token-gated `POST /scan?force=true` (there is deliberately no UI force button). Bounded-waits so a
+    completed scan reports counts; a still-running scan returns `in_progress`."""
+    return scan_manager.manager.trigger(
+        run_fn=_scan_run_fn(fetch_dep()), write_fn=_scan_write_fn, force=force,
         wait_timeout=config.SCAN_WAIT_TIMEOUT_SECONDS, db_path=db_path)
-    return st.get("last_result") or {}

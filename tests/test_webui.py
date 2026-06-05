@@ -65,22 +65,44 @@ def test_backlog_and_alerts(tmpdb):
     assert any(c["opportunity_id"] == "x" and c["transitioned"] for c in al["blocked_changes"])
 
 
-def test_run_scan_now_offline(tmpdb, monkeypatch):
-    def _df():
-        def mk(p, k, ask):
-            return {"series": "KXATPMATCH", "event_ticker": "EV", "kind": "match", "player": p,
-                    "player_key": k, "contract": f"Beat ({p})", "tournament": "T", "tour": "ATP",
-                    "yes_bid_c": ask - 2, "yes_ask_c": ask, "no_ask_c": None, "yes_bid_size": 100,
-                    "yes_ask_size": 100, "quote_quality": "Tight", "status": "active",
-                    "market_ticker": f"T-{k}", "kalshi_url": "", "event_title": "M", "time_value": None}
-        return pd.DataFrame([mk("A", "ka", 45), mk("B", "kb", 48)])
+def _two_way_stub():
+    """A 2-market underround stub fetch (one actionable dutch book) — no network."""
+    def mk(p, k, ask):
+        return {"series": "KXATPMATCH", "event_ticker": "EV", "kind": "match", "player": p,
+                "player_key": k, "contract": f"Beat ({p})", "tournament": "T", "tour": "ATP",
+                "yes_bid_c": ask - 2, "yes_ask_c": ask, "no_ask_c": None, "yes_bid_size": 100,
+                "yes_ask_size": 100, "quote_quality": "Tight", "status": "active",
+                "market_ticker": f"T-{k}", "kalshi_url": "", "event_title": "M", "time_value": None}
+    df = pd.DataFrame([mk("A", "ka", 45), mk("B", "kb", 48)])
 
     def stub(sport_id):
-        return (_df(), "fa", [], 2, 2, 0, 0) if sport_id == "tennis" else (pd.DataFrame(), "fa", [], 1, 0, 0, 0)
-    monkeypatch.setattr(engine, "fetch_dep", lambda: stub)   # no network
-    cov = engine.run_scan_now()
+        return (df, "fa", [], 2, 2, 0, 0) if sport_id == "tennis" else (pd.DataFrame(), "fa", [], 1, 0, 0, 0)
+    return stub
+
+
+def test_run_scan_now_offline(tmpdb, monkeypatch):
+    monkeypatch.setattr(engine, "fetch_dep", lambda: _two_way_stub())   # no network
+    st = engine.run_scan_now()                               # NON-force; empty tmpdb -> the first scan runs
+    assert st["status"] == "done"
+    cov = st["last_result"]
     assert cov["scanned"] >= 2 and cov["fetched_at"]
     assert engine.latest_opportunities()                     # something was persisted
+
+
+def test_run_scan_now_non_force_skips_within_ttl(tmpdb, monkeypatch):
+    """PR S3: the default (non-force) button respects the TTL — a click right after a scan does NOT refetch
+    (returns `skipped`), so many LAN viewers clicking can't hammer Kalshi."""
+    monkeypatch.setattr(engine, "fetch_dep", lambda: _two_way_stub())
+    assert engine.run_scan_now()["status"] == "done"         # first scan runs
+    second = engine.run_scan_now()                           # immediately again, non-force
+    assert second["status"] == "skipped" and second["reason"] == "ttl"
+
+
+def test_run_scan_now_force_overrides_ttl(tmpdb, monkeypatch):
+    """Force (the token-gated admin path) still bypasses the TTL."""
+    monkeypatch.setattr(engine, "fetch_dep", lambda: _two_way_stub())
+    assert engine.run_scan_now()["status"] == "done"
+    assert engine.run_scan_now(force=True)["status"] == "done"   # force re-runs despite the TTL
 
 
 def test_dashboard_imports_and_registers_page():

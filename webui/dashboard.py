@@ -508,11 +508,28 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         scan_btn.disable()        # stale-while-scanning: only the Scan button is disabled; filters keep working
         n = ui.notification("Scanning (core series)…", spinner=True, timeout=None)
         try:
-            cov = await run.io_bound(engine.run_scan_now)   # network I/O off the event loop
+            st = await run.io_bound(engine.run_scan_now)    # NON-force (PR S3); network I/O off the event loop
             refresh()
-            n.message = f"Scan done · {cov.get('scanned')} series · {cov.get('failed')} failed"
+            status = st.get("status")
+            if status == "done":
+                cov = st.get("last_result") or {}
+                n.message = f"Scan done · {cov.get('scanned')} series · {cov.get('failed')} failed"
+                n.type = "positive"
+            elif status == "in_progress":
+                n.message = "A scan is already in progress — the latest data will appear when it finishes."
+                n.type = "info"
+            elif status == "skipped":
+                reason = "data is already fresh" if st.get("reason") == "ttl" else (st.get("reason") or "skipped")
+                n.message = f"Skipped — {reason}."
+                n.type = "info"
+            elif status == "error":
+                cov = st.get("last_result") or {}
+                n.message = f"Scan failed: {cov.get('error', 'unknown error')}"
+                n.type = "negative"
+            else:
+                n.message = "Scan triggered."
+                n.type = "info"
             n.spinner = False
-            n.type = "positive"
         finally:
             n.dismiss()
             scan_btn.enable()
