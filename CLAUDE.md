@@ -4,13 +4,14 @@ Guidance for **Claude Code** working in this repository. Self-contained — read
 
 ## Project
 
-A small, **read-only** Streamlit **trader dashboard** over live [Kalshi](https://kalshi.com)
-prediction-market data for **tennis (ATP/WTA), NBA, WNBA, golf, soccer, MLB, and NHL**. It surfaces **executable
-inconsistencies** across a participant's related contracts (a deeper outcome must not price above a
-prerequisite that contains it) and **dutch-book arbitrage** on 2-outcome MECE events, framed as
-buy-only opportunities (**Buy YES / Buy NO**), split into Actionable / Blocked / Near-edge sections
-with collapsed diagnostics, per-player detail, and debug. Auto-refreshes on a timer under a
-process-wide rate throttle.
+A small, **read-only** **NiceGUI trader dashboard** (on FastAPI, via `serve.py`) over live
+[Kalshi](https://kalshi.com) prediction-market data for **tennis (ATP/WTA), NBA, WNBA, golf, soccer,
+MLB, and NHL**. It surfaces **executable inconsistencies** across a participant's related contracts (a
+deeper outcome must not price above a prerequisite that contains it) and **dutch-book arbitrage** on
+2-outcome MECE events, framed as buy-only opportunities (**Buy YES / Buy NO**), split into Actionable /
+Blocked / Near-edge sections with collapsed diagnostics, per-player detail, and debug. Auto-refreshes on
+a timer under a process-wide rate throttle. (The legacy Streamlit `app.py` was **retired** — NiceGUI is
+the sole UI.)
 
 - **Owner / GitHub:** FranciscoCarames (`franciscocarames1@gmail.com`). Repo `Kalshi-Visualizer` (private), default branch `main`.
 - **Platform:** Windows 11, PowerShell, Python 3.13. (The Bash tool is also available.)
@@ -37,21 +38,19 @@ process-wide rate throttle.
 ## Run & verify
 
 ```bash
-pip install -r requirements.txt          # runtime: streamlit, requests, pandas, fastapi, nicegui, uvicorn
-streamlit run app.py                     # Streamlit UI
+pip install -r requirements.txt          # runtime: requests, pandas, fastapi, nicegui, uvicorn
 python serve.py                          # FastAPI + NiceGUI dashboard (/) + REST API
 pip install -r requirements-dev.txt      # adds pytest, pytest-asyncio, ruff
 pytest -q                                # unit tests for the pure layers + headless NiceGUI smoke (no network)
 ruff check .                             # lint
 ```
 
-To verify without a browser: `pytest -q`; `python -c "import app, serve"`; a headless Streamlit boot —
-`streamlit run app.py --server.headless true --server.port 8765` then check
-`http://localhost:8765/_stcore/health` returns `200`; and a `serve.py` boot — `GET /`, `/healthz`,
-`/metrics` → `200` plus `/readyz` (readiness: `ready`/`degraded`/`not_ready`). The NiceGUI dashboard
-itself has headless browser smoke tests (`tests/test_browser.py`, via
-`nicegui.testing` — no selenium). Live Kalshi calls, `pip`, and `git push` in this environment require
-running the Bash tool with the sandbox disabled (network is otherwise blocked).
+To verify without a browser: `pytest -q`; `python -c "import serve, api, webui.dashboard"`; and a
+`serve.py` boot — `GET /`, `/healthz`, `/metrics` → `200` plus `/readyz` (readiness:
+`ready`/`degraded`/`not_ready`). The NiceGUI dashboard itself has headless browser smoke tests
+(`tests/test_browser.py`, via `nicegui.testing` — no selenium). Live Kalshi calls, `pip`, and
+`git push` in this environment require running the Bash tool with the sandbox disabled (network is
+otherwise blocked).
 
 **NiceGUI dashboard / LAN hosting:** `python serve.py` runs the FastAPI engine API + NiceGUI dashboard on
 one app (default loopback `127.0.0.1:8000`). `API_HOST`/`API_PORT` are env-overridable; binding a
@@ -62,7 +61,7 @@ non-loopback host **requires** `NICEGUI_STORAGE_SECRET` (`serve.bind_safety` fai
 Kalshi call). `SNAPSHOT_DB_PATH` is env-overridable (PR S2 — applied at `serve._apply_snapshot_db_path()`
 startup with a parent-dir check; `config.py` stays import-free). **Deploy artifact:**
 `scripts/build_deploy_repo.py` builds a clean runtime-only repo (import-graph allowlist → no
-Streamlit/tests/docs/state; pinned `requirements.txt`); `deploy/` ships the systemd service + scan
+tests/docs/state; pinned `requirements.txt`); `deploy/` ships the systemd service + scan
 `.timer` + `scan.sh` wrapper (PR D). See `docs/LAN_ACCESS.md` / `docs/DEPLOYMENT.md` (+ `serve_lan.ps1`).
 **`POST /scan` is NON-BLOCKING** (202; PR 21b): a process-local `scan_manager.ScanManager` singleflight
 (shared by `POST /scan` AND `webui.run_scan_now` → one upstream fetch) runs the scan on a background
@@ -151,24 +150,28 @@ filters.py         # NO streamlit: apply_membership (tournament/family/layer/eve
 viz.py             # NO streamlit: payoff_chart_data + ladder_prices (tidy chart frames). NOTE: the
                    #   opportunity_ranking bar chart was REMOVED (Stage 0) — it was misleading; the
                    #   Actionable table is the ranking surface (Stage 2 adds a sortable unified table).
-app.py             # Streamlit ONLY: sidebar controls, auto-refresh fragment, dashboard sections, chart
+serve.py / api.py  # FastAPI engine API + NiceGUI dashboard entrypoint — the SOLE UI (Streamlit retired)
+webui/             # NiceGUI dashboard (dashboard.py) + pure viewmodel.py / diagnostics.py cores
 scripts/           # check_links.py (local link reachability), export_glossary.py (-> docs/GLOSSARY.md)
 docs/GLOSSARY.md   # generated in-depth glossary (also published as a Google Doc)
 tests/             # pytest: test_data, test_consistency, test_dutchbook, test_glossary, test_client,
-                   #   test_filters, test_viz, test_sports, test_app (~158 tests total)
+                   #   test_filters, test_viz, test_sports, test_api, test_webui, … (full suite)
 ```
 
-`sports.py`, `data.py`, `consistency.py`, `glossary.py`, `filters.py`, `viz.py` MUST stay free of Streamlit imports.
+`sports.py`, `data.py`, `consistency.py`, `glossary.py`, `filters.py`, `viz.py` MUST stay free of UI
+imports (no `nicegui`, no `streamlit`) — they are pure logic, independently testable.
 
-- **Fetch by family (do not regress):** `load_contracts(families, scan_all)` fetches ONLY the series
-  whose contract family is enabled (`data.series_for_families`) — **family toggles are the only control
-  that changes what's fetched**. `scan_all` (default ON) widens candidates to all tennis via
-  `discover_tennis_series()`; else `DEFAULT_SERIES`. Tournament/event/participant filters are
-  client-side. Series list cached ttl 3600; contracts cached ttl `config.REFRESH_TTL` (30s).
-- **Auto-refresh (do not regress):** the dashboard renders inside `@st.fragment(run_every=...)` so it
-  re-fetches on a timer (on by default; interval picker, default `REFRESH_DEFAULT_SECONDS`=120s). The
-  fragment re-calls the cache-gated `load_contracts`. Full scan is heavier (~120+ GETs/tick): a warning
-  is shown and the interval is clamped to ≥ `FULL_SCAN_MIN_INTERVAL` (120s).
+- **Fetch by family (do not regress):** the fetch (`fetch.py`, extracted from the old
+  `app.load_contracts`) pulls ONLY the series whose contract family is enabled
+  (`data.series_for_families`) — **family toggles are the only control that changes what's fetched**.
+  The hosted scan path is `api.fetch_dep()` → **core series only** (`scan_all=False`); tournament/event/
+  participant filters are client-side. (`scan_all=True` would widen via `discover_tennis_series()`.)
+- **Auto-refresh (do not regress):** the NiceGUI dashboard refreshes from the persisted snapshot store;
+  a process-local **`scan_manager`/`scan_scheduler`** runs background scans on a timer (on by default —
+  `config.AUTO_SCAN_DEFAULT_ENABLED`, every `AUTO_SCAN_DEFAULT_SECONDS`), and the browser re-reads the
+  latest snapshot on a `ui.timer`. `POST /scan` is non-blocking + singleflight (one upstream fetch shared
+  by the API and the dashboard's "Scan now"). (The retired Streamlit app used an `@st.fragment(run_every)`
+  re-fetch instead.)
 - **Rate limiting (free tier):** Kalshi Basic read ≈ 20 req/s (200 tokens/s ÷ 10/GET; verified at
   docs.kalshi.com/getting_started/rate_limits). `kalshi_client._throttle` caps issuance at
   `config.MAX_RPS` (15, ~75%) via a min-interval limiter; the hard ban floor is `_get`'s exponential
@@ -259,10 +262,10 @@ unchanged 2-way `_detect_pair`; ≤1 finding/event.
   from `BLOCKERS["game_settlement"]` — abnormal resolution like a postponed/abandoned/no-contest game can
   break it). The caveat is advisory: it never changes `tradable_now`/bucket, so a game book can still be
   Actionable.
-- **UI:** `app.py` renders a **dedicated "Dutch-book arbitrage — match books" section** (both legs are the
-  *same* side, so it can't reuse the ladder's Buy-YES-broader/Buy-NO-deeper table). Membership-filtered like
-  the rest; thresholds spare it (like Actionable now). Glossary term "Dutch book" → "Gross edge (¢)" column;
-  the Caveat column shows `settlement_caveat` + `blockers`.
+- **UI:** dutch-book findings flow through `scanner.unified_opportunities` into the NiceGUI dashboard's
+  ranked Actionable/Review/Blocked tables (membership-filtered; thresholds spare Actionable). The Caveat
+  column shows `settlement_caveat` + `blockers`. (Historically the retired Streamlit `app.py` rendered a
+  dedicated "Dutch-book arbitrage — match books" section, since both legs are the *same* side.)
 - **In scope (built):** per-game 2-outcome books (NBA/WNBA `KX*GAME`) — milestone m1.1; soccer 3-way games
   (`_detect_n_way`, milestone m1 soccer); the **N-leg exact-score synthetic bundle** (`synthetic_bundle.py`,
   m5 — see next section); and **tournament-winner FIELDS** (`_detect_field`, PR 27b). A winner field is
@@ -321,8 +324,8 @@ name, which carries the scoreline subtitle).
   `action_1/2_*` backfilled from the first two legs so 2-leg consumers keep working. Routing:
   `STATUS_GROUP["EXECUTABLE_SYNTHETIC_BUNDLE"]="Warning"` + a `bucket_of` branch (review/blocked, since
   `tradable_now="Review rules"` never starts with "Yes").
-- **UI:** NiceGUI `explanation_lines`/leg-links iterate `legs`; `app.py` has a dedicated **"Synthetic-bundle
-  discrepancies — exact-score vs match-winner"** section (membership-filtered). Glossary term "Synthetic
+- **UI:** NiceGUI `explanation_lines`/leg-links iterate `legs`; synthetic-bundle findings route
+  review/blocked in the NiceGUI dashboard tables (membership-filtered). Glossary term "Synthetic
   bundle" → "Bundle (all legs)" column. NaN-safe.
 
 ## Mapping audit & raw ladder spreads
@@ -358,37 +361,32 @@ name, which carries the scoreline subtitle).
   `(player_key, tournament)`, so ladders never mix across tournaments and a fallback never collapses to
   "". `is_french_open_event` survives as a helper, not a gate.
 
-## UI — trader-first dashboard (do not regress the section order)
+## UI — trader-first dashboard (NiceGUI; `webui/dashboard.py`)
 
-**Controls live in `st.sidebar`; main page full width.** Order: Refresh, **Contract family**
-(**default ALL**, read **before** the fetch — *only this control changes what's fetched*), then after
-the fetch: **Tour** (default **Both**), **Tournament** (multiselect, default all), Auto-refresh +
-interval, **Market universe** (one merged **Participant** selectbox — *All* = no filter; a name filters
-the dashboard AND drives the detail section; **Event/game** + **Stage/layer** multiselects),
-**Thresholds** (Min available size, Quote quality, **Market status = Active only by default**),
-**Sections** toggles, and **Advanced — data scope LAST** (Scan-all **default ON** via a session-state
-read-ahead; **Min traded volume**; Show explanations).
+The UI is the **NiceGUI dashboard** mounted on FastAPI via `serve.py` (the Streamlit `app.py` was
+retired). Layout: display + scan controls, a filter row (Sport / Tournament / Participant / Min size /
+Active-only / Review / Blocked toggles), the ranked **Actionable** table, **Review** + **Blocked**
+(toggle-gated), the opt-in **Risk-budget** / **Near-miss** sections, a recently-actionable backlog, a
+click-to-open explanation dialog + selected-participant detail panel, and a collapsed Diagnostics &
+debug expander. `webui/viewmodel.py` (`opp_row`/`filter_opps`/`derive_options`/…) and
+`webui/diagnostics.py` are the pure, testable cores.
 
 **Filter split (critical — do not regress):** `consistency.bucket_of(row)` routes each comparison
-(actionable / blocked / near_edge / display_signal / wide_signal / data_quality / clean). Two passes via
-`filters.py`: `universe = apply_membership(dash_base, …)` (Tour pre-applied to `df`;
-tournament/contract-family/stage-layer/event/participant/min-volume are membership) feeds **Actionable
-now and every section**; `thresholded = apply_thresholds(universe, …)` (min size, quote, **market
-status**) feeds **every section EXCEPT Actionable now**. **Full diagnostics is built from `universe`
-(NOT `thresholded`) + the Outcome-status select**, so **finalized markets stay visible there** even with
-Active-only as the default elsewhere. (Scope: "finalized" here means markets with `status=finalized`
-within events the API still returns as `status=open`. Fully closed events are excluded at the API
-level — `kalshi_client.get_events` passes `status="open"` to Kalshi, so settled past events are not
-in the universe.) Membership runs on comparison rows so it never breaks pairing.
+(actionable / blocked / near_edge / display_signal / wide_signal / data_quality / clean). The same
+two-pass `filters.py` split is reused in `webui/viewmodel.filter_opps`: **membership**
+(sport/tournament/participant/min-volume) narrows **Actionable now and every section**, while
+**thresholds** (min size, quote, **market status**) spare **Actionable now** but gate the others. Full
+diagnostics is built from the membership-filtered set (NOT the thresholded set), so **finalized markets
+stay visible there** even with Active-only as the default elsewhere. (Scope: "finalized" = markets with
+`status=finalized` within events the API still returns as `status=open`; fully closed events are excluded
+at the API level — `kalshi_client.get_events` passes `status="open"`.)
 
-**Main area:** (1) header; (2) six `st.metric` cards + **⬇ Export** expander (Comparisons `universe`
-CSV, Raw contracts CSV); (3) **Actionable now** — always visible, **sorted by gross edge ↓** (no
-min-edge gate; any edge is good); (4) **Dutch-book arbitrage** section (dedicated, separate from the
-ladder); (5) **Blocked** / (6) **Near-edge** (Show-toggled); collapsed: (7) **Watchlist signals** +
-(7b) **Data-quality** (off by default), (8) **Selected player detail**, (9) **Full diagnostics**
-(Outcome-status + own CSV), (10) **Debug** (incl. `tournament_source`). The opportunity-ranking bar
-chart was **removed** (Stage 0 — misleading; Actionable table is the ranking surface). Use
-`width="stretch"` on dataframes and `st.altair_chart` if adding charts.
+**Section order:** Actionable is always visible, **ranked best→worst**; Review/Blocked and the opt-in
+Risk-budget/Near-miss sections follow; detail/diagnostics/debug are collapsed below.
+
+(Historical: the retired Streamlit `app.py` used an `st.sidebar` control stack, `st.metric` cards, an
+`@st.fragment(run_every=…)` auto-refresh, and a dedicated dutch-book section; the opportunity-ranking
+bar chart was removed in Stage 0 as misleading — the Actionable table is the ranking surface.)
 
 **Status display labels (no "Potential edge"; "edge" only for a positive executable gap):**
 `EXECUTABLE_VIOLATION`→"Actionable gross edge", `DISPLAY_VIOLATION`→"Display inconsistency",
@@ -404,9 +402,10 @@ chart was **removed** (Stage 0 — misleading; Actionable table is the ranking s
 - Always loop the `cursor` for pagination; the client raises if the `MAX_PAGES` cap is hit with a cursor
   still pending (no silent partial data).
 - **Failed series are surfaced in the Debug expander, never silently dropped** (hard requirement).
-- **Streamlit caches imported modules in the running server.** After editing `data.py`/`consistency.py`/…,
-  a browser "Rerun" won't pick it up — **fully stop and restart** `streamlit run app.py`. For a phantom
-  `ImportError`, clear stale bytecode too: `rm -rf __pycache__ tests/__pycache__`. (This already cost time once.)
+- **The running server caches imported modules.** After editing `data.py`/`consistency.py`/… while
+  `python serve.py` is running, the change won't take effect — **fully stop and restart** `serve.py`
+  (there is no auto-reload). For a phantom `ImportError`, clear stale bytecode too:
+  `rm -rf __pycache__ tests/__pycache__`. (This already cost time once.)
 - The FO date window in `config.py` is year-specific — update for future tournaments.
 - The Kalshi **web** site (`kalshi.com`) is bot-throttled (HTTP 429), so automated link-reachability
   checks from this environment are unreliable (everything 429s — not a broken link). Links now point at
@@ -420,20 +419,21 @@ chart was **removed** (Stage 0 — misleading; Actionable table is the ranking s
 - **Shell here-docs:** use the Bash tool's `<<'EOF'` here-doc for multi-line commit/PR text. The PowerShell
   `@'...'@` here-string syntax **corrupts** messages when invoked through the Bash tool (it bit us twice —
   stray `@` characters). Reference code as `path:line`.
-- Verify changes with `pytest -q` plus a headless Streamlit boot (see Run & verify).
+- Verify changes with `pytest -q` plus a `serve.py` boot (see Run & verify).
 - `.gitignore` covers `.env`, `*.pem`, `.venv`, `__pycache__`, and `.claude/` (local settings — keep out of the repo).
 
 ## Git workflow (strict — owner confirmed)
 
 - **Never commit or push to `main`.** The owner merges manually; you push branches and open PRs.
 - Branch off the current `main` (now canonical). **Do not stack on unmerged branches** — a past stack
-  caused a merge mess; one PR per change, based on `main`. Verify (`pytest -q`, headless) before pushing.
+  caused a merge mess; one PR per change, based on `main`. Verify (`pytest -q`, `serve.py` boot) before pushing.
 - Commit messages end with: `Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>`.
   PR bodies end with the Claude Code footer.
 
 ## Repository status
 
-`main` has shipped the full engine + dual front-ends. On main:
+`main` has shipped the full engine + the NiceGUI front-end (the legacy Streamlit `app.py` was retired).
+On main:
 
 - All-tennis generalization + multi-sport abstraction (`sports.py`): Tennis, NBA, WNBA, golf, soccer via
   `SportConfig`; dutch-book / MECE detector (`dutchbook.py`) + synthetic exact-score bundles
@@ -442,9 +442,9 @@ chart was **removed** (Stage 0 — misleading; Actionable table is the ranking s
   frames), cross-sport `scanner.py`, lifecycle/alerts, a typed **FastAPI** REST API (`api.py`:
   `/healthz` `/readyz` `/opportunities` `/coverage` `/metrics` `/scan` `/alerts` …), non-blocking
   `POST /scan` behind a **ScanManager** singleflight + per-process HTTP rate-limit + env-gated `SCAN_TOKEN`.
-- **NiceGUI dashboard** (`webui/`, mounted on FastAPI via `serve.py`): ranked Actionable/Review/Blocked,
-  participant-detail panel, diagnostics/debug with AG-Grids, truthful empty states, snapshot export, live
-  freshness; pure `webui/viewmodel.py` + `webui/diagnostics.py` cores. The Streamlit `app.py` still ships.
+- **NiceGUI dashboard** (`webui/`, mounted on FastAPI via `serve.py`) — the **sole UI**: ranked
+  Actionable/Review/Blocked, participant-detail panel, diagnostics/debug with AG-Grids, truthful empty
+  states, snapshot export, live freshness; pure `webui/viewmodel.py` + `webui/diagnostics.py` cores.
 - **LAN go-live (PRs S1–S5 + D):** `/readyz` readiness, env `SNAPSHOT_DB_PATH`, NON-force "Scan now",
   Linux-first `docs/DEPLOYMENT.md`, a clean deploy-repo builder (`scripts/build_deploy_repo.py`) + `deploy/`
   systemd/timer/`scan.sh` templates, and dashboard UX defaults (Blocked hidden, persistent row highlight,

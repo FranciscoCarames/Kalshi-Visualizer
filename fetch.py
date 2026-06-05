@@ -1,9 +1,8 @@
-"""Streamlit-free contract fetch — the engine's data-acquisition step.
+"""Contract fetch — the engine's data-acquisition step.
 
-Extracted from the body of the old `app.load_contracts` so BOTH the Streamlit app and the FastAPI
-service (Stage 4) can fetch the same way. The only Streamlit concern (caching) stays in `app.py`'s thin
-wrapper; this module is pure I/O + parsing (`kalshi_client` + `data` + `sports`), so the API and tests
-can call it directly. Family toggles are the only thing that changes WHAT is fetched.
+The FastAPI service (Stage 4) calls this to fetch contracts; it is pure I/O + parsing
+(`kalshi_client` + `data` + `sports`), so the API and tests can call it directly. Family toggles are
+the only thing that changes WHAT is fetched.
 """
 from __future__ import annotations
 

@@ -8,13 +8,11 @@ headless test can't (real-browser interactions, live endpoints, bind safety).
 - [ ] `pytest -q` — full suite green (engine, dutch-book/synthetic detectors, viewmodel, API, **headless
       NiceGUI browser smoke tests** in `tests/test_browser.py`).
 - [ ] `ruff check .` — clean.
-- [ ] `python -c "import webui.dashboard, serve, app"` — imports clean.
+- [ ] `python -c "import webui.dashboard, serve, api"` — imports clean.
 
 ## 2. Boots
-- [ ] FastAPI + NiceGUI: `python serve.py` → `GET /` 200, `GET /healthz` 200, `GET /coverage` 200,
-      `GET /metrics` 200 (JSON counters + scan heartbeat).
-- [ ] Streamlit (legacy, still shipped): `streamlit run app.py --server.headless true --server.port 8765`
-      → `/_stcore/health` 200.
+- [ ] FastAPI + NiceGUI (the sole UI): `python serve.py` → `GET /` 200, `GET /healthz` 200,
+      `GET /coverage` 200, `GET /metrics` 200 (JSON counters + scan heartbeat).
 
 ## 3. Live scan + data
 - [ ] `POST /scan?wait=true` (loopback) → 202; `GET /scan/status` → `done`; `GET /coverage` shows
