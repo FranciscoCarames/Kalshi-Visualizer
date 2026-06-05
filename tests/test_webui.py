@@ -169,6 +169,15 @@ def test_opp_row_handles_none_numbers():
     assert r["edge"] is None and r["units"] is None and r["profit"] is None   # no crash on None
 
 
+def test_opp_row_change_marker():
+    o = op("x", bucket="actionable")
+    assert vm.opp_row(o, set())["_change"] == ""                    # no change map -> blank
+    assert vm.opp_row(o, set(), {"x": "up"})["_change"] == "up"     # stamped from the changes map
+    assert vm.opp_row(o, set(), {"x": "down"})["_change"] == "down"
+    r = vm.opp_row(o, {"x"}, {"x": "new"})                          # new-actionable marker is independent
+    assert r["new"] == "🆕" and r["_change"] == "new"
+
+
 def test_ts_disp_and_backlog_row():
     assert vm.ts_disp(None, "UTC") == "—"
     assert vm.ts_disp(1000.0, "UTC") != "—"             # formats an epoch
