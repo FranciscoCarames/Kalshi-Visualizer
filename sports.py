@@ -957,3 +957,188 @@ NHL = register(SportConfig(
     division_fn=_nhl_division,
     winner_label="Win the Stanley Cup",
 ))
+
+
+# --- Motorsport (8th sport): F1 / NASCAR / IndyCar / MotoGP — a field sport like golf ----------------
+# Grounded in a read-only Phase-0 probe (2026-06-05) of /search/filters_by_sport + nested markets:
+#   * Identity: drivers/riders = custom_strike.racing_competitor (UUID); NASCAR teams = nascar_team (UUID);
+#     F1 constructors = custom_strike.Participant (a NAME, e.g. "Red Bull Racing" → LOW confidence). The
+#     `primary_participant_key` field is a key-NAME pointer ("racing_competitor"), NOT an id value, so it is
+#     deliberately not a candidate path. The resolved player_key is role-namespaced (driver/constructor/team)
+#     so a constructor that reuses the driver UUID path never merges with a driver.
+#   * Each market SCOPE owns its own series ticker, so the family is resolvable from the ticker alone.
+#     One-winner FIELDS (mutually_exclusive=True): race winner (Kalshi "Games"), champion futures, pole,
+#     fastest lap, top constructor, top team → overround-eligible via `field_families`. Top-N / Podium are
+#     mutually_exclusive=False (many qualify) → the finishing-position LADDER, never a field.
+#   * No head-to-head (match_family=""); KXF1H2H/KXNASCARH2H are listed-but-deferred → "other".
+#   * Grouping is per RACE INSTANCE: competition (F1 / NASCAR Cup Series / NASCAR Truck Series / IndyCar /
+#     MotoGP, from product_metadata.competition) + session (sprint vs main-race) + the event-ticker location
+#     token (e.g. F1 · main-race · MONGP26). Raw competition_scope (Game/Podium/Top 5 …) is NEVER in the key
+#     (it would split a race's own ladder rungs). Ladders are per-competition via ladder_fn.
+_MOTOR_PREFIXES = ("KXF1", "KXNASCAR", "KXINDY", "KXMOTOGP")
+_UUID_RE = re.compile(r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
+
+
+def _looks_like_uuid(v: Any) -> bool:
+    return bool(_UUID_RE.match(str(v or "")))
+
+
+_MOTOR_CATEGORY = {
+    "winner": "Champion (futures)", "race_winner": "Race winner", "advance": "Finish position",
+    "constructor": "Top constructor", "team": "Top team", "pole": "Pole position",
+    "fastest_lap": "Fastest lap", "other": "Other",
+}
+_MOTOR_STAGE_RANK = {"Top 20": 1, "Top 10": 2, "Top 5": 3, "Top 3": 4, "Podium": 4, "Win Race": 5,
+                     "Champion": 6}
+
+# Per-competition finishing-position ladders (broad → deep: the BIGGER finishing set ⊇ the smaller ⊇ win).
+# The deepest rung is "Win Race" (the race_winner field). MotoGP / O'Reilly list no finishing markets → no
+# ladder. Each ladder is checked only for its own competition's groups (ladder_fn), so no superset noise.
+def _motor_ladder(*nodes: str) -> LadderSpec:
+    pairs = tuple((nodes[i + 1], nodes[i]) for i in range(len(nodes) - 1))   # (deeper child, broader parent)
+    return LadderSpec(node_order=nodes, adjacent_pairs=pairs, match_stage_to_node={},
+                      advance_stage_to_node={n: n for n in nodes if n != "Win Race"})
+
+
+_MOTOR_LADDERS = {
+    "F1": _motor_ladder("Top 10", "Top 5", "Podium", "Win Race"),
+    "NASCAR Cup Series": _motor_ladder("Top 20", "Top 10", "Top 5", "Top 3", "Win Race"),
+    "NASCAR Truck Series": _motor_ladder("Top 10", "Top 3", "Win Race"),
+    "IndyCar": _motor_ladder("Top 10", "Top 3", "Win Race"),
+}
+_MOTOR_EMPTY_LADDER = LadderSpec((), (), {}, {})
+
+
+def _motor_family(cfg: SportConfig, series_ticker: str) -> str:
+    """Family from the SERIES ticker alone (each Kalshi scope owns its series). Order matters: specific
+    scope tokens before the generic RACE/SERIES checks."""
+    t = (series_ticker or "").upper()
+    if "H2H" in t:
+        return "other"                                          # head-to-head: listed, deferred
+    if any(x in t for x in ("DELAY", "OCCUR", "RETIRE", "QUALIFY", "CHINA", "RACEOLD", "TOPX")):
+        return "other"                                          # props / deprecated / ambiguous
+    if "POLE" in t:
+        return "pole"
+    if "FASTLAP" in t or "FASTESTLAP" in t:
+        return "fastest_lap"
+    if "TOPCONSTRUCTOR" in t or t.endswith("CONSTRUCTORS"):
+        return "constructor"
+    if "TOPTEAM" in t or "TOPMANU" in t or t.endswith("TEAMS"):
+        return "team"
+    if "PODIUM" in t:
+        return "advance"
+    if any(x in t for x in ("TOP20", "TOP10", "TOP5", "TOP3")):
+        return "advance"                                        # finishing-position rung (NOT a field)
+    if "RACE" in t or "INDY500" in t:
+        return "race_winner"                                    # the "Games" scope: one-winner race field
+    if "SERIES" in t or "CUPCHAMP" in t or t in ("KXF1", "KXMOTOGP", "KXNASCAR"):
+        return "winner"                                         # season champion futures
+    return "other"
+
+
+def _motor_stage(cfg: SportConfig, family: str, market: dict[str, Any]) -> str:
+    """The rung label, read from the MARKET ticker prefix (classify gives stage_fn only the market)."""
+    if family == "winner":
+        return "Champion"
+    if family == "race_winner":
+        return "Win Race"
+    if family == "advance":
+        t = (market.get("ticker") or "").upper()
+        if "TOP20" in t:
+            return "Top 20"
+        if "TOP10" in t:
+            return "Top 10"
+        if "TOP5" in t:
+            return "Top 5"
+        if "TOP3" in t:
+            return "Top 3"
+        if "PODIUM" in t:
+            return "Podium"
+    return ""
+
+
+def _motor_node(cfg: SportConfig, family: str, stage: str) -> str | None:
+    """Node names ARE the rung labels (uniform across competitions); ladder_fn decides which pairs apply."""
+    if family == "race_winner":
+        return "Win Race"
+    if family == "advance":
+        return stage or None
+    return None                                                 # winner futures = flat field (no rung)
+
+
+def _motor_division(cfg: SportConfig, series_ticker: str) -> str:
+    """Coarse Series filter; the precise competition (Cup/Truck/O'Reilly) lives in the tournament key."""
+    t = (series_ticker or "").upper()
+    if t.startswith("KXF1"):
+        return "F1"
+    if t.startswith("KXNASCAR"):
+        return "NASCAR"
+    if t.startswith("KXINDY"):
+        return "IndyCar"
+    if t.startswith("KXMOTOGP"):
+        return "MotoGP"
+    return ""
+
+
+def _motor_role(cfg: SportConfig, family: str) -> str:
+    """Role tag for player_key, from the CLASSIFIED family — constructors/teams (Participant/nascar_team)
+    must never merge with drivers/riders (racing_competitor), even when they share an id path."""
+    if family == "constructor":
+        return "constructor"
+    if family == "team":
+        return "team"
+    return "driver"
+
+
+def _motor_ladder_fn(cfg: SportConfig, rows: list) -> LadderSpec:
+    """The finishing-position ladder for THIS group's competition (read from the stamped `competition`)."""
+    comp = (rows[0].get("competition") if rows else "") or ""
+    return _MOTOR_LADDERS.get(comp, _MOTOR_EMPTY_LADDER)
+
+
+def _motor_tournament_key(cfg: SportConfig, event: dict[str, Any]) -> tuple[str, str]:
+    """Event-instance grouping key: `competition · session · race-token`, e.g. "F1 · main-race · MONGP26".
+    Unifies every scope of one race (the location token is shared) while separating sprint vs main race,
+    different races, and season futures. Raw competition_scope is intentionally NOT part of the key."""
+    et = str(event.get("event_ticker") or "")
+    comp = ((event.get("product_metadata") or {}).get("competition") or "Motorsport").strip()
+    token = et.split("-", 1)[1] if "-" in et else et            # event_ticker is SERIES-TOKEN
+    session = "sprint" if "SPRINT" in et.upper() else "main-race"
+    return (f"{comp} · {session} · {token}", "motorsport_event")
+
+
+MOTORSPORT = register(SportConfig(
+    sport_id="motorsport", label="Motorsport", emoji="\U0001f3ce",
+    series_prefixes=_MOTOR_PREFIXES,
+    default_series=(
+        "KXF1", "KXF1CONSTRUCTORS", "KXF1RACE", "KXF1RACEPODIUM", "KXF1TOP5", "KXF1TOP10",
+        "KXF1TOPCONSTRUCTOR", "KXF1POLE", "KXF1FASTLAP",
+        "KXNASCARCUPSERIES", "KXNASCARRACE", "KXNASCARTOP3", "KXNASCARTOP5", "KXNASCARTOP10",
+        "KXNASCARTOP20", "KXNASCARTOPTEAM", "KXNASCARFASTLAP", "KXNASCARPOLE", "KXNASCARTRUCKSERIES",
+        "KXINDYCARSERIES", "KXINDYCARRACE", "KXINDYCARTOP3", "KXINDYCARTOP10", "KXINDY500",
+        "KXMOTOGP", "KXMOTOGPRACE", "KXMOTOGPTEAMS",
+    ),
+    winner_tickers=frozenset(),
+    identity=IdentityResolver(
+        candidate_paths=("custom_strike.racing_competitor", "custom_strike.nascar_team",
+                         "custom_strike.Participant"),
+        id_label="competitor", id_validator=_looks_like_uuid),
+    ladder=_MOTOR_EMPTY_LADDER,                 # static default; real ladders come from ladder_fn per group
+    category_labels=_MOTOR_CATEGORY,
+    round_patterns=(),
+    stage_rank=_MOTOR_STAGE_RANK,
+    ladder_families=frozenset({"advance", "race_winner"}),
+    match_family="",                            # field sport — no head-to-head, no pair dutch books
+    divisions={"F1": ["F1"], "NASCAR": ["NASCAR"], "IndyCar": ["IndyCar"], "MotoGP": ["MotoGP"],
+               "All": ["F1", "NASCAR", "IndyCar", "MotoGP"]},
+    division_label="Series",
+    family_fn=_motor_family,
+    stage_fn=_motor_stage,
+    node_fn=_motor_node,
+    division_fn=_motor_division,
+    winner_label="Win the Championship",
+    field_families=frozenset({"winner", "race_winner", "pole", "fastest_lap", "constructor", "team"}),
+    role_fn=_motor_role,
+    ladder_fn=_motor_ladder_fn,
+    tournament_key_fn=_motor_tournament_key,
+))

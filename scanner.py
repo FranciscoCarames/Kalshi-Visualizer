@@ -1,7 +1,7 @@
 """Cross-sport opportunity scanner — Stage 2 engine.
 
 One PURE function, `unified_opportunities`, that aggregates every opportunity across all wired sports
-(tennis, NBA, WNBA, golf, soccer, MLB, NHL) into a single best→worst-ranked frame: it runs the containment-ladder checker
+(tennis, NBA, WNBA, golf, soccer, MLB, NHL, motorsport) into a single best→worst-ranked frame: it runs the containment-ladder checker
 (`consistency.build_checks`) and the dutch-book detector (`dutchbook.find_dutch_books`) per sport,
 stamps each row with its `sport`, normalizes the two row shapes onto one schema, ranks them, and
 optionally persists the scan to the Stage-1 snapshot store.

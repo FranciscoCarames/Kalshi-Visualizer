@@ -15,7 +15,7 @@
 
 The Kalshi Structured Market Visualizer is a read-only Streamlit web app that surfaces prediction-market data from the Kalshi exchange across multiple sports. It groups a participant's contracts into a logical progression ladder, detects when deeper outcomes are priced above broader prerequisites (a layer-consistency violation), and surfaces actionable entries as two-buy trade instructions. It also runs a separate Dutch-book / MECE detector on head-to-head match and per-game markets.
 
-**Current goal:** Give a trader a fast, accurate picture of which contracts on Kalshi have price inconsistencies or Dutch-book arbitrage across supported sports (tennis, NBA, WNBA, golf, soccer, MLB, NHL), whether those opportunities are executable, and exactly what to do (Buy YES on one leg, Buy NO on the other).
+**Current goal:** Give a trader a fast, accurate picture of which contracts on Kalshi have price inconsistencies or Dutch-book arbitrage across supported sports (tennis, NBA, WNBA, golf, soccer, MLB, NHL, motorsport), whether those opportunities are executable, and exactly what to do (Buy YES on one leg, Buy NO on the other).
 
 **Current supported sports:** Tennis (ATP + WTA, all tournaments), NBA (championship / conference / playoff-series / per-game), WNBA (championship / reach-stage / playoff-series / per-game), Golf (finishing-position ladder Top 20⊇10⊇5⊇Win), Soccer (World Cup advancement ladder + 3-way game dutch books), MLB (futures ladder Reach Playoffs⊇Win League⊇Win World Series + per-game books), NHL (futures ladder Reach Playoffs⊇Win Conference⊇Win Championship + playoff-series/per-game books). Each sport is registered as a `SportConfig` in `sports.py`.
 

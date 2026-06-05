@@ -2,7 +2,7 @@
 
 A small, read-only [NiceGUI](https://nicegui.io/)-on-[FastAPI](https://fastapi.tiangolo.com/) app
 (run via `serve.py`) that pulls live
-[Kalshi](https://kalshi.com/) prediction-market data for **tennis (ATP/WTA), NBA, WNBA, golf, soccer, MLB, and NHL**.
+[Kalshi](https://kalshi.com/) prediction-market data for **tennis (ATP/WTA), NBA, WNBA, golf, soccer, MLB, NHL, and motorsport (F1/NASCAR/IndyCar/MotoGP)**.
 It surfaces two classes of opportunity across related contracts:
 
 1. **Layer-consistency violations** — a deeper outcome must not price above a prerequisite that

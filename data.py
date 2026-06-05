@@ -454,6 +454,12 @@ def _contract_label(kind: str, market: dict[str, Any], opponent: str, stage: str
         return f"Reach {stage}" if stage else "Reach next stage"
     if kind == "winner":
         return cfg.winner_label
+    if kind == "race_winner":
+        return "Win the race"
+    if kind == "pole":
+        return "Pole position"
+    if kind == "fastest_lap":
+        return "Fastest lap"
     return _clean_title(market.get("title"))
 
 
