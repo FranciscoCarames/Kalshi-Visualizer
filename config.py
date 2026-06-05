@@ -200,5 +200,9 @@ UI_REFRESH_SECONDS = 10   # legacy heavy timed-rebuild cadence (pre-P2). Superse
 # auto-refreshes data without an external scheduler. One loop per process regardless of viewer count; each
 # tick rides the ScanManager TTL/budget/singleflight guards. The UI exposes a toggle + interval selector.
 AUTO_SCAN_INTERVAL_OPTIONS = [10, 15, 30, 60, 120]   # selectable seconds (>= SCAN_MIN_INTERVAL_SECONDS)
-AUTO_SCAN_DEFAULT_SECONDS = 30                        # default cadence
+AUTO_SCAN_DEFAULT_SECONDS = 10                        # default cadence (P3): aggressive ~10s so the P2
+                                                      # 1s poll has fresh data to surface. 10 > the 8s
+                                                      # SCAN_MIN_INTERVAL (no TTL-skip) and a full scan is
+                                                      # ~3-4s of rate-limited GETs, so ticks never overlap;
+                                                      # the budget/cooldown guards stay as the safety floor.
 AUTO_SCAN_DEFAULT_ENABLED = True                      # auto-refresh on by default
