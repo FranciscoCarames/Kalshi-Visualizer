@@ -184,6 +184,18 @@ class ScanStatus(BaseModel):
     last_result: dict[str, Any] | None = None
 
 
+class ReadyZ(BaseModel):
+    # Readiness (PR S1), distinct from the liveness-only /healthz. `status` ∈ {ready, degraded, not_ready};
+    # ready/degraded are 200, not_ready is 503. `last_scan_status` is the scan-manager state; no scheduler
+    # health is claimed and no live Kalshi call is made.
+    model_config = ConfigDict(extra="ignore")
+    status: str
+    reason: str | None = None
+    snapshot_age_seconds: float | None = None
+    last_scan_status: str | None = None
+    last_scan_error: str | None = None
+
+
 # --- dependencies (overridable in tests) ---------------------------------------------
 def db_path_dep() -> str | None:
     """The snapshot DB path. None → store uses config.SNAPSHOT_DB_PATH. Tests override to a tmp file."""
@@ -209,6 +221,25 @@ def _opps(db_path: str | None) -> list[dict[str, Any]]:
 @app.get("/healthz")
 def healthz() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get("/readyz", response_model=ReadyZ)
+def readyz(response: Response, db_path: str | None = Depends(db_path_dep)):
+    """Readiness (PR S1), distinct from the liveness-only /healthz: ready/degraded → 200, not_ready → 503.
+    The DB-writability probe is MIGRATION-FREE (`store.db_writable` → `os.access`; never `_connect`/
+    `_migrate`, so a health probe can't migrate or create the prod DB); the latest snapshot is read only
+    when the DB file already exists. Reflects the LAST scan's status (no live Kalshi call) and never claims
+    scheduler health."""
+    resolved = db_path or config.SNAPSHOT_DB_PATH
+    writable = store.db_writable(resolved)
+    snap = store.latest(db_path=resolved) if (writable and os.path.exists(resolved)) else None
+    age = data.data_age_seconds(snap["fetched_at"]) if snap else None
+    stale = data.is_stale(age, config.STALE_AFTER_SECONDS) if age is not None else None
+    code, body = diagnostics.build_readiness(
+        writable=writable, snapshot=snap, age=age, stale=stale,
+        scan_status=scan_manager.manager.status())
+    response.status_code = code
+    return ReadyZ(**body)
 
 
 @app.get("/opportunities", response_model=list[Opportunity])

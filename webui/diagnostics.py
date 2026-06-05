@@ -20,6 +20,38 @@ def _meta(snapshot: dict[str, Any] | None) -> dict[str, Any]:
     return (snapshot or {}).get("meta") or {}
 
 
+def build_readiness(*, writable: bool, snapshot: dict[str, Any] | None, age: float | None,
+                    stale: bool | None, scan_status: dict[str, Any] | None
+                    ) -> tuple[int, dict[str, Any]]:
+    """Pure readiness decision for `/readyz` (PR S1) — no IO, no clock. The caller gathers the facts (the
+    migration-free `store.db_writable`, the latest snapshot, its `data.data_age_seconds`/`is_stale`, and
+    `scan_manager.status()`) and this maps them to an ``(http_code, body)``. Liveness is `/healthz`; this
+    is readiness: ``ready`` and ``degraded`` are 200 (the UI still serves), ``not_ready`` is 503. It NEVER
+    claims scheduler health and reflects only the LAST scan's status (the caller makes no live upstream
+    call). A scan stores ``{"error": …}`` as ``last_result`` on failure, the coverage dict on success.
+
+    - not_ready (503): DB not writable — nothing could persist a scan.
+    - degraded  (200): writable but no snapshot yet, OR the last scan errored, OR the snapshot is stale.
+    - ready     (200): writable, a snapshot exists, the last scan did not error, and it is not stale.
+    """
+    status = scan_status or {}
+    last_error = (status.get("last_result") or {}).get("error")
+    body = {
+        "snapshot_age_seconds": age,
+        "last_scan_status": status.get("status") or "idle",
+        "last_scan_error": last_error,
+    }
+    if not writable:
+        return 503, {**body, "status": "not_ready", "reason": "snapshot DB not writable"}
+    if snapshot is None:
+        return 200, {**body, "status": "degraded", "reason": "no snapshot yet"}
+    if last_error:
+        return 200, {**body, "status": "degraded", "reason": f"last scan errored: {last_error}"}
+    if stale:
+        return 200, {**body, "status": "degraded", "reason": "snapshot is stale"}
+    return 200, {**body, "status": "ready", "reason": None}
+
+
 def build_metrics(*, snapshot: dict[str, Any] | None, scan_status: dict[str, Any] | None,
                   now_age: float | None = None, stale: bool | None = None,
                   now: float | None = None, viewer_count: int | None = None) -> dict[str, Any]:

@@ -154,6 +154,22 @@ def _promoted(row: dict[str, Any], key: str) -> str | None:
     return str(v)
 
 
+# --- readiness probe -----------------------------------------------------------------
+def db_writable(db_path: str | None = None) -> bool:
+    """MIGRATION-FREE writability probe for readiness checks (PR S1, used by `/readyz`). Unlike
+    `_connect`, this NEVER opens the database or runs `_migrate` — so a health probe can't migrate or
+    create the production DB. It only asks the filesystem whether we *could* write: a file that exists is
+    writable per `os.access`, otherwise its parent directory must exist and be writable so the app could
+    create the file. `:memory:` is always writable."""
+    resolved = db_path or config.SNAPSHOT_DB_PATH
+    if resolved == ":memory:":
+        return True
+    if os.path.exists(resolved):
+        return os.access(resolved, os.W_OK)
+    parent = os.path.dirname(os.path.abspath(resolved))
+    return os.path.isdir(parent) and os.access(parent, os.W_OK)
+
+
 # --- connection / migration ----------------------------------------------------------
 def _connect(db_path: str | None) -> sqlite3.Connection:
     resolved = db_path or config.SNAPSHOT_DB_PATH
