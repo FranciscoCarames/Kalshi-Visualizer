@@ -22,10 +22,44 @@ import store
 from api import _scan_run_fn, _scan_write_fn, fetch_dep
 from webui import diagnostics as diagnostics_mod
 
+# --- latest-snapshot cache (P1) ---------------------------------------------------------------------
+# coverage()/latest_opportunities()/frames()/participant_*/frame_availability() each fetch the latest
+# snapshot every call, and alerts() fetches the latest two — the dashboard poll loop calls several per
+# tick, so the latest snapshot was deserialized 3+ times. Memoize the deserialized latest snapshot (and
+# latest_two, for alerts) keyed by (db_path, latest_snapshot_id) so one snapshot is deserialized ONCE and
+# shared, refreshed only when `store.latest_snapshot_id()` (the cheap source of truth) advances. Keying on
+# db_path keeps tests (each a distinct tmp store) from cross-contaminating.
+_LATEST_CACHE: dict[str, Any] = {"key": None, "snap": None}
+_LATEST_TWO_CACHE: dict[str, Any] = {"key": None, "two": None}
+
+
+def _cache_key(db_path: str | None) -> tuple:
+    """(effective db path, latest snapshot id). Resolve `None` to `config.SNAPSHOT_DB_PATH` so a
+    runtime/test db-path swap (which keeps `db_path=None` but changes the resolved file) never serves a
+    stale cross-db hit — two distinct stores can both have snapshot id 1."""
+    eff = db_path if db_path is not None else config.SNAPSHOT_DB_PATH
+    return (eff, store.latest_snapshot_id(db_path=db_path))
+
+
+def _cached_latest(db_path: str | None) -> dict[str, Any] | None:
+    """The latest snapshot, deserialized once per (db, snapshot_id) and cached."""
+    key = _cache_key(db_path)
+    if _LATEST_CACHE["key"] != key:
+        _LATEST_CACHE.update(key=key, snap=(store.latest(db_path=db_path) if key[1] is not None else None))
+    return _LATEST_CACHE["snap"]
+
+
+def _cached_latest_two(db_path: str | None) -> list[dict[str, Any]]:
+    """The two most recent snapshots ([prev, cur]), cached per (db, latest snapshot_id)."""
+    key = _cache_key(db_path)
+    if _LATEST_TWO_CACHE["key"] != key:
+        _LATEST_TWO_CACHE.update(key=key, two=store.latest_two(db_path=db_path))
+    return _LATEST_TWO_CACHE["two"]
+
 
 def latest_opportunities(db_path: str | None = None) -> list[dict[str, Any]]:
     """All opportunities in the latest snapshot (already ranked), or [] when the store is empty."""
-    snap = store.latest(db_path=db_path)
+    snap = _cached_latest(db_path)
     return list(snap.get("opportunities") or []) if snap else []
 
 
@@ -40,7 +74,7 @@ def backlog(window_s: float, db_path: str | None = None) -> list[dict[str, Any]]
 
 def alerts(persistence_s: float | None = None, db_path: str | None = None) -> dict[str, list]:
     """New-actionable (§8) + blocked-change (§9), diffed over the two latest snapshots."""
-    pair = store.latest_two(db_path=db_path)
+    pair = _cached_latest_two(db_path)
     prev = pair[0] if len(pair) == 2 else None
     cur = pair[-1] if pair else None
     if persistence_s is None:
@@ -53,7 +87,7 @@ def alerts(persistence_s: float | None = None, db_path: str | None = None) -> di
 
 def coverage(db_path: str | None = None) -> dict[str, Any]:
     """Latest snapshot's coverage + live data age/stale; honest when the store is empty or meta-less."""
-    snap = store.latest(db_path=db_path)
+    snap = _cached_latest(db_path)
     if snap is None:
         return {"meta_present": False, "snapshot_id": None, "fetched_at": None, "data_age_seconds": None,
                 "stale": False, "opportunities": 0, "scanned": 0, "loaded": 0, "failed": 0, "excluded": 0}
@@ -77,7 +111,7 @@ def coverage(db_path: str | None = None) -> dict[str, Any]:
 def frames(db_path: str | None = None) -> list[dict[str, Any]]:
     """The latest snapshot's persisted evidence frames (contracts/checks/dutchbook, all sports), or [] when
     the store is empty / the snapshot predates frame persistence. The export (PR 23) is the first reader."""
-    snap = store.latest(db_path=db_path)
+    snap = _cached_latest(db_path)
     if snap is None:
         return []
     return store.load_frames(snap["snapshot_id"], db_path=db_path)
@@ -102,7 +136,7 @@ def _cached_frame_rows(snapshot_id: int, sport: str, frame_type: str, db_path: s
 
 def participant_contracts(sport: str, player_key: str, db_path: str | None = None) -> list[dict[str, Any]]:
     """A participant's stored contract rows for the latest snapshot (cached), or [] when absent."""
-    snap = store.latest(db_path=db_path)
+    snap = _cached_latest(db_path)
     if snap is None or not player_key:
         return []
     rows = _cached_frame_rows(snap["snapshot_id"], sport, "contracts", db_path)
@@ -111,7 +145,7 @@ def participant_contracts(sport: str, player_key: str, db_path: str | None = Non
 
 def participant_checks(sport: str, player_key: str, db_path: str | None = None) -> list[dict[str, Any]]:
     """A participant's stored consistency-check rows for the latest snapshot (cached), or []."""
-    snap = store.latest(db_path=db_path)
+    snap = _cached_latest(db_path)
     if snap is None or not player_key:
         return []
     rows = _cached_frame_rows(snap["snapshot_id"], sport, "checks", db_path)
@@ -120,7 +154,7 @@ def participant_checks(sport: str, player_key: str, db_path: str | None = None) 
 
 def frame_availability(db_path: str | None = None) -> str:
     """Whether the latest snapshot's evidence frames are present / expired / absent (PR 20 honesty)."""
-    snap = store.latest(db_path=db_path)
+    snap = _cached_latest(db_path)
     return store.frame_status(snap["snapshot_id"], db_path=db_path) if snap else "absent"
 
 
