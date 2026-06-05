@@ -82,6 +82,7 @@ _BACKLOG_COLUMNS = [
     {"name": "mins", "label": "Lasted (min)", "field": "mins", "sortable": True},
     {"name": "reason", "label": "Why it left", "field": "reason"},
     {"name": "last_edge", "label": "Last edge ¢", "field": "last_edge"},
+    {"name": "caveat", "label": "Settlement caveat", "field": "caveat"},
     {"name": "current", "label": "Now", "field": "current"},
 ]
 # Participant-detail tables (PR 24) — built by the pure viewmodel detail builders.

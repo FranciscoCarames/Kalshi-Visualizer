@@ -1,7 +1,7 @@
 # Kalshi Visualizer — Multi-Sport Executable-Inconsistency Dashboard
 
 A small, read-only [Streamlit](https://streamlit.io/) app that pulls live
-[Kalshi](https://kalshi.com/) prediction-market data for **tennis (ATP/WTA), NBA, WNBA, and golf**.
+[Kalshi](https://kalshi.com/) prediction-market data for **tennis (ATP/WTA), NBA, WNBA, golf, soccer, and MLB**.
 It surfaces two classes of opportunity across related contracts:
 
 1. **Layer-consistency violations** — a deeper outcome must not price above a prerequisite that
@@ -69,9 +69,12 @@ entrants, which is safe because an untraded or unlisted winner only pays more (f
 `k` legs bought, `gap = Σ yes_bid(subset) − 100`). Empty-book longshots are skipped; many legs are illiquid
 so these are often only partly fillable.
 
-**Sport coverage:** tennis matches + NBA/WNBA playoff series + NBA/WNBA per-game (`KX*GAME`) + soccer 3-way
-games + tournament-winner fields (all sports). Props and advancement markets are excluded. Unknown series
-are always excluded.
+**Sport coverage:** tennis matches + NBA/WNBA playoff series + per-game (`KX*GAME`) for NBA/WNBA/MLB +
+soccer 3-way games + tournament-winner fields (all sports). MLB also has an NBA-shape futures ladder
+(Reach Playoffs ⊇ Win League ⊇ Win World Series); MLB game books carry the per-game `settlement_caveat`
+(a postponed/suspended game can settle differently). Props and advancement markets are excluded
+(`KXMLBSERIES` too — a regular-season series can tie 2-2, so it isn't MECE). Unknown series are always
+excluded.
 
 ---
 

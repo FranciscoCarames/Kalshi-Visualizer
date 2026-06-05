@@ -150,6 +150,8 @@ class BacklogItem(BaseModel):
     last_edge_c: float | None = None
     last_action_1_text: str | None = None
     last_action_2_text: str | None = None
+    # Non-blocking per-game settlement caveat as it last looked actionable (blank for non-game books).
+    last_settlement_caveat: str | None = None
     # The full N-leg plan of the opportunity as it last looked actionable (PR 13); None for old snapshots.
     last_legs: list[dict[str, Any]] | None = None
     payout_floor_c: float | None = None
@@ -207,7 +209,7 @@ def fetch_dep() -> Callable[[str], tuple]:
     Tests override with a stub so /scan touches no network."""
     def _fetch(sport_id: str) -> tuple:
         cfg = sports.get_sport(sport_id)
-        families = tuple(sorted(set(cfg.category_labels.values())))
+        families = data.non_other_families(cfg)   # in-scope families only (excludes the "other" bucket)
         return fetch.fetch_contracts(families, False, sport_id)
     return _fetch
 
