@@ -106,6 +106,27 @@ Generate a secret (any of): `python -c "import secrets; print(secrets.token_hex(
 > (`SCAN_HTTP_MAX_PER_WINDOW`/`SCAN_HTTP_WINDOW_SECONDS`, default 10/60s → 429 when exceeded). If you set
 > `SCAN_TOKEN`, the scheduled-scan caller below **must** send the `X-Scan-Token` header or it gets 401.
 
+### Refresh rate & Kalshi API keys (no `.env` key needed)
+
+**A Kalshi API key will NOT make the data refresh faster, so there is no key to put in the env file.**
+The market-data endpoints this app uses (`/series`, `/events`, `/markets`) are **public and need no
+authentication** — keys only matter for *trading*, which is out of scope. What actually bounds the refresh
+loop is two things, both already tuned for the free tier:
+
+- **Request throttle** — a process-wide limiter paces every GET at `config.MAX_RPS = 15` req/s (~75% of
+  Kalshi's ~20/s Basic ceiling); `_get` backs off on any `429`. A full cross-sport scan is **many** GETs
+  (≈50 at the last live measurement, and higher now that golf/soccer/MLB/NHL are registered — re-measure
+  live with `GET /coverage` → `kalshi_requests`), but the throttle just makes a scan take a few **seconds**;
+  it never exceeds the rate.
+- **Scan cadence** — the background auto-scan runs every `config.AUTO_SCAN_DEFAULT_SECONDS` (10s) while a
+  viewer is connected, and the dashboard surfaces a new snapshot within ~1s of it finishing.
+
+To go faster you would lift the throttle (`MAX_RPS`) and/or shorten the cadence in `config.py` — but
+pushing `MAX_RPS` toward/over ~20 invites sustained `429`s (the backoff absorbs them; throughput won't
+improve past the ceiling). The only way to beat REST polling is a Kalshi **WebSocket** feed, which is not
+implemented (and still wouldn't need a *read* key). **Run exactly one process** — the throttle is
+per-process, so N workers issue `15 × N` req/s (see §1).
+
 ### Run as an auto-restart systemd service (Linux — primary)
 
 `/etc/systemd/system/kalshi-dashboard.service` (env comes from the 640 env file; **one worker**):
