@@ -9,9 +9,9 @@ market data) per the agreed decisions below.
 
 | Topic | Decision |
 |---|---|
-| Host environment | **IT's choice** — Linux service, Windows service, or Docker (all covered below) |
+| Host environment | **Linux + systemd** (primary). Windows/NSSM is the only alternative. **No day-one Docker** (deferred follow-up) |
 | Access control | **Open on the internal network** — no login. Data is read-only public market data |
-| Data refresh | **Scheduled auto-scan** — an external scheduler calls `POST /scan` every 2–5 min |
+| Data refresh | **Scheduled auto-scan (REQUIRED, default-on)** — a systemd timer calls `POST /scan` every 2–5 min |
 
 ---
 
@@ -31,8 +31,9 @@ session cookie is signed with the secret). For a quick trusted-LAN test you may 
 ## 1. What IT is running (architecture recap)
 
 - One Python process: **FastAPI engine API + NiceGUI dashboard on the same app/port** (`python serve.py`).
-- **UI:** `GET /` · **REST:** `/opportunities`, `/backlog`, `/coverage`, `/alerts`, `POST /scan` ·
-  **OpenAPI:** `/docs` · **Health:** `/healthz` → `{"status":"ok"}`.
+- **UI:** `GET /` · **REST:** `/opportunities`, `/backlog`, `/coverage`, `/alerts`, `/metrics`, `POST /scan` ·
+  **OpenAPI:** `/docs` · **Liveness:** `/healthz` → `{"status":"ok"}` · **Readiness:** `/readyz` →
+  `ready`/`degraded`/`not_ready` (DB writable + a fresh snapshot; 503 when not ready).
 - **State:** a single SQLite file (`snapshots.db`, path = `config.SNAPSHOT_DB_PATH`) holding ranked
   opportunity snapshots. The UI reads the latest snapshot; a scan writes a new one.
 - **Outbound:** the process fetches live data from `https://external-api.kalshi.com` (read-only, no auth).
@@ -63,11 +64,25 @@ This is what turns "works on my hotspot" into "works for everyone."
 
 ## 3. Server setup — runtime, env, service
 
+### Service user + filesystem layout (Linux)
+Run as a dedicated **non-root** user `kalshi-dashboard`, with clear absolute paths:
+- App code: `/opt/kalshi-dashboard` (the **clean deploy repo** — NiceGUI-only, no `app.py`/Streamlit).
+- Virtualenv: `/opt/kalshi-dashboard/.venv` (**Python 3.13**, matching dev).
+- Env file: `/etc/kalshi-dashboard.env`, owned `root:kalshi-dashboard`, mode **640** (NOT world-readable).
+- SQLite DB: `/var/lib/kalshi-dashboard/snapshots.db` on **LOCAL disk** — never NFS / a network share
+  (SQLite WAL needs local fsync). Create the dir and `chown` it to the service user.
+
+```bash
+sudo useradd --system --home /opt/kalshi-dashboard --shell /usr/sbin/nologin kalshi-dashboard
+sudo install -d -o kalshi-dashboard -g kalshi-dashboard /var/lib/kalshi-dashboard
+```
+
 ### Runtime
-- **Python 3.13**, a dedicated virtualenv.
-- `pip install -r requirements.txt` (streamlit, requests, pandas, fastapi, uvicorn, `nicegui>=3.12,<4`,
-  pydantic).
-- Launch command: `python serve.py` (single worker — see §1).
+- **Python 3.13**, a dedicated virtualenv: `python3.13 -m venv /opt/kalshi-dashboard/.venv`.
+- `/opt/kalshi-dashboard/.venv/bin/pip install -r requirements.txt` — the **pinned, Streamlit-free** deploy
+  requirements (the hosted app is NiceGUI on FastAPI via `serve.py`; Streamlit `app.py` is a dev-only
+  surface and is NOT deployed).
+- Launch command: `python serve.py` (**single worker** — see §1).
 
 ### Environment variables
 | Var | Value | Notes |
@@ -85,54 +100,78 @@ Generate a secret (any of): `python -c "import secrets; print(secrets.token_hex(
 > (`SCAN_HTTP_MAX_PER_WINDOW`/`SCAN_HTTP_WINDOW_SECONDS`, default 10/60s → 429 when exceeded). If you set
 > `SCAN_TOKEN`, the scheduled-scan caller below **must** send the `X-Scan-Token` header or it gets 401.
 
-### Run as an auto-restart service — pick ONE pattern
+### Run as an auto-restart systemd service (Linux — primary)
 
-**A) Linux + systemd** (`/etc/systemd/system/kalshi-dash.service`):
+`/etc/systemd/system/kalshi-dashboard.service` (env comes from the 640 env file; **one worker**):
 ```ini
 [Unit]
-Description=Kalshi Opportunity Dashboard
+Description=Kalshi LAN dashboard
 After=network-online.target
 Wants=network-online.target
 
 [Service]
-WorkingDirectory=/opt/kalshi-visualizer
-Environment=API_HOST=0.0.0.0
-Environment=API_PORT=8000
-Environment=NICEGUI_STORAGE_SECRET=__SET_ME__
-ExecStart=/opt/kalshi-visualizer/.venv/bin/python serve.py
+User=kalshi-dashboard
+WorkingDirectory=/opt/kalshi-dashboard
+EnvironmentFile=/etc/kalshi-dashboard.env
+ExecStart=/opt/kalshi-dashboard/.venv/bin/python serve.py
 Restart=always
-RestartSec=5
+RestartSec=3
 
 [Install]
 WantedBy=multi-user.target
 ```
-`sudo systemctl enable --now kalshi-dash`
+`sudo systemctl enable --now kalshi-dashboard`. **One process, one worker, one DB file** (§1).
 
-**B) Windows service via NSSM:**
-- Install the app + venv, set the three env vars (machine-level or in NSSM).
-- `nssm install KalshiDash "C:\path\.venv\Scripts\python.exe" "C:\path\serve.py"`
-- Set AppDirectory to the repo, `Start=auto`, recovery = restart on failure.
+### Scheduled auto-scan as a systemd timer (REQUIRED — see §4)
 
-**C) Docker** (sample `Dockerfile` — to be added in a follow-up; reference only):
-```dockerfile
-FROM python:3.13-slim
-WORKDIR /app
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-COPY . .
-ENV API_HOST=0.0.0.0 API_PORT=8000
-EXPOSE 8000
-CMD ["python", "serve.py"]
+The `X-Scan-Token` header must be **conditional** (sent only when `SCAN_TOKEN` is set), so the timer runs
+a small wrapper `/opt/kalshi-dashboard/scan.sh` (install mode **0755**), NOT an inline `curl`:
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+URL="http://127.0.0.1:${API_PORT}/scan"
+if [ -n "${SCAN_TOKEN:-}" ]; then
+  curl -fsS -X POST -H "X-Scan-Token: ${SCAN_TOKEN}" "$URL"
+else
+  curl -fsS -X POST "$URL"
+fi
 ```
-Run with `-e NICEGUI_STORAGE_SECRET=...`, a persistent volume for `snapshots.db`, and
-`--restart unless-stopped`. **One container only** (single worker — see §1).
+`/etc/systemd/system/kalshi-dashboard-scan.service` (oneshot; same env file → sees `API_PORT`/`SCAN_TOKEN`):
+```ini
+[Unit]
+Description=Trigger a Kalshi dashboard scan
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/kalshi-dashboard.env
+ExecStart=/opt/kalshi-dashboard/scan.sh
+```
+`/etc/systemd/system/kalshi-dashboard-scan.timer`:
+```ini
+[Unit]
+Description=Periodic Kalshi dashboard scan
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=3min
+[Install]
+WantedBy=timers.target
+```
+`sudo systemctl enable --now kalshi-dashboard-scan.timer`. (These three unit files + `scan.sh` ship in the
+deploy repo's `deploy/` directory — copy them in and `systemctl daemon-reload`.)
+
+### Windows alternative (only if the host is Windows)
+
+Run `serve.py` under **NSSM** as a single auto-restart service (secrets in machine env vars), a **Task
+Scheduler** job (every 2–5 min) for the scan, and a **Windows Firewall** private-network rule. Kill a
+stale port by owning PID:
+`Get-NetTCPConnection -LocalPort <port> | Select -Expand OwningProcess | Stop-Process -Id $_`.
 
 ---
 
 ## 4. Scheduled auto-scan (keeps data fresh)
 
-The dashboard only updates when a scan runs; the UI's own timer just re-reads the store. So schedule an
-external call to `POST /scan`.
+Auto-scan is **REQUIRED and default-on**: the dashboard only updates when a scan runs (its own UI timer
+just re-reads the store), so freshness must advance with **NO manual action**. On Linux this is the
+systemd timer in §3; the mechanics below apply to any scheduler.
 
 **`POST /scan` is NON-BLOCKING (202).** It returns immediately with
 `202 {status, since, last_snapshot_id}` and runs the scan in a background thread; the cron just
@@ -157,24 +196,34 @@ under Kalshi's rate limit. Observe progress with `GET /scan/status` (`status` �
 
 ## 5. Acceptance test (run after hosting)
 
-1. `GET http://<host>:<port>/healthz` → `{"status":"ok"}`.
+1. On the server: `curl http://127.0.0.1:<port>/healthz` → `{"status":"ok"}`, and
+   `curl http://127.0.0.1:<port>/readyz` → `ready` after the first scan (`degraded` before any scan).
 2. `GET http://<host>:<port>/` renders the dashboard.
-3. `POST /scan` returns coverage (scanned/failed counts); the freshness strip updates.
+3. `POST /scan` returns **202** + a `ScanStatus`; poll `GET /scan/status` until `done`; the freshness
+   strip advances.
 4. Open `http://<host>:<port>/` from **an office Wi-Fi device's browser** — it loads.
-5. Confirm the scheduled scan is firing (freshness timestamp advances every few minutes).
+5. The scheduled timer fires with **no manual action** (freshness advances every few minutes);
+   `sudo ss -ltnp | grep :<port>` shows exactly **one** process bound.
+6. `sudo systemctl restart kalshi-dashboard` and a full **reboot**: the service comes back and the scan
+   timer resumes.
 
 ---
 
 ## 6. Operations
 
-- **Logs:** capture stdout/stderr (systemd journal / NSSM logs / `docker logs`).
-- **Restart:** the service auto-restarts; manual restart after a code update.
-- **Persistence:** `snapshots.db` (30h retention). Put it on durable storage if history matters; safe to
-  delete (it rebuilds on the next scan).
-- **Updates:** `git pull` → `pip install -r requirements.txt` → restart the service. (Module changes are
-  cached by uvicorn — a full restart is required, not just a browser refresh.)
+- **Logs:** journald — `journalctl -u kalshi-dashboard` (and `-u kalshi-dashboard-scan`). Retention via
+  the system's existing journald policy.
+- **Restart:** the service auto-restarts (`Restart=always`) and survives a host reboot.
+- **Time sync:** the host MUST run **NTP** — snapshot age, scan freshness, and stale warnings all depend
+  on the clock.
+- **Backup:** the SQLite DB is three files — back up `snapshots.db` + `snapshots.db-wal` +
+  `snapshots.db-shm` **together** (or use `sqlite3 .backup`). 30h retention; safe to lose (it rebuilds on
+  the next scan). Keep it on local disk (§3).
+- **Rollback / updates:** the deploy repo is regenerated per release. Deploy into a versioned dir (e.g.
+  `/opt/kalshi-dashboard/releases/<version>` with a `current` symlink); to roll back, repoint `current` to
+  the previous release (reinstall deps if they changed) and `systemctl restart kalshi-dashboard`.
 - **One instance / one worker only** — see §1.
-- **Egress:** ensure the host can reach `external-api.kalshi.com` (HTTPS out).
+- **Egress:** the host needs outbound HTTPS to `external-api.kalshi.com`.
 
 ---
 
@@ -190,7 +239,9 @@ under Kalshi's rate limit. Observe progress with `GET /scan/status` (`status` �
 ---
 
 ## 8. Open follow-ups (not blocking)
-- Optional reverse proxy + TLS + friendly hostname.
+- Optional reverse proxy + TLS + friendly hostname (the proxy MUST forward WebSocket upgrade headers —
+  NiceGUI needs WebSockets). Add company auth/SSO here if policy requires it before exposure.
 - Full-scan breadth for the scheduled scan (currently core series).
-- A committed `Dockerfile` if IT chooses the container path.
-- The broader UI-parity work (Phase E PRs 19–26) is separate from hosting and can proceed independently.
+- Docker is a **deferred follow-up** (NOT day-one; the locked decision is systemd / NSSM). A committed
+  `Dockerfile` can be added later if IT elects the container path.
+- The broader UI-parity work is separate from hosting and can proceed independently.
