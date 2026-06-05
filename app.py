@@ -362,7 +362,7 @@ with st.sidebar:
         show_cross_sport = st.toggle(
             "Scan all sports (cross-sport view)", value=False, key="cross_sport",
             help="Adds one ranked table aggregating opportunities across ALL sports "
-                 "(tennis, NBA, WNBA, golf, soccer, MLB) and persists each scan. Heavier — fetches every sport.")
+                 "(tennis, NBA, WNBA, golf, soccer, MLB, NHL) and persists each scan. Heavier — fetches every sport.")
         show_help = st.toggle("Show explanations", value=True)
 
     # Full scan / cross-sport are heavy: warn and never auto-refresh faster than FULL_SCAN_MIN_INTERVAL.

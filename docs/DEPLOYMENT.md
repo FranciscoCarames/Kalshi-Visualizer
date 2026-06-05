@@ -196,7 +196,7 @@ under Kalshi's rate limit. Observe progress with `GET /scan/status` (`status` âˆ
   `powershell -Command "Invoke-RestMethod -Method Post http://localhost:8000/scan"`.
 - **If `SCAN_TOKEN` is set** (see Environment variables), the scheduled caller MUST send the header, e.g.
   `curl -s -X POST -H "X-Scan-Token: $SCAN_TOKEN" http://localhost:8000/scan >/dev/null` (otherwise 401).
-- Scan scope = **core series, all sports** (tennis + NBA + WNBA + golf + soccer + MLB). Full-scan breadth is a
+- Scan scope = **core series, all sports** (tennis + NBA + WNBA + golf + soccer + MLB + NHL). Full-scan breadth is a
   possible follow-up, not part of this deployment.
 
 ---

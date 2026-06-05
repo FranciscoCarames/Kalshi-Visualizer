@@ -4,7 +4,7 @@
 
 The Kalshi Structured Market Visualizer is a tool for spotting **executable pricing inconsistencies and
 arbitrage opportunities** in related prediction-market contracts on Kalshi. It covers multiple sports —
-currently tennis, NBA basketball, and WNBA basketball — where a single player or team can appear across
+currently tennis, NBA, WNBA, golf, soccer, MLB, and NHL — where a single player or team can appear across
 several contract types at once: match-result contracts, advancement contracts (reaching a given round),
 and tournament-winner contracts. Viewing these side by side makes it possible to see when the same
 participant is priced inconsistently across related contracts, and to identify cases where a set of
@@ -22,8 +22,8 @@ inconsistencies and guaranteed-arbitrage situations.
 
 Current capabilities:
 
-- **Multi-sport coverage** — tennis (all tournaments the platform can find), NBA basketball, and WNBA
-  basketball, off one shared engine. Adding another sport is designed to be a small configuration step.
+- **Multi-sport coverage** — tennis (all tournaments the platform can find), NBA, WNBA, golf, soccer,
+  MLB, and NHL, off one shared engine. Adding another sport is designed to be a small configuration step.
 - **Participant and team selection** — filter down to one player or team and see all their related
   contracts together.
 - **Filters** — by sport, tournament, contract type, outcome status, and volume/liquidity.

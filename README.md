@@ -1,7 +1,7 @@
 # Kalshi Visualizer — Multi-Sport Executable-Inconsistency Dashboard
 
 A small, read-only [Streamlit](https://streamlit.io/) app that pulls live
-[Kalshi](https://kalshi.com/) prediction-market data for **tennis (ATP/WTA), NBA, WNBA, golf, soccer, and MLB**.
+[Kalshi](https://kalshi.com/) prediction-market data for **tennis (ATP/WTA), NBA, WNBA, golf, soccer, MLB, and NHL**.
 It surfaces two classes of opportunity across related contracts:
 
 1. **Layer-consistency violations** — a deeper outcome must not price above a prerequisite that
@@ -42,6 +42,10 @@ conservative:
 | Tennis | Reach Semifinal ⊇ Reach Final ⊇ Win Tournament |
 | NBA | Reach Playoffs ⊇ Win Conference ⊇ Win Championship |
 | WNBA | Reach Playoffs ⊇ Reach Semifinals ⊇ Reach Finals ⊇ Win Championship |
+| Golf | Top 20 ⊇ Top 10 ⊇ Top 5 ⊇ Win Tournament |
+| Soccer (World Cup) | Reach Round of 16 ⊇ Reach Quarterfinals ⊇ Reach Semifinals ⊇ Reach Finals |
+| MLB | Reach Playoffs ⊇ Win League ⊇ Win World Series |
+| NHL | Reach Playoffs ⊇ Win Conference ⊇ Win Championship |
 
 ---
 
@@ -69,12 +73,13 @@ entrants, which is safe because an untraded or unlisted winner only pays more (f
 `k` legs bought, `gap = Σ yes_bid(subset) − 100`). Empty-book longshots are skipped; many legs are illiquid
 so these are often only partly fillable.
 
-**Sport coverage:** tennis matches + NBA/WNBA playoff series + per-game (`KX*GAME`) for NBA/WNBA/MLB +
-soccer 3-way games + tournament-winner fields (all sports). MLB also has an NBA-shape futures ladder
-(Reach Playoffs ⊇ Win League ⊇ Win World Series); MLB game books carry the per-game `settlement_caveat`
-(a postponed/suspended game can settle differently). Props and advancement markets are excluded
-(`KXMLBSERIES` too — a regular-season series can tie 2-2, so it isn't MECE). Unknown series are always
-excluded.
+**Sport coverage:** tennis matches + NBA/WNBA/NHL playoff series + per-game (`KX*GAME`) for NBA/WNBA/MLB/NHL +
+soccer 3-way games + tournament-winner fields (all sports). MLB and NHL also have NBA-shape futures ladders
+(MLB: Reach Playoffs ⊇ Win League ⊇ Win World Series; NHL: Reach Playoffs ⊇ Win Conference ⊇ Win
+Championship); MLB and NHL game books carry the per-game `settlement_caveat` (a postponed/suspended game
+can settle differently). Props and advancement markets are excluded (`KXMLBSERIES` too — a regular-season
+series can tie 2-2, so it isn't MECE; NHL's `KXNHLSERIES` IS a clean best-of-7 playoff series, so it stays
+in). Unknown series are always excluded.
 
 ---
 
@@ -88,11 +93,15 @@ to the explicit `UNKNOWN` sport — never silently to tennis.
 
 Registered sports:
 
-| Sport | Series prefixes | Identity key | Match family |
+| Sport | Series prefixes / ownership | Identity key | Match family |
 |---|---|---|---|
 | Tennis 🎾 | `KXATP*`, `KXWTA*` | `custom_strike.tennis_competitor` UUID | `match` |
 | NBA 🏀 | `KXNBA*` | `custom_strike.basketball_team` UUID | `match` (playoff series) |
 | WNBA 🏀 | `KXWNBA*` | `custom_strike.basketball_team` UUID | `match` (playoff series) |
+| Golf ⛳ | `exact_series` (`KXPGATOP5/10/20`, `KXPGATOUR`) | `custom_strike.golf_competitor` UUID | — (no dutch books) |
+| Soccer ⚽ | `exact_series` (`KXWC*` World Cup) | `custom_strike.soccer_team` UUID | — (3-way games) |
+| MLB ⚾ | `KXMLB*` (allow-list) | `custom_strike.baseball_team` UUID | — (`KXMLBGAME` games) |
+| NHL 🏒 | `KXNHL*` (allow-list) | `custom_strike.hockey_team` UUID | `match` (playoff series) |
 
 ---
 

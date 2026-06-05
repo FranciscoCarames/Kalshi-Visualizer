@@ -103,10 +103,11 @@ def _is_active(row: dict[str, Any]) -> bool:
 
 
 # Two-way (exactly-2-outcome) contract families the detector accepts. A sport's head-to-head family
-# (tennis "match"; NBA/WNBA "match" = playoff series) PLUS per-game ("game" — NBA/WNBA single games).
-# Both are 2-outcome and exhaustive for the draw-free sports we support; the exactly-2-distinct-
-# participant guard in `_detect_pair` is the real MECE safety net (a draw-prone 3-outcome game would
-# carry 3 markets and be rejected there). Tennis has no "game" family, so it's unaffected.
+# (tennis "match"; NBA/WNBA/NHL "match" = playoff series) PLUS per-game ("game" — NBA/WNBA/NHL/MLB single
+# games). Both are 2-outcome and exhaustive for the draw-free sports here (not a claim about every future
+# sport); the exactly-2-distinct-participant guard in `_detect_pair` is the real MECE safety net (a
+# draw-prone 3-outcome game would carry 3 markets and be rejected there). Tennis/MLB have no "match" two-
+# way (tennis has no "game" family; MLB has match_family="") so they're unaffected by the match path.
 _GAME_FAMILY = "game"
 
 
@@ -228,6 +229,12 @@ def _detect_pair(event_ticker: str, markets: list[dict[str, Any]],
     a, b = markets
     # Two distinct participants of the same match (defensive against duplicate rows).
     if a.get("player_key") and a.get("player_key") == b.get("player_key"):
+        return None
+    # Both legs must belong to the SAME series — defensive against event-ticker collisions / mixed
+    # synthetic frames pairing unrelated markets. Normalized strict equality so a row missing `series`
+    # can't slip through (errs toward NOT firing — the safe direction for a dutch-book guard; two
+    # genuinely series-less rows still match as "" == "").
+    if str(a.get("series") or "").upper() != str(b.get("series") or "").upper():
         return None
 
     # Soonest the edge starts settling (capital frees / opportunity expires): the earlier leg time.

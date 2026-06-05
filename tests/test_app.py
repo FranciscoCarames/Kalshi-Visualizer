@@ -144,6 +144,54 @@ def test_app_renders_nba_and_unmapped_table():
         assert not at.exception
 
 
+def _nhl_market(ticker: str, team: str, uuid: str, bid: str, ask: str, title: str) -> dict:
+    return {
+        "ticker": ticker, "yes_sub_title": team, "custom_strike": {"hockey_team": uuid},
+        "yes_bid_dollars": bid, "yes_ask_dollars": ask, "last_price_dollars": ask,
+        "yes_bid_size_fp": "100", "yes_ask_size_fp": "100",
+        "volume_fp": "1000", "open_interest_fp": "500", "status": "active",
+        "title": title, "close_time": "2026-06-16T09:00:00Z",
+    }
+
+
+def _nhl_results() -> list[tuple[str, list[dict]]]:
+    """Stanley Cup winner + conference (a real Win Championship ⊆ Win Conference ladder) + a per-game
+    market (ineligible — must surface in the unmapped table, never in ladder checks)."""
+    comp = {"competition": "Pro Hockey"}
+    champ = {"event_ticker": "KXNHL-26", "title": "Stanley Cup", "product_metadata": comp,
+             "markets": [_nhl_market("KXNHL-26-BOS", "Bruins", "uuid-bos", "0.40", "0.42",
+                                     "Will the Bruins win the 2026 Stanley Cup?")]}
+    conf = {"event_ticker": "KXNHLEAST-26", "title": "East", "product_metadata": comp,
+            "markets": [_nhl_market("KXNHLEAST-26-BOS", "Bruins", "uuid-bos", "0.55", "0.57",
+                                    "Will the Bruins win the Eastern Conference?")]}
+    game = {"event_ticker": "KXNHLGAME-26JUN10", "title": "Game 4",
+            "product_metadata": {"competition": "Pro Hockey", "competition_scope": "Game"},
+            "markets": [_nhl_market("KXNHLGAME-26JUN10-BOS", "Bruins", "uuid-bos", "0.50", "0.52",
+                                    "Game 4 Winner?")]}
+    return [("KXNHL", [champ]), ("KXNHLEAST", [conf]), ("KXNHLGAME", [game])]
+
+
+def test_app_renders_nhl_and_unmapped_table():
+    pytest.importorskip("streamlit")
+    from streamlit.testing.v1 import AppTest
+
+    results = _nhl_results()
+    tickers = [t for t, _ in results]
+    with patch("kalshi_client.discover_series_for_sport", return_value=tickers), \
+         patch("kalshi_client.get_events_for_series", return_value=(results, [])), \
+         patch("kalshi_client.get_series_titles", return_value={}):
+        at = AppTest.from_file(APP_PATH, default_timeout=60)
+        at.session_state["sport_id"] = "nhl"          # select NHL before the first render
+        at.session_state["scan_all_toggle"] = False
+        at.run()
+        assert not at.exception
+
+        toggle = next(t for t in at.toggle if "non-laddered" in t.label.lower())
+        toggle.set_value(True)
+        at.run()
+        assert not at.exception
+
+
 def test_dutch_plan_text_lists_all_n_legs():
     """The dutch-book table's plan cell lists EVERY leg for an n-outcome (soccer 3-way) finding, and
     falls back to the positional action_1/2 fields for a 2-leg book."""
