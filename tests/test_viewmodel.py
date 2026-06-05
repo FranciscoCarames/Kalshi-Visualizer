@@ -78,32 +78,56 @@ def test_scope_banner_honest_when_no_scan_or_no_meta():
 
 # --- URL state round-trip + graceful reset --------------------------------------------
 def test_url_state_round_trip():
-    state = {"sports": ["tennis", "nba"], "tournaments": ["French Open"], "participant": "Alc",
-             "min_size": 50.0, "active_only": True}
+    # participant is now a LIST of keys (PR6); keys with commas/spaces survive via URL-encoding.
+    state = {"sports": ["tennis", "nba"], "tournaments": ["French Open"],
+             "participant": ["uuid-a", "key, with space"], "min_size": 50.0, "active_only": True}
     q = vm.query_from_state(state)
-    assert q == {"sport": "tennis,nba", "tournament": "French Open", "participant": "Alc",
-                 "min_size": "50.0", "active": "1"}
+    assert q["sport"] == "tennis,nba" and q["tournament"] == "French Open"
+    assert q["participant"] == "uuid-a,key%2C%20with%20space"   # comma/space encoded, not corrupting the join
+    assert q["min_size"] == "50.0" and q["active"] == "1"
     back = vm.state_from_query(q)   # no options -> accept all
     assert back["sports"] == ["tennis", "nba"] and back["tournaments"] == ["French Open"]
-    assert back["participant"] == "Alc" and back["min_size"] == 50.0 and back["active_only"] is True
+    assert back["participant"] == ["uuid-a", "key, with space"]   # round-trips exactly
+    assert back["min_size"] == 50.0 and back["active_only"] is True
 
 
-def test_url_state_gracefully_drops_unknown_sport_and_tournament():
-    options = {"sports": {"tennis": "Tennis"}, "tournaments": ["French Open"]}
-    q = {"sport": "tennis,golf", "tournament": "Wimbledon", "participant": "x"}
+def test_url_state_gracefully_drops_unknown_sport_tournament_and_participant():
+    options = {"sports": {"tennis": "Tennis"}, "tournaments": ["French Open"],
+               "participants": [{"value": "uuid-a", "label": "Alcaraz"}]}
+    q = {"sport": "tennis,golf", "tournament": "Wimbledon", "participant": "uuid-a,uuid-gone"}
     st = vm.state_from_query(q, options=options)
     assert st["sports"] == ["tennis"]            # golf isn't in the snapshot -> dropped, not errored
     assert "tournaments" not in st               # Wimbledon absent -> the whole (now-empty) key omitted
-    assert st["participant"] == "x"              # participant is free text -> kept
+    assert st["participant"] == ["uuid-a"]       # the absent participant key is dropped (stale-link reset)
 
 
 def test_active_filter_chips_labels():
-    options = {"sports": {"tennis": "Tennis"}, "tournaments": ["French Open"]}
-    chips = vm.active_filter_chips({"sports": ["tennis"], "participant": "Alc", "min_size": 50.0,
+    options = {"sports": {"tennis": "Tennis"}, "tournaments": ["French Open"],
+               "participants": [{"value": "uuid-a", "label": "Alcaraz"}]}
+    chips = vm.active_filter_chips({"sports": ["tennis"], "participant": ["uuid-a"], "min_size": 50.0,
                                     "active_only": True}, options)
-    assert "sport: Tennis" in chips and "participant: “Alc”" in chips
+    assert "sport: Tennis" in chips and "participant: Alcaraz" in chips   # key -> label for display
     assert "min size ≥ 50" in chips and "active only" in chips
     assert vm.active_filter_chips({}) == []
+
+
+def test_derive_options_participants_keyed_and_disambiguated():
+    opps = [
+        {"sport": "tennis", "participant_keys": ["k1"], "participant_labels": ["Alcaraz"]},
+        {"sport": "tennis", "participant_keys": ["k2", "k3"], "participant_labels": ["Smith", "Smith"]},
+    ]
+    labels = {p["value"]: p["label"] for p in vm.derive_options(opps)["participants"]}
+    assert labels["k1"] == "Alcaraz"                          # unique label stays clean
+    assert labels["k2"] == "Smith [k2]" and labels["k3"] == "Smith [k3]"   # same name, diff key -> suffixed
+
+
+def test_filter_opps_participant_or_match_by_key():
+    opps = [{"participant_keys": ["ka", "kb"], "name": "A vs B"},
+            {"participant_keys": ["kc"], "name": "C ladder"}]
+    assert {o["name"] for o in vm.filter_opps(opps, participant=["kb"])} == {"A vs B"}     # B side reachable
+    assert {o["name"] for o in vm.filter_opps(opps, participant=["ka", "kc"])} == {"A vs B", "C ladder"}  # OR
+    assert len(vm.filter_opps(opps, participant=[])) == 2                                  # empty = no filter
+    assert {o["name"] for o in vm.filter_opps(opps, participant="ladder")} == {"C ladder"}  # legacy substring
 
 
 # --- participant detail builders (PR 24) — pure over a single participant's contract rows ----------

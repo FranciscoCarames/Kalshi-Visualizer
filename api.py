@@ -96,6 +96,10 @@ class Opportunity(BaseModel):
     # fields, so an N>2 plan would be silently lost otherwise). Synthesized 2-leg for the other shapes.
     legs: list[dict[str, Any]] | None = None
     n_legs: int | None = None
+    # All participants on the opportunity (every leg) for the participant multi-select filter (PR6).
+    # Parallel lists key<->label; must be DECLARED or extra="ignore" would drop them.
+    participant_keys: list[str] = []
+    participant_labels: list[str] = []
 
 
 class Coverage(BaseModel):

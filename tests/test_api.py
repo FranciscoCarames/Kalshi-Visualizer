@@ -189,6 +189,15 @@ def test_opportunity_model_preserves_pr13_fields():
     assert o.n_legs == 2 and isinstance(o.legs, list) and len(o.legs) == 2
 
 
+def test_opportunity_model_carries_participant_lists():
+    # PR6 (#13): the participant multi-select needs every leg's key/label to survive extra="ignore".
+    row = op("x")
+    row.update(participant_keys=["ka", "kb"], participant_labels=["A", "B"])
+    o = api.Opportunity(**row)
+    assert o.participant_keys == ["ka", "kb"] and o.participant_labels == ["A", "B"]
+    assert api.Opportunity(**op("y")).participant_keys == []   # default empty, never required
+
+
 def test_backlog_model_carries_last_legs():
     item = api.BacklogItem(opportunity_id="x", last_legs=[{"text": "a"}], payout_floor_c=100, roi_pct=9.0)
     assert isinstance(item.last_legs, list) and item.payout_floor_c == 100 and item.roi_pct == 9.0
