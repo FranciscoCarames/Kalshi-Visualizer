@@ -34,6 +34,19 @@ _SELECTED_ROW_CSS = (
     ".opp-sel tbody tr.selected > td:first-child { box-shadow: inset 4px 0 0 0 var(--q-primary); }"
 )
 
+# Accessibility (#10). Keyboard-focus visibility (a clear ring on whatever control is focused, in BOTH
+# themes via --q-primary) + an opt-in "Larger text" mode scoped to `body.a11y-large` (NOT global `html`,
+# so it's reversible and contained): bumps base text, the dense Quasar table cells/headers, and the small
+# helper text. Paired with ARIA labels applied to every control/table (see _apply_aria below), and with
+# colour cues that always carry text/icon companions elsewhere in the UI.
+_A11Y_CSS = (
+    "*:focus-visible { outline: 2px solid var(--q-primary) !important; outline-offset: 2px; }\n"
+    "body.a11y-large { font-size: 112.5%; }\n"
+    "body.a11y-large .q-table tbody td, body.a11y-large .q-table thead th { font-size: 1.05rem; }\n"
+    "body.a11y-large .text-sm { font-size: 1rem; }\n"
+    "body.a11y-large .text-xs { font-size: 0.9rem; }"
+)
+
 
 def _aggrid_options(rows: list[dict[str, Any]], fields: list[tuple[str, str]]) -> dict[str, Any]:
     """Client-side AG-Grid options (pagination + per-column filter/sort) over already-in-memory rows.
@@ -144,6 +157,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                              "rendered_snapshot_id": "__unseeded__", "selected": None}
 
     ui.add_css(_SELECTED_ROW_CSS)        # selected-row highlight (#14) — see module note
+    ui.add_css(_A11Y_CSS)                 # accessibility (#10): focus-visible ring + opt-in larger text
     ui.label("🎯 Kalshi opportunity engine — cross-sport").classes("text-2xl font-bold")
     ui.label("Opportunities across all sports, ranked best→worst. Core series, gross of fees — "
              "NOT all of Kalshi.").classes("text-sm text-gray-500")
@@ -159,9 +173,13 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         rules_sw = ui.switch("Resolution criteria", value=False).tooltip(
             "Show each contract's settlement rules in the click panel and auto-open them in the detail view.")
         _darkmode = ui.dark_mode()
-        ui.switch("Dark mode",
-                  on_change=lambda e: _darkmode.enable() if e.value else _darkmode.disable()
-                  ).tooltip("Toggle a dark theme.")
+        dark_sw = ui.switch("Dark mode",
+                            on_change=lambda e: _darkmode.enable() if e.value else _darkmode.disable()
+                            ).tooltip("Toggle a dark theme.")
+        larger_sw = ui.switch("Larger text").tooltip("Increase text size across the dashboard for readability.")
+        larger_sw.on_value_change(
+            lambda e: ui.query("body").classes(add="a11y-large") if e.value
+            else ui.query("body").classes(remove="a11y-large"))
         scan_btn = ui.button("⟳ Scan now (core series)")
         export_btn = ui.button("⬇ Export (ZIP)")
         # Auto-refresh: drive the in-process scan scheduler (NON-force, TTL/budget-guarded). This control is
@@ -186,7 +204,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             "Show the Review-signal section — settlement-caveated, never auto-tradable.")
         show_blocked_sw = ui.switch("Blocked", value=False).tooltip(   # hidden by default (PR S5)
             "Show the Blocked section — opportunities that exist but aren't currently tradable.")
-        ui.button("Clear filters", on_click=lambda: _clear_filters())
+        clear_btn = ui.button("Clear filters", on_click=lambda: _clear_filters())
 
     # --- "Beyond the strict rule" — two opt-in sections past the actionable line (PR 29) ---
     with ui.row().classes("items-end gap-4 flex-wrap"):
@@ -680,6 +698,29 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             coverage=cov, frames=engine.frames(), backlog=backlog, backlog_window=win_label, filters=filters)
         ui.download.content(blob, f"kalshi-snapshot-{cov['snapshot_id']}.zip", "application/zip")
         ui.notify(f"Exported snapshot {cov['snapshot_id']} · {len(view)} opportunities", type="positive")
+
+    # Accessibility (#10): an explicit aria-label on every control + each data table + the key expansions,
+    # so a screen reader announces a meaningful name (emoji/short labels and the unlabelled tables aren't
+    # self-describing). Applied in one pass now that every element exists.
+    for _el, _aria in (
+        (tz_select, "Time zone"), (persist_select, "New-actionable banner persistence"),
+        (window_select, "Backlog window"), (show_ids, "Show IDs and codes"),
+        (rules_sw, "Show resolution criteria"), (dark_sw, "Dark mode"), (larger_sw, "Larger text"),
+        (scan_btn, "Scan now (core series)"), (export_btn, "Export snapshot ZIP"),
+        (auto_sw, "Auto-refresh in the background"), (interval_sel, "Auto-scan interval (seconds)"),
+        (sport_sel, "Filter by sport"), (tour_sel, "Filter by tournament"),
+        (participant_in, "Filter by participant or match"), (min_size_in, "Minimum tradable size"),
+        (active_sw, "Active markets only"), (show_review_sw, "Show the Review-signal section"),
+        (show_blocked_sw, "Show the Blocked section"), (clear_btn, "Clear all filters"),
+        (rb_switch, "Show risk-budget candidates"), (rb_max_loss, "Risk-budget max loss in cents"),
+        (rb_min_ratio, "Risk-budget minimum upside-to-risk ratio"),
+        (nm_switch, "Show near-miss books"), (nm_max_over, "Near-miss max overpay in cents"),
+        (actionable, "Actionable opportunities"), (review, "Review-signal opportunities"),
+        (blocked, "Blocked opportunities"), (rb_table, "Risk-budget candidates"),
+        (nm_table, "Near-miss books"), (backlog, "Recently-actionable backlog"),
+        (detail_expansion, "Selected participant detail"), (diagnostics_expansion, "Diagnostics and debug"),
+    ):
+        _el.props(f'aria-label="{_aria}"')
 
     scan_btn.on_click(do_scan)
     export_btn.on_click(do_export)
