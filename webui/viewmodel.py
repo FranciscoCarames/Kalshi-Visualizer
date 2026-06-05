@@ -30,10 +30,28 @@ def ts_disp(ts: Any, tz: str) -> str:
     return data.fmt_time(datetime.fromtimestamp(ts, timezone.utc), tz, fmt="%H:%M:%S %Z") if ts else "—"
 
 
-def opp_row(o: dict[str, Any], new_ids: set[str]) -> dict[str, Any]:
+def classify_changes(prev: dict[str, dict], cur: dict[str, dict], ever_seen: set[str],
+                     *, metric: str = "exec_gap_c") -> dict[str, str]:
+    """Per-opportunity change vs the PREVIOUS snapshot, keyed by opportunity_id:
+    'up'/'down' (the headline `metric` — gross edge — moved), 'new' (id never seen before),
+    'returned' (seen before but absent in the previous snapshot), '' (unchanged). Pure; no UI. Computed
+    once per new snapshot (see dashboard.reload_data) and persisted, so a plain filter re-render never
+    re-derives or "replays" it."""
+    out: dict[str, str] = {}
+    for oid, o in cur.items():
+        if oid in prev:
+            a, b = _num_or_none(prev[oid].get(metric)), _num_or_none(o.get(metric))
+            out[oid] = "" if (a is None or b is None or a == b) else ("up" if b > a else "down")
+        else:
+            out[oid] = "returned" if oid in ever_seen else "new"
+    return out
+
+
+def opp_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str] | None = None) -> dict[str, Any]:
     return {
         "opportunity_id": o.get("opportunity_id"),
         "new": "🆕" if o.get("opportunity_id") in new_ids else "",
+        "_change": (changes or {}).get(o.get("opportunity_id"), ""),
         "sport": o.get("sport_label") or o.get("sport") or "",
         "name": o.get("name") or "", "detail": o.get("detail") or "",
         "edge": o.get("exec_gap_c"), "roi": o.get("roi_pct"), "units": o.get("exec_min_size"),
@@ -100,13 +118,14 @@ def _upside_risk(worst: Any, best: Any) -> Any:
     return None if _isna(best) else round(best / risk, 1)
 
 
-def risk_budget_row(o: dict[str, Any], new_ids: set[str]) -> dict[str, Any]:
+def risk_budget_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str] | None = None) -> dict[str, Any]:
     """Display row for the risk-budget table: leads with the convex economics (max loss / max profit /
     upside:risk); worst-case ROC is a labelled secondary, never the headline (it's honestly negative)."""
     wc, bc = o.get("worst_case_profit_c"), o.get("best_case_profit_c")
     return {
         "opportunity_id": o.get("opportunity_id"),
         "new": "🆕" if o.get("opportunity_id") in new_ids else "",
+        "_change": (changes or {}).get(o.get("opportunity_id"), ""),
         "sport": o.get("sport_label") or o.get("sport") or "",
         "name": o.get("name") or "", "detail": o.get("detail") or "",
         "cost": o.get("cost_c"),
@@ -120,13 +139,14 @@ def risk_budget_row(o: dict[str, Any], new_ids: set[str]) -> dict[str, Any]:
     }
 
 
-def near_miss_row(o: dict[str, Any], new_ids: set[str]) -> dict[str, Any]:
+def near_miss_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str] | None = None) -> dict[str, Any]:
     """Display row for the near-miss watchlist: the cost, the overpay (= guaranteed bundle loss), and the
     flat-loss note. Never frames it as an edge."""
     g = o.get("exec_gap_c")
     return {
         "opportunity_id": o.get("opportunity_id"),
         "new": "🆕" if o.get("opportunity_id") in new_ids else "",
+        "_change": (changes or {}).get(o.get("opportunity_id"), ""),
         "sport": o.get("sport_label") or o.get("sport") or "",
         "name": o.get("name") or "", "detail": o.get("detail") or "",
         "cost": o.get("cost_c"),

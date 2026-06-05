@@ -190,6 +190,17 @@ def test_mode_switch_no_rescan():
     assert [o["opportunity_id"] for o in rows] == ["a", "b"]             # pure: input list not mutated
 
 
+# --- change signal (#3) ------------------------------------------------------------------------------
+def test_classify_changes_new_returned_up_down():
+    prev = {"a": {"exec_gap_c": 5}, "b": {"exec_gap_c": 10}}
+    cur = {"a": {"exec_gap_c": 7}, "b": {"exec_gap_c": 8}, "c": {"exec_gap_c": 3}, "d": {"exec_gap_c": 1}}
+    ever = {"a", "b", "d"}        # d seen before but absent in prev -> returned; c never seen -> new
+    assert vm.classify_changes(prev, cur, ever) == {"a": "up", "b": "down", "c": "new", "d": "returned"}
+    # unchanged value, or a missing metric on either side -> "" (no phantom delta)
+    assert vm.classify_changes({"a": {"exec_gap_c": 5}}, {"a": {"exec_gap_c": 5}}, {"a"}) == {"a": ""}
+    assert vm.classify_changes({"a": {}}, {"a": {"exec_gap_c": 5}}, {"a"}) == {"a": ""}
+
+
 # --- participant detail builders (PR 24) — pure over a single participant's contract rows ----------
 import consistency  # noqa: E402  — used by the payoff-chart test
 

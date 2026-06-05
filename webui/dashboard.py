@@ -47,6 +47,23 @@ _A11Y_CSS = (
     "body.a11y-large .text-xs { font-size: 0.9rem; }"
 )
 
+# Change-signal (#3) — a Quasar body-cell slot on the indicator column rendering a COLOURED, shaped marker
+# of how each opportunity moved since the last scan: green ▲ (edge up), red ▼ (edge down), amber ↩
+# (returned), a blue "new" badge — colour AND icon/shape (never colour alone). The new-actionable 🆕 takes
+# priority. Persistent per snapshot (no fade animation), so a plain filter re-render never replays it.
+_CHANGE_CELL_SLOT = (
+    '<q-td :props="props" class="text-center">'
+    '<span v-if="props.row.new">{{ props.row.new }}</span>'
+    '<q-icon v-else-if="props.row._change==\'up\'" name="arrow_upward" color="positive" size="sm">'
+    '<q-tooltip>edge up since the last scan</q-tooltip></q-icon>'
+    '<q-icon v-else-if="props.row._change==\'down\'" name="arrow_downward" color="negative" size="sm">'
+    '<q-tooltip>edge down since the last scan</q-tooltip></q-icon>'
+    '<q-icon v-else-if="props.row._change==\'returned\'" name="undo" color="amber-8" size="sm">'
+    '<q-tooltip>returned this scan</q-tooltip></q-icon>'
+    '<q-badge v-else-if="props.row._change==\'new\'" color="primary">new</q-badge>'
+    '</q-td>'
+)
+
 
 def _aggrid_options(rows: list[dict[str, Any]], fields: list[tuple[str, str]]) -> dict[str, Any]:
     """Client-side AG-Grid options (pagination + per-column filter/sort) over already-in-memory rows.
@@ -154,7 +171,10 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
     # the store. (P2: store reads happen in reload_data; rerender is pure in-memory.)
     state: dict[str, Any] = {"opps": {}, "opps_list": [], "seen_new": set(), "new_ids": set(),
                              "first": True, "options": {}, "cov": {}, "backlog": [],
-                             "rendered_snapshot_id": "__unseeded__", "selected": None}
+                             "rendered_snapshot_id": "__unseeded__", "selected": None,
+                             # change-signal (#3): per-opp up/down/new/returned vs the PREVIOUS snapshot,
+                             # recomputed once per new snapshot; `ever_seen` distinguishes new from returned.
+                             "changes": {}, "ever_seen": set()}
 
     ui.add_css(_SELECTED_ROW_CSS)        # selected-row highlight (#14) — see module note
     ui.add_css(_A11Y_CSS)                 # accessibility (#10): focus-visible ring + opt-in larger text
@@ -428,6 +448,8 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                         selection="single", pagination=10).classes("w-full overflow-x-auto opp-sel")
     nm_table.on_select(_on_select(nm_table))
     _sel_tables.extend([actionable, review, blocked, rb_table, nm_table])
+    for _t in _sel_tables:        # colour the change-signal indicator column on every opportunity table (#3)
+        _t.add_slot("body-cell-new", _CHANGE_CELL_SLOT)
 
     with ui.expansion("📉 Recently actionable (left the actionable set)").classes("w-full"):
         backlog = ui.table(columns=_BACKLOG_COLUMNS, rows=[], row_key="name",
@@ -556,9 +578,20 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         not — that's the expensive path we keep off the hot loop). Sync, so the first paint (`_seed`) and
         the async `reload_data` share one code path."""
         cov, opps, al = bundle["cov"], bundle["opps"], bundle["alerts"]
+        # Change-signal (#3): diff against the PREVIOUS snapshot's opps, captured BEFORE we overwrite them,
+        # and ONLY when the snapshot id advanced (a persist/window control reload re-reads the same snapshot
+        # -> no phantom deltas). First paint shows none. Computed once here; rerender just re-displays it.
+        prev_opps, was_first = state["opps"], state["first"]
+        new_id = cov.get("snapshot_id")
+        if was_first or new_id == state.get("rendered_snapshot_id"):
+            state["changes"] = {}
+        else:
+            state["changes"] = vm.classify_changes(prev_opps, {o.get("opportunity_id"): o for o in opps},
+                                                   state["ever_seen"])
         state["cov"] = cov
         state["opps_list"] = opps
         state["opps"] = {o.get("opportunity_id"): o for o in opps}
+        state["ever_seen"].update(state["opps"].keys())     # after classify, so 'returned' detection works
         state["options"] = vm.derive_options(opps)
         state["backlog"] = bundle["backlog"]
         sport_sel.options = state["options"]["sports"]
@@ -593,6 +626,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         tz = tz_select.value
         opps = state.get("opps_list") or []
         new_ids = state.get("new_ids") or set()
+        chg = state.get("changes") or {}      # per-snapshot change-signal; re-displayed, never re-derived here
         cov = state.get("cov") or {}
         filters = _current_filters()
         view = vm.rank_opps(vm.filter_opps(opps, **filters), rank_sel.value)   # display-time re-sort, no rescan
@@ -603,9 +637,9 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         empty.set_text(msg or "")
         empty.set_visibility(msg is not None)
 
-        actionable.rows = [vm.opp_row(o, new_ids) for o in view if o.get("bucket") == "actionable"]
-        review.rows = [vm.opp_row(o, new_ids) for o in view if o.get("bucket") == "review_signal"]
-        blocked.rows = [vm.opp_row(o, new_ids) for o in view if o.get("bucket") == "blocked"]
+        actionable.rows = [vm.opp_row(o, new_ids, chg) for o in view if o.get("bucket") == "actionable"]
+        review.rows = [vm.opp_row(o, new_ids, chg) for o in view if o.get("bucket") == "review_signal"]
+        blocked.rows = [vm.opp_row(o, new_ids, chg) for o in view if o.get("bucket") == "blocked"]
         for lbl, tbl, sw in ((review_label, review, show_review_sw), (blocked_label, blocked, show_blocked_sw)):
             lbl.set_visibility(sw.value)
             tbl.set_visibility(sw.value)
@@ -615,14 +649,14 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         if rb_switch.value:
             rbv = vm.risk_budget_view(view, max_loss_c=int(rb_max_loss.value or 0),
                                       min_ratio_tenths=round(float(rb_min_ratio.value or 0) * 10))
-            rb_table.rows = [vm.risk_budget_row(o, new_ids) for o in rbv]
+            rb_table.rows = [vm.risk_budget_row(o, new_ids, chg) for o in rbv]
         rb_label.set_visibility(rb_switch.value)
         rb_table.set_visibility(rb_switch.value)
         rb_max_loss.set_enabled(rb_switch.value)
         rb_min_ratio.set_enabled(rb_switch.value)
         if nm_switch.value:
             nmv = vm.near_miss_view(view, max_over_c=int(nm_max_over.value or 0))
-            nm_table.rows = [vm.near_miss_row(o, new_ids) for o in nmv]
+            nm_table.rows = [vm.near_miss_row(o, new_ids, chg) for o in nmv]
         nm_label.set_visibility(nm_switch.value)
         nm_table.set_visibility(nm_switch.value)
         nm_max_over.set_enabled(nm_switch.value)
