@@ -25,7 +25,9 @@ from nicegui import ui
 
 import api
 import config
+import scan_scheduler
 import webui.dashboard  # noqa: F401  — importing registers the @ui.page('/') dashboard
+from webui import engine
 
 # Real storage secret comes from the env; the config value is only a clearly-labeled dev fallback.
 _storage_secret = os.getenv("NICEGUI_STORAGE_SECRET") or config.NICEGUI_STORAGE_SECRET_FALLBACK
@@ -123,4 +125,8 @@ if __name__ == "__main__":
     if _host not in _LOOPBACK_HOSTS:
         print(f"Serving on http://{_host}:{_port}  ·  reach it from the LAN at "
               f"http://<this-machine-LAN-IP>:{_port}  (see docs/LAN_ACCESS.md)")
+    # Start the in-process auto-scan loop HERE (runtime only) so `import serve` / the test harnesses never
+    # spawn a background scan. It drives the NON-force scan; the ScanManager TTL/budget/singleflight guards
+    # bound every tick. (When using this, disable the optional systemd scan.timer — see docs/DEPLOYMENT.md.)
+    scan_scheduler.scheduler.start(lambda: engine.run_scan_now(force=False))
     uvicorn.run(api.app, host=_host, port=_port)

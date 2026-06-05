@@ -216,7 +216,7 @@ All data comes from the Kalshi public market-data REST API (`https://external-ap
 
 ### Rate limiting and concurrency
 
-- The client uses a process-wide min-interval limiter (`_throttle`) capped at `config.MAX_RPS` (5 req/s, ~25% of Kalshi's 20 req/s Basic tier limit).
+- The client uses a process-wide min-interval limiter (`_throttle`) capped at `config.MAX_RPS` (15 req/s, ~75% of Kalshi's 20 req/s Basic tier limit). The hard ban floor is the 429 exponential backoff (honors `Retry-After` if the 429 carries one).
 - Fan-out to multiple series is concurrent via `ThreadPoolExecutor(max_workers=CONCURRENCY=4)`.
 - A `Retry-After`-aware exponential backoff handles 429 and 5xx responses.
 - Pagination is guarded: `get_paginated` raises `KalshiError` if `MAX_PAGES=100` is reached with a cursor still pending — partial data is never silently returned.
@@ -1050,7 +1050,7 @@ Key terms as defined in the app's single source of truth:
 
 6. **Contracts stamped `Unknown` tournament:** The `competition` field is absent and no keyword/ticker fallback matched. Check `data.tournament_of` and the `tournament_source` column in the Debug panel.
 
-7. **Rate limit errors in production:** `MAX_RPS` is set to 5 (25% of the 20/s ceiling). If errors persist, lower `CONCURRENCY` or `MAX_RPS`. Note the limiter is process-wide only.
+7. **Rate limit errors in production:** `MAX_RPS` is set to 15 (~75% of the 20/s ceiling). If errors persist, lower `CONCURRENCY` or `MAX_RPS`. Note the limiter is process-wide only — 15/s assumes a single process.
 
 8. **Dutch-book detector fires on a non-MECE event:** Check that the event has exactly 2 distinct `player_key` markets. Events with more than 2 markets are excluded by the exactly-2 guard in `dutchbook._detect_pair`.
 
@@ -1066,7 +1066,7 @@ Key terms as defined in the app's single source of truth:
 | `DISPLAY_TOL_C` | `config.py` | 1¢ | Ignore display gaps below this (noise filter) |
 | `NEAR_EDGE_MIN_C` | `config.py` | -5¢ | Near-edge watchlist window lower bound |
 | `FO_WINDOW` | `config.py` | 2026-05-18 to 2026-06-09 | FO date-window fallback; update per year |
-| `MAX_RPS` | `config.py` | 5 req/s | Rate limiter ceiling |
+| `MAX_RPS` | `config.py` | 15 req/s | Rate limiter ceiling (~75% of Basic; single-process) |
 | `REFRESH_TTL` | `config.py` | 30s | `load_contracts` cache TTL |
 | `REFRESH_DEFAULT_SECONDS` | `config.py` | 120s | Default auto-refresh interval |
 | `FRESHNESS_TICK_SECONDS` | `config.py` | 1s | How often the freshness strip re-renders (no refetch) |

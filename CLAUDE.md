@@ -159,10 +159,11 @@ tests/             # pytest: test_data, test_consistency, test_dutchbook, test_g
   is shown and the interval is clamped to ≥ `FULL_SCAN_MIN_INTERVAL` (120s).
 - **Rate limiting (free tier):** Kalshi Basic read ≈ 20 req/s (200 tokens/s ÷ 10/GET; verified at
   docs.kalshi.com/getting_started/rate_limits). `kalshi_client._throttle` caps issuance at
-  `config.MAX_RPS` (5, ~25%) via a min-interval limiter; `_get` retries with `Retry-After`/exponential
-  backoff (`MAX_RETRIES`/`BACKOFF_*`); fan-out concurrency is `CONCURRENCY` (4). **The throttle is
-  PROCESS-WIDE ONLY** — multiple processes/containers/replicas each have their own limiter (aggregate =
-  `MAX_RPS × process count`); a large scale-out would need a shared limiter.
+  `config.MAX_RPS` (15, ~75%) via a min-interval limiter; the hard ban floor is `_get`'s exponential
+  backoff on 429 (honoring `Retry-After` when the 429 carries one — Kalshi may omit it) via
+  `MAX_RETRIES`/`BACKOFF_*`; fan-out concurrency is `CONCURRENCY` (4). **The throttle is PROCESS-WIDE
+  ONLY** — 15/s is safe for ONE process; multiple processes/workers/replicas each have their own limiter
+  (aggregate = `MAX_RPS × process count`), so don't run several without a shared limiter.
 - **Contract row (build_contracts), partial schema:** `player, player_key, player_key_source,
   mapping_confidence, mapping_reason, tour, kind, category, contract, stage, stage_rank, opponent,
   tournament, tournament_source, display_pct, yes_mid_pct, last_pct, yes_bid_pct, yes_ask_pct,

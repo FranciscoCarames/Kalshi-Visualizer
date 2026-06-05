@@ -4,9 +4,10 @@ Only GET endpoints are used and no authentication is required for market data.
 All network/pagination/retry/rate-limit concerns live here so the rest of the app stays clean.
 
 Rate limiting: Kalshi's Basic (free) tier allows ~20 read requests/second. We cap issuance at
-``config.MAX_RPS`` (~25% of that) with a process-wide min-interval limiter, plus exponential backoff
-that honours a ``Retry-After`` header on 429. The limiter is PROCESS-WIDE ONLY — it bounds one Python
-process; multiple processes/containers/replicas each get their own limiter (aggregate =
+``config.MAX_RPS`` (~75% of that) with a process-wide min-interval limiter. The hard floor against a ban
+is the exponential backoff on a 429 — it honours a ``Retry-After`` header WHEN the 429 carries one
+(Kalshi may omit it), otherwise it backs off exponentially. The limiter is PROCESS-WIDE ONLY — it bounds
+one Python process; multiple processes/containers/replicas each get their own limiter (aggregate =
 MAX_RPS x process_count). See config.py.
 """
 from __future__ import annotations
