@@ -58,7 +58,7 @@ from consistency import (
     representative,
     scenario_payoffs,
 )
-from data import data_age_seconds, fmt_time, is_stale, link_audit
+from data import data_age_seconds, fmt_time, is_stale, link_audit, non_other_families
 from fetch import fetch_contracts
 from filters import QUOTE_MODES, STATUS_MODES, apply_membership, apply_thresholds
 from glossary import help_for
@@ -362,7 +362,7 @@ with st.sidebar:
         show_cross_sport = st.toggle(
             "Scan all sports (cross-sport view)", value=False, key="cross_sport",
             help="Adds one ranked table aggregating opportunities across ALL sports "
-                 "(tennis + NBA + WNBA) and persists each scan. Heavier — fetches every sport.")
+                 "(tennis, NBA, WNBA, golf, soccer, MLB) and persists each scan. Heavier — fetches every sport.")
         show_help = st.toggle("Show explanations", value=True)
 
     # Full scan / cross-sport are heavy: warn and never auto-refresh faster than FULL_SCAN_MIN_INTERVAL.
@@ -404,7 +404,7 @@ def _render_freshness_strip(fr: dict) -> None:
                help="Series loaded / scanned for the enabled contract families.")
     cov_bits = []
     if n_excluded_unknown:
-        cov_bits.append(f"{n_excluded_unknown} series excluded (unrecognised kind)")
+        cov_bits.append(f"{n_excluded_unknown} non-core / Other series excluded")
     if skipped_no_name:
         cov_bits.append(f"{skipped_no_name} markets skipped (no participant name)")
     if errors:
@@ -578,7 +578,7 @@ def render_dashboard() -> None:
     if show_cross_sport:
         def _cross_sport_fetch(sport_id: str) -> pd.DataFrame:
             cfg2 = sports.get_sport(sport_id)
-            fams = tuple(sorted(set(cfg2.category_labels.values())))   # all families for this sport
+            fams = non_other_families(cfg2)   # all in-scope families (excludes the "other" bucket)
             return load_contracts(fams, scan_all, sport_id)[0]
 
         def _snapshot_writer(fa, frame) -> None:
@@ -685,9 +685,11 @@ def render_dashboard() -> None:
                 rdf["mins"] = (pd.to_numeric(rdf["duration_s"], errors="coerce") / 60).round(1)
                 st.download_button("⬇ Recently-actionable (CSV)", rdf.to_csv(index=False),
                                    file_name="recently_actionable.csv", mime="text/csv", key="dl_recent")
+                if "last_settlement_caveat" not in rdf.columns:
+                    rdf["last_settlement_caveat"] = ""   # old snapshots predate the field
                 st.dataframe(
                     rdf[["sport", "name", "became", "left", "mins", "reason_left", "last_edge_c",
-                         "current_status", "url"]],
+                         "last_settlement_caveat", "current_status", "url"]],
                     hide_index=True, width="stretch",
                     column_config={
                         "sport": "Sport", "name": "Participant / match",
@@ -695,6 +697,7 @@ def render_dashboard() -> None:
                         "mins": st.column_config.NumberColumn("Lasted (min)", format="%.1f"),
                         "reason_left": "Why it left",
                         "last_edge_c": st.column_config.NumberColumn("Last edge (¢)", format="%.0f"),
+                        "last_settlement_caveat": "Settlement caveat",
                         "current_status": "Now", "url": st.column_config.LinkColumn("Market", display_text="open ↗"),
                     },
                 )
@@ -1306,7 +1309,7 @@ def render_dashboard() -> None:
         if skipped_no_name > 0:
             st.caption(f"⚠ {skipped_no_name} market(s) skipped — `yes_sub_title` blank (no player name to display).")
         if n_excluded_unknown > 0:
-            st.caption(f"ℹ {n_excluded_unknown} discovered series excluded — unrecognised contract kind (not in selected families).")
+            st.caption(f"ℹ {n_excluded_unknown} discovered series excluded — non-core / Other family (not in the selected families).")
 
         if chosen_key is None:
             st.caption("Pick a Participant to see per-player raw fields, tournament source, and the link audit.")

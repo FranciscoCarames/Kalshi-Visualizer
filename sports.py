@@ -130,6 +130,9 @@ class SportConfig:
     # market that is NOT a real competitor; build_contracts then gives it a per-event synthetic key
     # (never selectable, never merges across events). None (default) → every outcome is a participant.
     tie_fn: Callable[["SportConfig", dict], bool] | None = None
+    # Human-readable label for the "winner" family. The default suits tennis/golf/soccer (the event IS a
+    # tournament); NBA/WNBA/MLB override with their championship wording (see data._contract_label).
+    winner_label: str = "Win the tournament"
 
     # ---- convenience API (engine calls these) --------------------------------------------
     def family_of(self, series_ticker: str) -> str:
@@ -466,6 +469,7 @@ NBA = register(SportConfig(
     stage_fn=_nba_stage,
     node_fn=_nba_node,
     division_fn=_nba_division,
+    winner_label="Win the Championship",
 ))
 
 
@@ -571,6 +575,7 @@ WNBA = register(SportConfig(
     stage_fn=_wnba_stage,
     node_fn=_wnba_node,
     division_fn=_wnba_division,
+    winner_label="Win the Championship",
 ))
 
 
@@ -734,4 +739,82 @@ SOCCER = register(SportConfig(
     division_fn=_soccer_division,
     exact_series=_SOCCER_EXACT,
     tie_fn=_soccer_tie,
+))
+
+
+# --- MLB (7th sport): NBA-shape futures ladder + per-game dutch books ---------------------------------
+# Futures map onto Reach Playoffs (KXMLBPLAYOFFS, a many-Yes qualifier reach-market) ⊇ Win League /
+# AL+NL pennant (KXMLBAL/KXMLBNL) ⊇ Win World Series (KXMLB). KXMLBGAME is a 2-outcome single game →
+# "game" family (dutch-book eligible; inherits the per-game settlement_caveat). Identity = the stable
+# custom_strike.baseball_team UUID; grouping rides event-level competition="Pro Baseball". The "KXMLB"
+# prefix only FINDS baseball-like series — the family_fn allow-list defines MLB's in-scope markets, so the
+# ~110 KXMLB* props/awards/division series resolve to "other" (never laddered, not fetched in the normal
+# view). KXMLBSERIES is excluded: a regular-season series can tie 2-2, so 2 markets are NOT MECE.
+_MLB_STAGE_RANK = {"Playoffs": 1, "League": 2, "Champion": 3}
+_MLB_CATEGORY = {
+    "winner": "World Series", "advance": "Advancement (reach a stage)", "match": "Playoff series",
+    "game": "Game (not laddered)", "other": "Other",
+}
+_MLB_LADDER = LadderSpec(
+    node_order=("Reach Playoffs", "Win League", "Win World Series"),
+    adjacent_pairs=(("Win World Series", "Win League"), ("Win League", "Reach Playoffs")),
+    match_stage_to_node={},                    # no head-to-head ladder rung (KXMLBSERIES excluded)
+    advance_stage_to_node={"Playoffs": "Reach Playoffs", "League": "Win League"},
+)
+
+
+def _mlb_family(cfg: SportConfig, series_ticker: str) -> str:
+    t = (series_ticker or "").upper()
+    if t == "KXMLB":
+        return "winner"                                              # win the World Series
+    if t == "KXMLBPLAYOFFS":
+        return "advance"                                             # reach the playoffs (qualifier field)
+    if t in ("KXMLBAL", "KXMLBNL"):
+        return "advance"                                             # win the AL/NL pennant (= reach the WS)
+    if t == "KXMLBGAME":
+        return "game"                                                # single game — 2-outcome dutch book
+    return "other"                                                   # KXMLBSERIES, KXMLBWS, divisions, props
+
+
+def _mlb_stage(cfg: SportConfig, family: str, market: dict[str, Any]) -> str:
+    if family == "winner":
+        return "Champion"
+    if family == "advance":
+        # The rung comes from which advance series the market is in (NBA-style; MLB has no title round).
+        tk = (market.get("ticker") or "").upper()
+        if tk.startswith("KXMLBPLAYOFFS"):
+            return "Playoffs"
+        if tk.startswith(("KXMLBAL", "KXMLBNL")):
+            return "League"
+        return ""   # no ticker evidence → unmapped, NOT a false "League" guess
+    return ""
+
+
+def _mlb_node(cfg: SportConfig, family: str, stage: str) -> str | None:
+    if family == "winner":
+        return "Win World Series"
+    if family == "advance":
+        return cfg.ladder.advance_stage_to_node.get(stage)
+    return None
+
+
+MLB = register(SportConfig(
+    sport_id="mlb", label="MLB", emoji="⚾",
+    series_prefixes=("KXMLB",),
+    default_series=("KXMLB", "KXMLBAL", "KXMLBNL", "KXMLBPLAYOFFS", "KXMLBGAME"),
+    winner_tickers=frozenset(),
+    identity=IdentityResolver(candidate_paths=("custom_strike.baseball_team",), id_label="baseball_team"),
+    ladder=_MLB_LADDER,
+    category_labels=_MLB_CATEGORY,
+    round_patterns=(),
+    stage_rank=_MLB_STAGE_RANK,
+    ladder_families=frozenset({"advance", "winner"}),
+    match_family="",                           # no 2-way head-to-head; KXMLBGAME rides the "game" family
+    divisions={},
+    division_label="",
+    family_fn=_mlb_family,
+    stage_fn=_mlb_stage,
+    node_fn=_mlb_node,
+    division_fn=lambda cfg, t: "",
+    winner_label="Win the World Series",
 ))

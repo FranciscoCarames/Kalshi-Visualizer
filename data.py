@@ -387,15 +387,22 @@ def _clean_title(title: Any) -> str:
     return text or "Contract"
 
 
-def _contract_label(kind: str, market: dict[str, Any], opponent: str, stage: str) -> str:
-    """Human-readable description of what a contract pays out on."""
+def _contract_label(kind: str, market: dict[str, Any], opponent: str, stage: str,
+                    cfg: sports.SportConfig, ladder_node: str | None) -> str:
+    """Human-readable description of what a contract pays out on. Winner/advance wording is sport-aware:
+    the winner label comes from `cfg.winner_label` (tennis/golf/soccer keep "Win the tournament";
+    NBA/WNBA → "Win the Championship"; MLB → "Win the World Series"), and an advance leg prefers its
+    ladder node (e.g. "Win League" / "Win Conference" / "Top 5") over a generic "Reach {stage}" — the node
+    is None only when the stage is unmapped, so the old "Reach {stage}" fallback is preserved."""
     if kind == "match":
         base = f"Beat {opponent}" if opponent else "Win match"
         return f"{base} — {stage}" if stage else base
     if kind == "advance":
+        if ladder_node:
+            return ladder_node
         return f"Reach {stage}" if stage else "Reach next stage"
     if kind == "winner":
-        return "Win the tournament"
+        return cfg.winner_label
     return _clean_title(market.get("title"))
 
 
@@ -584,13 +591,14 @@ def build_contracts(
             no_bid_c = to_cents(market.get("no_bid_dollars"))
             no_ask_c = to_cents(market.get("no_ask_dollars"))
 
-            # Time label depends on contract type: match-result contracts have a real match
+            # Time label depends on contract type: match/game contracts have a real start
             # time (occurrence); everything else shows when the market closes/expires.
             occurrence = market.get("occurrence_datetime") or ""
             close_t = market.get("close_time") or ""
             expiration_t = market.get("expiration_time") or ""
-            if kind == "match" and occurrence:
-                time_value, time_kind = occurrence, "Match time"
+            if kind in ("match", "game") and occurrence:
+                time_value = occurrence
+                time_kind = "Game time" if kind == "game" else "Match time"
             else:
                 time_value = close_t or expiration_t
                 time_kind = "Close time" if close_t else "Expiration"
@@ -608,7 +616,7 @@ def build_contracts(
                     "tour": tour,
                     "kind": kind,
                     "category": category,
-                    "contract": _contract_label(kind, market, opponent, stage),
+                    "contract": _contract_label(kind, market, opponent, stage, cfg, mc.ladder_node),
                     "stage": stage,
                     "stage_rank": mc.stage_rank,
                     "opponent": opponent,
@@ -683,6 +691,14 @@ def build_contracts(
                 }
             )
     return rows
+
+
+def non_other_families(cfg: sports.SportConfig) -> tuple[str, ...]:
+    """A sport's family LABELS excluding the catch-all "other" bucket — the cross-sport fetch scope that
+    skips props/awards. Single-sourced so the Streamlit cross-sport path (`app.py`) and the `/scan` API
+    path (`api.fetch_dep`) can't drift; matters once a prefix-owned sport (e.g. MLB) has ~110 prop series.
+    A sport with no "other" key yields all its labels (no behavior change)."""
+    return tuple(sorted({v for k, v in cfg.category_labels.items() if k != "other"}))
 
 
 def series_for_families(series_tickers: list[str], families: Any) -> list[str]:

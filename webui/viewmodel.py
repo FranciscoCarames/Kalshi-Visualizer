@@ -140,6 +140,7 @@ def backlog_row(b: dict[str, Any], tz: str) -> dict[str, Any]:
         "became": ts_disp(b.get("became_ts"), tz), "left": ts_disp(b.get("left_ts"), tz),
         "mins": round(dur / 60, 1) if isinstance(dur, (int, float)) else None,
         "reason": b.get("reason_left") or "", "last_edge": b.get("last_edge_c"),
+        "caveat": b.get("last_settlement_caveat") or "",
         "current": b.get("current_status") or b.get("current_bucket") or "gone",
     }
 

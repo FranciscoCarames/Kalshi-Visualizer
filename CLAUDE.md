@@ -5,7 +5,7 @@ Guidance for **Claude Code** working in this repository. Self-contained — read
 ## Project
 
 A small, **read-only** Streamlit **trader dashboard** over live [Kalshi](https://kalshi.com)
-prediction-market data for **tennis (ATP/WTA), NBA, WNBA, and golf**. It surfaces **executable
+prediction-market data for **tennis (ATP/WTA), NBA, WNBA, golf, soccer, and MLB**. It surfaces **executable
 inconsistencies** across a participant's related contracts (a deeper outcome must not price above a
 prerequisite that contains it) and **dutch-book arbitrage** on 2-outcome MECE events, framed as
 buy-only opportunities (**Buy YES / Buy NO**), split into Actionable / Blocked / Near-edge sections
@@ -14,9 +14,13 @@ process-wide rate throttle.
 
 - **Owner / GitHub:** FranciscoCarames (`franciscocarames1@gmail.com`). Repo `Kalshi-Visualizer` (private), default branch `main`.
 - **Platform:** Windows 11, PowerShell, Python 3.13. (The Bash tool is also available.)
-- **Multi-sport (shipped):** `sports.py` defines a `SportConfig` abstraction; tennis, NBA, WNBA, and golf
-  are registered sports. Adding a new sport = one `register(SportConfig(...))` call. (Golf uses
-  `exact_series` ownership of its 4 finishing-position series + `match_family=""`; no dutch books.)
+- **Multi-sport (shipped):** `sports.py` defines a `SportConfig` abstraction; tennis, NBA, WNBA, golf,
+  soccer, and MLB are registered sports. Adding a new sport = one `register(SportConfig(...))` call. (Golf
+  uses `exact_series` ownership of its 4 finishing-position series + `match_family=""`; no dutch books.
+  MLB: NBA-shape futures ladder Reach Playoffs ⊇ Win League ⊇ Win World Series + per-game `KXMLBGAME` dutch
+  books; identity `custom_strike.baseball_team`; `match_family=""` (`KXMLBSERIES` excluded as non-MECE).
+  `SportConfig.winner_label` gives the winner family its per-sport wording — "Win the World Series" /
+  "Win the Championship" / default "Win the tournament".)
   `build_contracts`
   includes **all events for all registered sports**; containment ladders group by **(player_key,
   tournament)** per sport. Tournament is a client-side filter.
@@ -105,6 +109,7 @@ The women's winner title is the ugly "win the KXFOWOMEN-26?" → synthesize "Win
 Tennis identity: `custom_strike.tennis_competitor` UUID. Basketball identity: `custom_strike.basketball_team` UUID.
 Key NBA series: `KXNBA` (championship winner), `KXNBAEAST`/`KXNBAWEST`/`KXNBAPLAYOFF` (advance), `KXNBASERIES` (playoff series match), `KXNBAGAME` (per-game).
 Key WNBA series: `KXWNBA` (championship), `KXWNBAPLAYOFF`/`KXWNBASEMIFINAL`/`KXWNBAFINAL` (advance), `KXWNBASERIES` (playoff series), `KXWNBAGAME` (per-game).
+**MLB series** (`sports.py` `MLB`): identity `custom_strike.baseball_team`. `KXMLB` (World Series winner), `KXMLBAL`/`KXMLBNL` (advance = win the AL/NL pennant → "Win League"), `KXMLBPLAYOFFS` (advance = reach the playoffs, a many-Yes qualifier field), `KXMLBGAME` (per-game dutch book, carries the per-game `settlement_caveat`). `KXMLBSERIES`/`KXMLBWS`/divisions/`KXMLBASGAME`/`KXMLBSTGAME`/props → `other` (allow-list, not the `KXMLB` prefix). `KXMLBSERIES` is excluded as non-MECE (a regular-season series can tie 2-2).
 
 ## Architecture
 
@@ -485,3 +490,11 @@ book, and the known-limits docs — only seed follow-ons (advancement-FIELD dete
     full diagnostics moved behind the Advanced expander. Forward plan (not yet built): engine-first
     architecture migrating UI from Streamlit → NiceGUI on FastAPI, with a SQLite snapshot store,
     cross-sport scanner, lifecycle/alerts, and a REST API (Stages 1–6; detail in `docs/ROADMAP.md`).
+16. **MLB (7th sport)**: NBA-shape futures ladder (Reach Playoffs ⊇ Win League ⊇ Win World Series) +
+    `KXMLBGAME` per-game dutch books, registered via a `SportConfig` drop. Adds a defaulted
+    `SportConfig.winner_label` + makes `data._contract_label` sport-aware (winner via `winner_label`,
+    advance prefers the ladder node → "Win League"/"Win Conference"/"Top 5"; also fixed latent NBA "Reach
+    Conference" and golf "Reach Top 5"); a shared `data.non_other_families(cfg)` so the Streamlit cross-
+    sport and `/scan` API fetch paths exclude the "Other" bucket identically; `time_kind="Game time"` for
+    every `kind=="game"` row (NBA/WNBA/soccer/MLB); and `last_settlement_caveat` carried onto the
+    recently-actionable backlog (lifecycle → `api.BacklogItem` → Streamlit table/CSV + NiceGUI).

@@ -23,12 +23,12 @@ def fetch_contracts(families: tuple, scan_all: bool, sport_id: str) -> tuple[
     Returns the 7-tuple ``(df, fetched_at, errors, n_scanned, n_loaded, skipped_no_name,
     n_excluded_unknown)``: the contract DataFrame, a UTC ``fetched_at`` stamp, the list of
     ``(series, error)`` failures, the counts of series scanned / loaded, markets skipped for a blank
-    name, and discovered series excluded for an unrecognised family.
+    name, and discovered series excluded as non-core / "Other" family (never in any selected family list).
     """
     cfg = sports.get_sport(sport_id)
     all_series = discover_series_for_sport(cfg) if scan_all else list(cfg.default_series)
     tickers = series_for_families(all_series, families)
-    # Discovered series excluded because their family is unrecognised (never in any family list).
+    # Discovered series excluded because their family is the catch-all "Other" bucket (props/awards/etc.).
     n_excluded_unknown = sum(
         1 for s in all_series if cfg.category_labels.get(cfg.family_of(s), "Other") == "Other"
     )

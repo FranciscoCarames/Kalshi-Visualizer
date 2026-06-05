@@ -196,6 +196,9 @@ def recently_actionable(snapshots: list[dict[str, Any]], *, now_ts: float | None
             "last_legs": last_row.get("legs"),
             "payout_floor_c": _num(last_row.get("payout_floor_c")),
             "roi_pct": _num(last_row.get("roi_pct")),
+            # Non-blocking per-game settlement caveat as it last looked actionable (e.g. a postponed/
+            # suspended game can settle differently). Carried so the backlog doesn't drop it.
+            "last_settlement_caveat": last_row.get("settlement_caveat") or "",
             "current_status": (cur_row or {}).get("status"),
             "current_bucket": (cur_row or {}).get("bucket"),
             "url": last_row.get("url"),
