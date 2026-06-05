@@ -57,6 +57,13 @@ def _cached_latest_two(db_path: str | None) -> list[dict[str, Any]]:
     return _LATEST_TWO_CACHE["two"]
 
 
+def latest_snapshot_id(db_path: str | None = None) -> int | None:
+    """The id of the newest stored snapshot (or None). The dashboard poll loop's cheap "has new data
+    landed?" probe — a single indexed query, no deserialize. Thin wrapper so the dashboard stays off
+    `store` directly."""
+    return store.latest_snapshot_id(db_path=db_path)
+
+
 def latest_opportunities(db_path: str | None = None) -> list[dict[str, Any]]:
     """All opportunities in the latest snapshot (already ranked), or [] when the store is empty."""
     snap = _cached_latest(db_path)
