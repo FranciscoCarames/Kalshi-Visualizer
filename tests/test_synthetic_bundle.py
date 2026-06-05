@@ -315,3 +315,144 @@ def test_format_proof_not_back_inferred_from_present_states():
     rows = _event(scores=("2-0", "2-1"), score_kw={"yes_ask_c": 2}, hedge_kw={"no_ask_c": 90})
     assert sb.find_synthetic_bundles(rows) == []
     assert sb.expected_states(sports.TENNIS, "ATP", "French Open") == ("3-0", "3-1", "3-2")
+
+
+# --- Advancement hedge (PR 27a): score bundle vs the advance/win-tournament market it implies --------
+# Winning a Quarterfinal ≡ Reach Semifinal; winning the Final ≡ Win Tournament (match_stage_to_node).
+# The advance/winner markets are single-sided; the join is node-based, not a 2-participant match.
+def advance_market(player_key, *, node="Reach Semifinal", event="KXATPADVANCE-26X",
+                   series="KXATPADVANCE", tour="ATP", tournament="French Open", stage="Semifinal",
+                   kind="advance", yes_ask_c=50, yes_bid_c=48, no_ask_c=None, yes_ask_size=100,
+                   yes_bid_size=100, quality="Tight", status="active", name="Pat", **extra):
+    row = {
+        "kind": kind, "series": series, "event_ticker": event, "player_key": player_key,
+        "tour": tour, "tournament": tournament, "stage": stage, "ladder_node": node,
+        "yes_ask_c": yes_ask_c, "yes_bid_c": yes_bid_c, "no_ask_c": no_ask_c,
+        "yes_ask_size": yes_ask_size, "yes_bid_size": yes_bid_size,
+        "quote_quality": quality, "status": status, "player": name,
+        "market_ticker": f"{event}-{player_key}", "kalshi_url": "http://a",
+    }
+    row.update(extra)
+    return row
+
+
+def _qf_scores(pk="P", **kw):
+    """P's three best-of-5 score rows at the Quarterfinal (implies Reach Semifinal)."""
+    return [score_market(pk, s, stage="Quarterfinal", **kw) for s in ("3-0", "3-1", "3-2")]
+
+
+def test_advance_hedge_forward_fires_with_own_caveat():
+    # forward cost = yes_ask(2)*3 + no_ask(advance 90) = 96 < 100 -> gap 4. No match-winner present.
+    rows = _qf_scores(yes_ask_c=2) + [advance_market("P", node="Reach Semifinal", no_ask_c=90)]
+    f = sb.find_synthetic_bundles(rows)
+    assert len(f) == 1
+    g = f[0]
+    assert g["hedge_kind"] == "advance" and g["direction"] == "forward" and g["exec_gap_c"] == 4
+    assert "Reach Semifinal" in g["hedge"] and g["n_legs"] == 4
+    assert g["bucket"] == "review_signal" and g["rule_flag"] == "SETTLEMENT_CHECK_REQUIRED"
+    assert "walkover" in g["blocked_reason"]  # the advance-specific settlement caveat
+
+
+def test_advance_hedge_reverse_fires_at_n_times_100():
+    # reverse: no_ask(score 90)*3 + yes_ask(advance 20) = 290 < 300 -> gap 10. (forward 40*3+90=210, no.)
+    rows = _qf_scores(yes_ask_c=40, no_ask_c=90) + [advance_market("P", yes_ask_c=20, no_ask_c=90)]
+    f = sb.find_synthetic_bundles(rows)
+    assert len(f) == 1 and f[0]["hedge_kind"] == "advance"
+    assert f[0]["direction"] == "reverse" and f[0]["exec_gap_c"] == 10 and f[0]["payout_floor_c"] == 300
+
+
+def test_both_hedges_emit_independently_with_distinct_ids():
+    # P has BOTH a match-winner hedge and an advance hedge, both firing forward (96 < 100) -> 2 findings.
+    rows = _qf_scores(yes_ask_c=2)
+    rows += [match_market("P", stage="Quarterfinal", no_ask_c=90), match_market("Q", stage="Quarterfinal")]
+    rows += [advance_market("P", node="Reach Semifinal", no_ask_c=90)]
+    f = sb.find_synthetic_bundles(rows)
+    assert len(f) == 2
+    assert {g["hedge_kind"] for g in f} == {"match", "advance"}
+    assert len({g["opportunity_id"] for g in f}) == 2          # distinct ids, no collision
+    assert all(g["bucket"] == "review_signal" for g in f)
+
+
+def test_advance_hedge_winner_family_covers_the_final():
+    # Winning the Final ≡ Win Tournament -> a winner-family market hedges a Final score bundle.
+    rows = [score_market("P", s, stage="Final", yes_ask_c=2) for s in ("3-0", "3-1", "3-2")]
+    rows += [advance_market("P", node="Win Tournament", series="KXFOMEN", event="KXFOMEN-26X",
+                            kind="winner", stage="", no_ask_c=90)]
+    f = sb.find_synthetic_bundles(rows)
+    assert len(f) == 1 and f[0]["hedge_kind"] == "advance" and "Win Tournament" in f[0]["hedge"]
+
+
+def test_advance_hedge_wrong_node_does_not_fire():
+    # A QF bundle implies Reach Semifinal; an advance market at Reach Final must NOT hedge it.
+    rows = _qf_scores(yes_ask_c=2) + [advance_market("P", node="Reach Final", stage="Final", no_ask_c=90)]
+    assert sb.find_synthetic_bundles(rows) == []
+
+
+def test_advance_hedge_respects_safety_gates():
+    # A non-binary advance leg breaks the 0-or-100¢ math -> suppressed, recorded with the hedge kind.
+    rows = _qf_scores(yes_ask_c=2) + [advance_market("P", no_ask_c=90, market_type="scalar")]
+    diag: dict = {}
+    assert sb.find_synthetic_bundles(rows, diag) == []
+    assert any("advance" in s["reason"] and "non-binary" in s["reason"] for s in diag["suppressed"])
+
+
+def test_advance_hedge_no_size_emits_blocked():
+    rows = _qf_scores(yes_ask_c=2, yes_ask_size=0) + [advance_market("P", no_ask_c=90)]
+    f = sb.find_synthetic_bundles(rows)
+    assert len(f) == 1 and f[0]["hedge_kind"] == "advance"
+    assert f[0]["tradable_now"] == "No" and f[0]["bucket"] == "blocked"
+
+
+def test_match_hedge_opportunity_id_recipe_unchanged():
+    # Regression: the match-winner id recipe stays 4-part so lifecycle tracking is continuous.
+    import data
+    f = sb.find_synthetic_bundles(_event(score_kw={"yes_ask_c": 2}, hedge_kw={"no_ask_c": 90}))[0]
+    assert f["hedge_kind"] == "match"
+    assert f["opportunity_id"] == data.opportunity_id(
+        "synthetic_bundle", "KXATPEXACTMATCH-26X", "P", "forward")
+
+
+def test_advance_hedge_opportunity_id_recipe_encodes_hedge_and_node():
+    import data
+    rows = _qf_scores(yes_ask_c=2) + [advance_market("P", node="Reach Semifinal", no_ask_c=90)]
+    f = sb.find_synthetic_bundles(rows)[0]
+    assert f["opportunity_id"] == data.opportunity_id(
+        "synthetic_bundle", "KXATPEXACTMATCH-26X", "P", "advance", "Reach Semifinal", "forward")
+
+
+def test_scanner_round_trips_advance_finding():
+    import scanner
+    rows = _qf_scores(yes_ask_c=2) + [advance_market("P", node="Reach Semifinal", no_ask_c=90)]
+    f = sb.find_synthetic_bundles(rows)[0]
+    u = scanner._to_unified_synthetic(f, sports.TENNIS)
+    assert "reach-next-round" in u["detail"]
+    assert u["legs"] and u["n_legs"] == 4 and u["opportunity_id"] == f["opportunity_id"]
+
+
+def test_advance_hedge_later_close_time_does_not_suppress():
+    # Verified-live shape: an advance market's SCHEDULED close is the later stage's date, but it settles
+    # on THIS match (Reach Semifinal ≡ winning the QF). The score-vs-advance gap must NOT suppress.
+    rows = [score_market("P", s, stage="Quarterfinal", yes_ask_c=2, close_time="2026-06-19T12:30:00Z")
+            for s in ("3-0", "3-1", "3-2")]
+    rows += [advance_market("P", node="Reach Semifinal", no_ask_c=90, close_time="2026-06-22T12:30:00Z")]
+    diag: dict = {}
+    f = sb.find_synthetic_bundles(rows, diag)
+    assert len(f) == 1 and f[0]["hedge_kind"] == "advance" and not diag.get("suppressed")
+
+
+def test_advance_hedge_score_legs_split_close_time_still_suppresses():
+    # The close-time gate still fires when the SCORE legs themselves close far apart (a real divergence).
+    rows = [score_market("P", "3-0", stage="Quarterfinal", yes_ask_c=2, close_time="2026-06-19T12:30:00Z"),
+            score_market("P", "3-1", stage="Quarterfinal", yes_ask_c=2, close_time="2026-06-19T12:30:00Z"),
+            score_market("P", "3-2", stage="Quarterfinal", yes_ask_c=2, close_time="2026-06-26T12:30:00Z")]
+    rows += [advance_market("P", node="Reach Semifinal", no_ask_c=90, close_time="2026-06-19T12:30:00Z")]
+    diag: dict = {}
+    assert sb.find_synthetic_bundles(rows, diag) == []
+    assert "different times" in diag["suppressed"][0]["reason"]
+
+
+def test_advance_hedge_different_tournament_does_not_join():
+    # A player's advance market in another tournament must never hedge this tournament's score bundle.
+    rows = _qf_scores(yes_ask_c=2)  # French Open
+    rows += [advance_market("P", node="Reach Semifinal", tournament="Wimbledon", no_ask_c=90)]
+    assert sb.find_synthetic_bundles(rows) == []

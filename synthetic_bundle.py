@@ -2,8 +2,15 @@
 
 A synthetic bundle replicates a player's "wins" outcome from the MECE set of exact-set-score contracts
 (men's best-of-5 → {3-0, 3-1, 3-2}; women's/best-of-3 → {2-0, 2-1}) and prices it against a broader
-**hedge** — here the same match's **match-winner** market (the spike-proven, reliably-joinable hedge; the
-reach-next-round advance hedge is a later PR). Two directions, both pairs/sets of BUYS:
+**hedge**. Two hedge kinds are emitted INDEPENDENTLY (a player with both available yields two findings):
+
+  * **match-winner** — the same match's match-winner market (the spike-proven, directly-joinable hedge).
+  * **advance/progression** — the player's advance/winner market at the node their current match
+    *implies* (``Quarterfinal win ≡ Reach Semifinal``; ``Final win ≡ Win Tournament``), the established
+    `match_alignment` equivalence. It carries an extra settlement nuance (a player can reach the next
+    round on a walkover without winning a match), so it gets its own caveat.
+
+Two directions per hedge, both pairs/sets of BUYS:
 
   * **forward** — Buy YES on every score state + Buy NO on the hedge. Pays 100¢ in every normal covered
     outcome, so it is a gross discrepancy when ``Σ yes_ask(states) + no_ask(hedge) < 100¢``.
@@ -21,8 +28,9 @@ Gates before any emit (any failure → silent skip, never a false positive):
      the discovered markets (`expected_states`); unprovable → skip.
   2. **Exhaustive** — the per-player found state set (grouped by `player_key` UUID) == the expected set;
      missing / duplicate / extra → skip.
-  3. **Hedge present + same round** — a match-winner row for the player in the same match (joined by the
-     event's player-key set); a stage/round mismatch is a hard rules-conflict → skip.
+  3. **Hedge present + round aligned** — a match-winner row for the player in the same match (joined by
+     the event's player-key set, same ``stage``), or an advance/winner row at the node the match implies
+     (``match_stage_to_node[stage]``); a round mismatch is a hard rules-conflict → skip.
   4. **Bundle proven SAFE (`_unsafe_reason`)** — three hard suppression gates that prove a bundle's legs
      cannot settle as a clean 0-or-100¢ MECE set, applied to the score legs + hedge together. Each only
      suppresses on PROVEN-unsafe evidence (absent metadata never suppresses — a legacy/sparse row passes):
@@ -86,6 +94,22 @@ def parse_scoreline(row: dict[str, Any]) -> str | None:
         return None
     m = _SCORELINE_RE.search(str(raw))
     return f"{m.group(1)}-{m.group(2)}" if m else None
+
+
+def _node_of(row: dict[str, Any]) -> str | None:
+    """The contract's containment node — the ``ladder_node`` stamped by ``data.build_contracts``, else
+    recomputed from the resolved sport's family/stage maps (for fixtures without a stamped node).
+
+    Mirrors ``consistency.node_of`` (incl. its TENNIS fallback for series-less fixtures) but is kept
+    local so this module stays pandas-free / independently testable — ``consistency`` imports pandas.
+    """
+    stamped = row.get("ladder_node")
+    if stamped:
+        return stamped
+    cfg = sports.sport_for_series(row.get("series"))
+    if cfg.sport_id == "unknown":
+        cfg = sports.TENNIS
+    return cfg.node_fn(cfg, row.get("kind"), row.get("stage"))
 
 
 def expected_states(cfg: Any, division: str, tournament: str) -> tuple[str, ...] | None:
@@ -209,12 +233,20 @@ def _rule_token_divergence(leg_rows: list[dict]) -> set[str]:
     return union - shared
 
 
-def _unsafe_reason(leg_rows: list[dict]) -> str | None:
-    """The first hard-suppression reason for this bundle's legs (score legs + hedge), or None if safe."""
+def _unsafe_reason(leg_rows: list[dict], close_time_rows: list[dict] | None = None) -> str | None:
+    """The first hard-suppression reason for this bundle's legs (score legs + hedge), or None if safe.
+
+    ``close_time_rows`` scopes the close-time-sync check (defaults to all legs). The advance hedge passes
+    only the score legs: an advance market's ``close_time`` is its *scheduled* upper bound (the later
+    stage's date), but it actually settles on THIS match's result (the `match_alignment` equivalence), so
+    the score-vs-advance scheduled-close gap is expected and must not suppress (verified live — a SF
+    bundle's "Reach Final" hedge closes days later yet settles on the SF). Binary + rule-token gates
+    still apply across ALL legs.
+    """
     label = _nonbinary_leg(leg_rows)
     if label is not None:
         return f"non-binary leg: {label}"
-    if _close_times_diverge(leg_rows):
+    if _close_times_diverge(close_time_rows if close_time_rows is not None else leg_rows):
         return "legs resolve at different times"
     diff = _rule_token_divergence(leg_rows)
     if diff:
@@ -256,8 +288,9 @@ def _direction(direction: str, state_rows: list[dict], hedge_row: dict, n: int) 
 
 def _detect_player_bundle(event_ticker: str, cfg: Any, player_key: str,
                           score_rows: list[dict], hedge_row: dict,
+                          hedge_kind: str, hedge_label: str,
                           diag: dict | None = None) -> dict[str, Any] | None:
-    """One player's bundle vs their match-winner hedge, or None when a gate fails / no direction fires."""
+    """One player's bundle vs one hedge (``match`` or ``advance``), or None when a gate fails / no fire."""
     expected = expected_states(cfg, score_rows[0].get("tour"), score_rows[0].get("tournament"))
     if not expected:
         return None  # gate 1: format unprovable
@@ -270,19 +303,34 @@ def _detect_player_bundle(event_ticker: str, cfg: Any, player_key: str,
     if set(found) != set(expected):
         return None  # gate 2: not exhaustive (missing / duplicate / extra state)
 
-    # gate 3: states + hedge must reference the SAME round; a stage mismatch means the hedge replicates a
-    # different event (hard rules-conflict) → no emit.
-    if {r.get("stage") for r in score_rows} | {hedge_row.get("stage")} != {hedge_row.get("stage")}:
-        return None
+    # gate 3 (hedge-aware): the bundle and its hedge must reference the SAME round, else the hedge
+    # replicates a different event (hard rules-conflict) → no emit.
+    #   * match: every score row and the hedge share one `stage`.
+    #   * advance/winner: the hedge's node == the node the score round IMPLIES (`match_stage_to_node`),
+    #     i.e. winning this match ≡ reaching that node. (Guaranteed by the index lookup; re-checked here
+    #     so a direct caller with a mismatched hedge is still rejected.)
+    score_stages = {r.get("stage") for r in score_rows}
+    if hedge_kind == "match":
+        if score_stages | {hedge_row.get("stage")} != {hedge_row.get("stage")}:
+            return None
+    else:
+        if len(score_stages) != 1:
+            return None
+        implied = cfg.ladder.match_stage_to_node.get(next(iter(score_stages)) or "")
+        if not implied or _node_of(hedge_row) != implied:
+            return None
 
     state_rows = [found[s] for s in expected]  # canonical order
 
     # gate 4: the bundle's legs must settle as a clean MECE set. A proven-unsafe leg (non-binary
     # settlement / split close-time / divergent settlement rules) is SUPPRESSED (recorded in _diag),
-    # never shown — distinct from the residual settlement risk that keeps the review caveat.
-    reason = _unsafe_reason(state_rows + [hedge_row])
+    # never shown — distinct from the residual settlement risk that keeps the review caveat. For the
+    # advance hedge the close-time-sync check covers the SCORE legs only (its scheduled close is a later
+    # upper bound, not its settlement — see _unsafe_reason); binary + rule-token gates still span all legs.
+    close_scope = state_rows + [hedge_row] if hedge_kind == "match" else state_rows
+    reason = _unsafe_reason(state_rows + [hedge_row], close_scope)
     if reason is not None:
-        _record(diag, "suppressed", event_ticker, f"{player_key}: {reason}")
+        _record(diag, "suppressed", event_ticker, f"{player_key} ({hedge_kind}): {reason}")
         return None
     fired = [c for c in (_direction("forward", state_rows, hedge_row, len(expected)),
                          _direction("reverse", state_rows, hedge_row, len(expected)))
@@ -290,19 +338,24 @@ def _detect_player_bundle(event_ticker: str, cfg: Any, player_key: str,
     if not fired:
         return None
     best = max(fired, key=lambda c: c["gap_c"])
-    return _build_finding(event_ticker, cfg, player_key, hedge_row, best)
+    return _build_finding(event_ticker, cfg, player_key, hedge_row, best, hedge_kind, hedge_label)
 
 
 def _build_finding(event_ticker: str, cfg: Any, player_key: str, hedge_row: dict,
-                   cand: dict[str, Any]) -> dict[str, Any]:
+                   cand: dict[str, Any], hedge_kind: str, hedge_label: str) -> dict[str, Any]:
     legs = cand["legs"]
     gap, min_size = cand["gap_c"], cand["min_size"]
     player = str(hedge_row.get("player") or _leg_label(legs[0]["row"]))
     n_states = len(legs) - 1
+    # How the hedge reads in the plan / reason. Match keeps the legacy "(match winner)" wording exactly;
+    # advance uses the implied node ("Reach Semifinal" / "Win Tournament").
+    hedge_desc = "match winner" if hedge_kind == "match" else hedge_label
 
     all_active = all(_is_active(leg["row"]) for leg in legs)
-    # Blockers: the settlement caveat ALWAYS (the bundle is never riskless), plus execution blockers.
-    blockers = [BLOCKERS["synthetic_settlement"]]
+    # Blockers: the settlement caveat ALWAYS (the bundle is never riskless), plus execution blockers. The
+    # advance hedge carries an extra nuance (reach-next-round on a walkover ≠ winning a match).
+    caveat = BLOCKERS["synthetic_settlement"] if hedge_kind == "match" else BLOCKERS["synthetic_settlement_advance"]
+    blockers = [caveat]
     if min_size is None:
         blockers.append(BLOCKERS["size_missing"])
     for leg in legs:
@@ -321,10 +374,10 @@ def _build_finding(event_ticker: str, cfg: Any, player_key: str, hedge_row: dict
 
     times = [t for t in (leg["row"].get("time_value") for leg in legs) if t]
     if cand["direction"] == "forward":
-        reason = (f"Forward: Buy YES {n_states} score states + Buy NO {player} (match winner) = "
+        reason = (f"Forward: Buy YES {n_states} score states + Buy NO {player} ({hedge_desc}) = "
                   f"{cand['cost_c']}¢ < 100¢ → {gap}¢ gross per unit. Settlement-caveated (not riskless).")
     else:
-        reason = (f"Reverse: Buy NO {n_states} score states + Buy YES {player} (match winner) = "
+        reason = (f"Reverse: Buy NO {n_states} score states + Buy YES {player} ({hedge_desc}) = "
                   f"{cand['cost_c']}¢ < {cand['threshold_c']}¢ → {gap}¢ gross per unit. "
                   f"Settlement-caveated (not riskless).")
 
@@ -334,10 +387,19 @@ def _build_finding(event_ticker: str, cfg: Any, player_key: str, hedge_row: dict
         "url": leg["row"].get("kalshi_url", ""), "text": _buy_text(leg["side"], _leg_label(leg["row"]), leg["price_c"]),
     } for leg in legs]
 
+    # opportunity_id recipe is hedge-aware AND collision-free: the match-winner recipe is UNCHANGED
+    # (4-part) so its id stays stable across this PR for lifecycle tracking; the advance hedge adds its
+    # kind + node so the two hedges for one player/direction never collide.
+    if hedge_kind == "match":
+        opp_id = data.opportunity_id(CHECK_TYPE, event_ticker, player_key, cand["direction"])
+    else:
+        opp_id = data.opportunity_id(CHECK_TYPE, event_ticker, player_key, hedge_kind, hedge_label,
+                                     cand["direction"])
+
     finding = {
         "check_type": CHECK_TYPE, "relationship_type": CHECK_TYPE,
-        "opportunity_id": data.opportunity_id(CHECK_TYPE, event_ticker, player_key, cand["direction"]),
-        "status": EXECUTABLE_SYNTHETIC_BUNDLE,
+        "opportunity_id": opp_id,
+        "status": EXECUTABLE_SYNTHETIC_BUNDLE, "hedge_kind": hedge_kind,
         # review-only: a settlement-caveated bundle is never Actionable. Priced/sized/active ("Review rules")
         # -> review_signal (a distinct bucket just below actionable); no-size / inactive ("No") -> blocked.
         # Mirrors consistency.bucket_of so the persisted bucket and the router agree.
@@ -346,7 +408,7 @@ def _build_finding(event_ticker: str, cfg: Any, player_key: str, hedge_row: dict
         "event_ticker": event_ticker, "series": hedge_row.get("series", ""),
         "tournament": hedge_row.get("tournament", ""), "tour": hedge_row.get("tour", ""),
         "stage": hedge_row.get("stage", ""), "player": player, "player_key": player_key,
-        "hedge": f"{player} (match winner)",
+        "hedge": f"{player} ({hedge_desc})",
         "match": f"{player} — {hedge_row.get('tournament', '')} {hedge_row.get('stage', '')}".strip(),
         "resolve_time": min(times) if times else None,
         "tradable_now": tradable_now, "rule_flag": "SETTLEMENT_CHECK_REQUIRED",
@@ -395,20 +457,46 @@ def _match_hedge_index(rows: list[dict]) -> dict[str, dict]:
     return index
 
 
+def _advance_hedge_index(rows: list[dict]) -> dict[str, dict[str, dict[str, dict]]]:
+    """Map ``player_key`` → {tournament → {ladder node → advance/winner row}} (their progression hedge).
+
+    A score bundle replicates "win this match", which is equivalent to the progression node the match
+    implies (``Quarterfinal win ≡ Reach Semifinal``; ``Final win ≡ Win Tournament``) — the established
+    `match_alignment` equivalence. These markets are single-sided (no opponent), so unlike
+    ``_match_hedge_index`` there is no two-participant gate. Keyed by **tournament** as well as node so a
+    player's advance market in one tournament never hedges their match in another. Node classification
+    goes through the local ``_node_of`` (mirrors ``consistency.node_of``). First row per (player,
+    tournament, node) wins; a real scan has at most one advance/winner market per node per player.
+    """
+    index: dict[str, dict[str, dict[str, dict]]] = {}
+    for r in rows:
+        if r.get("kind") not in ("advance", "winner"):
+            continue
+        pk = r.get("player_key")
+        node = _node_of(r)
+        if pk and node:
+            index.setdefault(pk, {}).setdefault(r.get("tournament") or "", {}).setdefault(node, r)
+    return index
+
+
 def find_synthetic_bundles(rows: list[dict[str, Any]],
                            _diag: dict | None = None) -> list[dict[str, Any]]:
     """Scan per-player contract rows; return synthetic-bundle findings (possibly empty).
 
     Groups exact-score rows by event and by ``player_key`` (UUID — NOT the display name, which carries
-    the scoreline subtitle), joins each player's bundle to their match-winner hedge, and emits at most one
-    finding per (player, best-firing direction). The optional ``_diag`` dict collects bundles SUPPRESSED
-    by a hard safety gate (`{"suppressed": [{event_ticker, reason}, …]}`) for Debug / live smoke.
+    the scoreline subtitle), then prices each player's bundle against EVERY available hedge — their
+    match-winner market AND their advance/winner market at the node the current match implies — emitting
+    the hedges INDEPENDENTLY (a player with both, both firing, yields two findings, at most one per
+    (player, hedge, best-firing direction); distinct `opportunity_id`s avoid collision). The optional
+    ``_diag`` dict collects bundles SUPPRESSED by a hard safety gate
+    (`{"suppressed": [{event_ticker, reason}, …]}`) for Debug / live smoke.
     """
     rows = rows or []
     score_rows = [r for r in rows if r.get("kind") == "exact_score"]
     if not score_rows:
         return []
-    hedge_index = _match_hedge_index(rows)
+    match_index = _match_hedge_index(rows)
+    advance_index = _advance_hedge_index(rows)
 
     # event_ticker -> {player_key: [score rows]}
     score_events: dict[str, dict[str, list[dict]]] = {}
@@ -420,13 +508,27 @@ def find_synthetic_bundles(rows: list[dict[str, Any]],
     out: list[dict[str, Any]] = []
     for event_ticker, by_player in score_events.items():
         for player_key, player_rows in by_player.items():
-            hedge_row = hedge_index.get(player_key)
-            if hedge_row is None:
-                continue  # no match-winner hedge for this player → skip (advance hedge is a later PR)
             cfg = sports.sport_for_series(player_rows[0].get("series"))
-            finding = _detect_player_bundle(event_ticker, cfg, player_key, player_rows, hedge_row, _diag)
-            if finding is not None:
-                out.append(finding)
+            # Resolve every candidate hedge for this player: match-winner, then the advance/winner
+            # market at the node their current match implies (`match_stage_to_node[stage]`).
+            hedges: list[tuple[dict, str, str]] = []
+            match_row = match_index.get(player_key)
+            if match_row is not None:
+                hedges.append((match_row, "match", "match winner"))
+            score_stages = {r.get("stage") for r in player_rows}
+            if len(score_stages) == 1:
+                implied = cfg.ladder.match_stage_to_node.get(next(iter(score_stages)) or "")
+                tournament = player_rows[0].get("tournament") or ""
+                advance_row = (advance_index.get(player_key, {}).get(tournament, {}).get(implied)
+                               if implied else None)
+                if advance_row is not None:
+                    hedges.append((advance_row, "advance", implied))
 
-    out.sort(key=lambda f: (-f["exec_gap_c"], f["event_ticker"], f["player_key"]))
+            for hedge_row, hedge_kind, hedge_label in hedges:
+                finding = _detect_player_bundle(event_ticker, cfg, player_key, player_rows,
+                                                hedge_row, hedge_kind, hedge_label, _diag)
+                if finding is not None:
+                    out.append(finding)
+
+    out.sort(key=lambda f: (-f["exec_gap_c"], f["event_ticker"], f["player_key"], f.get("hedge_kind", "")))
     return out

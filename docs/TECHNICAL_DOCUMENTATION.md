@@ -551,6 +551,21 @@ Detection lives entirely in `dutchbook.py`. The only `consistency.py` touches ar
 - n-outcome winner fields (≥ 3 outcomes): need a field-completeness proof + multi-leg representation (planned as future stage).
 - Per-game books on tennis (tennis has no `game` family and no per-game series, so it is unaffected).
 
+### 9c. Synthetic exact-score bundle detector (`synthetic_bundle.py`)
+
+A third, **N-leg** check family (Streamlit/pandas-free). A player wins their match **iff** one of the exact set scores occurs — best-of-5 `{3-0, 3-1, 3-2}`, best-of-3 `{2-0, 2-1}` — so that MECE set *replicates* "they win". `find_synthetic_bundles(rows)` groups exact-score rows by event and by `player_key` UUID and prices the bundle against **two independent hedges**, emitted separately:
+
+- **match-winner** — the same match's match-winner market (`hedge_kind="match"`).
+- **advance / progression** — the player's advance/winner market at the node their match *implies* via `ladder.match_stage_to_node` (winning a Quarterfinal ≡ Reach Semifinal; winning the Final ≡ Win Tournament — the `match_alignment` equivalence). `hedge_kind="advance"`.
+
+Two directions each (exact integer cents): **forward** = Buy YES every state + Buy NO hedge, fires when `Σ yes_ask(states) + no_ask(hedge) < 100¢`; **reverse** = Buy NO every state + Buy YES hedge, fires when `Σ no_ask(states) + yes_ask(hedge) < N×100¢`.
+
+It is **never riskless / never Actionable**: an exact score is not the hedge, and on a retirement / no-ball-played the score legs settle to Fair Market Price while the hedge settles cleanly — so every finding carries `rule_flag="SETTLEMENT_CHECK_REQUIRED"`, `tradable_now="Review rules"`, and routes to the `review_signal` bucket (or `blocked` when un-executable). The advance hedge carries an **extra caveat** (a player can advance on a walkover **without** winning a match) and a 6-part `opportunity_id` recipe; the match hedge keeps the legacy 4-part recipe for lifecycle continuity. Four gates guard every emit (format proven, exhaustive state set, round aligned, firm per-leg ask) plus three hard safety suppressions (non-binary leg / split close-time / divergent settlement rules), recorded in an optional `_diag`. Status literal `EXECUTABLE_SYNTHETIC_BUNDLE`; `STATUS_GROUP` maps it to `"Warning"`.
+
+#### Out of scope (synthetic)
+
+- n-outcome FIELD detectors (tournament-winner 1-of-N, K-of-N qualifiers) — each needs a field-completeness proof.
+
 ---
 
 ## 10. Dashboard and UI Logic

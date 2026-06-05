@@ -119,9 +119,10 @@ dutchbook.py       # NO streamlit: find_dutch_books() — MECE dutch-book detect
                    #   status EXECUTABLE_DUTCH_BOOK; see section below
 synthetic_bundle.py# NO streamlit/pandas: find_synthetic_bundles() — N-leg exact-score / state-bundle
                    #   detector. A player's MECE set scores ({3-0,3-1,3-2} bo5 / {2-0,2-1} bo3) replicate
-                   #   "they win", priced vs their match-winner hedge; both directions; ALWAYS settlement-
-                   #   caveated (review-only, never Actionable). parse_scoreline + expected_states (format-
-                   #   gated); status EXECUTABLE_SYNTHETIC_BUNDLE; see section below
+                   #   "they win", priced vs TWO independent hedges (match-winner AND the implied advance/
+                   #   win-tournament market); both directions; ALWAYS settlement-caveated (review-only,
+                   #   never Actionable). parse_scoreline + expected_states (format-gated); status
+                   #   EXECUTABLE_SYNTHETIC_BUNDLE; see section below
 glossary.py        # NO streamlit: GLOSSARY{term:{short,long}}, BLOCKERS, WATCHLIST_NOTE, help_for
 filters.py         # NO streamlit: apply_membership (tournament/family/layer/event/participant/volume)
                    #   / apply_thresholds (size/quote/market-status) — the two-pass filter split
@@ -243,10 +244,13 @@ unchanged 2-way `_detect_pair`; ≤1 finding/event.
 ## Synthetic exact-score bundle detector — `synthetic_bundle.py` (do not regress)
 
 A **separate, N-leg check family** (NO streamlit/pandas). A player wins their match iff one of the exact set
-scores occurs — **best-of-5 {3-0,3-1,3-2}, best-of-3 {2-0,2-1}** — so that MECE set *replicates* "they win",
-which is also what their **match-winner** market pays (the spike-proven, reliably-joinable hedge; the
-reach-next-round advance hedge is a future seed). `find_synthetic_bundles(rows)` groups exact-score rows by
-event and by **`player_key` UUID** (NOT the display name, which carries the scoreline subtitle).
+scores occurs — **best-of-5 {3-0,3-1,3-2}, best-of-3 {2-0,2-1}** — so that MECE set *replicates* "they win".
+That bundle is priced against **TWO independent hedges**, emitted separately (`hedge_kind` ∈ `{match,
+advance}`, distinct `opportunity_id`s): (1) the same match's **match-winner** market; (2) the
+**advance / win-tournament** market at the node the match *implies* (`ladder.match_stage_to_node`: winning a
+Quarterfinal ≡ Reach Semifinal, winning the Final ≡ Win Tournament — the `match_alignment` equivalence).
+`find_synthetic_bundles(rows)` groups exact-score rows by event and by **`player_key` UUID** (NOT the display
+name, which carries the scoreline subtitle).
 
 - **NOT a dutch book / NOT true arbitrage.** An exact score is NOT the match-winner. On a retirement /
   no-ball-played the score legs settle to **Fair Market Price** while the hedge settles cleanly (verified
@@ -260,9 +264,20 @@ event and by **`player_key` UUID** (NOT the display name, which carries the scor
   comes from a verified signal (`expected_states`: division + tournament via `SportConfig.score_format_fn`;
   men's Grand Slam = bo5, WTA + non-Slam ATP = bo3 — **NOT keyed off ATP/WTA alone**), never from the
   discovered markets (else completeness is circular); (2) **exhaustive** — found set == expected set; (3)
-  **hedge present + same round** (stage match; a round mismatch is a hard rules-conflict); (4) **firm ask per
+  **hedge present + round aligned** — match hedge: same `stage`; advance hedge: the hedge's node ==
+  `match_stage_to_node[score_stage]` (a round mismatch is a hard rules-conflict); (4) **firm ask per
   leg** (priced-but-no-size / inactive → emitted blocked/review, not dropped). Scoreline is read from the
   structured `custom_strike["Set Score"]` (verified live), regex-fallback on the subtitle.
+- **Two hedge kinds (PR 27a):** the match hedge keeps the legacy 4-part `opportunity_id` recipe
+  (`synthetic_bundle, event, player_key, direction`) so lifecycle tracking is continuous; the advance hedge
+  uses a 6-part recipe (`…, "advance", node, direction`) and carries an **extra caveat**
+  (`BLOCKERS["synthetic_settlement_advance"]`: a player can reach the next round on a walkover WITHOUT
+  winning a match). `_advance_hedge_index` maps `player_key → {tournament → {node → advance/winner row}}`
+  (tournament-keyed so a player's advance market in one tournament never hedges their match in another)
+  via a local `_node_of` (mirrors `consistency.node_of`, kept local so the module stays pandas-free). The
+  close-time safety gate for the advance hedge checks the **score legs only** — an advance market's
+  scheduled `close_time` is the later stage's date but it settles on THIS match (verified live), so the
+  score-vs-advance gap is expected; the binary + rule-token gates still span all legs.
 - **Config:** `SportConfig.state_bundles` (format_key → per-player states) + `score_format_fn`, both DEFAULTED
   (NBA/WNBA empty) so adding a sport stays one `register()` call.
 - **Engine wiring (mirrors dutch-book):** `scanner.unified_opportunities` calls `find_synthetic_bundles` and

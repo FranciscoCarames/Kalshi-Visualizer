@@ -212,8 +212,12 @@ AG-Grids, truthful empty states, snapshot export, and live freshness — all rea
 The Streamlit app (`app.py`) is still shipped alongside it. See [`docs/ROADMAP.md`](docs/ROADMAP.md) for
 the staged history and [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) for office-LAN hosting.
 
-Remaining (not yet built): follow-on detectors (advancement hedge + n-outcome FIELDs) and known-limits
-documentation (net-of-fees, position limits, full-depth execution).
+The synthetic exact-score bundle is hedged two ways — against the **match-winner** market and against the
+**advance / win-tournament** market the match implies (winning a quarterfinal ≡ reaching the semifinal),
+emitted independently and review-only.
+
+Remaining (not yet built): follow-on detectors (n-outcome FIELDs) and known-limits documentation
+(net-of-fees, position limits, full-depth execution).
 
 ---
 

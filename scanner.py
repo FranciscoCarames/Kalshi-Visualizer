@@ -191,7 +191,9 @@ def _to_unified_synthetic(r: dict[str, Any], cfg) -> dict[str, Any]:
     d = {
         "sport": cfg.sport_id, "sport_label": cfg.label, "source": "synthetic_bundle",
         "name": r.get("player") or r.get("match") or "",
-        "detail": f"score bundle vs match-winner ({r.get('direction') or ''})".strip(),
+        "detail": (f"score bundle vs "
+                   f"{'reach-next-round' if r.get('hedge_kind') == 'advance' else 'match-winner'} "
+                   f"({r.get('direction') or ''})").strip(),
         "tournament": r.get("tournament") or "", "tour": r.get("tour") or "",
         "action_1_text": r.get("action_1_text") or "", "action_2_text": r.get("action_2_text") or "",
         "action_1_price_c": _num(r.get("action_1_price_c")), "action_2_price_c": _num(r.get("action_2_price_c")),

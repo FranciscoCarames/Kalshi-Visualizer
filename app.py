@@ -498,7 +498,7 @@ def render_dashboard() -> None:
             tradable_disp=db_df["tradable_now"].map(TRADABLE_DISP).fillna(db_df["tradable_now"]),
         ).sort_values("exec_gap_c", ascending=False)
 
-    # ---- Synthetic exact-score bundles (N-leg, vs the match-winner hedge) ---------------------
+    # ---- Synthetic exact-score bundles (N-leg, vs the match-winner OR advance hedge) ----------
     # A SEPARATE family (synthetic_bundle.py): a player's MECE exact-score set replicates "they win the
     # match", priced against their match-winner. Always settlement-caveated (review-only, never tradable
     # as arbitrage). Narrowed by the same tournament / event / participant membership as the rest.
@@ -830,20 +830,23 @@ def render_dashboard() -> None:
                    "and partial-fill risk.")
 
     # ================================================================================
-    # 3c. Synthetic-bundle discrepancies (exact-score set vs match-winner) — review only.
-    #     N legs, all the SAME structure, so it gets its own table (not the 2-leg ladder).
+    # 3c. Synthetic-bundle discrepancies (exact-score set vs the match-winner OR advance hedge) — review only.
+    #     N legs, all the SAME structure, so it gets its own table (not the 2-leg ladder). Each row's
+    #     "Hedge" reads the actual hedge ("(match winner)" or "(Reach Semifinal)").
     # ================================================================================
-    st.subheader("🔎 Review signal — synthetic-bundle discrepancies (exact-score vs match-winner)")
+    st.subheader("🔎 Review signal — synthetic-bundle discrepancies (exact-score vs match-winner / advance)")
     st.caption("A player's exact-set-score contracts ({3-0, 3-1, 3-2} best-of-5; {2-0, 2-1} best-of-3) "
-               "together replicate 'they win the match'; priced against their match-winner this can reveal "
-               "a **gross pricing discrepancy**. " + help_for("Review signal") + " **Not riskless** — an "
-               "exact score is not the match-winner, and a retirement / no-ball-played settles the score "
-               "legs to Fair Market Price while the winner settles cleanly. **Review the settlement rules "
-               "before trading.** Gross, top-of-book.")
+               "together replicate 'they win the match'; priced against their match-winner — or the "
+               "advance / win-tournament market the match implies (winning a quarterfinal ≡ reaching the "
+               "semifinal) — this can reveal a **gross pricing discrepancy**. " + help_for("Review signal") +
+               " **Not riskless** — an exact score is not the hedge, a retirement / no-ball-played settles "
+               "the score legs to Fair Market Price while the hedge settles cleanly, and a player can advance "
+               "on a walkover without winning a match. **Review the settlement rules before trading.** "
+               "Gross, top-of-book.")
     if sb_df.empty:
         st.info("No synthetic-bundle discrepancies right now.")
     else:
-        DIR_LABEL = {"forward": "Buy YES states + Buy NO winner", "reverse": "Buy NO states + Buy YES winner"}
+        DIR_LABEL = {"forward": "Buy YES states + Buy NO hedge", "reverse": "Buy NO states + Buy YES hedge"}
         sort_label = st.radio("Sort by", ["Gross discrepancy (¢)", "ROI %"], horizontal=True,
                               key="sb_sort", help="Gross gap is the headline; ROI is the gross gap per ¢ "
                                                   "of capital staked (both before fees / partial fill).")
@@ -866,7 +869,8 @@ def render_dashboard() -> None:
                 "player": "Player",
                 "tournament": "Tournament",
                 "dir_disp": st.column_config.TextColumn(
-                    "Trade", help="Every leg is a BUY: all score states one side + the match-winner the other."),
+                    "Trade", help="Every leg is a BUY: all score states one side + the hedge "
+                                  "(match-winner or advance) the other. See 'Bundle (all legs)' for the hedge."),
                 "bundle_text": st.column_config.TextColumn("Bundle (all legs)", help=help_for("Bundle (all legs)")),
                 "cost_c": st.column_config.NumberColumn(
                     "Cost (¢)", format="%.0f", help="Combined cost of all legs (top-of-book, gross of fees)."),

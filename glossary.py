@@ -157,8 +157,11 @@ GLOSSARY: dict[str, dict[str, str]] = {
                 "N×100¢). It is NOT true arbitrage: an exact score is not the match-winner, and on a "
                 "retirement or a no-ball-played the exact-score legs resolve to Fair Market Price while the "
                 "winner settles cleanly — so every finding carries a settlement caveat and is shown "
-                "review-only, never actionable. Gross of fees; sizes are top-of-book (full-depth fill not "
-                "modeled).",
+                "review-only, never actionable. The same bundle is also priced against a second hedge — the "
+                "player's advance/win-tournament market at the round their match implies (winning a "
+                "quarterfinal ≡ reaching the semifinal) — emitted independently, with an extra caveat "
+                "(a player can advance on a walkover without winning a match). Gross of fees; sizes are "
+                "top-of-book (full-depth fill not modeled).",
     },
     "Review signal": {
         "short": "A priced, sized, active discrepancy that is NOT auto-tradable because its legs are "
@@ -230,6 +233,13 @@ BLOCKERS: dict[str, str] = {
                             "hedge are different markets. On a retirement / no-ball-played the score legs "
                             "resolve to Fair Market Price while the hedge settles cleanly — review the "
                             "settlement rules before trading.",
+    "synthetic_settlement_advance": "Gross discrepancy, not riskless: the exact-score legs replicate "
+                                    "winning THIS match, hedged against the reach-next-round / win-"
+                                    "tournament market. Winning the match implies reaching the next round, "
+                                    "but a player can also advance on a walkover/withdrawal WITHOUT a "
+                                    "match — and on a retirement / no-ball-played the score legs resolve "
+                                    "to Fair Market Price while the hedge settles cleanly. Review the "
+                                    "settlement rules before trading.",
     "game_settlement": "Per-game settlement risk: if the game is postponed, abandoned, ruled no-contest, "
                        "or not played as originally scheduled, the legs may not settle together and the "
                        "gross gap need not hold — review the settlement rules before trading.",
