@@ -342,6 +342,16 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                           selection="single", pagination=15).classes("w-full overflow-x-auto opp-sel")
     actionable.on_select(_on_select(actionable))
 
+    # Risk-budget: containment near-misses (bounded loss, convex upside) — default hidden, toggled on.
+    # Placed immediately AFTER Actionable (#2): when its switch is on, the risk-adjusted candidates sit
+    # right below the actionable set (not below Review/Blocked). Visibility stays gated in rerender().
+    rb_label = ui.label("🟡 Risk-budget candidates — cost slightly over 100¢ for a BOUNDED loss and a "
+                        "CONVEX upside (broader-but-not-deeper pays +$1). GROSS of fees; NOT locked."
+                        ).classes("text-lg font-bold")
+    rb_table = ui.table(columns=_RISK_COLUMNS, rows=[], row_key="opportunity_id",
+                        selection="single", pagination=10).classes("w-full overflow-x-auto opp-sel")
+    rb_table.on_select(_on_select(rb_table))
+
     review_label = ui.label("🔎 Review signal (settlement-caveated — review the rules, never auto-tradable)"
                             ).classes("text-lg font-bold")
     review = ui.table(columns=_OPP_COLUMNS, rows=[], row_key="opportunity_id",
@@ -352,14 +362,6 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
     blocked = ui.table(columns=_OPP_COLUMNS, rows=[], row_key="opportunity_id",
                        selection="single", pagination=10).classes("w-full overflow-x-auto opp-sel")
     blocked.on_select(_on_select(blocked))
-
-    # Risk-budget: containment near-misses (bounded loss, convex upside) — default hidden, toggled on.
-    rb_label = ui.label("🟡 Risk-budget candidates — cost slightly over 100¢ for a BOUNDED loss and a "
-                        "CONVEX upside (broader-but-not-deeper pays +$1). GROSS of fees; NOT locked."
-                        ).classes("text-lg font-bold")
-    rb_table = ui.table(columns=_RISK_COLUMNS, rows=[], row_key="opportunity_id",
-                        selection="single", pagination=10).classes("w-full overflow-x-auto opp-sel")
-    rb_table.on_select(_on_select(rb_table))
 
     # Near-miss books: flat-payout watchlist (a guaranteed gross loss as a bundle) — default hidden.
     nm_label = ui.label("🔭 Near-miss books (watchlist) — sum just OVER the payout floor: FLAT payout, so a "
