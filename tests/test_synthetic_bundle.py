@@ -371,6 +371,10 @@ def test_both_hedges_emit_independently_with_distinct_ids():
     assert {g["hedge_kind"] for g in f} == {"match", "advance"}
     assert len({g["opportunity_id"] for g in f}) == 2          # distinct ids, no collision
     assert all(g["bucket"] == "review_signal" for g in f)
+    by_kind = {g["hedge_kind"]: g for g in f}
+    # The advance hedge leg is self-describing (carries the node); the match hedge leg is unchanged.
+    assert "(Reach Semifinal)" in by_kind["advance"]["legs"][-1]["text"]
+    assert "(" not in by_kind["match"]["legs"][-1]["text"]
 
 
 def test_advance_hedge_winner_family_covers_the_final():
@@ -456,3 +460,22 @@ def test_advance_hedge_different_tournament_does_not_join():
     rows = _qf_scores(yes_ask_c=2)  # French Open
     rows += [advance_market("P", node="Reach Semifinal", tournament="Wimbledon", no_ask_c=90)]
     assert sb.find_synthetic_bundles(rows) == []
+
+
+def test_advance_finding_renders_through_unified_api_and_webui():
+    # End-to-end: a firing advance finding survives scanner -> unified row -> API model -> webui panel,
+    # with the hedge leg self-describing and the advance caveat present.
+    import scanner
+    from api import Opportunity
+    from webui import viewmodel
+    g = sb.find_synthetic_bundles(_qf_scores(yes_ask_c=2)
+                                  + [advance_market("P", node="Reach Semifinal", no_ask_c=90)])[0]
+    assert "Pat (Reach Semifinal)" in g["legs"][-1]["text"]      # hedge leg self-describing
+    u = scanner._to_unified_synthetic(g, sports.TENNIS)
+    assert "reach-next-round" in u["detail"]
+    o = Opportunity(**u)                                          # API boundary (extra=ignore) keeps legs
+    assert o.source == "synthetic_bundle" and o.n_legs == 4 and len(o.legs) == 4
+    assert o.bucket == "review_signal"
+    lines = viewmodel.explanation_lines(u)                        # webui panel lists all 4 legs
+    assert sum(1 for ln in lines if ln.startswith("Leg ")) == 4
+    assert any("Reach Semifinal" in ln for ln in lines)

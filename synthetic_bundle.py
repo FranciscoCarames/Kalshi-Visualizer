@@ -381,10 +381,17 @@ def _build_finding(event_ticker: str, cfg: Any, player_key: str, hedge_row: dict
                   f"{cand['cost_c']}¢ < {cand['threshold_c']}¢ → {gap}¢ gross per unit. "
                   f"Settlement-caveated (not riskless).")
 
+    # The hedge leg's label carries the node for the advance hedge so each leg is self-describing now that
+    # two hedge kinds can appear in the same section (the match hedge keeps its legacy bare-player label).
+    def _out_label(leg: dict) -> str:
+        if leg["row"] is hedge_row and hedge_kind == "advance":
+            return f"{player} ({hedge_desc})"
+        return _leg_label(leg["row"])
+
     out_legs = [{
-        "side": leg["side"], "contract": _leg_label(leg["row"]), "price_c": leg["price_c"],
+        "side": leg["side"], "contract": _out_label(leg), "price_c": leg["price_c"],
         "size": leg["size"], "ticker": leg["row"].get("market_ticker", ""),
-        "url": leg["row"].get("kalshi_url", ""), "text": _buy_text(leg["side"], _leg_label(leg["row"]), leg["price_c"]),
+        "url": leg["row"].get("kalshi_url", ""), "text": _buy_text(leg["side"], _out_label(leg), leg["price_c"]),
     } for leg in legs]
 
     # opportunity_id recipe is hedge-aware AND collision-free: the match-winner recipe is UNCHANGED
