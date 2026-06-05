@@ -1,8 +1,8 @@
 """Build the clean, runtime-only DEPLOY artifact from this source repo (PR D1-D5).
 
 The hosted app is NiceGUI on FastAPI via ``serve.py``. The deploy artifact ships ONLY the first-party
-runtime modules it imports + the ops templates + a pinned, Streamlit-free requirements lock — never the
-tests, docs, planning folders, Streamlit ``app.py``, or local state (``snapshots.db`` / caches / ``.env``).
+runtime modules it imports + the ops templates + a pinned requirements lock — never the
+tests, docs, planning folders, or local state (``snapshots.db`` / caches / ``.env``).
 
 The module allowlist is DERIVED from the import graph (a static AST walk of imports from ``serve.py`` /
 ``api.py``), so a transitive dependency can never be silently dropped — a hand-maintained list missed
@@ -35,7 +35,7 @@ STATIC_INCLUDES = (
     ".gitignore",
 )
 # Anything matching these must NEVER appear in the artifact (asserted after the build).
-FORBIDDEN_NAMES = ("app.py", ".env")
+FORBIDDEN_NAMES = (".env",)
 FORBIDDEN_DIRS = ("tests", "docs", ".kss", ".claude", "__pycache__", "tmp_kalshi_docs")
 
 
@@ -78,7 +78,7 @@ def local_modules(entries: tuple[str, ...], root: Path = REPO_ROOT) -> set[Path]
 
 def _assert_no_local_state(out_dir: Path) -> None:
     """Guard: the built artifact must contain no local state / dev / docs (snapshots.db + WAL/SHM, .env,
-    app.py, tests/, docs/, caches)."""
+    tests/, docs/, caches)."""
     bad: set[str] = set()
     for p in out_dir.rglob("*"):
         rel = p.relative_to(out_dir)

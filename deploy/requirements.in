@@ -1,6 +1,6 @@
-# Runtime deps for the NiceGUI-on-FastAPI deploy artifact (serve.py). NO streamlit (app.py is not
-# deployed) and NO dev tools (pytest/ruff). `scripts/build_deploy_repo.py` compiles this to a fully
-# pinned requirements.txt via pip-compile (pip-tools) for the clean deploy repo.
+# Runtime deps for the NiceGUI-on-FastAPI deploy artifact (serve.py). NO dev tools (pytest/ruff).
+# `scripts/build_deploy_repo.py` compiles this to a fully pinned requirements.txt via pip-compile
+# (pip-tools) for the clean deploy repo.
 requests>=2.32
 pandas>=2.2
 tzdata>=2024.1

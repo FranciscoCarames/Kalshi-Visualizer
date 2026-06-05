@@ -1,7 +1,7 @@
 """FastAPI engine API — Stage 4 (the boundary).
 
 Exposes the pure engine (scanner + store + lifecycle) as a typed REST API. Read endpoints serve the
-LATEST persisted snapshot from the store (fast, deterministic); `POST /scan` runs a Streamlit-free scan
+LATEST persisted snapshot from the store (fast, deterministic); `POST /scan` runs a scan
 on demand (store-backed TTL guard) and persists the result with coverage metadata. Handlers are THIN —
 they only call engine functions; no detection logic lives here. The db path and the scan fetch are
 FastAPI dependencies so tests override them (seeded tmp store + stub fetch, no network).
@@ -280,7 +280,7 @@ def get_coverage(db_path: str | None = Depends(db_path_dep)):
     age = data.data_age_seconds(snap["fetched_at"])
     stale = data.is_stale(age, config.STALE_AFTER_SECONDS)
     meta = snap.get("meta")
-    if not meta:   # snapshot written without coverage (e.g. by the Streamlit app) — never fake counts
+    if not meta:   # snapshot written without coverage metadata — never fake counts
         return Coverage(meta_present=False, fetched_at=snap["fetched_at"], data_age_seconds=age, stale=stale)
     return Coverage(meta_present=True, fetched_at=snap["fetched_at"], data_age_seconds=age, stale=stale,
                     scanned=meta.get("scanned", 0), loaded=meta.get("loaded", 0),

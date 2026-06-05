@@ -10,19 +10,6 @@ code style, and git workflow. Everything there applies here too.
 
 ## Codex-specific notes
 
-### Running Streamlit
-
-Use `python -m streamlit`, not the bare `streamlit` shim (not executable in the Codex environment):
-
-```bash
-python -m streamlit run app.py
-python -m streamlit run app.py --server.headless true --server.port 8765  # headless
-```
-
-Headless health check: `GET http://localhost:8765/_stcore/health` → `200`.
-
-AppTest smoke: `streamlit.testing.v1.AppTest.from_file("app.py").run()` — assert `not at.exception`.
-
 ### Network
 
 Network egress is sandboxed by default. Live Kalshi calls, `pip`, and `git push` require network
@@ -37,13 +24,12 @@ quoting is unreliable in the Codex shell.
 
 ### Verification checklist
 
-Before committing (same steps as CLAUDE.md, but use `python -m streamlit`):
+Before committing (same steps as CLAUDE.md):
 
 ```bash
 pytest -q
-python -m py_compile config.py kalshi_client.py data.py consistency.py filters.py viz.py app.py serve.py api.py
+python -m py_compile config.py kalshi_client.py data.py consistency.py filters.py viz.py serve.py api.py
 ruff check .
-python -m streamlit run app.py --server.headless true --server.port 8765  # then check /_stcore/health
 python serve.py  # on a NON-default port; then GET /healthz, /readyz, /metrics
 ```
 

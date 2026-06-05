@@ -1,6 +1,7 @@
 # Kalshi Visualizer — Multi-Sport Executable-Inconsistency Dashboard
 
-A small, read-only [Streamlit](https://streamlit.io/) app that pulls live
+A small, read-only [NiceGUI](https://nicegui.io/)-on-[FastAPI](https://fastapi.tiangolo.com/) app
+(run via `serve.py`) that pulls live
 [Kalshi](https://kalshi.com/) prediction-market data for **tennis (ATP/WTA), NBA, WNBA, golf, soccer, MLB, and NHL**.
 It surfaces two classes of opportunity across related contracts:
 
@@ -164,8 +165,9 @@ Rather than a single implied probability, each row exposes:
 | `glossary.py` | `GLOSSARY`, `BLOCKERS`, `WATCHLIST_NOTE`, `help_for` — single-sourced terminology (no Streamlit) |
 | `filters.py` | `apply_membership` (tournament/family/layer/event/participant/volume) + `apply_thresholds` (size/quote/status) (no Streamlit) |
 | `viz.py` | `payoff_chart_data` + `ladder_prices` — tidy chart frames (no Streamlit) |
-| `app.py` | Streamlit UI: sidebar controls, auto-refresh fragment, dashboard sections, charts |
-| `tests/` | ~480 pytest tests — pure-logic layers, the in-process engine + REST API, and headless NiceGUI smoke (no network) |
+| `serve.py` / `api.py` | FastAPI engine API + NiceGUI dashboard entrypoint — the sole UI (Streamlit retired) |
+| `webui/` | NiceGUI dashboard (`dashboard.py`) + pure `viewmodel.py` / `diagnostics.py` cores |
+| `tests/` | pytest suite — pure-logic layers, the in-process engine + REST API, and headless NiceGUI smoke (no network) |
 
 `data.py`, `consistency.py`, `dutchbook.py`, `sports.py`, `glossary.py`, `filters.py`, and `viz.py`
 are **Streamlit-free** and independently testable.
@@ -174,17 +176,16 @@ are **Streamlit-free** and independently testable.
 
 ## Setup & run
 
-Two front-ends share one read-only engine. The **Streamlit** app is the original UI; the **FastAPI +
-NiceGUI** server (`serve.py`) is the opportunity-first dashboard + a typed REST API on one port.
+The **FastAPI + NiceGUI** server (`serve.py`) is the opportunity-first dashboard + a typed REST API on
+one port — the sole UI (the legacy Streamlit app was retired).
 
 ```bash
-pip install -r requirements.txt          # streamlit, requests, pandas, altair, fastapi, nicegui, uvicorn
-streamlit run app.py                     # Streamlit UI
+pip install -r requirements.txt          # requests, pandas, fastapi, nicegui, uvicorn
 python serve.py                          # FastAPI + NiceGUI dashboard at /, REST at /opportunities etc.
 ```
 
-The app opens in your browser. Auto-refresh is on by default (120 s interval; configurable in the
-sidebar). Data is public — no API key required. The REST API serves `/healthz` (liveness), **`/readyz`**
+The dashboard opens at `/`. Background auto-refresh is on by default (configurable in the controls).
+Data is public — no API key required. The REST API serves `/healthz` (liveness), **`/readyz`**
 (readiness — `ready`/`degraded`/`not_ready`: DB writable + a fresh snapshot), `/coverage`, and a
 low-cardinality `/metrics` (scan counters + heartbeat) for monitoring. `POST /scan` triggers a scan (the
 dashboard's own "Scan now" button is non-force — it respects the refresh TTL); on a LAN, set `SCAN_TOKEN`
@@ -204,8 +205,7 @@ pytest -q                                # full suite (engine + API + viewmodel 
 ruff check .                             # lint
 ```
 
-Verify without a browser: `pytest -q`; `python -c "import app, serve"`; a headless Streamlit boot
-(`streamlit run app.py --server.headless true --server.port 8765` → `/_stcore/health` 200) and a `serve.py`
+Verify without a browser: `pytest -q`; `python -c "import serve, api, webui.dashboard"`; and a `serve.py`
 boot (`GET /`, `/healthz`, `/metrics` → 200 and `/readyz` → ready/degraded). See
 `docs/RELEASE_CHECKLIST.md` for the full pre-ship checklist.
 
@@ -237,7 +237,7 @@ evidence frames); a **ScanManager** singleflights scans behind a non-blocking `P
 surfaces
 ranked Actionable / Review / Blocked sections, a participant-detail panel, a diagnostics/debug section with
 AG-Grids, truthful empty states, snapshot export, and live freshness — all reading the engine in-process.
-The Streamlit app (`app.py`) is still shipped alongside it. See [`docs/ROADMAP.md`](docs/ROADMAP.md) for
+It is the sole UI (the legacy Streamlit `app.py` was retired). See [`docs/ROADMAP.md`](docs/ROADMAP.md) for
 the staged history and [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) for office-LAN hosting.
 
 The synthetic exact-score bundle is hedged two ways — against the **match-winner** market and against the

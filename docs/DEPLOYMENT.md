@@ -86,9 +86,8 @@ sudo install -d -o kalshi-dashboard -g kalshi-dashboard /var/lib/kalshi-dashboar
 
 ### Runtime
 - **Python 3.13**, a dedicated virtualenv: `python3.13 -m venv /opt/kalshi-dashboard/.venv`.
-- `/opt/kalshi-dashboard/.venv/bin/pip install -r requirements.txt` — the **pinned, Streamlit-free** deploy
-  requirements (the hosted app is NiceGUI on FastAPI via `serve.py`; Streamlit `app.py` is a dev-only
-  surface and is NOT deployed).
+- `/opt/kalshi-dashboard/.venv/bin/pip install -r requirements.txt` — the **pinned** deploy
+  requirements (the hosted app is NiceGUI on FastAPI via `serve.py`, the sole UI).
 - Launch command: `python serve.py` (**single worker** — see §1).
 
 ### Environment variables

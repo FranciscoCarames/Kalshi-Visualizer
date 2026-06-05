@@ -1,5 +1,9 @@
 # Kalshi Opportunity Engine — Development Roadmap
 
+> **⚠ Status update:** the Streamlit → NiceGUI/FastAPI migration described below is **complete**, and the
+> legacy Streamlit `app.py` has since been **retired** — NiceGUI on FastAPI (`serve.py`) is the sole UI.
+> Mentions of "the Streamlit app" / "throwaway Streamlit" below are **historical** planning context.
+>
 > Strategy and architecture document. Revised **2026-06-03**. Decisions captured: **audience = small
 > private group**, **latency target = a few seconds**, **execution = read-only now, fully-automated
 > trading only in the very long term**, **opportunity scope = all sports + all Kalshi categories**

@@ -1,5 +1,11 @@
 # Kalshi Structured Market Visualizer — Technical Documentation
 
+> **⚠ Status (Streamlit retired):** the legacy Streamlit `app.py` (and `tests/test_app.py`) have been
+> **removed** — the **NiceGUI dashboard on FastAPI (`serve.py` / `webui/`) is the sole UI**. References
+> to `app.py`, `test_app.py`, "Streamlit UI", and `streamlit run` below are **historical** and pending a
+> full prose refresh (tracked with the Google-Drive doc sync). The pure engine modules and detectors are
+> current; for run/verify use `python serve.py` + `pytest -q` (see README / CLAUDE.md).
+
 **Audience:** Backend developer, technical collaborator, or future maintainer.
 **Source of truth:** The live codebase as of 2026-06-03 (`main`, PR #35 merged). Planned/unimplemented items are explicitly labelled.
 
@@ -1042,7 +1048,7 @@ Key terms as defined in the app's single source of truth:
 
 ### E. Debugging checklist
 
-1. **App shows stale data after a code edit:** Fully stop and restart `streamlit run app.py`. A browser "Rerun" does not reload edited modules. Clear `__pycache__` if a phantom `ImportError` persists.
+1. **App shows stale data after a code edit:** Fully stop and restart `python serve.py` (no auto-reload). Clear `__pycache__` if a phantom `ImportError` persists.
 
 2. **Unexpected `UNKNOWN_RELATIONSHIP` rows:** The match's stage is not in the sport's `match_stage_to_node` map (e.g. NBA First Round may not map to a ladder node). Check `sports.py` for the sport's `_nba_ladder` / `_tennis_ladder` `match_stage_to_node`.
 

@@ -1,8 +1,8 @@
 """Entrypoint: the FastAPI engine API + the NiceGUI dashboard, served by uvicorn (Stage 5).
 
 The REST API (`api.app`) and the NiceGUI opportunity-first dashboard run on ONE app: importing
-`webui.dashboard` registers the `@ui.page('/')`, and `ui.run_with` mounts NiceGUI onto `api.app`. The
-Streamlit app (`app.py`) is unchanged and still runs separately until a later retirement milestone.
+`webui.dashboard` registers the `@ui.page('/')`, and `ui.run_with` mounts NiceGUI onto `api.app`.
+This is the sole UI (the legacy Streamlit app was retired).
 Run: ``python serve.py``  (UI at ``/``, REST at ``/opportunities`` etc., OpenAPI at ``/docs``).
 
 **Bind / LAN safety (PR 19a).** The bind address/port are env-overridable (``API_HOST``/``API_PORT``) so
