@@ -159,6 +159,25 @@ def participant_checks(sport: str, player_key: str, db_path: str | None = None) 
     return [r for r in rows if r.get("player_key") == player_key]
 
 
+def contract_by_ticker(market_ticker: str, sport: str | None = None,
+                       db_path: str | None = None) -> dict[str, Any] | None:
+    """The stored contract row for a given market ticker in the latest snapshot, or None. Market tickers
+    are globally unique on Kalshi, so this searches by TICKER ALONE — the optional `sport` is only a
+    narrowing hint (checked first for speed, tolerated when blank/mismatched). N-leg / soccer / field /
+    synthetic legs can span shapes where the opportunity's participant_key/sport isn't reliable, so the
+    lookup must not depend on them. Carries `rules_primary` (and the rest of the contract row) for the UI."""
+    if not market_ticker:
+        return None
+    snap = _cached_latest(db_path)
+    if snap is not None and sport:           # fast path: try the hinted sport's contracts frame first
+        hint = _cached_frame_rows(snap["snapshot_id"], sport, "contracts", db_path)
+        for r in hint:
+            if r.get("market_ticker") == market_ticker:
+                return r
+    return next((r for r in all_contracts(db_path=db_path)
+                 if r.get("market_ticker") == market_ticker), None)
+
+
 def frame_availability(db_path: str | None = None) -> str:
     """Whether the latest snapshot's evidence frames are present / expired / absent (PR 20 honesty)."""
     snap = _cached_latest(db_path)
