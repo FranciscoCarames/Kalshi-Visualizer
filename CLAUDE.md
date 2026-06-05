@@ -181,7 +181,7 @@ imports (no `nicegui`, no `streamlit`) — they are pure logic, independently te
   (aggregate = `MAX_RPS × process count`), so don't run several without a shared limiter.
 - **Contract row (build_contracts), partial schema:** `player, player_key, player_key_source,
   mapping_confidence, mapping_reason, tour, kind, category, contract, stage, stage_rank, opponent,
-  tournament, tournament_source, display_pct, yes_mid_pct, last_pct, yes_bid_pct, yes_ask_pct,
+  tournament, tournament_source, subpenny, display_pct, yes_mid_pct, last_pct, yes_bid_pct, yes_ask_pct,
   spread_cents, quote_quality, yes_bid_c,
   yes_ask_c, last_c, display_c, yes_bid_size, yes_ask_size, no_bid_pct, no_ask_pct, no_bid_c, no_ask_c,
   volume, open_interest, status, time_value, time_kind, kalshi_url, series, event_ticker, market_ticker,

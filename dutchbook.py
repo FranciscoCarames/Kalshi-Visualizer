@@ -29,8 +29,9 @@ legs' sizes. All comparisons are EXACT integer cents (parsed upstream by ``data.
 
 Beyond the 2-outcome case this module also handles two n-outcome shapes:
   - **Soccer 3-way games** (Home/Away/Tie) via ``_detect_n_way`` (both directions; needs the full MECE set).
-  - **Tournament-winner FIELDS** (≥3-player "win the tournament" markets) via ``_detect_field`` —
-    **OVERROUND ONLY.** A field is mutually exclusive (one champion) but NOT provably exhaustive (a Grand
+  - **One-winner FIELDS** (≥3-participant fields — championship, race winner, pole, fastest lap, top
+    constructor/team; per ``cfg.field_families``) via ``_detect_field`` —
+    **OVERROUND ONLY.** A field is mutually exclusive (one winner) but NOT provably exhaustive (a Grand
     Slam lists fewer markets than its draw), so underround (Buy YES all) is unsafe and never emitted. The
     overround is safe on **any priceable subset** of a mutually-exclusive set: buying NO on k legs pays
     ≥(k−1)·100¢ (an unlisted/illiquid winner only pays MORE), so we trade the priceable legs and skip the
@@ -124,17 +125,23 @@ def _is_two_way_row(row: dict[str, Any]) -> bool:
     return kind == cfg.match_family or kind == _GAME_FAMILY
 
 
-# The tournament-winner family ("win the tournament", one market per participant). An event's winner
-# markets form a mutually-exclusive FIELD (one champion) → an OVERROUND-only dutch book (see _detect_field).
+# One-winner FIELD families: a market scope with one market per participant whose markets form a
+# mutually-exclusive FIELD (exactly one settles YES) → an OVERROUND-only dutch book (see _detect_field).
+# The default is just "winner" (championship / win-the-tournament); a sport widens this via
+# SportConfig.field_families (e.g. motorsport: race_winner / pole / fastest_lap / top constructor / team).
 _WINNER_FAMILY = "winner"
 
 
 def _is_field_row(row: dict[str, Any]) -> bool:
-    """A row from a tournament-winner field event of a RECOGNIZED sport (an UNKNOWN sport is excluded)."""
+    """A row from a one-winner FIELD event of a RECOGNIZED sport (an UNKNOWN sport is excluded).
+
+    Field-eligibility is per-sport via ``cfg.field_families`` (defaults to ``{"winner"}``), so existing
+    sports are unchanged while a field sport can mark pole/fastest-lap/constructor/team fields eligible too.
+    """
     cfg = sports.sport_for_series(row.get("series"))
     if cfg.sport_id == "unknown":
         return False
-    return row.get("kind") == _WINNER_FAMILY
+    return row.get("kind") in cfg.field_families
 
 
 def _leg_label(row: dict[str, Any]) -> str:
@@ -535,21 +542,21 @@ def proof_audit(event_rows: list[dict[str, Any]], cfg: Any) -> dict[str, Any]:
 
 # ---- Tournament-winner FIELD (overround-only) -------------------------------------------------------
 def prove_field_mece(event_rows: list[dict[str, Any]], cfg: Any) -> MeceProof:
-    """Prove a tournament-winner FIELD is mutually exclusive — safe for an OVERROUND-only dutch book.
+    """Prove a one-winner FIELD is mutually exclusive — safe for an OVERROUND-only dutch book.
 
-    Requires ≥3 distinct-participant winner markets all flagged ``mutually_exclusive``. Exhaustiveness is
+    Requires ≥3 distinct-participant field markets all flagged ``mutually_exclusive``. Exhaustiveness is
     deliberately NOT proven (`exhaustive=False`): a Grand Slam lists fewer "win" markets than its draw, so
     underround (Buy YES all) could pay 0 and is never emitted. The overround is safe from mutual
     exclusivity alone — at most one market settles YES, so buying NO on any k≥2 legs pays ≥(k−1)·100¢, and
     a winner outside the traded subset only pays MORE.
     """
     if len(event_rows) < 3:
-        return MeceProof(False, False, False, "", "winner field needs >=3 outcomes")
+        return MeceProof(False, False, False, "", "one-winner field needs >=3 outcomes")
     if len({str(r.get("player_key") or "") for r in event_rows}) != len(event_rows):
         return MeceProof(False, False, False, "", "duplicate participant keys")
     if not all(bool(r.get("mutually_exclusive")) for r in event_rows):
         return MeceProof(False, False, False, "", "event not flagged mutually_exclusive")
-    return MeceProof(True, True, False, "tournament winner (one champion)", "")
+    return MeceProof(True, True, False, "one-winner field (exactly one winner)", "")
 
 
 def _field_overround_subset(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -678,6 +685,12 @@ def find_dutch_books(rows: list[dict[str, Any]],
     for row in rows or []:
         ev = row.get("event_ticker") or ""
         if not ev:
+            continue
+        # Variable-tick guard (data.market_has_subpenny): a subpenny price is ROUNDED by to_cents, so an
+        # edge off it could be false — exclude the leg from detection and surface it in the diag. No-op for
+        # the current whole-cent sports (every row's `subpenny` is False).
+        if row.get("subpenny"):
+            _record(_diag, "rejected", ev, "subpenny price (variable tick) — rounded cents not trusted")
             continue
         if _is_two_way_row(row):
             groups.setdefault(ev, []).append(row)
