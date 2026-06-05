@@ -94,6 +94,20 @@ def test_latest_cache_one_store_load_across_accessors(tmpdb, monkeypatch):
     assert calls["n"] == 1
 
 
+def test_contract_by_ticker_finds_by_ticker_and_handles_misses(tmpdb):
+    # PR4 (#7): resolution-criteria lookup is by globally-unique market_ticker; sport is only a hint.
+    engine._FRAME_CACHE.clear()        # avoid a stale (snapshot_id, sport, frame) entry from a prior test
+    store.write_snapshot("2026-06-05 12:00:00 UTC", [op("o1")], frames=[{
+        "sport": "tennis", "frame_type": "contracts", "schema_version": 1,
+        "rows": [{"market_ticker": "T-a", "contract": "Beat A", "rules_primary": "Settles YES if A wins."},
+                 {"market_ticker": "T-b", "contract": "Beat B", "rules_primary": "Settles YES if B wins."}],
+    }])
+    assert engine.contract_by_ticker("T-a")["rules_primary"].startswith("Settles YES if A")
+    assert engine.contract_by_ticker("T-b", sport="nba")["contract"] == "Beat B"   # sport mismatch still hits
+    assert engine.contract_by_ticker("T-zzz") is None                              # truthful miss
+    assert engine.contract_by_ticker("") is None
+
+
 def _two_way_stub():
     """A 2-market underround stub fetch (one actionable dutch book) — no network."""
     def mk(p, k, ask):

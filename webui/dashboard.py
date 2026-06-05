@@ -141,7 +141,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
     # the store. (P2: store reads happen in reload_data; rerender is pure in-memory.)
     state: dict[str, Any] = {"opps": {}, "opps_list": [], "seen_new": set(), "new_ids": set(),
                              "first": True, "options": {}, "cov": {}, "backlog": [],
-                             "rendered_snapshot_id": "__unseeded__"}
+                             "rendered_snapshot_id": "__unseeded__", "selected": None}
 
     ui.add_css(_SELECTED_ROW_CSS)        # selected-row highlight (#14) — see module note
     ui.label("🎯 Kalshi opportunity engine — cross-sport").classes("text-2xl font-bold")
@@ -156,6 +156,8 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         window_select = ui.select(list(config.BACKLOG_WINDOWS), value=config.BACKLOG_DEFAULT,
                                    label="Backlog window")
         show_ids = ui.switch("Show IDs & codes", value=False)
+        rules_sw = ui.switch("Resolution criteria", value=False).tooltip(
+            "Show each contract's settlement rules in the click panel and auto-open them in the detail view.")
         _darkmode = ui.dark_mode()
         ui.switch("Dark mode",
                   on_change=lambda e: _darkmode.enable() if e.value else _darkmode.disable()
@@ -205,6 +207,20 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
     # --- explanation panel (row click) ---
     dialog = ui.dialog()
 
+    def _leg_rules(opp: dict[str, Any]) -> list[tuple[str, str | None]]:
+        """Per-leg (label, settlement-rules) for an opportunity, resolved by MARKET TICKER over the stored
+        contracts (so it works for every shape — containment, dutch, soccer/field, synthetic — regardless
+        of participant_key). A leg whose row / rules aren't in the snapshot yields None (truthful gap)."""
+        sport = opp.get("sport") or None
+        out: list[tuple[str, str | None]] = []
+        for i, leg in enumerate(opp.get("legs") or [], start=1):
+            tkr = leg.get("ticker") or ""
+            label = leg.get("contract") or leg.get("text") or tkr or f"Leg {i}"
+            row = engine.contract_by_ticker(tkr, sport=sport) if tkr else None
+            rules = (row or {}).get("rules_primary")
+            out.append((label, str(rules) if rules else None))
+        return out
+
     def open_panel(opp: dict[str, Any]) -> None:
         dialog.clear()
         lines = vm.explanation_lines(opp, show_ids=show_ids.value)
@@ -214,6 +230,18 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             ui.separator()
             for line in lines[2:]:
                 ui.label(line)
+            if rules_sw.value:        # global "Resolution criteria" toggle — per-leg settlement rules
+                ui.separator()
+                ui.label("📜 Resolution criteria").classes("text-sm font-bold")
+                legrules = _leg_rules(opp)
+                if any(text for _, text in legrules):
+                    for label, text in legrules:
+                        ui.label(label).classes("text-sm font-medium")
+                        ui.label(text or "— rules not captured in this snapshot —"
+                                 ).classes("text-sm text-gray-600 mb-1")
+                else:
+                    ui.label("Resolution rules aren't captured in the latest snapshot."
+                             ).classes("text-sm text-gray-500")
             with ui.row():
                 legs = opp.get("legs")
                 if isinstance(legs, list) and legs:           # N-leg: one link per leg with a url
@@ -274,10 +302,13 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             rules = [(r.get("contract") or r.get("market_ticker") or "—", str(r.get("rules_primary")))
                      for r in prows if r.get("rules_primary")]
             if rules:
-                with ui.expansion("📜 Resolution criteria (settlement rules)").classes("w-full mt-2"):
+                rules_exp = ui.expansion("📜 Resolution criteria (settlement rules)").classes("w-full mt-2")
+                with rules_exp:
                     for contract, text in rules:
                         ui.label(contract).classes("text-sm font-medium")
                         ui.label(text).classes("text-sm text-gray-600 mb-2")
+                if rules_sw.value:        # global toggle on → surface the rules without an extra click
+                    rules_exp.open()
             # Raw fields / link audit / duplicate sources — debug detail, only when "Show IDs & codes" is on.
             if show_ids.value and prows:
                 with ui.expansion("🔧 Raw fields · link audit · duplicates").classes("w-full mt-2"):
@@ -323,6 +354,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             if sel:
                 opp = state["opps"].get(sel[0].get("opportunity_id"))
                 if opp:
+                    state["selected"] = opp        # remember it so the rules toggle can re-render this view
                     open_panel(opp)
                     render_detail(opp)
                 # Keep THIS row highlighted as a visible cue (PR S5), but clear the others so exactly one
@@ -662,6 +694,18 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
     # Alert-persistence + backlog-window parameterize STORE reads, so they go through reload_data.
     for ctrl in (persist_select, window_select):
         ctrl.on_value_change(lambda _=None: reload_data())
+
+    def _on_rules_toggle() -> None:
+        # The global "Resolution criteria" switch re-renders only the views that are CURRENTLY open for the
+        # selected opportunity — it never pops the dialog open on its own. Next row-click respects the toggle.
+        sel = state.get("selected")
+        if not sel:
+            return
+        if dialog.value:
+            open_panel(sel)
+        if detail_expansion.value:
+            render_detail(sel)
+    rules_sw.on_value_change(lambda _=None: _on_rules_toggle())
 
     def tick_age() -> None:
         # Re-render only the freshness/scope line each second (scope_banner recomputes the age live).
