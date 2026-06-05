@@ -137,6 +137,10 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         window_select = ui.select(list(config.BACKLOG_WINDOWS), value=config.BACKLOG_DEFAULT,
                                    label="Backlog window")
         show_ids = ui.switch("Show IDs & codes", value=False)
+        _darkmode = ui.dark_mode()
+        ui.switch("Dark mode",
+                  on_change=lambda e: _darkmode.enable() if e.value else _darkmode.disable()
+                  ).tooltip("Toggle a dark theme.")
         scan_btn = ui.button("⟳ Scan now (core series)")
         export_btn = ui.button("⬇ Export (ZIP)")
 
@@ -146,9 +150,11 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         tour_sel = ui.select([], multiple=True, label="Tournament").classes("min-w-[10rem]").props("dense")
         participant_in = ui.input("Participant / match contains").classes("min-w-[12rem]")
         min_size_in = ui.number("Min size", min=0, format="%.0f").classes("w-28")
-        active_sw = ui.switch("Active only")
-        show_review_sw = ui.switch("Review", value=True)
-        show_blocked_sw = ui.switch("Blocked", value=True)
+        active_sw = ui.switch("Active only").tooltip("Hide non-active (finalized/settled) markets.")
+        show_review_sw = ui.switch("Review", value=True).tooltip(
+            "Show the Review-signal section — settlement-caveated, never auto-tradable.")
+        show_blocked_sw = ui.switch("Blocked", value=False).tooltip(   # hidden by default (PR S5)
+            "Show the Blocked section — opportunities that exist but aren't currently tradable.")
         ui.button("Clear filters", on_click=lambda: _clear_filters())
 
     # --- "Beyond the strict rule" — two opt-in sections past the actionable line (PR 29) ---
@@ -234,6 +240,15 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             if not (chain or spreads or expected or contracts):
                 ui.label("No stored contracts for this participant in the latest snapshot."
                          ).classes("text-gray-500 mt-2")
+            # Resolution criteria / settlement rules per contract — a collapsible toggle (PR S5): trust
+            # support for go-live, so a trader can read the rules without leaving the page.
+            rules = [(r.get("contract") or r.get("market_ticker") or "—", str(r.get("rules_primary")))
+                     for r in prows if r.get("rules_primary")]
+            if rules:
+                with ui.expansion("📜 Resolution criteria (settlement rules)").classes("w-full mt-2"):
+                    for contract, text in rules:
+                        ui.label(contract).classes("text-sm font-medium")
+                        ui.label(text).classes("text-sm text-gray-600 mb-2")
             # Raw fields / link audit / duplicate sources — debug detail, only when "Show IDs & codes" is on.
             if show_ids.value and prows:
                 with ui.expansion("🔧 Raw fields · link audit · duplicates").classes("w-full mt-2"):
@@ -271,6 +286,8 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                 ui.echart(payoff_opt).classes("w-full h-64")
         detail_expansion.open()
 
+    _sel_tables: list[Any] = []   # all opportunity tables — keep exactly ONE row highlighted across them
+
     def _on_select(table):
         def handler(e: Any) -> None:
             sel = e.selection if hasattr(e, "selection") else None
@@ -279,10 +296,16 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                 if opp:
                     open_panel(opp)
                     render_detail(opp)
-                table.selected = []   # allow re-selecting the same row
+                # Keep THIS row highlighted as a visible cue (PR S5), but clear the others so exactly one
+                # opportunity is selected across all tables.
+                for other in _sel_tables:
+                    if other is not table:
+                        other.selected = []
         return handler
 
     ui.separator()
+    ui.label("Tip: click any row to open its full breakdown (resolution rules · ladder · contracts) below."
+             ).classes("text-xs text-gray-500")
     ui.label("✅ Actionable now").classes("text-lg font-bold")
     # `overflow-x-auto` (PR 26a responsive pass): the wide opportunity tables scroll horizontally on a
     # narrow screen instead of overflowing the viewport. The control rows already wrap (flex-wrap).
@@ -316,6 +339,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
     nm_table = ui.table(columns=_NEARMISS_COLUMNS, rows=[], row_key="opportunity_id",
                         selection="single", pagination=10).classes("w-full overflow-x-auto")
     nm_table.on_select(_on_select(nm_table))
+    _sel_tables.extend([actionable, review, blocked, rb_table, nm_table])
 
     with ui.expansion("📉 Recently actionable (left the actionable set)").classes("w-full"):
         backlog = ui.table(columns=_BACKLOG_COLUMNS, rows=[], row_key="name",
