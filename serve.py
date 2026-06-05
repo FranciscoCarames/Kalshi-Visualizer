@@ -90,7 +90,33 @@ def _enforce_bind_safety(host: str) -> None:
         raise SystemExit(2)
 
 
+def resolve_snapshot_db_path(raw: str | None) -> str | None:
+    """Validate an explicit ``SNAPSHOT_DB_PATH`` override (the env value; ``None``/empty -> keep the
+    config default, return ``None``). Raises ``SystemExit`` with a clear message if the parent directory
+    is missing — fail FAST at startup instead of surfacing a confusing sqlite "unable to open database
+    file" on the first write. ``config.py`` stays import-free, so the env is read here at the boundary
+    (like ``SCAN_TOKEN`` in ``api.py``). Pure apart from the directory check; unit-testable."""
+    if not raw:
+        return None
+    parent = os.path.dirname(os.path.abspath(raw))
+    if not os.path.isdir(parent):
+        raise SystemExit(
+            f"SNAPSHOT_DB_PATH={raw!r}: parent directory {parent!r} does not exist. "
+            "Create it (writable by the service user) before starting.")
+    return raw
+
+
+def _apply_snapshot_db_path() -> None:
+    """Point the snapshot store at ``SNAPSHOT_DB_PATH`` from the env, applied ONCE at startup so every
+    store read/write — the REST API and the in-process dashboard alike — uses it (``store`` reads
+    ``config.SNAPSHOT_DB_PATH`` at call time)."""
+    resolved = resolve_snapshot_db_path(os.getenv("SNAPSHOT_DB_PATH"))
+    if resolved:
+        config.SNAPSHOT_DB_PATH = resolved
+
+
 if __name__ == "__main__":
+    _apply_snapshot_db_path()
     _host = os.getenv("API_HOST", config.API_HOST)
     _port = int(os.getenv("API_PORT", str(config.API_PORT)))
     _enforce_bind_safety(_host)

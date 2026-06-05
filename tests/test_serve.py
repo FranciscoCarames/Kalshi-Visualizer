@@ -6,6 +6,11 @@ throttle are process-local, so multiple workers must be warned against.
 """
 from __future__ import annotations
 
+import importlib
+
+import pytest
+
+import config
 import serve
 
 
@@ -59,3 +64,45 @@ def test_fatal_and_worker_warn_are_independent():
     issues = serve.bind_safety("0.0.0.0", storage_secret_set=False, allow_dev_on_lan=False,
                                web_concurrency=2)
     assert _levels(issues) == ["fatal", "warn"]
+
+
+# --- SNAPSHOT_DB_PATH env override (PR S2) ---------------------------------------------------
+def test_resolve_db_path_unset_keeps_default():
+    assert serve.resolve_snapshot_db_path(None) is None
+    assert serve.resolve_snapshot_db_path("") is None
+
+
+def test_resolve_db_path_valid_parent_returns_path(tmp_path):
+    p = str(tmp_path / "snapshots.db")            # parent (tmp_path) exists
+    assert serve.resolve_snapshot_db_path(p) == p
+
+
+def test_resolve_db_path_missing_parent_exits_at_startup(tmp_path):
+    with pytest.raises(SystemExit):
+        serve.resolve_snapshot_db_path(str(tmp_path / "missing" / "snapshots.db"))
+
+
+def test_config_does_not_read_env_at_import(monkeypatch):
+    # The override lives at the serve boundary, NOT in config.py (which stays import-free): setting the env
+    # and re-importing config must NOT change its default.
+    monkeypatch.setenv("SNAPSHOT_DB_PATH", "/somewhere/else.db")
+    importlib.reload(config)
+    assert config.SNAPSHOT_DB_PATH == "snapshots.db"
+
+
+def test_apply_sets_config_when_env_set(tmp_path, monkeypatch):
+    original = config.SNAPSHOT_DB_PATH
+    target = str(tmp_path / "snap.db")
+    monkeypatch.setenv("SNAPSHOT_DB_PATH", target)
+    try:
+        serve._apply_snapshot_db_path()
+        assert config.SNAPSHOT_DB_PATH == target
+    finally:
+        config.SNAPSHOT_DB_PATH = original
+
+
+def test_apply_noop_when_env_unset(monkeypatch):
+    original = config.SNAPSHOT_DB_PATH
+    monkeypatch.delenv("SNAPSHOT_DB_PATH", raising=False)
+    serve._apply_snapshot_db_path()
+    assert config.SNAPSHOT_DB_PATH == original
