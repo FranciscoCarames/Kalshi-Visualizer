@@ -20,22 +20,27 @@ from typing import Any, Callable
 
 import pandas as pd
 
+import config
 import consistency
 import dutchbook
 import sports
 import synthetic_bundle
 
 # Section priority for ranking (lower = surfaced first). Mirrors the dashboard's importance order;
-# `bucket` is stamped on every row by Stage 1 (consistency.bucket_of / dutchbook).
+# `bucket` is stamped on every row by Stage 1 (consistency.bucket_of / dutchbook). Its key set MUST equal
+# consistency.DASHBOARD_BUCKETS (a test guards this). risk_budget / near_miss are "beyond the strict rule"
+# (opt-in, past the actionable line), so they rank just below blocked and above the near_edge watchlist.
 BUCKET_PRIORITY = {
     "actionable": 0,
     "review_signal": 1,   # settlement-caveated discrepancies (synthetic bundles) — review, just below actionable
     "blocked": 2,
-    "near_edge": 3,
-    "display_signal": 4,
-    "wide_signal": 5,
-    "data_quality": 6,
-    "clean": 7,
+    "risk_budget": 3,     # containment near-miss: bounded loss, convex upside (opt-in)
+    "near_miss": 4,       # dutch-book near-miss: flat-payout watchlist (opt-in)
+    "near_edge": 5,
+    "display_signal": 6,
+    "wide_signal": 7,
+    "data_quality": 8,
+    "clean": 9,
 }
 
 # The shared minimal schema both row shapes (containment checks + dutch-book findings) map onto. Stable
@@ -55,6 +60,10 @@ UNIFIED_COLUMNS = [
     "payout_floor_c", "roi_pct",               # guaranteed payout floor + gross ROI on cost (PR 13)
     "snapshot_id",                             # stamped by store.write_snapshot at write time (PR 21a)
     "participant_key",                         # the participant's stable key, for the detail panel (PR 24)
+    # "Beyond the strict rule" (PR 29): edge_class tags risk-budget / near-miss rows; worst/best per-unit
+    # profit drives the convex risk-budget columns (max loss / max profit / upside:risk). roi_pct (above)
+    # doubles as the worst-case ROC for risk-budget rows (worst_case_profit_c == exec_gap_c).
+    "edge_class", "worst_case_profit_c", "best_case_profit_c",
 ]
 
 
@@ -150,6 +159,10 @@ def _to_unified_consistency(r: dict[str, Any], cfg) -> dict[str, Any]:
         "ticker_1": r.get("parent_ticker") or "", "ticker_2": r.get("child_ticker") or "",
         "url": r.get("parent_url") or r.get("child_url") or "", "url_2": r.get("child_url") or r.get("parent_url") or "",
         "legs": None, "n_legs": None,  # synthesized into a 2-leg list by _finalize_unified (parity)
+        # Risk-budget tag + convex payoff (PR 29) — populated only for RISK_BUDGET_CANDIDATE / executable rows.
+        "edge_class": r.get("edge_class") or "",
+        "worst_case_profit_c": _num(r.get("worst_case_profit_c")),
+        "best_case_profit_c": _num(r.get("best_case_profit_c")),
     }
     # broader-YES + deeper-NO guarantees ≥100¢ in every settled state, so the floor is 100 when there's a
     # buy-plan (a firm cost), else None (CLEAN / display-only rows have no executable position).
@@ -179,6 +192,10 @@ def _to_unified_dutchbook(r: dict[str, Any], cfg) -> dict[str, Any]:
         # 2-leg books carry legs=None (synthesized below); the n-outcome (soccer 3-way) path sets a full
         # `legs` list. _finalize_unified normalizes both into a uniform list + n_legs.
         "legs": r.get("legs"), "n_legs": _num(r.get("n_legs")),
+        # Near-miss tag + flat per-unit profit (worst == best == gap_c, negative on a near-miss).
+        "edge_class": r.get("edge_class") or "",
+        "worst_case_profit_c": _num(r.get("worst_case_profit_c")),
+        "best_case_profit_c": _num(r.get("best_case_profit_c")),
     }
     # 2-way floor is 100¢; the n-way path already carries (n−1)·100 (overround) / 100 (underround).
     return _finalize_unified(d, payout_floor_c=(_num(r.get("payout_floor_c")) or 100))
@@ -209,6 +226,8 @@ def _to_unified_synthetic(r: dict[str, Any], cfg) -> dict[str, Any]:
         "ticker_2": (legs[1].get("ticker") if len(legs) > 1 else "") or "",
         "url": r.get("url") or "", "url_2": "",
         "legs": legs, "n_legs": _num(r.get("n_legs")),
+        # Synthetic bundles aren't risk-budget/near-miss rows (always review-only) — no edge_class / convex split.
+        "edge_class": "", "worst_case_profit_c": None, "best_case_profit_c": None,
     }
     # synthetic forward floor = 100¢, reverse = N×100¢ (carried as payout_floor_c by _build_finding).
     return _finalize_unified(d, payout_floor_c=_num(r.get("payout_floor_c")))
@@ -257,9 +276,11 @@ def unified_opportunities(
             continue
         try:
             records = contracts.to_dict("records")
-            checks = consistency.build_checks(contracts)
+            # "Beyond the strict rule" (PR 29): always compute the FULL opt-in bands so every scan persists
+            # risk-budget + near-miss candidates; the NiceGUI UI filters them live (no rescan on a control move).
+            checks = consistency.build_checks(contracts, risk_budget_max_loss_c=config.RISK_BUDGET_MAX_LOSS_C)
             checks_records = checks.to_dict("records")
-            books = dutchbook.find_dutch_books(records)
+            books = dutchbook.find_dutch_books(records, near_miss_max_over_c=config.NEAR_MISS_MAX_OVER_C)
             bundles = synthetic_bundle.find_synthetic_bundles(records)
         except Exception as exc:
             errors.append({"sport": cfg.sport_id, "error": str(exc)})

@@ -38,6 +38,19 @@ DISPLAY_TOL_C = 1
 # near-edge watchlist (e.g. -5 → gaps in [-5, 0]). Tight/OK quotes only; never a buy instruction.
 NEAR_EDGE_MIN_C = -5
 
+# --- "Beyond the strict rule" — risk-budget candidates + near-miss books (NiceGUI; integer cents only) ---
+# Risk-budget candidates: containment trades that cost SLIGHTLY over 100¢ — bounded downside, CONVEX upside
+# (the broader-but-not-deeper state pays an extra $1). The scanner persists candidates whose worst-case
+# loss is up to RISK_BUDGET_MAX_LOSS_C cents; the NiceGUI UI filters live by max-loss + min upside:risk.
+# These are NOT arbitrage — a small bounded loss bought for a large convex payoff. GROSS of fees.
+RISK_BUDGET_MAX_LOSS_C = 25                 # widest worst-case loss persisted (≈ cost 1.25 vs 1.00 floor)
+RISK_BUDGET_DEFAULT_MAX_LOSS_C = 5          # default UI max-loss filter (¢)
+RISK_BUDGET_DEFAULT_MIN_RATIO_TENTHS = 0    # default min upside:risk × 10 (0 = off; e.g. 30 = 3.0:1)
+# Near-miss dutch books: a MECE book overpriced by up to NEAR_MISS_MAX_OVER_C cents over its payout floor —
+# FLAT payout, so a guaranteed gross LOSS as a bundle. Watchlist only; a small band is all that's useful.
+NEAR_MISS_MAX_OVER_C = 5                     # widest overpay persisted (¢ over the payout floor)
+NEAR_MISS_DEFAULT_OVER_C = 3                 # default UI max-overpay filter (¢)
+
 # Kalshi web frontend base for per-series market pages.
 KALSHI_WEB_BASE = "https://kalshi.com/markets"
 

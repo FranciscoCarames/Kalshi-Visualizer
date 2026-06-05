@@ -268,6 +268,10 @@ BLOCKERS: dict[str, str] = {
                        "mutually-exclusive field (one champion), not every entrant — safe because an "
                        "untraded or unlisted winner only pays more. Gross, top-of-book; many legs are "
                        "illiquid so the position is often only partly fillable.",
+    "near_miss_flat": "Near-miss watchlist only — NOT an edge: this book costs MORE than its payout "
+                      "floor, and a MECE book pays the floor in every outcome, so buying the whole "
+                      "bundle now is a guaranteed gross loss. Watch it in case a leg is mispriced or it "
+                      "crosses into a real discrepancy on the next tick.",
 }
 
 WATCHLIST_NOTE = (
