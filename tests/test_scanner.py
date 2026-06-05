@@ -229,6 +229,26 @@ def test_dutchbook_leg_ticker_url_shape():
     assert out["url"] == "https://k/event" and out["url_2"] == ""
 
 
+def test_participant_keys_per_shape():
+    """participant_keys/labels cover EVERY named leg (PR6): the B side of a match, every soccer/field leg
+    (Tie/draw dropped), the single participant of a containment/synthetic row — never a primary fallback."""
+    c = scanner._to_unified_consistency({"player_key": "k1", "player": "Alcaraz"}, sports.TENNIS)
+    assert c["participant_keys"] == ["k1"] and c["participant_labels"] == ["Alcaraz"]
+
+    d = scanner._to_unified_dutchbook(
+        {"player_key_a": "ka", "player_a": "A", "player_key_b": "kb", "player_b": "B"}, sports.NBA)
+    assert d["participant_keys"] == ["ka", "kb"] and d["participant_labels"] == ["A", "B"]
+
+    n = scanner._to_unified_dutchbook({"legs": [
+        {"player_key": "kx", "contract": "Team X"},
+        {"player_key": "", "contract": "Draw"},       # Tie/draw leg has no participant -> dropped
+        {"player_key": "ky", "contract": "Team Y"}]}, sports.NBA)
+    assert n["participant_keys"] == ["kx", "ky"] and n["participant_labels"] == ["Team X", "Team Y"]
+
+    s = scanner._to_unified_synthetic({"player_key": "ks", "player": "Sinner", "legs": []}, sports.TENNIS)
+    assert s["participant_keys"] == ["ks"] and s["participant_labels"] == ["Sinner"]
+
+
 # --- Stage 5 §0: explanation-panel enrichment fields ---------------------------------
 def test_unified_columns_include_explanation_fields():
     for col in ("action_1_price_c", "action_2_price_c", "cost_c", "ticker_1", "ticker_2", "url_2"):

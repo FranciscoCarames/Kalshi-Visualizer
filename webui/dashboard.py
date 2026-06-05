@@ -197,7 +197,10 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
     with ui.row().classes("items-end gap-4 flex-wrap"):
         sport_sel = ui.select({}, multiple=True, label="Sport").classes("min-w-[8rem]").props("dense")
         tour_sel = ui.select([], multiple=True, label="Tournament").classes("min-w-[10rem]").props("dense")
-        participant_in = ui.input("Participant / match contains").classes("min-w-[12rem]")
+        # Searchable, key-based multi-select (PR6 / #13): two same-named players never merge, and picking
+        # several players/teams ORs them. Options ({key: label}) are filled from the snapshot in _seed/reload.
+        participant_sel = ui.select({}, multiple=True, with_input=True, label="Players / matches"
+                                    ).classes("min-w-[14rem]").props("dense use-chips")
         min_size_in = ui.number("Min size", min=0, format="%.0f").classes("w-28")
         active_sw = ui.switch("Active only").tooltip("Hide non-active (finalized/settled) markets.")
         show_review_sw = ui.switch("Review", value=True).tooltip(
@@ -446,8 +449,8 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             s["sports"] = list(sport_sel.value)
         if tour_sel.value:
             s["tournaments"] = list(tour_sel.value)
-        if (participant_in.value or "").strip():
-            s["participant"] = participant_in.value.strip()
+        if participant_sel.value:
+            s["participant"] = list(participant_sel.value)
         if min_size_in.value:
             s["min_size"] = float(min_size_in.value)
         if active_sw.value:
@@ -455,7 +458,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         return s
 
     def _clear_filters() -> None:
-        sport_sel.value, tour_sel.value, participant_in.value = [], [], ""
+        sport_sel.value, tour_sel.value, participant_sel.value = [], [], []
         min_size_in.value, active_sw.value = None, False
         rerender()        # membership filters are in-memory — no store read needed
 
@@ -556,8 +559,10 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         state["backlog"] = bundle["backlog"]
         sport_sel.options = state["options"]["sports"]
         tour_sel.options = state["options"]["tournaments"]
+        participant_sel.options = {p["value"]: p["label"] for p in state["options"]["participants"]}
         sport_sel.update()
         tour_sel.update()
+        participant_sel.update()
         # New-actionable toast + banner + blocked-change label (alerts are snapshot/persistence scoped).
         new_ids = {r.get("opportunity_id") for r in al["new_actionable"]}
         fresh = new_ids - state["seen_new"]
@@ -643,10 +648,11 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         options = vm.derive_options(engine.latest_opportunities())
         sport_sel.options = options["sports"]
         tour_sel.options = options["tournaments"]
+        participant_sel.options = {p["value"]: p["label"] for p in options["participants"]}
         seeded = vm.state_from_query(query, options=options)
         sport_sel.value = seeded.get("sports", [])
         tour_sel.value = seeded.get("tournaments", [])
-        participant_in.value = seeded.get("participant", "")
+        participant_sel.value = seeded.get("participant", [])
         min_size_in.value = seeded.get("min_size")
         active_sw.value = bool(seeded.get("active_only"))
         _apply_bundle(_read_bundle(*_read_args()))   # synchronous first paint (page-build thread)
@@ -709,7 +715,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         (scan_btn, "Scan now (core series)"), (export_btn, "Export snapshot ZIP"),
         (auto_sw, "Auto-refresh in the background"), (interval_sel, "Auto-scan interval (seconds)"),
         (sport_sel, "Filter by sport"), (tour_sel, "Filter by tournament"),
-        (participant_in, "Filter by participant or match"), (min_size_in, "Minimum tradable size"),
+        (participant_sel, "Filter by players or matches"), (min_size_in, "Minimum tradable size"),
         (active_sw, "Active markets only"), (show_review_sw, "Show the Review-signal section"),
         (show_blocked_sw, "Show the Blocked section"), (clear_btn, "Clear all filters"),
         (rb_switch, "Show risk-budget candidates"), (rb_max_loss, "Risk-budget max loss in cents"),
@@ -727,7 +733,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
     _seed()        # set control values from the URL BEFORE binding handlers (so seeding fires no render)
 
     # Filter / display controls re-render PURELY in-memory from the cached snapshot (no store, no fetch).
-    for ctrl in (tz_select, show_ids, sport_sel, tour_sel, participant_in, min_size_in, active_sw,
+    for ctrl in (tz_select, show_ids, sport_sel, tour_sel, participant_sel, min_size_in, active_sw,
                  show_review_sw, show_blocked_sw, rb_switch, rb_max_loss, rb_min_ratio,
                  nm_switch, nm_max_over):
         ctrl.on_value_change(lambda _=None: rerender())

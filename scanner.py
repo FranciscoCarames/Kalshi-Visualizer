@@ -59,12 +59,32 @@ UNIFIED_COLUMNS = [
     "legs", "n_legs",                          # N-leg plan (synthetic bundles); synthesized 2-leg otherwise
     "payout_floor_c", "roi_pct",               # guaranteed payout floor + gross ROI on cost (PR 13)
     "snapshot_id",                             # stamped by store.write_snapshot at write time (PR 21a)
-    "participant_key",                         # the participant's stable key, for the detail panel (PR 24)
+    "participant_key",                         # the PRIMARY participant's key, for the detail panel (PR 24)
+    # ALL participants on the opportunity (every leg), for the participant multi-select filter (PR6 / #13).
+    # Parallel lists key<->label; the singular participant_key above stays the detail-panel anchor.
+    "participant_keys", "participant_labels",
     # "Beyond the strict rule" (PR 29): edge_class tags risk-budget / near-miss rows; worst/best per-unit
     # profit drives the convex risk-budget columns (max loss / max profit / upside:risk). roi_pct (above)
     # doubles as the worst-case ROC for risk-budget rows (worst_case_profit_c == exec_gap_c).
     "edge_class", "worst_case_profit_c", "best_case_profit_c",
 ]
+
+
+def _participants(pairs: list[tuple[Any, Any]]) -> tuple[list[str], list[str]]:
+    """From (key, label) pairs, the deduped parallel (keys, labels) for the participant filter — empties
+    dropped (so a Tie/draw leg or an unkeyed leg never becomes a phantom participant), order preserved.
+    NEVER falls back to the primary key for a multi-leg row: a leg with no key is simply omitted."""
+    keys: list[str] = []
+    labels: list[str] = []
+    seen: set[str] = set()
+    for k, lab in pairs:
+        k = str(k or "")
+        if not k or k in seen:
+            continue
+        seen.add(k)
+        keys.append(k)
+        labels.append(str(lab or k))
+    return keys, labels
 
 
 def _cost(a: Any, b: Any) -> Any:
@@ -164,6 +184,7 @@ def _to_unified_consistency(r: dict[str, Any], cfg) -> dict[str, Any]:
         "worst_case_profit_c": _num(r.get("worst_case_profit_c")),
         "best_case_profit_c": _num(r.get("best_case_profit_c")),
     }
+    d["participant_keys"], d["participant_labels"] = _participants([(r.get("player_key"), r.get("player"))])
     # broader-YES + deeper-NO guarantees ≥100¢ in every settled state, so the floor is 100 when there's a
     # buy-plan (a firm cost), else None (CLEAN / display-only rows have no executable position).
     return _finalize_unified(d, payout_floor_c=(100 if d["cost_c"] is not None else None))
@@ -197,6 +218,15 @@ def _to_unified_dutchbook(r: dict[str, Any], cfg) -> dict[str, Any]:
         "worst_case_profit_c": _num(r.get("worst_case_profit_c")),
         "best_case_profit_c": _num(r.get("best_case_profit_c")),
     }
+    # Participants: n-leg shapes (soccer 3-way, field overround) carry per-leg identity on `legs` (a Tie/
+    # draw leg has no player_key → dropped); the 2-way path has no legs yet (synthesized later), so use the
+    # detector's two named participants. NEVER fall back to the single primary key for a multi-leg row.
+    _legs = r.get("legs")
+    if isinstance(_legs, list) and _legs:
+        _pairs = [(leg.get("player_key"), leg.get("contract")) for leg in _legs]
+    else:
+        _pairs = [(r.get("player_key_a"), r.get("player_a")), (r.get("player_key_b"), r.get("player_b"))]
+    d["participant_keys"], d["participant_labels"] = _participants(_pairs)
     # 2-way floor is 100¢; the n-way path already carries (n−1)·100 (overround) / 100 (underround).
     return _finalize_unified(d, payout_floor_c=(_num(r.get("payout_floor_c")) or 100))
 
@@ -229,6 +259,8 @@ def _to_unified_synthetic(r: dict[str, Any], cfg) -> dict[str, Any]:
         # Synthetic bundles aren't risk-budget/near-miss rows (always review-only) — no edge_class / convex split.
         "edge_class": "", "worst_case_profit_c": None, "best_case_profit_c": None,
     }
+    # A synthetic bundle is one player's score set vs one hedge — a single participant.
+    d["participant_keys"], d["participant_labels"] = _participants([(r.get("player_key"), r.get("player"))])
     # synthetic forward floor = 100¢, reverse = N×100¢ (carried as payout_floor_c by _build_finding).
     return _finalize_unified(d, payout_floor_c=_num(r.get("payout_floor_c")))
 

@@ -441,6 +441,7 @@ def _detect_n_way(event_ticker: str, rows: list[dict[str, Any]], cfg: Any,
         label = _leg_label(r)
         legs.append({"side": side, "contract": label, "price_c": p, "size": _num(size),
                      "ticker": r.get("market_ticker", ""), "url": r.get("kalshi_url", ""),
+                     "player_key": r.get("player_key", ""),   # per-leg identity (participant filter, PR6)
                      "text": _buy_text(side, label, p)})
 
     all_active = all(_is_active(r) for r in rows)
@@ -590,6 +591,7 @@ def _detect_field(event_ticker: str, rows: list[dict[str, Any]], cfg: Any,
         label = _leg_label(r)
         legs.append({"side": "buy_no", "contract": label, "price_c": p, "size": _num(r.get("yes_bid_size")),
                      "ticker": r.get("market_ticker", ""), "url": r.get("kalshi_url", ""),
+                     "player_key": r.get("player_key", ""),   # per-leg identity (participant filter, PR6)
                      "text": _buy_text("buy_no", label, p)})
 
     all_active = all(_is_active(r) for r in subset)

@@ -12,6 +12,8 @@ exec_min_size / market_status); richer quote/layer filters need the persisted *c
 """
 from __future__ import annotations
 
+import urllib.parse
+from collections import Counter
 from datetime import datetime, timezone
 from typing import Any, Iterable
 
@@ -195,10 +197,14 @@ def _spared(o: dict[str, Any]) -> bool:
 
 
 def filter_opps(opps: Iterable[dict[str, Any]], *, sports: Iterable[str] | None = None,
-                tournaments: Iterable[str] | None = None, participant: str = "",
+                tournaments: Iterable[str] | None = None, participant: Any = "",
                 min_size: float | None = None, active_only: bool = False) -> list[dict[str, Any]]:
     """Apply the membership + threshold filters to the unified opportunity rows. Membership narrows every
-    row; thresholds narrow everything except `_spared` rows. Empty/None selection = no filter; NaN-safe."""
+    row; thresholds narrow everything except `_spared` rows. Empty/None selection = no filter; NaN-safe.
+
+    `participant` is a LIST of participant keys (the multi-select, PR6) — a row matches if ANY selected key
+    is among its `participant_keys` (so both sides of a match / every named leg are reachable). A plain
+    string is still accepted as a legacy case-insensitive substring match on the opportunity name."""
     rows = list(opps or [])
     if sports:
         sset = set(sports)
@@ -207,8 +213,12 @@ def filter_opps(opps: Iterable[dict[str, Any]], *, sports: Iterable[str] | None 
         tset = set(tournaments)
         rows = [o for o in rows if o.get("tournament") in tset]
     if participant:
-        needle = participant.strip().lower()
-        rows = [o for o in rows if needle in str(o.get("name") or "").lower()]
+        if isinstance(participant, (list, tuple, set)):
+            keyset = {str(k) for k in participant}
+            rows = [o for o in rows if keyset.intersection(o.get("participant_keys") or [])]
+        else:
+            needle = str(participant).strip().lower()
+            rows = [o for o in rows if needle in str(o.get("name") or "").lower()]
     if min_size:
         rows = [o for o in rows
                 if _spared(o) or (not _isna(o.get("exec_min_size")) and o.get("exec_min_size") >= min_size)]
@@ -222,12 +232,22 @@ def derive_options(opps: Iterable[dict[str, Any]]) -> dict[str, Any]:
     `sports` is an ``{id: label}`` map (the filter matches the id); `tournaments` a sorted list."""
     sports: dict[str, str] = {}
     tournaments: set[str] = set()
+    pmap: dict[str, str] = {}        # participant_key -> display label (first label wins; stable across opps)
     for o in opps or []:
         if o.get("sport"):
             sports[o["sport"]] = o.get("sport_label") or o["sport"]
         if o.get("tournament"):
             tournaments.add(o["tournament"])
-    return {"sports": dict(sorted(sports.items())), "tournaments": sorted(tournaments)}
+        for k, lab in zip(o.get("participant_keys") or [], o.get("participant_labels") or []):
+            if k and k not in pmap:
+                pmap[k] = lab or k
+    # Key-based options (two same-named players never merge). Disambiguate a label shared by >1 key with a
+    # short key suffix, mirroring the Streamlit "Name [key6]" convention.
+    label_counts = Counter(pmap.values())
+    participants = [{"value": k, "label": (f"{lab} [{k[:6]}]" if label_counts[lab] > 1 else lab)}
+                    for k, lab in sorted(pmap.items(), key=lambda kv: (kv[1].lower(), kv[0]))]
+    return {"sports": dict(sorted(sports.items())), "tournaments": sorted(tournaments),
+            "participants": participants}
 
 
 # --- scope banner (honest; surfaces the PR 21a counters) ------------------------------
@@ -256,11 +276,13 @@ def scope_banner(cov: dict[str, Any] | None, tz: str = "UTC", *, stale_after: fl
 
 # --- URL state (compact, graceful reset of unknown sport/tournament) ------------------
 def state_from_query(params: dict[str, Any], *, options: dict[str, Any] | None = None) -> dict[str, Any]:
-    """Parse compact query params into control values. A `sport`/`tournament` not present in the snapshot
-    (`options`) is DROPPED, not errored (graceful reset of a stale link). `participant` is free text."""
+    """Parse compact query params into control values. A `sport`/`tournament`/`participant` not present in
+    the snapshot (`options`) is DROPPED, not errored (graceful reset of a stale link). `participant` is a
+    comma-separated, URL-encoded list of participant KEYS (PR6)."""
     state: dict[str, Any] = {}
     valid_sports = set((options or {}).get("sports") or {})
     valid_tours = set((options or {}).get("tournaments") or [])
+    valid_participants = {p["value"] for p in (options or {}).get("participants") or []}
     if params.get("sport"):
         sel = [s for s in str(params["sport"]).split(",") if s and (options is None or s in valid_sports)]
         if sel:
@@ -270,7 +292,11 @@ def state_from_query(params: dict[str, Any], *, options: dict[str, Any] | None =
         if sel:
             state["tournaments"] = sel
     if params.get("participant"):
-        state["participant"] = str(params["participant"])
+        sel = [urllib.parse.unquote(p) for p in str(params["participant"]).split(",") if p]
+        # validate against the snapshot's participants when options are supplied (stale-link reset)
+        sel = [k for k in sel if not valid_participants or k in valid_participants]
+        if sel:
+            state["participant"] = sel
     if params.get("min_size"):
         try:
             state["min_size"] = float(params["min_size"])
@@ -289,7 +315,7 @@ def query_from_state(state: dict[str, Any]) -> dict[str, str]:
     if state.get("tournaments"):
         q["tournament"] = ",".join(state["tournaments"])
     if state.get("participant"):
-        q["participant"] = str(state["participant"])
+        q["participant"] = ",".join(urllib.parse.quote(str(k), safe="") for k in state["participant"])
     if state.get("min_size"):
         q["min_size"] = str(state["min_size"])
     if state.get("active_only"):
@@ -306,7 +332,8 @@ def active_filter_chips(state: dict[str, Any], options: dict[str, Any] | None = 
     if state.get("tournaments"):
         chips.append("tournament: " + ", ".join(state["tournaments"]))
     if state.get("participant"):
-        chips.append(f"participant: “{state['participant']}”")
+        pmap = {p["value"]: p["label"] for p in (options or {}).get("participants") or []}
+        chips.append("participant: " + ", ".join(pmap.get(k, k) for k in state["participant"]))
     if state.get("min_size"):
         chips.append(f"min size ≥ {state['min_size']:g}")
     if state.get("active_only"):
