@@ -1,0 +1,8 @@
+[Unit]
+Description=Trigger a Kalshi dashboard scan (oneshot, fired by kalshi-dashboard-scan.timer)
+
+[Service]
+Type=oneshot
+User=kalshi-dashboard
+EnvironmentFile=/etc/kalshi-dashboard.env
+ExecStart=/opt/kalshi-dashboard/scan.sh
