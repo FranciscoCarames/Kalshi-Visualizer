@@ -20,6 +20,7 @@ from typing import Any, Iterable
 import config
 import consistency
 import data
+import scanner
 import sports
 import viz
 
@@ -225,6 +226,110 @@ def filter_opps(opps: Iterable[dict[str, Any]], *, sports: Iterable[str] | None 
     if active_only:
         rows = [o for o in rows if _spared(o) or str(o.get("market_status") or "") == "active"]
     return rows
+
+
+# --- ranking modes (#1/#9) — payoff GEOMETRY, no probability / no expected-value ---------------------
+# Three display-time orderings over the already-filtered rows; buckets ALWAYS group first (Actionable
+# before Review before Blocked …), and a mode only re-orders WITHIN a bucket. Pure in-memory re-sort of
+# the cached opportunities — no rescan, no store read. Risk-budget geometry comes from the existing PR29
+# payoff fields (worst/best_case_profit_c); a row missing them simply sorts last within its bucket.
+RANK_MODES = {"blended": "Blended", "edge": "Per-unit edge ¢", "spread_upside": "Spread upside"}
+RANK_MODE_DEFAULT = "blended"
+# Within-bucket Blended weights (renormalized over the components a row actually has). ROI is weighted a
+# touch above absolute edge so the owner's "a 2¢→3¢ gap is a 50% improvement just like 20¢→30¢" shows up —
+# a small-edge/high-ROI row can out-rank a big-edge/low-ROI one. Pure-absolute lives in the "edge" mode.
+_BLEND_W = {"edge": 0.35, "roi": 0.45, "geom": 0.2}
+
+
+def _num_or_none(x: Any) -> float | None:
+    return x if isinstance(x, (int, float)) and x == x else None
+
+
+def _edge(o: dict[str, Any]) -> float:
+    g = _num_or_none(o.get("exec_gap_c"))
+    return g if g is not None else float("-inf")
+
+
+def _geometry(o: dict[str, Any]) -> tuple[float, float, float] | None:
+    """(max_loss_c, spread_upside_c, upside_risk_ratio) from the convex payoff bounds, or None when they
+    aren't present. ratio = +inf when there's upside but zero downside (a bounded-loss-of-0 row)."""
+    wc, bc = _num_or_none(o.get("worst_case_profit_c")), _num_or_none(o.get("best_case_profit_c"))
+    if wc is None or bc is None:
+        return None
+    max_loss = max(0.0, -wc)
+    if max_loss == 0:
+        ratio = float("inf") if bc > 0 else 0.0
+    else:
+        ratio = bc / max_loss
+    return (max_loss, bc, ratio)
+
+
+def _norm(vals: list[float | None]) -> list[float | None]:
+    """Min-max normalize the present (non-None) values to 0..1; a constant set -> all 0; absent -> None."""
+    present = [v for v in vals if v is not None]
+    if not present:
+        return [None] * len(vals)
+    lo, hi = min(present), max(present)
+    if hi <= lo:
+        return [0.0 if v is not None else None for v in vals]
+    return [((v - lo) / (hi - lo)) if v is not None else None for v in vals]
+
+
+def _blended_order(group: list[dict[str, Any]], is_risk: bool) -> list[dict[str, Any]]:
+    n = len(group)
+    edges = _norm([_num_or_none(o.get("exec_gap_c")) for o in group])
+    rois = _norm([_num_or_none(o.get("roi_pct")) for o in group])
+    geo_raw: list[float | None] = [None] * n
+    if is_risk:
+        geos = [_geometry(o) for o in group]
+        finite = [g[2] for g in geos if g and g[2] != float("inf")]
+        cap = (max(finite) + 1) if finite else 1.0     # map an infinite ratio to one step above the max finite
+        geo_raw = [None if g is None else (cap if g[2] == float("inf") else g[2]) for g in geos]
+    geos_n = _norm(geo_raw)
+
+    scored: list[tuple[float | None, dict[str, Any]]] = []
+    for i, o in enumerate(group):
+        parts = [(w, v) for w, v in ((_BLEND_W["edge"], edges[i]), (_BLEND_W["roi"], rois[i]),
+                                     (_BLEND_W["geom"], geos_n[i])) if v is not None]
+        score = (sum(w * v for w, v in parts) / sum(w for w, _ in parts)) if parts else None
+        scored.append((score, o))
+    # known scores first (descending); rows with no usable inputs last; edge/id break ties deterministically.
+    return [o for _, o in sorted(
+        scored, key=lambda sv: (0 if sv[0] is not None else 1, -(sv[0] or 0.0),
+                                -_edge(sv[1]), sv[1].get("opportunity_id") or ""))]
+
+
+def _spread_upside_order(group: list[dict[str, Any]], is_risk: bool) -> list[dict[str, Any]]:
+    if not is_risk:                                     # no convex payoff here -> fall back to edge
+        return sorted(group, key=lambda o: (-_edge(o), o.get("opportunity_id") or ""))
+
+    def key(o: dict[str, Any]) -> tuple:
+        g = _geometry(o)
+        if g is None:                                   # unknown geometry sorts AFTER known, by edge
+            return (1, -_edge(o), 0.0, 0.0, o.get("opportunity_id") or "")
+        max_loss, upside, ratio = g
+        return (0, -ratio, -upside, max_loss, o.get("opportunity_id") or "")   # +inf ratio -> top
+    return sorted(group, key=key)
+
+
+def rank_opps(opps: Iterable[dict[str, Any]] | None, mode: str = RANK_MODE_DEFAULT) -> list[dict[str, Any]]:
+    """Re-order opportunities by `mode` (see RANK_MODES). Buckets group first; the mode re-orders within a
+    bucket only. Pure in-memory — switching modes never rescans or reads the store."""
+    rows = list(opps or [])
+    by_bucket: dict[Any, list[dict[str, Any]]] = {}
+    for o in rows:
+        by_bucket.setdefault(o.get("bucket"), []).append(o)
+    out: list[dict[str, Any]] = []
+    for bucket in sorted(by_bucket, key=lambda b: scanner.BUCKET_PRIORITY.get(b, 99)):
+        group = by_bucket[bucket]
+        is_risk = bucket == "risk_budget"
+        if mode == "spread_upside":
+            out.extend(_spread_upside_order(group, is_risk))
+        elif mode == "blended":
+            out.extend(_blended_order(group, is_risk))
+        else:                                           # "edge" (and any unknown mode) -> per-unit edge ¢
+            out.extend(sorted(group, key=lambda o: (-_edge(o), o.get("opportunity_id") or "")))
+    return out
 
 
 def derive_options(opps: Iterable[dict[str, Any]]) -> dict[str, Any]:

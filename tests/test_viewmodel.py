@@ -130,6 +130,66 @@ def test_filter_opps_participant_or_match_by_key():
     assert {o["name"] for o in vm.filter_opps(opps, participant="ladder")} == {"C ladder"}  # legacy substring
 
 
+# --- ranking modes (#1/#9) — payoff geometry, no probability ----------------------------------------
+def _o(oid, bucket="actionable", gap=None, roi=None, wc=None, bc=None):
+    return {"opportunity_id": oid, "bucket": bucket, "exec_gap_c": gap, "roi_pct": roi,
+            "worst_case_profit_c": wc, "best_case_profit_c": bc}
+
+
+def test_risk_budget_geometry_from_payoff_fields():
+    assert vm._geometry({"worst_case_profit_c": -3, "best_case_profit_c": 97}) == (3, 97, 97 / 3)
+    assert vm._geometry({"worst_case_profit_c": 0, "best_case_profit_c": 5}) == (0, 5, float("inf"))
+    assert vm._geometry({"worst_case_profit_c": None, "best_case_profit_c": 5}) is None
+
+
+def test_spread_upside_orders_by_ratio_then_upside_then_loss():
+    rows = [_o("low", "risk_budget", gap=-2, wc=-4, bc=8),   # ratio 2.0
+            _o("hi", "risk_budget", gap=-2, wc=-2, bc=8),    # ratio 4.0
+            _o("inf", "risk_budget", gap=-2, wc=0, bc=1)]    # ratio +inf -> top
+    assert [o["opportunity_id"] for o in vm.rank_opps(rows, "spread_upside")] == ["inf", "hi", "low"]
+
+
+def test_spread_upside_falls_back_to_edge_for_non_risk_budget():
+    rows = [_o("a", "actionable", gap=2), _o("b", "actionable", gap=9)]
+    assert [o["opportunity_id"] for o in vm.rank_opps(rows, "spread_upside")] == ["b", "a"]
+
+
+def test_unknown_risk_budget_geometry_sorts_last():
+    rows = [_o("known", "risk_budget", gap=-2, wc=-2, bc=8), _o("missing", "risk_budget", gap=-1)]
+    assert [o["opportunity_id"] for o in vm.rank_opps(rows, "spread_upside")] == ["known", "missing"]
+    rows2 = [_o("hasinputs", "risk_budget", gap=-2, roi=5.0, wc=-2, bc=8), _o("none", "risk_budget")]
+    assert [o["opportunity_id"] for o in vm.rank_opps(rows2, "blended")][-1] == "none"
+
+
+def test_blended_uses_edge_roi_geometry_no_probability():
+    rows = [_o("x", "risk_budget", gap=-2, roi=4.0, wc=-2, bc=8),
+            _o("y", "risk_budget", gap=-1, roi=8.0, wc=-4, bc=2)]
+    ordered = vm.rank_opps(rows, "blended")
+    assert {o["opportunity_id"] for o in ordered} == {"x", "y"}
+    assert all("p_bonus" not in o and "expected_profit_c" not in o for o in ordered)   # no probability fields
+
+
+def test_blended_ranks_relative_above_absolute():
+    rows = [_o("smallhighroi", "actionable", gap=2, roi=30.0), _o("biglowroi", "actionable", gap=9, roi=5.0)]
+    assert [o["opportunity_id"] for o in vm.rank_opps(rows, "blended")][0] == "smallhighroi"   # ROI tilt
+    assert [o["opportunity_id"] for o in vm.rank_opps(rows, "edge")][0] == "biglowroi"          # pure absolute
+
+
+def test_blended_normalizes_within_bucket():
+    a = [_o("a1", "actionable", gap=2, roi=30.0), _o("a2", "actionable", gap=9, roi=5.0)]
+    alone = [o["opportunity_id"] for o in vm.rank_opps(a, "blended") if o["bucket"] == "actionable"]
+    b = a + [_o("r", "risk_budget", gap=100, roi=999.0, wc=-1, bc=99)]   # extreme row in ANOTHER bucket
+    withother = [o["opportunity_id"] for o in vm.rank_opps(b, "blended") if o["bucket"] == "actionable"]
+    assert alone == withother                                            # other bucket didn't reorder this one
+
+
+def test_mode_switch_no_rescan():
+    rows = [_o("a", "actionable", gap=2, roi=30.0), _o("b", "actionable", gap=9, roi=5.0)]
+    assert [o["opportunity_id"] for o in vm.rank_opps(rows, "edge")] == ["b", "a"]
+    assert [o["opportunity_id"] for o in vm.rank_opps(rows, "blended")] == ["a", "b"]
+    assert [o["opportunity_id"] for o in rows] == ["a", "b"]             # pure: input list not mutated
+
+
 # --- participant detail builders (PR 24) — pure over a single participant's contract rows ----------
 import consistency  # noqa: E402  — used by the payoff-chart test
 

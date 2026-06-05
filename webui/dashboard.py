@@ -169,6 +169,10 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                                    value=next(iter(config.ALERT_PERSISTENCE_OPTIONS)))
         window_select = ui.select(list(config.BACKLOG_WINDOWS), value=config.BACKLOG_DEFAULT,
                                    label="Backlog window")
+        rank_sel = ui.select(vm.RANK_MODES, value=vm.RANK_MODE_DEFAULT, label="Rank by").tooltip(
+            "Within each section: Per-unit edge ¢, Spread upside (risk-budget geometry: upside:risk, then "
+            "spread, then lower max loss), or Blended (edge + ROI % + geometry). Gross — not a probability "
+            "model.")
         show_ids = ui.switch("Show IDs & codes", value=False)
         rules_sw = ui.switch("Resolution criteria", value=False).tooltip(
             "Show each contract's settlement rules in the click panel and auto-open them in the detail view.")
@@ -591,7 +595,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         new_ids = state.get("new_ids") or set()
         cov = state.get("cov") or {}
         filters = _current_filters()
-        view = vm.filter_opps(opps, **filters)
+        view = vm.rank_opps(vm.filter_opps(opps, **filters), rank_sel.value)   # display-time re-sort, no rescan
         # Truthful empty state by scope (PR 26a): no-scan / scanning / scan-failed / no-opportunities /
         # filter-hid-all — or hidden when there's content to show.
         msg = vm.empty_state(cov=cov, total_opps=len(opps), shown_opps=len(view),
@@ -715,6 +719,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         (scan_btn, "Scan now (core series)"), (export_btn, "Export snapshot ZIP"),
         (auto_sw, "Auto-refresh in the background"), (interval_sel, "Auto-scan interval (seconds)"),
         (sport_sel, "Filter by sport"), (tour_sel, "Filter by tournament"),
+        (rank_sel, "Rank opportunities by"),
         (participant_sel, "Filter by players or matches"), (min_size_in, "Minimum tradable size"),
         (active_sw, "Active markets only"), (show_review_sw, "Show the Review-signal section"),
         (show_blocked_sw, "Show the Blocked section"), (clear_btn, "Clear all filters"),
@@ -733,7 +738,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
     _seed()        # set control values from the URL BEFORE binding handlers (so seeding fires no render)
 
     # Filter / display controls re-render PURELY in-memory from the cached snapshot (no store, no fetch).
-    for ctrl in (tz_select, show_ids, sport_sel, tour_sel, participant_sel, min_size_in, active_sw,
+    for ctrl in (tz_select, rank_sel, show_ids, sport_sel, tour_sel, participant_sel, min_size_in, active_sw,
                  show_review_sw, show_blocked_sw, rb_switch, rb_max_loss, rb_min_ratio,
                  nm_switch, nm_max_over):
         ctrl.on_value_change(lambda _=None: rerender())
