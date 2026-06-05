@@ -24,6 +24,16 @@ from webui import viewmodel as vm
 app.on_connect(lambda *_: presence.connect())
 app.on_disconnect(lambda *_: presence.disconnect())
 
+# Selected-row highlight (#14): make the clicked opportunity UNMISTAKABLE across every opportunity table.
+# Targets Quasar QTable's `selected` row class, scoped to our `.opp-sel` tables. A translucent blue tint
+# reads on BOTH the light and dark themes, and a solid left accent bar (`--q-primary`) is a non-colour cue
+# (accessibility — colour is never the only signal). `!important` overrides Quasar's faint default. The
+# visual result is a MANUAL browser check (the headless harness can't drive table row selection).
+_SELECTED_ROW_CSS = (
+    ".opp-sel tbody tr.selected > td { background-color: rgba(37, 99, 235, 0.22) !important; }\n"
+    ".opp-sel tbody tr.selected > td:first-child { box-shadow: inset 4px 0 0 0 var(--q-primary); }"
+)
+
 
 def _aggrid_options(rows: list[dict[str, Any]], fields: list[tuple[str, str]]) -> dict[str, Any]:
     """Client-side AG-Grid options (pagination + per-column filter/sort) over already-in-memory rows.
@@ -133,6 +143,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                              "first": True, "options": {}, "cov": {}, "backlog": [],
                              "rendered_snapshot_id": "__unseeded__"}
 
+    ui.add_css(_SELECTED_ROW_CSS)        # selected-row highlight (#14) — see module note
     ui.label("🎯 Kalshi opportunity engine — cross-sport").classes("text-2xl font-bold")
     ui.label("Opportunities across all sports, ranked best→worst. Core series, gross of fees — "
              "NOT all of Kalshi.").classes("text-sm text-gray-500")
@@ -328,18 +339,18 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
     # `overflow-x-auto` (PR 26a responsive pass): the wide opportunity tables scroll horizontally on a
     # narrow screen instead of overflowing the viewport. The control rows already wrap (flex-wrap).
     actionable = ui.table(columns=_OPP_COLUMNS, rows=[], row_key="opportunity_id",
-                          selection="single", pagination=15).classes("w-full overflow-x-auto")
+                          selection="single", pagination=15).classes("w-full overflow-x-auto opp-sel")
     actionable.on_select(_on_select(actionable))
 
     review_label = ui.label("🔎 Review signal (settlement-caveated — review the rules, never auto-tradable)"
                             ).classes("text-lg font-bold")
     review = ui.table(columns=_OPP_COLUMNS, rows=[], row_key="opportunity_id",
-                      selection="single", pagination=10).classes("w-full overflow-x-auto")
+                      selection="single", pagination=10).classes("w-full overflow-x-auto opp-sel")
     review.on_select(_on_select(review))
 
     blocked_label = ui.label("⛔ Blocked").classes("text-lg font-bold")
     blocked = ui.table(columns=_OPP_COLUMNS, rows=[], row_key="opportunity_id",
-                       selection="single", pagination=10).classes("w-full overflow-x-auto")
+                       selection="single", pagination=10).classes("w-full overflow-x-auto opp-sel")
     blocked.on_select(_on_select(blocked))
 
     # Risk-budget: containment near-misses (bounded loss, convex upside) — default hidden, toggled on.
@@ -347,7 +358,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                         "CONVEX upside (broader-but-not-deeper pays +$1). GROSS of fees; NOT locked."
                         ).classes("text-lg font-bold")
     rb_table = ui.table(columns=_RISK_COLUMNS, rows=[], row_key="opportunity_id",
-                        selection="single", pagination=10).classes("w-full overflow-x-auto")
+                        selection="single", pagination=10).classes("w-full overflow-x-auto opp-sel")
     rb_table.on_select(_on_select(rb_table))
 
     # Near-miss books: flat-payout watchlist (a guaranteed gross loss as a bundle) — default hidden.
@@ -355,7 +366,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                         "guaranteed gross loss as a bundle. Watch for a mispriced leg; NOT an edge."
                         ).classes("text-lg font-bold")
     nm_table = ui.table(columns=_NEARMISS_COLUMNS, rows=[], row_key="opportunity_id",
-                        selection="single", pagination=10).classes("w-full overflow-x-auto")
+                        selection="single", pagination=10).classes("w-full overflow-x-auto opp-sel")
     nm_table.on_select(_on_select(nm_table))
     _sel_tables.extend([actionable, review, blocked, rb_table, nm_table])
 
