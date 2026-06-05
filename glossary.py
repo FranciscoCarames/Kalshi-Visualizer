@@ -220,6 +220,23 @@ GLOSSARY: dict[str, dict[str, str]] = {
                 "the risk that only part of your order fills. Treat it as an upper bound on what the "
                 "quotes imply, not a guaranteed take-home.",
     },
+    "Known limits": {
+        "short": "What the edges deliberately do NOT model: exchange fees, position/collateral limits, and "
+                 "order-book depth beyond the top quote. Every number is gross and top-of-book — an upper "
+                 "bound, not a guaranteed take-home.",
+        "long": "The app reports GROSS, TOP-OF-BOOK edges and never silently nets execution costs into the "
+                "actionability decision, so a finding can look positive yet be unprofitable in practice. "
+                "Three limits are documented but NOT built (until the owner opts in): "
+                "(1) Net-of-fees — Kalshi's trading / settlement fees are not subtracted; a thin gross gap "
+                "can turn net-negative after fees. Fee metadata may be captured for honest caveats, but it "
+                "never drives the gap ('gross-only' means 'don't silently net fees', not 'ignore fees'). "
+                "(2) Position limits & collateral — sizes are the top-of-book quote size; the app does not "
+                "model Kalshi's per-market position caps or the collateral required to hold every leg, so "
+                "'Max units' and 'Gross profit' assume you can take the full quoted size. "
+                "(3) Full-depth execution — prices and sizes are TOP-OF-BOOK only; filling more than the top "
+                "resting size walks the book to worse prices, which is not modeled, so the displayed size is "
+                "the max at the quoted price, not the total tradable edge. Treat every edge as an upper bound.",
+    },
 }
 
 # --- Why-not-tradable reason templates (single-sourced, plain English) ---------------

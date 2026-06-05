@@ -906,7 +906,13 @@ None of these modules exist yet. Do not claim `store.py`, `scanner.py`, `lifecyc
 
 ## 16. Known Limitations
 
-- **Finite sport set:** The engine supports tennis, NBA, and WNBA. Adding a new sport requires a `register(SportConfig(...))` call in `sports.py` and vetting live series. The architecture is designed for this but the work has not been done for other sports.
+- **Gross-only edges (net-of-fees not modeled):** Every edge (`exec_gap_c`, ROI, "Gross profit $") is GROSS. Kalshi's trading / settlement fees are never subtracted, and fees never drive the actionability decision — a thin gross gap can turn net-negative after fees. Fee metadata may be captured for honest caveats, but "gross-only" means "don't silently net fees", not "ignore fees". Documented as a known limit (glossary term "Known limits"); not built until the owner opts in.
+
+- **Position limits & collateral not modeled:** Sizes ("Max units") are the top-of-book quote size. The app does not model Kalshi's per-market position caps or the collateral required to hold every leg of a multi-leg position, so the sizing figures assume you can take the full quoted size.
+
+- **Top-of-book only (full-depth execution not modeled):** All prices and sizes are top-of-book. Filling more than the top resting size walks the book to worse prices; depth is not modeled, so the displayed size is the max at the quoted price, not the total tradable edge.
+
+- **Finite sport set:** The engine supports tennis, NBA, WNBA, golf, and soccer (World Cup). Adding a new sport requires a `register(SportConfig(...))` call in `sports.py` and vetting live series. The architecture is designed for this but other sports have not been added.
 
 - **Tennis all-tournament, not French-Open-only:** The FO gate has been removed — all tennis events are included. However, the `is_french_open_event` helper and `FO_WINDOW` date window in `config.py` are still French Open 2026–specific; update `FO_WINDOW` annually for future tournaments.
 
@@ -920,13 +926,13 @@ None of these modules exist yet. Do not claim `store.py`, `scanner.py`, `lifecyc
 
 - **No true arbitrage guarantee for match-alignment pairs:** Match-alignment pairs carry `RULE_CHECK_REQUIRED`/`RULE_MISMATCH` because settlement-rule compatibility is not auto-verified. Dutch-book findings **do not** have this caveat — both legs are outcomes of the same event and settle together.
 
-- **Dutch-book scope is 2-outcome only:** The detector handles exactly-2-outcome events. n-outcome winner fields (≥ 3 outcomes) are out of scope — they need a field-completeness proof and multi-leg representation.
+- **Dutch-book n-outcome coverage:** The detector handles 2-outcome match/game events, soccer 3-way games, and tournament-winner FIELDs (overround-only — a field is mutually exclusive but not provably exhaustive). Still out of scope: n-outcome **advancement** fields and field **underround** (both need an exhaustiveness proof).
 
 - **No probability modeling:** Display prices are market prices, not de-vigged probabilities. No implied probability calculations or Kelly sizing are implemented.
 
 - **Process-wide rate limiter only:** Multiple processes or containers each have their own limiter. Aggregate rate is `MAX_RPS × process_count`. A large horizontal scale-out would need a shared/distributed limiter.
 
-- **No persistent history:** Each refresh is a stateless snapshot. The planned SQLite snapshot store (`store.py`) is not yet built.
+- **Snapshot history is recent-only:** The SQLite snapshot store (`store.py`) persists each scan, but heavy evidence frames are retained latest-N under a DB-size budget — aged-out evidence shows "evidence expired" rather than a full time series. There is no long-horizon historical archive.
 
 - **UI under active refinement:** Section visibility toggles, threshold filter defaults, and the near-edge window are tunable constants that may need adjustment as real data arrives.
 

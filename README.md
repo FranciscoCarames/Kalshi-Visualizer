@@ -223,8 +223,30 @@ The synthetic exact-score bundle is hedged two ways — against the **match-winn
 **advance / win-tournament** market the match implies (winning a quarterfinal ≡ reaching the semifinal),
 emitted independently and review-only.
 
-Remaining (not yet built): the advancement-field detector (n-outcome reach-a-stage fields) and
-known-limits documentation (net-of-fees, position limits, full-depth execution).
+Remaining (not yet built): the advancement-field detector (n-outcome reach-a-stage fields) and field
+underround — both need an exhaustiveness proof. See **Known limits** below for what the edges deliberately
+do not model.
+
+---
+
+## Known limits (not modeled)
+
+Every edge the app reports — `exec_gap_c`, ROI, "Gross profit $", "Max units" — is **gross and
+top-of-book**. The engine never silently nets execution costs into the actionability decision, so a finding
+can look positive yet be unprofitable in practice. Three limits are **documented but not built** (until the
+owner opts in); they are single-sourced in `glossary.py` (term **"Known limits"**):
+
+- **Net-of-fees not modeled.** Kalshi's trading / settlement fees are not subtracted; a thin gross gap can
+  turn net-negative after fees. Fee metadata may be captured for honest caveats, but it never drives the
+  gap — "gross-only" means "don't silently net fees", not "ignore fees".
+- **Position limits & collateral not modeled.** Sizes are the top-of-book quote size; the app does not
+  account for Kalshi's per-market position caps or the collateral needed to hold every leg, so "Max units"
+  and "Gross profit" assume you can take the full quoted size.
+- **Full-depth execution not modeled.** Prices and sizes are **top-of-book only**; filling more than the
+  top resting size walks the book to worse prices. The app does not model depth, so the displayed size is
+  the max at the quoted price, not the total tradable edge.
+
+Treat every edge as an upper bound on what the quotes imply, not a guaranteed take-home.
 
 ---
 
