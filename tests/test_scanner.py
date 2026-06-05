@@ -112,6 +112,36 @@ def test_aggregates_multiple_sports_and_stamps_sport():
     assert list(unified.columns) == scanner.UNIFIED_COLUMNS
 
 
+def _motorsport_field_df():
+    """A 3-driver F1 race-winner FIELD (mutually exclusive) with an overround: yes_bid 40+35+30=105 ->
+    buy NO on all 3 costs 195 < 200 floor -> one-winner-field overround (the motorsport headline edge)."""
+    def drv(name, key, yes_bid):
+        return {
+            "series": "KXF1RACE", "event_ticker": "KXF1RACE-MONGP26", "kind": "race_winner",
+            "player": name, "player_key": f"driver:{key}", "is_participant": True,
+            "tournament": "F1 · main-race · MONGP26", "tour": "F1", "mutually_exclusive": True,
+            "yes_bid_c": yes_bid, "no_ask_c": 100 - yes_bid, "yes_bid_size": 100, "yes_ask_size": 100,
+            "quote_quality": "Tight", "status": "active", "market_ticker": f"KXF1RACE-MONGP26-{key}",
+            "kalshi_url": "x", "event_title": "Monaco GP", "time_value": None,
+        }
+    return pd.DataFrame([drv("Norris", "a", 40), drv("Piastri", "b", 35), drv("Verstappen", "c", 30)])
+
+
+def test_motorsport_field_overround_flows_through_scanner():
+    """End-to-end (no network): a motorsport race-winner field becomes a unified opportunity stamped
+    sport='motorsport' via the one-winner-field overround (PR1 field_families + PR2 registration)."""
+    def fetch(sport_id):
+        return _motorsport_field_df() if sport_id == "motorsport" else pd.DataFrame()
+    unified, errors = scanner.unified_opportunities(fetch)
+    assert errors == []
+    moto = unified[unified["sport"] == "motorsport"]
+    assert len(moto) == 1
+    assert moto.iloc[0]["source"] == "dutch_book"
+    assert moto.iloc[0]["sport_label"] == "Motorsport"
+    assert moto.iloc[0]["exec_gap_c"] == 5
+    assert list(unified.columns) == scanner.UNIFIED_COLUMNS
+
+
 def test_ranking_actionable_first_then_edge():
     unified, _ = scanner.unified_opportunities(_fetch)
     # nba dutch book (actionable, edge 7) outranks tennis containment (actionable, edge 5);
