@@ -65,6 +65,35 @@ def test_backlog_and_alerts(tmpdb):
     assert any(c["opportunity_id"] == "x" and c["transitioned"] for c in al["blocked_changes"])
 
 
+def test_latest_cache_reuses_object_and_reloads_on_new_snapshot(tmpdb):
+    store.write_snapshot(1000, [op("a")])
+    first = engine._cached_latest(None)
+    assert first is engine._cached_latest(None)               # same deserialized object within a snapshot
+    assert {o["opportunity_id"] for o in first["opportunities"]} == {"a"}
+    store.write_snapshot(2000, [op("b")])                     # new snapshot -> latest_snapshot_id advances
+    refreshed = engine._cached_latest(None)
+    assert refreshed is not first                             # cache re-read on the new id
+    assert {o["opportunity_id"] for o in refreshed["opportunities"]} == {"b"}
+
+
+def test_latest_cache_one_store_load_across_accessors(tmpdb, monkeypatch):
+    # coverage()+latest_opportunities()+alerts() share ONE deserialize of the latest snapshot:
+    # the first accessor loads via store.latest, the others hit the cache, and alerts() uses latest_two.
+    store.write_snapshot("2026-06-04 12:00:00 UTC", [op("a")], meta={"scanned": 1})
+    calls = {"n": 0}
+    real = store.latest
+
+    def spy(*a, **k):
+        calls["n"] += 1
+        return real(*a, **k)
+
+    monkeypatch.setattr(store, "latest", spy)
+    engine.coverage()
+    engine.latest_opportunities()
+    engine.alerts()
+    assert calls["n"] == 1
+
+
 def _two_way_stub():
     """A 2-market underround stub fetch (one actionable dutch book) — no network."""
     def mk(p, k, ask):

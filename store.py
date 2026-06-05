@@ -452,6 +452,20 @@ def load_frames(snapshot_id: int, *, sport: str | None = None, frame_type: str |
     } for r in rows]
 
 
+def latest_snapshot_id(db_path: str | None = None) -> int | None:
+    """The id of the single newest snapshot, or None if the store is empty. A lightweight indexed lookup
+    (no JSON expansion / no opportunity deserialize) — the cheap "has a new snapshot landed?" probe for
+    the dashboard poll loop. This is the SOURCE OF TRUTH for snapshot freshness (the in-memory
+    `scan_manager` id is only an optimization hint that can go stale on restart / db-path change)."""
+    conn = _connect(db_path)
+    try:
+        row = conn.execute(
+            "SELECT id FROM snapshots ORDER BY fetched_ts DESC, id DESC LIMIT 1").fetchone()
+    finally:
+        conn.close()
+    return row["id"] if row else None
+
+
 def latest(db_path: str | None = None) -> dict[str, Any] | None:
     """The single newest snapshot (or None if the store is empty) — what the read endpoints serve."""
     conn = _connect(db_path)

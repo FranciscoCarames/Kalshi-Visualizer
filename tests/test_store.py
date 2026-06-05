@@ -50,6 +50,16 @@ def test_latest_two_handles_empty_and_single(tmp_path):
     assert len(only) == 1 and only[0]["opportunities"][0]["opportunity_id"] == "a"
 
 
+def test_latest_snapshot_id_tracks_newest(tmp_path):
+    db = _db(tmp_path)
+    assert store.latest_snapshot_id(db_path=db) is None          # empty store -> None
+    sid1 = store.write_snapshot(1000, [_opp("a")], db_path=db)
+    assert store.latest_snapshot_id(db_path=db) == sid1
+    sid2 = store.write_snapshot(2000, [_opp("b")], db_path=db)
+    assert sid2 > sid1
+    assert store.latest_snapshot_id(db_path=db) == sid2          # advances to the newest id
+
+
 def test_full_row_round_trips_via_json_blob(tmp_path):
     db = _db(tmp_path)
     store.write_snapshot(1000, [_opp("a", reason="child bid > parent ask", exec_gap_c=3)], db_path=db)
