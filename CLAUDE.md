@@ -38,8 +38,9 @@ ruff check .                             # lint
 
 To verify without a browser: `pytest -q`; `python -c "import app, serve"`; a headless Streamlit boot —
 `streamlit run app.py --server.headless true --server.port 8765` then check
-`http://localhost:8765/_stcore/health` returns `200`; and a `serve.py` boot — `GET /` and `/metrics` →
-`200`. The NiceGUI dashboard itself has headless browser smoke tests (`tests/test_browser.py`, via
+`http://localhost:8765/_stcore/health` returns `200`; and a `serve.py` boot — `GET /`, `/healthz`,
+`/metrics` → `200` plus `/readyz` (readiness: `ready`/`degraded`/`not_ready`). The NiceGUI dashboard
+itself has headless browser smoke tests (`tests/test_browser.py`, via
 `nicegui.testing` — no selenium). Live Kalshi calls, `pip`, and `git push` in this environment require
 running the Bash tool with the sandbox disabled (network is otherwise blocked).
 
@@ -47,10 +48,19 @@ running the Bash tool with the sandbox disabled (network is otherwise blocked).
 one app (default loopback `127.0.0.1:8000`). `API_HOST`/`API_PORT` are env-overridable; binding a
 non-loopback host **requires** `NICEGUI_STORAGE_SECRET` (`serve.bind_safety` fail-hard, no auth — escape:
 `ALLOW_DEV_STORAGE_SECRET_ON_LAN=1`) and warns on `WEB_CONCURRENCY>1` (store + throttle are process-local).
-See `docs/LAN_ACCESS.md` / `docs/DEPLOYMENT.md` (+ `serve_lan.ps1`). **`POST /scan` is NON-BLOCKING** (202;
-PR 21b): a process-local `scan_manager.ScanManager` singleflight (shared by `POST /scan` AND
-`webui.run_scan_now` → one upstream fetch) runs the scan on a background thread; `?wait=true` bounded-blocks,
-`?force=true` overrides the TTL/budget, `GET /scan/status` polls. The scanner persists per-sport
+**Liveness** `/healthz`; **readiness** `/readyz` (PR S1 — `ready`/`degraded`/`not_ready`+503: DB writable
++ a fresh snapshot, via the MIGRATION-FREE probe `store.db_writable`; reflects the last scan, no live
+Kalshi call). `SNAPSHOT_DB_PATH` is env-overridable (PR S2 — applied at `serve._apply_snapshot_db_path()`
+startup with a parent-dir check; `config.py` stays import-free). **Deploy artifact:**
+`scripts/build_deploy_repo.py` builds a clean runtime-only repo (import-graph allowlist → no
+Streamlit/tests/docs/state; pinned `requirements.txt`); `deploy/` ships the systemd service + scan
+`.timer` + `scan.sh` wrapper (PR D). See `docs/LAN_ACCESS.md` / `docs/DEPLOYMENT.md` (+ `serve_lan.ps1`).
+**`POST /scan` is NON-BLOCKING** (202; PR 21b): a process-local `scan_manager.ScanManager` singleflight
+(shared by `POST /scan` AND `webui.run_scan_now` → one upstream fetch) runs the scan on a background
+thread; `?wait=true` bounded-blocks, `?force=true` overrides the TTL/budget, `GET /scan/status` polls. The
+dashboard "Scan now" button is **NON-force by default** (PR S3 — it respects the TTL/cooldown like the
+scheduler; force is reachable only via the token-gated HTTP endpoint, no UI force button). The scanner
+persists per-sport
 contracts/checks/dutchbook frames + coverage counters (`contracts_scanned`/`checks_tested`/`kalshi_requests`)
 per scan (PR 21a).
 
@@ -417,11 +427,15 @@ chart was **removed** (Stage 0 — misleading; Actionable table is the ranking s
   (`synthetic_bundle.py`).
 - **Engine-behind-an-API:** SQLite snapshot store (`store.py`, v3 — opportunities + per-sport evidence
   frames), cross-sport `scanner.py`, lifecycle/alerts, a typed **FastAPI** REST API (`api.py`:
-  `/opportunities` `/coverage` `/metrics` `/scan` `/alerts` …), non-blocking `POST /scan` behind a
-  **ScanManager** singleflight + per-process HTTP rate-limit + env-gated `SCAN_TOKEN`.
+  `/healthz` `/readyz` `/opportunities` `/coverage` `/metrics` `/scan` `/alerts` …), non-blocking
+  `POST /scan` behind a **ScanManager** singleflight + per-process HTTP rate-limit + env-gated `SCAN_TOKEN`.
 - **NiceGUI dashboard** (`webui/`, mounted on FastAPI via `serve.py`): ranked Actionable/Review/Blocked,
   participant-detail panel, diagnostics/debug with AG-Grids, truthful empty states, snapshot export, live
   freshness; pure `webui/viewmodel.py` + `webui/diagnostics.py` cores. The Streamlit `app.py` still ships.
+- **LAN go-live (PRs S1–S5 + D):** `/readyz` readiness, env `SNAPSHOT_DB_PATH`, NON-force "Scan now",
+  Linux-first `docs/DEPLOYMENT.md`, a clean deploy-repo builder (`scripts/build_deploy_repo.py`) + `deploy/`
+  systemd/timer/`scan.sh` templates, and dashboard UX defaults (Blocked hidden, persistent row highlight,
+  resolution-criteria toggle, dark mode, a11y tooltips).
 
 `pytest` is the full suite (`test_data`, `test_consistency`, `test_dutchbook`, `test_synthetic_bundle`,
 `test_store`, `test_scanner`, `test_lifecycle`, `test_api`, `test_webui`, `test_viewmodel`,
