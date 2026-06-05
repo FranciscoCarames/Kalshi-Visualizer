@@ -37,10 +37,17 @@ session cookie is signed with the secret). For a quick trusted-LAN test you may 
 - **State:** a single SQLite file (`snapshots.db`, path = `config.SNAPSHOT_DB_PATH`) holding ranked
   opportunity snapshots. The UI reads the latest snapshot; a scan writes a new one.
 - **Outbound:** the process fetches live data from `https://external-api.kalshi.com` (read-only, no auth).
-- **Run EXACTLY ONE worker / one instance.** The snapshot store and the Kalshi request throttle
-  (`MAX_RPS=5`) are **process-local**: multiple workers (`WEB_CONCURRENCY>1`, `uvicorn --workers N`) or
-  replicas each keep their own, which both **fragments the data** (divergent snapshots) and multiplies the
-  request rate past Kalshi's free-tier limit. `serve.py` warns if `WEB_CONCURRENCY>1` / `--workers` is set.
+- **Run EXACTLY ONE worker / one instance.** The snapshot store, the Kalshi request throttle
+  (`MAX_RPS=15`, ~75% of the Basic ceiling), and the in-process auto-scan scheduler are **process-local**:
+  multiple workers (`WEB_CONCURRENCY>1`, `uvicorn --workers N`) or replicas each keep their own, which
+  **fragments the data** (divergent snapshots), runs a scan loop per worker, and multiplies the request
+  rate past Kalshi's free-tier limit (aggregate = `15 × N`). `serve.py` warns if `WEB_CONCURRENCY>1` /
+  `--workers` is set. The 15/s cap is safe only for a single process.
+- **Auto-scan: prefer the in-process scheduler.** `python serve.py` runs a built-in periodic scan loop
+  (default-on; cadence via the dashboard's Auto-refresh toggle). The optional systemd `scan.timer` below is
+  **safe but redundant** alongside it — and only loosely deduped (`SCAN_MIN_INTERVAL_SECONDS=8`), so a
+  3-minute external fire can still add the occasional extra scan. **Disable the `scan.timer` when relying on
+  the in-process scheduler** (use the timer only if you run the app under a manager that can't keep the loop alive).
 
 ---
 

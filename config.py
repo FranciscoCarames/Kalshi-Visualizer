@@ -86,11 +86,14 @@ MAX_PAGES = 100
 
 # --- Rate limiting (stay safely under Kalshi's Basic/free tier) ----------------------
 # Kalshi Basic tier: read budget 200 tokens/s, a standard GET costs 10 tokens -> ~20 read req/s
-# (verified from docs.kalshi.com/getting_started/rate_limits). We cap at ~25% of that.
-# NOTE: this limiter is PROCESS-WIDE only — it bounds one Python process. If the app runs as several
-# processes / containers / replicas, each has its own limiter and the aggregate rate is
-# MAX_RPS x process_count. A large horizontal scale-out would need a shared/distributed limiter.
-MAX_RPS = 5                 # max requests/second issued by this process (≈25% of the ~20/s ceiling)
+# (verified from docs.kalshi.com/getting_started/rate_limits). We cap at ~75% of that, leaving headroom.
+# A full cross-sport scan is only ~49 GETs, so the burst is brief (~3.3s at 15/s). The HARD floor against
+# a ban is the 429 exponential backoff in kalshi_client._get (it honors a Retry-After header WHEN the 429
+# carries one — Kalshi may omit it — otherwise it backs off exponentially).
+# NOTE: this limiter is PROCESS-WIDE only — it bounds one Python process. 15/s is safe for a SINGLE
+# process; do not run WEB_CONCURRENCY>1 / `uvicorn --workers N` / multiple replicas without a shared
+# limiter, since each keeps its own and the aggregate rate is MAX_RPS x process_count (serve.py warns).
+MAX_RPS = 15                # max requests/second issued by this process (~75% of the ~20/s Basic ceiling)
 CONCURRENCY = 4             # thread-pool workers for the per-series fan-out (throttle paces them)
 MAX_RETRIES = 5             # attempts per request before raising
 BACKOFF_BASE = 1.0          # seconds; exponential backoff base for 429/5xx/network errors
@@ -159,7 +162,10 @@ API_PORT = 8000
 # POST /scan is rate-guarded against the latest STORED snapshot: a new scan is skipped (returns the
 # latest result marked skipped, writes nothing) when the newest snapshot is younger than this, unless
 # ?force=true. Sane after a restart because the guard reads the store, not process memory.
-SCAN_MIN_INTERVAL_SECONDS = REFRESH_TTL   # 30s
+# Explicitly 8s (not tied to REFRESH_TTL) so the in-process auto-scan scheduler's fastest interval (10s,
+# see AUTO_SCAN_INTERVAL_OPTIONS) actually re-fetches instead of being TTL-skipped. Still bounds how often
+# any non-forced trigger (scheduler / button / POST /scan) hits Kalshi.
+SCAN_MIN_INTERVAL_SECONDS = 8
 # Non-blocking /scan (PR 21b): POST /scan returns 202 immediately and the scan runs in a background thread
 # (process-local ScanManager singleflight). `?wait=true` joins the in-flight scan up to this bound, then
 # returns 202 regardless (still non-blocking past the bound).
@@ -183,4 +189,13 @@ SCAN_HTTP_WINDOW_SECONDS = 60
 # serve.py, which may import os); this is only a clearly-labeled dev-only fallback. (config stays
 # import-free per the project convention, so the env read lives in serve.py, not here.)
 NICEGUI_STORAGE_SECRET_FALLBACK = "dev-only-not-a-secret-set-NICEGUI_STORAGE_SECRET-in-prod"
-UI_REFRESH_SECONDS = REFRESH_DEFAULT_SECONDS   # NiceGUI poll cadence for re-reading the store (120s)
+UI_REFRESH_SECONDS = 10   # NiceGUI poll cadence for re-reading the STORE (cheap re-render, NOT a fetch) —
+                          # low so a fresh snapshot surfaces quickly once the auto-scan writes it.
+
+# --- In-process auto-scan scheduler (scan_scheduler.py) -------------------------------
+# A single process-wide background loop that triggers the NON-force scan on a timer, so `python serve.py`
+# auto-refreshes data without an external scheduler. One loop per process regardless of viewer count; each
+# tick rides the ScanManager TTL/budget/singleflight guards. The UI exposes a toggle + interval selector.
+AUTO_SCAN_INTERVAL_OPTIONS = [10, 15, 30, 60, 120]   # selectable seconds (>= SCAN_MIN_INTERVAL_SECONDS)
+AUTO_SCAN_DEFAULT_SECONDS = 30                        # default cadence
+AUTO_SCAN_DEFAULT_ENABLED = True                      # auto-refresh on by default

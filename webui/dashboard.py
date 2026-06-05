@@ -15,6 +15,7 @@ from nicegui import app, run, ui
 
 import config
 import presence
+import scan_scheduler
 from webui import engine, export
 from webui import viewmodel as vm
 
@@ -143,6 +144,16 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                   ).tooltip("Toggle a dark theme.")
         scan_btn = ui.button("⟳ Scan now (core series)")
         export_btn = ui.button("⬇ Export (ZIP)")
+        # Auto-refresh: drive the in-process scan scheduler (NON-force, TTL/budget-guarded). This control is
+        # SERVER-WIDE shared state — one scheduler loop per process — so a change affects every viewer
+        # (intended for a single-owner / small-LAN tool). The fetch cadence is the scan, not this widget.
+        auto_sw = ui.switch("Auto-refresh", value=scan_scheduler.scheduler.enabled).tooltip(
+            "Periodically re-scan in the background (server-wide). Off = manual 'Scan now' only.")
+        interval_sel = ui.select(config.AUTO_SCAN_INTERVAL_OPTIONS,
+                                  value=scan_scheduler.scheduler.interval_s, label="Every (s)").tooltip(
+            "How often the background auto-scan runs.")
+        auto_sw.on_value_change(lambda e: scan_scheduler.scheduler.set_enabled(bool(e.value)))
+        interval_sel.on_value_change(lambda e: scan_scheduler.scheduler.set_interval(int(e.value)))
 
     # --- filters (narrow the STORED snapshot — NONE of these fetches) ---
     with ui.row().classes("items-end gap-4 flex-wrap"):
