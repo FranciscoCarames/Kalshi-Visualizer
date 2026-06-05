@@ -167,6 +167,10 @@ tests/             # pytest: test_data, test_consistency, test_dutchbook, test_g
   trade, else blank. A `0.00/1.00` book is "No quote" (never a fake 50%).
 - **Quote quality:** Tight (≤5¢) / OK (≤15¢) / Wide (≤30¢) / Very wide / One-sided / No quote.
 - Surface every component (mid / last / bid / ask / spread) so a price is never opaque.
+- **Known limits (gross, top-of-book — single-sourced in `glossary.py` "Known limits"):** every edge is
+  GROSS and TOP-OF-BOOK. Three costs are documented, NOT modeled, until the owner opts in — exchange
+  **fees** (never netted into the gap; "gross-only" ≠ "ignore fees"), **position limits / collateral**, and
+  **full-depth execution** (filling past the top size walks the book). Treat edges as an upper bound.
 
 ## Layer Consistency Checker — hard rules (do not regress)
 
@@ -422,7 +426,8 @@ chart was **removed** (Stage 0 — misleading; Actionable table is the ranking s
 `pytest` is the full suite (`test_data`, `test_consistency`, `test_dutchbook`, `test_synthetic_bundle`,
 `test_store`, `test_scanner`, `test_lifecycle`, `test_api`, `test_webui`, `test_viewmodel`,
 `test_diagnostics`, `test_ratelimit`, `test_browser` [headless NiceGUI], …). All UNIFIED-PLAN Phase A–E PRs
-are merged; only Phase F follow-ons (advancement/field detectors, known-limits docs) remain.
+are merged; Phase F shipped the advancement-hedge synthetic detector, the tournament-winner FIELD dutch
+book, and the known-limits docs — only seed follow-ons (advancement-FIELD detector, field underround) remain.
 
 ## Iteration history (intent)
 1. Per-player French Open match viewer.
