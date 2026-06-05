@@ -1,0 +1,6 @@
+# Deploy artifacts MUST keep LF line endings — they run on Linux (the systemd units and the scan.sh
+# wrapper break with CRLF: `bad interpreter`). build_deploy_repo.py copies the working-tree files, so
+# forcing eol=lf here keeps the built artifact Linux-safe even when checked out on Windows.
+deploy/scan.sh text eol=lf
+deploy/*.service text eol=lf
+deploy/*.timer text eol=lf
