@@ -6,8 +6,9 @@ process regardless of how many browser tabs/viewers are connected — strictly s
 timer — and every tick still passes through the ScanManager's TTL / budget / singleflight guards
 (the scan function the app injects is `webui.engine.run_scan_now(force=False)`).
 
-The scan function is dependency-INJECTED via `start(scan_fn)` so this module never imports the web/engine
-layers; unit tests pass a stub. The module-level `scheduler` singleton is CONSTRUCTED but NOT started at
+The scan function is dependency-INJECTED via `start(scan_fn, gate=...)` so this module never imports the
+web/engine/presence layers; unit tests pass a stub. The optional `gate` predicate lets the runtime pause
+ticks (e.g. while no viewer is connected) without coupling the scheduler to presence/config. The module-level `scheduler` singleton is CONSTRUCTED but NOT started at
 import time — `start()` is called only from the real `serve.py` runtime, so importing this module (as the
 test suite does) never spawns a thread or triggers a scan.
 
@@ -26,6 +27,7 @@ import config
 logger = logging.getLogger(__name__)
 
 ScanFn = Callable[[], object]
+GateFn = Callable[[], bool]   # optional per-tick predicate; when it returns False the tick is skipped
 
 
 class Scheduler:
@@ -35,18 +37,25 @@ class Scheduler:
         self.interval_s = int(interval_s)
         self.enabled = bool(enabled)
         self._scan_fn: ScanFn | None = None
+        self._gate: GateFn | None = None
         self._thread: threading.Thread | None = None
         self._stop = threading.Event()
         self._wake = threading.Event()
         self._lock = threading.Lock()
 
     # --- lifecycle -------------------------------------------------------------------
-    def start(self, scan_fn: ScanFn) -> None:
-        """Launch the daemon loop. Idempotent: a second call while running is a no-op."""
+    def start(self, scan_fn: ScanFn, *, gate: GateFn | None = None) -> None:
+        """Launch the daemon loop. Idempotent: a second call while running is a no-op.
+
+        `gate` is an optional per-tick predicate: when supplied and it returns False, the tick is skipped
+        (the loop keeps running and re-checks next interval). `serve.py` uses it to pause auto-scanning
+        while no viewer is connected (`presence.count() > 0`). `None` (the default) always scans —
+        keeping this module free of any presence/config-flag knowledge."""
         with self._lock:
             if self._thread is not None and self._thread.is_alive():
                 return
             self._scan_fn = scan_fn
+            self._gate = gate
             self._stop.clear()
             self._wake.clear()
             self._thread = threading.Thread(target=self._run, name="scan-scheduler", daemon=True)
@@ -76,7 +85,7 @@ class Scheduler:
     # --- the loop --------------------------------------------------------------------
     def _run(self) -> None:
         while not self._stop.is_set():
-            if self.enabled and self._scan_fn is not None:
+            if self.enabled and self._scan_fn is not None and (self._gate is None or self._gate()):
                 try:
                     self._scan_fn()
                 except Exception:  # a transient fetch/scan error must never kill the loop

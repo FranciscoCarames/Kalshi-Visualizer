@@ -60,6 +60,42 @@ def test_disabled_never_scans():
         s.stop()
 
 
+def test_gate_false_skips_scans():
+    # P4: a gate returning False (e.g. presence.count()==0) pauses ticks even while enabled.
+    calls = []
+    s = Scheduler(interval_s=0.02, enabled=True)
+    try:
+        s.start(lambda: calls.append(1), gate=lambda: False)
+        assert _wait(lambda: len(calls) > 0, timeout=0.3) is False
+        assert calls == []
+    finally:
+        s.stop()
+
+
+def test_gate_resumes_when_it_turns_true():
+    # P4: when the gate opens (a viewer connects) the loop resumes on the next tick — no restart.
+    calls = []
+    fired = threading.Event()
+    watching = {"on": False}
+
+    def scan_fn():
+        calls.append(1)
+        fired.set()
+
+    s = Scheduler(interval_s=0.02, enabled=True)
+    try:
+        s.start(scan_fn, gate=lambda: watching["on"])
+        assert _wait(lambda: len(calls) > 0, timeout=0.2) is False   # gated off -> no scan
+        watching["on"] = True                                        # viewer connects
+        assert fired.wait(2.0), "scan_fn never ran after the gate opened"
+    finally:
+        s.stop()
+
+
+def test_presence_gate_flag_default_on():
+    assert config.AUTO_SCAN_PAUSE_WHEN_IDLE is True
+
+
 def test_set_enabled_toggles_live():
     calls = []
     fired = threading.Event()

@@ -25,6 +25,7 @@ from nicegui import ui
 
 import api
 import config
+import presence
 import scan_scheduler
 import webui.dashboard  # noqa: F401  — importing registers the @ui.page('/') dashboard
 from webui import engine
@@ -128,5 +129,7 @@ if __name__ == "__main__":
     # Start the in-process auto-scan loop HERE (runtime only) so `import serve` / the test harnesses never
     # spawn a background scan. It drives the NON-force scan; the ScanManager TTL/budget/singleflight guards
     # bound every tick. (When using this, disable the optional systemd scan.timer — see docs/DEPLOYMENT.md.)
-    scan_scheduler.scheduler.start(lambda: engine.run_scan_now(force=False))
+    # Presence gate (P4): pause auto-scanning while no viewer is connected (config-flagged, default on).
+    _gate = (lambda: presence.count() > 0) if config.AUTO_SCAN_PAUSE_WHEN_IDLE else None
+    scan_scheduler.scheduler.start(lambda: engine.run_scan_now(force=False), gate=_gate)
     uvicorn.run(api.app, host=_host, port=_port)
