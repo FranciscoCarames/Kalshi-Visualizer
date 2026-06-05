@@ -271,9 +271,10 @@ _REL_EXPLAIN = {
     "containment": "Containment ladder: a deeper outcome (e.g. Win Tournament) is contained in a broader "
                    "one (e.g. Reach Final), so it must never price higher. The trade is Buy YES the broader "
                    "leg + Buy NO the deeper leg.",
-    "dutch_book": "Dutch book: cover every outcome of a mutually-exclusive set for under the payout floor — "
-                  "a gross two-way pricing discrepancy under normal one-winner settlement (a per-game book "
-                  "carries a postponement caveat).",
+    "dutch_book": "Dutch book: cover every (covered) outcome of a mutually-exclusive set for under the "
+                  "payout floor — a gross pricing discrepancy under normal one-winner settlement. Covers "
+                  "2-way match/game books, 3-way soccer games, and tournament-winner fields (overround on "
+                  "the priceable subset). A per-game book carries a postponement caveat.",
     "synthetic_bundle": "Synthetic bundle: a player's exact-set-score contracts together replicate 'they "
                         "win', priced against their match-winner — settlement-caveated, shown review-only.",
 }

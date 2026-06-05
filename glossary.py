@@ -142,7 +142,11 @@ GLOSSARY: dict[str, dict[str, str]] = {
                 "SAME event and normally settle together, but an abnormal resolution (a postponed / "
                 "abandoned / no-contest game, settling to a fair price) can break that: a per-game (KX*GAME) "
                 "book therefore carries a postponement settlement caveat. Match/series legs settle together "
-                "under normal one-winner settlement.",
+                "under normal one-winner settlement. A fourth shape is a tournament-winner FIELD (many "
+                "‘win the tournament’ markets, one champion): it is mutually exclusive but not provably "
+                "exhaustive (fewer markets than the draw), so only the overround is checked — buy NO on the "
+                "priceable subset of entrants, which is safe because a winner outside that subset only pays "
+                "more. Many field legs are illiquid, so these are usually only partly fillable.",
     },
     "Synthetic bundle": {
         "short": "A gross pricing discrepancy where a player's exact-set-score contracts (the MECE set "
@@ -243,6 +247,10 @@ BLOCKERS: dict[str, str] = {
     "game_settlement": "Per-game settlement risk: if the game is postponed, abandoned, ruled no-contest, "
                        "or not played as originally scheduled, the legs may not settle together and the "
                        "gross gap need not hold — review the settlement rules before trading.",
+    "field_overround": "Winner-field overround: this buys NO on the priceable subset of a "
+                       "mutually-exclusive field (one champion), not every entrant — safe because an "
+                       "untraded or unlisted winner only pays more. Gross, top-of-book; many legs are "
+                       "illiquid so the position is often only partly fillable.",
 }
 
 WATCHLIST_NOTE = (

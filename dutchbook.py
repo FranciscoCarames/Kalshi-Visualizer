@@ -27,10 +27,18 @@ Sizes: a Buy-YES leg's tradable size is ``yes_ask_size``; a Buy-NO leg's is ``ye
 has no NO-side sizes — buying NO matches resting YES bids). Tradable units = the smaller of the two
 legs' sizes. All comparisons are EXACT integer cents (parsed upstream by ``data.to_cents``).
 
+Beyond the 2-outcome case this module also handles two n-outcome shapes:
+  - **Soccer 3-way games** (Home/Away/Tie) via ``_detect_n_way`` (both directions; needs the full MECE set).
+  - **Tournament-winner FIELDS** (≥3-player "win the tournament" markets) via ``_detect_field`` —
+    **OVERROUND ONLY.** A field is mutually exclusive (one champion) but NOT provably exhaustive (a Grand
+    Slam lists fewer markets than its draw), so underround (Buy YES all) is unsafe and never emitted. The
+    overround is safe on **any priceable subset** of a mutually-exclusive set: buying NO on k legs pays
+    ≥(k−1)·100¢ (an unlisted/illiquid winner only pays MORE), so we trade the priceable legs and skip the
+    empty-book longshots. ``gap = Σ yes_bid(subset) − 100``.
+
 The N-leg **exact-score synthetic bundle** (a player's MECE set scores priced vs their match-winner) is
-BUILT in the sibling ``synthetic_bundle.py`` (milestone m5). Still out of scope here: n-outcome winner
-FIELDS (≥3-player tournament/advance fields). No Streamlit / pandas imports here, so this module is
-independently testable.
+BUILT in the sibling ``synthetic_bundle.py`` (milestone m5). No Streamlit / pandas imports here, so this
+module is independently testable.
 """
 from __future__ import annotations
 
@@ -108,6 +116,19 @@ def _is_two_way_row(row: dict[str, Any]) -> bool:
         return False
     kind = row.get("kind")
     return kind == cfg.match_family or kind == _GAME_FAMILY
+
+
+# The tournament-winner family ("win the tournament", one market per participant). An event's winner
+# markets form a mutually-exclusive FIELD (one champion) → an OVERROUND-only dutch book (see _detect_field).
+_WINNER_FAMILY = "winner"
+
+
+def _is_field_row(row: dict[str, Any]) -> bool:
+    """A row from a tournament-winner field event of a RECOGNIZED sport (an UNKNOWN sport is excluded)."""
+    cfg = sports.sport_for_series(row.get("series"))
+    if cfg.sport_id == "unknown":
+        return False
+    return row.get("kind") == _WINNER_FAMILY
 
 
 def _leg_label(row: dict[str, Any]) -> str:
@@ -451,21 +472,150 @@ def proof_audit(event_rows: list[dict[str, Any]], cfg: Any) -> dict[str, Any]:
     }
 
 
+# ---- Tournament-winner FIELD (overround-only) -------------------------------------------------------
+def prove_field_mece(event_rows: list[dict[str, Any]], cfg: Any) -> MeceProof:
+    """Prove a tournament-winner FIELD is mutually exclusive — safe for an OVERROUND-only dutch book.
+
+    Requires ≥3 distinct-participant winner markets all flagged ``mutually_exclusive``. Exhaustiveness is
+    deliberately NOT proven (`exhaustive=False`): a Grand Slam lists fewer "win" markets than its draw, so
+    underround (Buy YES all) could pay 0 and is never emitted. The overround is safe from mutual
+    exclusivity alone — at most one market settles YES, so buying NO on any k≥2 legs pays ≥(k−1)·100¢, and
+    a winner outside the traded subset only pays MORE.
+    """
+    if len(event_rows) < 3:
+        return MeceProof(False, False, False, "", "winner field needs >=3 outcomes")
+    if len({str(r.get("player_key") or "") for r in event_rows}) != len(event_rows):
+        return MeceProof(False, False, False, "", "duplicate participant keys")
+    if not all(bool(r.get("mutually_exclusive")) for r in event_rows):
+        return MeceProof(False, False, False, "", "event not flagged mutually_exclusive")
+    return MeceProof(True, True, False, "tournament winner (one champion)", "")
+
+
+def _field_overround_subset(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """The legs to BUY NO on: every leg with a firm no-side price AND ``yes_bid_c > 0``.
+
+    Overround is safe on ANY subset of a mutually-exclusive set, so we trade only the priceable legs — a
+    field's longshots have empty 0/1 books that would otherwise make the whole field unpriceable. Adding a
+    leg with ``yes_bid b`` raises the gross gap by exactly ``b`` (``gap = Σ yes_bid − 100``), so the
+    priceable-and-bid>0 set is also the gap-maximising one.
+    """
+    return [r for r in rows if _firm_no_ask_c(r) is not None and (_num(r.get("yes_bid_c")) or 0) > 0]
+
+
+def _detect_field(event_ticker: str, rows: list[dict[str, Any]], cfg: Any,
+                  diag: dict | None = None) -> dict[str, Any] | None:
+    """Detect an OVERROUND dutch book on a tournament-winner field (mutually-exclusive, n-outcome), or None.
+
+    Overround only (underround needs an exhaustive field we can't prove). Trades the priceable subset; the
+    payout floor is ``(k−1)·100`` for the ``k`` legs actually bought.
+    """
+    proof = prove_field_mece(rows, cfg)
+    if not proof.ok:
+        _record(diag, "rejected", event_ticker, f"field: {proof.reason}")
+        return None
+    subset = _field_overround_subset(rows)
+    if len(subset) < 2:
+        _record(diag, "eligible_non_firing", event_ticker, "field: fewer than 2 priceable legs")
+        return None
+    cand = _n_direction_candidate("buy_no", subset)   # overround only; floor=(k-1)*100, cost=Σ no_ask
+    if cand is None or cand["gap_c"] <= 0:
+        _record(diag, "eligible_non_firing", event_ticker, "field: priced, no positive overround gap")
+        return None
+
+    n_field, k = len(rows), len(subset)
+    cost, gap_c, min_size, floor = cand["cost_c"], cand["gap_c"], cand["min_size"], cand["payout_floor_c"]
+
+    legs: list[dict[str, Any]] = []
+    for r, p in zip(subset, cand["prices"]):
+        label = _leg_label(r)
+        legs.append({"side": "buy_no", "contract": label, "price_c": p, "size": _num(r.get("yes_bid_size")),
+                     "ticker": r.get("market_ticker", ""), "url": r.get("kalshi_url", ""),
+                     "text": _buy_text("buy_no", label, p)})
+
+    all_active = all(_is_active(r) for r in subset)
+    tradable_now = "Yes" if (min_size is not None and all_active) else "No"
+    blockers: list[str] = []
+    if min_size is None:
+        blockers.append(BLOCKERS["size_missing"])
+    for r in subset:
+        q = r.get("quote_quality")
+        if q in ("No quote", "One-sided"):
+            blockers.append(BLOCKERS["no_quote"].format(leg=_leg_label(r)))
+        elif q == "Crossed":
+            blockers.append(BLOCKERS["crossed"].format(leg=_leg_label(r)))
+        s = str(r.get("status") or "")
+        if s and s != "active":
+            blockers.append(BLOCKERS["inactive"].format(leg=_leg_label(r), status=s))
+
+    # Stable id: one field overround per EVENT (NOT the variable priceable subset, which shifts between
+    # scans as books fill) so lifecycle tracking is continuous.
+    oid = data.opportunity_id(CHECK_TYPE, event_ticker, "field", "overround")
+    bucket = "actionable" if tradable_now.startswith("Yes") else "blocked"
+    blockers_str = "; ".join(blockers)
+    blocked_reason = (blockers_str or "not executable now") if bucket == "blocked" else ""
+    pa, pb = subset[0], subset[1]
+    tournament = rows[0].get("tournament", "")
+    match = (f"{tournament} winner field".strip()) or (rows[0].get("event_title") or event_ticker)
+    times = [t for t in (r.get("time_value") for r in subset) if t]
+    reason = (f"overround: buy NO on {k} of {n_field} mutually-exclusive winner-field legs costs {cost}c "
+              f"< {floor}c payout floor -> {gap_c}c gross per unit, under normal one-winner settlement")
+
+    return {
+        "check_type": CHECK_TYPE,
+        "relationship_type": CHECK_TYPE,
+        "opportunity_id": oid,
+        "bucket": bucket,
+        "blocked_reason": blocked_reason,
+        "status": EXECUTABLE_DUTCH_BOOK,
+        "direction": "overround",
+        "event_ticker": event_ticker,
+        "series": rows[0].get("series", ""),
+        "tournament": tournament,
+        "tour": rows[0].get("tour", ""),
+        "match": match,
+        "player_a": _leg_label(pa), "player_b": _leg_label(pb),
+        "player_key_a": pa.get("player_key", ""), "player_key_b": pb.get("player_key", ""),
+        "resolve_time": min(times) if times else None,
+        "tradable_now": tradable_now,
+        "market_status": "active" if all_active else "inactive",
+        "blockers": blockers_str,
+        # Advisory only: an overround on a SUBSET of the field — never affects tradability/bucket.
+        "settlement_caveat": BLOCKERS["field_overround"],
+        "legs": legs, "n_legs": k, "field_size": n_field, "payout_floor_c": floor,
+        "action_1_side": legs[0]["side"], "action_1_contract": legs[0]["contract"],
+        "action_1_price_c": legs[0]["price_c"], "action_1_text": legs[0]["text"],
+        "action_2_side": legs[1]["side"], "action_2_contract": legs[1]["contract"],
+        "action_2_price_c": legs[1]["price_c"], "action_2_text": legs[1]["text"],
+        "cost_c": cost,
+        "exec_gap_c": gap_c,
+        "exec_min_size": min_size,
+        "exec_max_profit_dollars": round(gap_c * min_size / 100, 2) if min_size is not None else None,
+        "reason": reason,
+        "event_title": rows[0].get("event_title", ""),
+        "ticker_a": legs[0]["ticker"],
+        "ticker_b": legs[1]["ticker"],
+        "url": rows[0].get("kalshi_url", ""),
+    }
+
+
 def find_dutch_books(rows: list[dict[str, Any]],
                      _diag: dict | None = None) -> list[dict[str, Any]]:
     """Scan per-player contract rows and return one dutch-book finding per qualifying event (possibly
-    empty). Eligible rows are grouped by ``event_ticker``; **soccer 3-way games dispatch to
-    ``_detect_n_way``, every other 2-way sport keeps ``_detect_pair`` byte-identical**. The optional
-    ``_diag`` dict collects rejected + eligible-non-firing n-way candidates (for Debug / live smoke).
+    empty). Two-way rows are grouped by ``event_ticker`` (**soccer 3-way games dispatch to
+    ``_detect_n_way``, every other 2-way sport keeps ``_detect_pair`` byte-identical**); tournament-winner
+    field rows are grouped separately and dispatched to ``_detect_field`` (overround-only). The optional
+    ``_diag`` dict collects rejected + eligible-non-firing n-way/field candidates (for Debug / live smoke).
     """
     groups: dict[str, list[dict[str, Any]]] = {}
+    field_groups: dict[str, list[dict[str, Any]]] = {}
     for row in rows or []:
-        if not _is_two_way_row(row):
-            continue
         ev = row.get("event_ticker") or ""
         if not ev:
             continue
-        groups.setdefault(ev, []).append(row)
+        if _is_two_way_row(row):
+            groups.setdefault(ev, []).append(row)
+        elif _is_field_row(row):
+            field_groups.setdefault(ev, []).append(row)
 
     out: list[dict[str, Any]] = []
     for event_ticker, markets in groups.items():
@@ -474,6 +624,11 @@ def find_dutch_books(rows: list[dict[str, Any]],
             finding = _detect_n_way(event_ticker, markets, cfg, _diag)
         else:
             finding = _detect_pair(event_ticker, markets)
+        if finding is not None:
+            out.append(finding)
+    for event_ticker, markets in field_groups.items():
+        cfg = sports.sport_for_series(markets[0].get("series"))
+        finding = _detect_field(event_ticker, markets, cfg, _diag)
         if finding is not None:
             out.append(finding)
     # Strongest edge first (largest gross gap), deterministic tiebreak on event ticker.

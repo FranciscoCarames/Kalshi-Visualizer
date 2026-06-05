@@ -236,10 +236,18 @@ unchanged 2-way `_detect_pair`; ≤1 finding/event.
   *same* side, so it can't reuse the ladder's Buy-YES-broader/Buy-NO-deeper table). Membership-filtered like
   the rest; thresholds spare it (like Actionable now). Glossary term "Dutch book" → "Gross edge (¢)" column;
   the Caveat column shows `settlement_caveat` + `blockers`.
-- **In scope (built):** per-game 2-outcome books (NBA/WNBA `KX*GAME`) — milestone m1.1, shipped; and the
-  **N-leg exact-score synthetic bundle** (`synthetic_bundle.py`, milestone m5 — see next section). **Out of
-  scope (seed):** n-outcome winner **fields** (≥3-player tournament/advance fields; need completeness proof).
-  `find_dutch_books` consumes `df.to_dict("records")` so it is **NaN-safe**.
+- **In scope (built):** per-game 2-outcome books (NBA/WNBA `KX*GAME`) — milestone m1.1; soccer 3-way games
+  (`_detect_n_way`, milestone m1 soccer); the **N-leg exact-score synthetic bundle** (`synthetic_bundle.py`,
+  m5 — see next section); and **tournament-winner FIELDS** (`_detect_field`, PR 27b). A winner field is
+  mutually exclusive (one champion) but NOT provably exhaustive (fewer "win" markets than the draw), so it is
+  **overround-only** (`prove_field_mece` sets `exhaustive=False` → underround never emitted). The overround is
+  safe on **any priceable subset** (`_field_overround_subset`: legs with a firm no-side price + `yes_bid>0`):
+  buying NO on k legs pays ≥`(k−1)·100` and an untraded/unlisted winner only pays more, so empty-book
+  longshots are skipped. `gap = Σ yes_bid(subset) − 100`; the id keys on the EVENT (stable across subset
+  shifts); a non-blocking `field_overround` advisory caveat flags the subset/partial-fill nature.
+  `find_dutch_books` groups winner rows separately (`_is_field_row`) → `_detect_field`; the 2-way/soccer paths
+  stay byte-identical. **Out of scope (seed):** n-outcome ADVANCE fields; field underround (needs
+  exhaustiveness). `find_dutch_books` consumes `df.to_dict("records")` so it is **NaN-safe**.
 
 ## Synthetic exact-score bundle detector — `synthetic_bundle.py` (do not regress)
 
