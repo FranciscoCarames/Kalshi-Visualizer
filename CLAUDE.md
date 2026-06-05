@@ -5,7 +5,7 @@ Guidance for **Claude Code** working in this repository. Self-contained — read
 ## Project
 
 A small, **read-only** Streamlit **trader dashboard** over live [Kalshi](https://kalshi.com)
-prediction-market data for **tennis (ATP/WTA), NBA, WNBA, golf, soccer, and MLB**. It surfaces **executable
+prediction-market data for **tennis (ATP/WTA), NBA, WNBA, golf, soccer, MLB, and NHL**. It surfaces **executable
 inconsistencies** across a participant's related contracts (a deeper outcome must not price above a
 prerequisite that contains it) and **dutch-book arbitrage** on 2-outcome MECE events, framed as
 buy-only opportunities (**Buy YES / Buy NO**), split into Actionable / Blocked / Near-edge sections
@@ -15,12 +15,17 @@ process-wide rate throttle.
 - **Owner / GitHub:** FranciscoCarames (`franciscocarames1@gmail.com`). Repo `Kalshi-Visualizer` (private), default branch `main`.
 - **Platform:** Windows 11, PowerShell, Python 3.13. (The Bash tool is also available.)
 - **Multi-sport (shipped):** `sports.py` defines a `SportConfig` abstraction; tennis, NBA, WNBA, golf,
-  soccer, and MLB are registered sports. Adding a new sport = one `register(SportConfig(...))` call. (Golf
+  soccer, MLB, and NHL are registered sports. Adding a new sport = one `register(SportConfig(...))` call. (Golf
   uses `exact_series` ownership of its 4 finishing-position series + `match_family=""`; no dutch books.
   MLB: NBA-shape futures ladder Reach Playoffs ⊇ Win League ⊇ Win World Series + per-game `KXMLBGAME` dutch
   books; identity `custom_strike.baseball_team`; `match_family=""` (`KXMLBSERIES` excluded as non-MECE).
+  NHL: NBA-shape futures ladder Reach Playoffs ⊇ Win Conference ⊇ Win Championship + `KXNHLSERIES`
+  playoff-series AND `KXNHLGAME` per-game dutch books; identity `custom_strike.hockey_team`;
+  `match_family="match"` (live `KXNHLSERIES` rounds are only "1st/2nd Round" → no ladder rung →
+  `UNKNOWN_RELATIONSHIP`).
   `SportConfig.winner_label` gives the winner family its per-sport wording — "Win the World Series" /
-  "Win the Championship" / default "Win the tournament".)
+  "Win the Stanley Cup" / "Win the Championship" / default "Win the tournament". Non-tennis grouping keys
+  are season-scoped (`data.tournament_of` appends `· <season>` so co-loaded seasons never cross-pair).)
   `build_contracts`
   includes **all events for all registered sports**; containment ladders group by **(player_key,
   tournament)** per sport. Tournament is a client-side filter.
@@ -110,6 +115,8 @@ Tennis identity: `custom_strike.tennis_competitor` UUID. Basketball identity: `c
 Key NBA series: `KXNBA` (championship winner), `KXNBAEAST`/`KXNBAWEST`/`KXNBAPLAYOFF` (advance), `KXNBASERIES` (playoff series match), `KXNBAGAME` (per-game).
 Key WNBA series: `KXWNBA` (championship), `KXWNBAPLAYOFF`/`KXWNBASEMIFINAL`/`KXWNBAFINAL` (advance), `KXWNBASERIES` (playoff series), `KXWNBAGAME` (per-game).
 **MLB series** (`sports.py` `MLB`): identity `custom_strike.baseball_team`. `KXMLB` (World Series winner), `KXMLBAL`/`KXMLBNL` (advance = win the AL/NL pennant → "Win League"), `KXMLBPLAYOFFS` (advance = reach the playoffs, a many-Yes qualifier field), `KXMLBGAME` (per-game dutch book, carries the per-game `settlement_caveat`). `KXMLBSERIES`/`KXMLBWS`/divisions/`KXMLBASGAME`/`KXMLBSTGAME`/props → `other` (allow-list, not the `KXMLB` prefix). `KXMLBSERIES` is excluded as non-MECE (a regular-season series can tie 2-2).
+
+**NHL series** (`sports.py` `NHL`): identity `custom_strike.hockey_team`. `KXNHL` (Stanley Cup winner → "Win the Stanley Cup"), `KXNHLEAST`/`KXNHLWEST` (advance = win conference → "Win Conference"), `KXNHLPLAYOFF` (advance = reach the playoffs, a many-team qualifier field), `KXNHLSERIES` (playoff-series `match` dutch book), `KXNHLGAME` (per-game dutch book, carries the per-game `settlement_caveat`). Lookalikes (`KXNHLSERIESGAMES`/`KXNHLFINALSEXACT`/props) → `other` (exact-equality allow-list, not the `KXNHL` prefix). Unlike MLB, `KXNHLSERIES` IS a clean best-of-7 → kept; but live series wording is only "1st/2nd Round" (read from title + `rules_primary`, ticker suffix `Rn`), which maps to NO ladder rung → series match-alignment is safely `UNKNOWN_RELATIONSHIP`.
 
 ## Architecture
 
@@ -498,3 +505,11 @@ book, and the known-limits docs — only seed follow-ons (advancement-FIELD dete
     sport and `/scan` API fetch paths exclude the "Other" bucket identically; `time_kind="Game time"` for
     every `kind=="game"` row (NBA/WNBA/soccer/MLB); and `last_settlement_caveat` carried onto the
     recently-actionable backlog (lifecycle → `api.BacklogItem` → Streamlit table/CSV + NiceGUI).
+17. **NHL (8th sport)**: NBA-shape futures ladder (Reach Playoffs ⊇ Win Conference ⊇ Win Championship) +
+    `KXNHLSERIES` playoff-series AND `KXNHLGAME` per-game dutch books, registered via a `SportConfig` drop
+    (identity `custom_strike.hockey_team`, `winner_label="Win the Stanley Cup"`), consuming the MLB
+    cross-sport foundation. Two NHL-owned general fixes: `data.tournament_of` now **season-scopes** every
+    non-tennis grouping key (`_season_token` → `· <season>`, so co-loaded seasons never form a false
+    cross-season ladder; tennis byte-for-byte unchanged), and `dutchbook._detect_pair` adds a normalized
+    **same-series guard** (both legs must share a series). Live `KXNHLSERIES` rounds ("1st/2nd Round") map
+    to no ladder rung → `UNKNOWN_RELATIONSHIP`; NHL's value is the advance+winner ladder + series/game books.

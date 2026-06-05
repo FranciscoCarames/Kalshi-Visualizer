@@ -471,6 +471,24 @@ def _tournament_from_title(*texts: Any) -> str:
     return ""
 
 
+def _season_token(series_ticker: Any, event_ticker: Any) -> str:
+    """Season token (digit run) parsed from an event ticker, for season-scoping non-tennis grouping.
+
+    Only strips the series prefix when the event ticker actually starts with it (case-insensitive), then
+    reads the leading digit run after an optional ``-``/``_`` separator. Returns ``""`` when the prefix
+    does not match or no digits follow — callers treat ``""`` as "no season scope" (key left unchanged),
+    so a non-matching ticker is never mis-parsed.
+    ``KXNHL``/``KXNHL-26`` -> ``"26"``; ``KXNHLSERIES``/``KXNHLSERIES-26MTLBUFR2`` -> ``"26"``;
+    ``KXNHL``/``KXNBA-26`` -> ``""``.
+    """
+    series = str(series_ticker or "").upper()
+    event = str(event_ticker or "").upper()
+    if not series or not event.startswith(series):
+        return ""
+    m = re.match(r"^[-_]?(\d+)", event[len(series):])
+    return m.group(1) if m else ""
+
+
 def tournament_of(competition: Any, series_ticker: Any, event_ticker: Any,
                   event_title: Any) -> tuple[str, str]:
     """Return ``(tournament_key, source)`` — the grouping key for containment ladders, plus where it
@@ -483,18 +501,30 @@ def tournament_of(competition: Any, series_ticker: Any, event_ticker: Any,
       4. last-resort stable fallback  -> source "fallback"  (label "Unknown · <id>")
 
     The fallback can only *fail to form* a ladder (under-group), never MIX two unrelated ladders.
+
+    **Season scoping (non-tennis only):** after the key is chosen, a parseable season token (from
+    `_season_token`) is appended as ``"<key> · <token>"`` for every non-tennis sport, so co-loading two
+    seasons (e.g. ``KXNHL-26`` vs ``KXNHL-27``) can never form a false cross-season ladder. Tennis is
+    left byte-for-byte unchanged (preserves the tennis regression guarantee); an empty token is a no-op.
     """
     cleaned = _clean_tournament(competition)
     if cleaned:
-        return cleaned, "competition"
-    if str(series_ticker or "").upper() in FO_WINNER_TICKERS:
-        return "French Open", "winner_ticker"
-    kw = _tournament_from_title(event_title)
-    if kw:
-        return kw, "title_keyword"
-    fallback = (str(competition or "").strip() or str(event_ticker or "").strip()
-                or str(event_title or "").strip() or str(series_ticker or "").strip() or "unknown")
-    return f"Unknown · {fallback}", "fallback"
+        key, source = cleaned, "competition"
+    elif str(series_ticker or "").upper() in FO_WINNER_TICKERS:
+        key, source = "French Open", "winner_ticker"
+    elif _tournament_from_title(event_title):
+        key, source = _tournament_from_title(event_title), "title_keyword"
+    else:
+        fallback = (str(competition or "").strip() or str(event_ticker or "").strip()
+                    or str(event_title or "").strip() or str(series_ticker or "").strip() or "unknown")
+        key, source = f"Unknown · {fallback}", "fallback"
+
+    # Single wrapper exit: season-scope every non-tennis key uniformly (tennis untouched).
+    if sports.sport_for_series(series_ticker).sport_id != "tennis":
+        token = _season_token(series_ticker, event_ticker)
+        if token:
+            key = f"{key} · {token}"
+    return key, source
 
 
 def build_contracts(

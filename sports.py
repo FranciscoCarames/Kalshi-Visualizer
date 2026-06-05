@@ -818,3 +818,100 @@ MLB = register(SportConfig(
     division_fn=lambda cfg, t: "",
     winner_label="Win the World Series",
 ))
+
+
+# --- NHL (8th sport): NBA-shape futures ladder + playoff-series/per-game dutch books ------------------
+# Futures map onto Reach Playoffs (KXNHLPLAYOFF, 32-team qualifier field) ⊇ Win Conference (KXNHLEAST/
+# KXNHLWEST) ⊇ Win Championship / Stanley Cup (KXNHL). KXNHLSERIES is a 2-market playoff series ("match"
+# family) and KXNHLGAME a 2-market single game ("game" family) — both dutch-book eligible; the game
+# inherits the per-game settlement_caveat. Identity = the stable custom_strike.hockey_team UUID. The
+# "KXNHL" prefix only FINDS series — family_fn defines scope, so KXNHL* props/awards resolve to "other"
+# (never laddered; discovered but filtered out of fetch by non_other_families). Live data carries only
+# "1st/2nd Round" KXNHLSERIES wording (no Conference-Final/Stanley-Cup-Final series), so series rounds map
+# to NO ladder rung today → match-alignment is safely absent (UNKNOWN_RELATIONSHIP); NHL's value is the
+# advance+winner ladder + the series/game dutch books.
+_NHL_ROUND_PATTERNS = (
+    # Specific finals guards FIRST (best-effort — not present in current data, where the championship is the
+    # KXNHL field, but harmless if such SERIES text ever appears). No bare \bfinals?\b fallback; the round
+    # text is read from title + rules_primary, never a ticker suffix (the suffix grammar is "Rn").
+    ("Stanley Cup Final", r"stanley cup final(?:s)?"),
+    ("Conference Finals", r"conference final(?:s)?|\b[ew]cf\b"),
+    ("First Round", r"\b1st round\b|\bfirst round\b|\bround 1\b"),
+    ("Second Round", r"\b2nd round\b|\bsecond round\b|\bround 2\b"),
+    ("Third Round", r"\b3rd round\b|\bthird round\b|\bround 3\b"),
+)
+_NHL_STAGE_RANK = {
+    "Playoffs": 1, "First Round": 2, "Second Round": 3, "Third Round": 4,
+    "Conference Finals": 5, "Stanley Cup Final": 6, "Conference": 7, "Champion": 8,
+}
+_NHL_CATEGORY = {
+    "winner": "Championship", "advance": "Advancement (reach a stage)", "match": "Playoff series",
+    "game": "Game (not laddered)", "other": "Other",
+}
+_NHL_LADDER = LadderSpec(
+    node_order=("Reach Playoffs", "Win Conference", "Win Championship"),
+    adjacent_pairs=(("Win Championship", "Win Conference"), ("Win Conference", "Reach Playoffs")),
+    # Best-effort match rungs; currently unhit (no Final-series wording) → series → UNKNOWN_RELATIONSHIP.
+    match_stage_to_node={"Stanley Cup Final": "Win Championship", "Conference Finals": "Win Conference"},
+    advance_stage_to_node={"Playoffs": "Reach Playoffs", "Conference": "Win Conference"},
+)
+
+
+def _nhl_family(cfg: SportConfig, series_ticker: str) -> str:
+    t = (series_ticker or "").upper()
+    if t == "KXNHL":
+        return "winner"                                              # win the Stanley Cup
+    if t in ("KXNHLEAST", "KXNHLWEST", "KXNHLPLAYOFF"):
+        return "advance"                                             # win conference / reach the playoffs
+    if t == "KXNHLSERIES":
+        return "match"                                               # playoff series head-to-head
+    if t == "KXNHLGAME":
+        return "game"                                                # single game — 2-outcome dutch book
+    return "other"                                                   # KXNHLSERIESGAMES, props, awards, …
+
+
+def _nhl_stage(cfg: SportConfig, family: str, market: dict[str, Any]) -> str:
+    if family == "winner":
+        return "Champion"
+    if family == "advance":
+        # NHL has no title round, so the advance "stage" comes from which series the market is in.
+        return "Playoffs" if (market.get("ticker") or "").upper().startswith("KXNHLPLAYOFF") else "Conference"
+    if family == "match":
+        return extract_round(cfg.round_patterns, market.get("title"), market.get("rules_primary"))
+    return ""
+
+
+def _nhl_node(cfg: SportConfig, family: str, stage: str) -> str | None:
+    if family == "winner":
+        return "Win Championship"
+    if family == "advance":
+        return cfg.ladder.advance_stage_to_node.get(stage)           # Playoffs / Conference
+    if family == "match":
+        return cfg.ladder.match_stage_to_node.get(stage)             # Final rungs only (currently unhit)
+    return None
+
+
+def _nhl_division(cfg: SportConfig, series_ticker: str) -> str:
+    return ""   # NHL has no ATP/WTA-style division (conference is a ladder rung, not a UI filter)
+
+
+NHL = register(SportConfig(
+    sport_id="nhl", label="NHL", emoji="🏒",
+    series_prefixes=("KXNHL",),
+    default_series=("KXNHL", "KXNHLEAST", "KXNHLWEST", "KXNHLPLAYOFF", "KXNHLSERIES", "KXNHLGAME"),
+    winner_tickers=frozenset(),
+    identity=IdentityResolver(candidate_paths=("custom_strike.hockey_team",), id_label="hockey_team"),
+    ladder=_NHL_LADDER,
+    category_labels=_NHL_CATEGORY,
+    round_patterns=_NHL_ROUND_PATTERNS,
+    stage_rank=_NHL_STAGE_RANK,
+    ladder_families=frozenset({"match", "advance", "winner"}),
+    match_family="match",                          # KXNHLSERIES head-to-head; KXNHLGAME rides "game"
+    divisions={},
+    division_label="",
+    family_fn=_nhl_family,
+    stage_fn=_nhl_stage,
+    node_fn=_nhl_node,
+    division_fn=_nhl_division,
+    winner_label="Win the Stanley Cup",
+))

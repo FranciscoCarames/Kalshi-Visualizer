@@ -155,7 +155,7 @@ def test_nba_build_contracts_stamps_ladder_fields():
     assert r["player_key"] == "uuid-bos" and r["mapping_confidence"] == "high"
     assert r["kind"] == "winner" and r["ladder_node"] == "Win Championship"
     assert r["ladder_eligible"] is True
-    assert r["tournament"] == "Pro Basketball (M)"           # grouping key from competition
+    assert r["tournament"] == "Pro Basketball (M) · 26"      # competition + season token (event KXNBA-26)
     assert r["raw_custom_strike"] == {"basketball_team": "uuid-bos"}   # raw metadata preserved
 
 
@@ -364,7 +364,7 @@ def test_wnba_identity_is_basketball_team():
                      "Will Atlanta win the 2026 Women's Pro Basketball Championship?")])])[0]
     assert r["player_key"] == "uuid-atl" and r["mapping_confidence"] == "high"
     assert r["kind"] == "winner" and r["ladder_node"] == "Win Championship"
-    assert r["tournament"] == "Pro Basketball (W)"
+    assert r["tournament"] == "Pro Basketball (W) · 26"      # competition + season token (event KXWNBA-26)
 
 
 # --- tennis preservation (the abstraction didn't change tennis) ----------------------
@@ -425,7 +425,7 @@ def test_golf_build_contracts_stamps_ladder_fields():
     r = data.build_contracts("KXPGATOP5", [top5])[0]
     assert r["player_key"] == "uuid-sco" and r["mapping_confidence"] == "high"
     assert r["kind"] == "advance" and r["ladder_node"] == "Top 5" and r["ladder_eligible"] is True
-    assert r["tournament"] == "U.S. Open"                          # grouping key from competition
+    assert r["tournament"] == "U.S. Open · 26"                     # competition + season token (event …-26USO)
     assert r["raw_custom_strike"] == {"golf_competitor": "uuid-sco"}   # golf identity path
 
 
@@ -506,7 +506,7 @@ def test_soccer_tie_is_non_participant_with_per_event_key():
     assert tie["is_participant"] is False and tie["participant_type"] == "tie"
     assert tie["player_key"] == "tie::KXWCGAME-26JUN11MEXRSA"               # per-event synthetic key
     assert all(r["mutually_exclusive"] is True for r in rows)              # MECE flag stamped from the event
-    assert {r["tournament"] for r in rows} == {"2026 FIFA World Cup"}      # one stable WC key
+    assert {r["tournament"] for r in rows} == {"2026 FIFA World Cup · 26"}  # WC key + season token
     assert all(r["kind"] == "game" for r in rows)
 
 

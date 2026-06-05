@@ -9,9 +9,9 @@
 
 The Kalshi Structured Market Visualizer is a read-only Streamlit web app that surfaces prediction-market data from the Kalshi exchange across multiple sports. It groups a participant's contracts into a logical progression ladder, detects when deeper outcomes are priced above broader prerequisites (a layer-consistency violation), and surfaces actionable entries as two-buy trade instructions. It also runs a separate Dutch-book / MECE detector on head-to-head match and per-game markets.
 
-**Current goal:** Give a trader a fast, accurate picture of which contracts on Kalshi have price inconsistencies or Dutch-book arbitrage across supported sports (tennis, NBA, WNBA), whether those opportunities are executable, and exactly what to do (Buy YES on one leg, Buy NO on the other).
+**Current goal:** Give a trader a fast, accurate picture of which contracts on Kalshi have price inconsistencies or Dutch-book arbitrage across supported sports (tennis, NBA, WNBA, golf, soccer, MLB, NHL), whether those opportunities are executable, and exactly what to do (Buy YES on one leg, Buy NO on the other).
 
-**Current supported sports:** Tennis (ATP + WTA, all tournaments), NBA (championship / conference / playoff-series / per-game), WNBA (championship / reach-stage / playoff-series / per-game). Each sport is registered as a `SportConfig` in `sports.py`.
+**Current supported sports:** Tennis (ATP + WTA, all tournaments), NBA (championship / conference / playoff-series / per-game), WNBA (championship / reach-stage / playoff-series / per-game), Golf (finishing-position ladder Top 20⊇10⊇5⊇Win), Soccer (World Cup advancement ladder + 3-way game dutch books), MLB (futures ladder Reach Playoffs⊇Win League⊇Win World Series + per-game books), NHL (futures ladder Reach Playoffs⊇Win Conference⊇Win Championship + playoff-series/per-game books). Each sport is registered as a `SportConfig` in `sports.py`.
 
 **Current development stage:** Multi-sport engine operational; Stage 0 clarity wins shipped (live freshness strip, timezone selector, Show IDs toggle, diagnostics behind Advanced toggle); opportunity-ranking bar chart removed. Stages 1–6 of the forward roadmap are planned but not yet built.
 
@@ -238,6 +238,10 @@ Every contract row preserves raw price strings (`raw_yes_bid`, `raw_yes_ask`, et
 Each sport defines an `IdentityResolver` in its `SportConfig.identity`. The resolver tries `candidate_paths` in order for a stable UUID:
 - **Tennis:** `custom_strike.tennis_competitor`
 - **NBA / WNBA:** `custom_strike.basketball_team`
+- **Golf:** `custom_strike.golf_competitor`
+- **Soccer:** `custom_strike.soccer_team`
+- **MLB:** `custom_strike.baseball_team`
+- **NHL:** `custom_strike.hockey_team`
 
 When a UUID is found, it is used directly as `player_key` (`player_key_source = "competitor_uuid"`, `mapping_confidence = "high"`). The same UUID links a participant's contracts across all series and rounds.
 
@@ -286,7 +290,7 @@ A `SportConfig` holds:
 - `round_patterns: tuple[tuple[str, str], ...]` — ordered `(label, regex)` pairs for stage extraction (most-specific first)
 - `stage_rank: dict[str, int]` — integer sort keys per stage label
 - `ladder_families: frozenset[str]` — which families participate in ladder checks
-- `match_family: str` — the head-to-head family name (`"match"` for tennis/NBA/WNBA; `""` for golf, which has no head-to-head and so produces no dutch books)
+- `match_family: str` — the head-to-head family name (`"match"` for tennis/NBA/WNBA/NHL; `""` for golf/MLB/soccer, which have no head-to-head `match` family — MLB/soccer still produce dutch books via the `"game"` family and soccer's 3-way games)
 - `divisions: dict[str, list[str]]`, `division_label: str` — UI split (tennis: `{"Women": ["WTA"], "Men": ["ATP"], "Both": ...}`; NBA/WNBA/golf: empty)
 - `family_fn`, `stage_fn`, `node_fn`, `division_fn` — small per-sport callables
 - `exact_series: frozenset[str]` (defaulted empty) — exact ticker ownership. When non-empty, these tickers resolve to this sport **before** any prefix/winner match (most specific wins regardless of registry order), and `discover_series_for_sport` short-circuits the `/series` scan for exact-only sports. Golf uses this to own exactly its 4 finishing-position series (`KXPGATOP5/10/20`, `KXPGATOUR`) without a broad prefix that would swallow round-finishers/H2H/props (which resolve to `UNKNOWN`).
@@ -516,7 +520,7 @@ Currently the **2-outcome case only**: any event with **exactly two distinct-par
 
 Because `bid ≤ ask`, the two directions are mutually exclusive — at most one fires per event.
 
-**Eligible event families:** The sport's `match_family` (tennis `"match"`, NBA/WNBA `"match"` = playoff series head-to-head) **plus** `"game"` (NBA/WNBA single per-game markets). Props, winner, advance markets are NOT included. Unknown series (`sports.UNKNOWN`) are excluded. The exactly-2-distinct-participants guard in `_detect_pair` is the real MECE safety net.
+**Eligible event families:** The sport's `match_family` (tennis `"match"`, NBA/WNBA/NHL `"match"` = playoff series head-to-head) **plus** `"game"` (NBA/WNBA/MLB/NHL single per-game markets). Props, winner, advance markets are NOT included. Unknown series (`sports.UNKNOWN`) are excluded. The exactly-2-distinct-participants guard in `_detect_pair` is the real MECE safety net, and a normalized same-`series` guard prevents pairing legs from different series.
 
 #### API
 
