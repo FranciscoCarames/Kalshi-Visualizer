@@ -6,7 +6,8 @@ Guidance for **Claude Code** working in this repository. Self-contained — read
 
 A small, **read-only** **NiceGUI trader dashboard** (on FastAPI, via `serve.py`) over live
 [Kalshi](https://kalshi.com) prediction-market data for **tennis (ATP/WTA), NBA, WNBA, golf, soccer,
-MLB, and NHL**. It surfaces **executable inconsistencies** across a participant's related contracts (a
+MLB, NHL, and motorsport (F1 / NASCAR / IndyCar / MotoGP)**. It surfaces **executable inconsistencies**
+across a participant's related contracts (a
 deeper outcome must not price above a prerequisite that contains it) and **dutch-book arbitrage** on
 2-outcome MECE events, framed as buy-only opportunities (**Buy YES / Buy NO**), split into Actionable /
 Blocked / Near-edge sections with collapsed diagnostics, per-player detail, and debug. Auto-refreshes on
@@ -16,7 +17,8 @@ the sole UI.)
 - **Owner / GitHub:** FranciscoCarames (`franciscocarames1@gmail.com`). Repo `Kalshi-Visualizer` (private), default branch `main`.
 - **Platform:** Windows 11, PowerShell, Python 3.13. (The Bash tool is also available.)
 - **Multi-sport (shipped):** `sports.py` defines a `SportConfig` abstraction; tennis, NBA, WNBA, golf,
-  soccer, MLB, and NHL are registered sports. Adding a new sport = one `register(SportConfig(...))` call. (Golf
+  soccer, MLB, NHL, and motorsport are registered sports (8). Adding a new sport = one
+  `register(SportConfig(...))` call. (Golf
   uses `exact_series` ownership of its 4 finishing-position series + `match_family=""`; no dutch books.
   MLB: NBA-shape futures ladder Reach Playoffs ⊇ Win League ⊇ Win World Series + per-game `KXMLBGAME` dutch
   books; identity `custom_strike.baseball_team`; `match_family=""` (`KXMLBSERIES` excluded as non-MECE).
@@ -26,7 +28,19 @@ the sole UI.)
   `UNKNOWN_RELATIONSHIP`).
   `SportConfig.winner_label` gives the winner family its per-sport wording — "Win the World Series" /
   "Win the Stanley Cup" / "Win the Championship" / default "Win the tournament". Non-tennis grouping keys
-  are season-scoped (`data.tournament_of` appends `· <season>` so co-loaded seasons never cross-pair).)
+  are season-scoped (`data.tournament_of` appends `· <season>` so co-loaded seasons never cross-pair).
+  Motorsport (F1/NASCAR Cup+Truck+O'Reilly/IndyCar/MotoGP, prefixes `KXF1`/`KXNASCAR`/`KXINDY`/`KXMOTOGP`):
+  a **field sport like golf** (`match_family=""`, no pair dutch books). Identity multi-path
+  `racing_competitor`(driver UUID) / `nascar_team`(UUID) / `Participant`(constructor NAME → low conf via
+  `IdentityResolver.id_validator`); `player_key` is **role-namespaced** (`driver:`/`constructor:`/`team:`)
+  from the classified family so a constructor sharing the driver UUID path never merges. **One-winner
+  FIELDS** (`field_families` = winner/race_winner/pole/fastest_lap/constructor/team — all
+  `mutually_exclusive`) get the overround dutch book; **Top-N/Podium are `mutually_exclusive=False`** → the
+  per-competition finishing-position **ladder** (`ladder_fn`: F1 Top10⊇Top5⊇Podium⊇WinRace; Cup
+  Top20⊇Top10⊇Top5⊇Top3⊇WinRace; Truck/IndyCar Top10⊇Top3⊇WinRace; MotoGP/O'Reilly none). Kalshi "Games"
+  scope = **race winner** (NOT the app `game` family). Grouping is per RACE INSTANCE via `tournament_key_fn`
+  → `competition · session · token` (e.g. `F1 · main-race · MONGP26`); raw `competition_scope` is never in
+  the key. `KXF1H2H`/`KXNASCARH2H` listed-but-deferred → "other".)
   `build_contracts`
   includes **all events for all registered sports**; containment ladders group by **(player_key,
   tournament)** per sport. Tournament is a client-side filter.

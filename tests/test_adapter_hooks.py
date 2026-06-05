@@ -93,10 +93,14 @@ def racetest():
 # --------------------------------------------------------------------------------------------------
 # PR 1.A — field_families (one-winner generalization)
 # --------------------------------------------------------------------------------------------------
+# Sports that intentionally opt into the adapter hooks (so they're excluded from the no-op assertions).
+_OPTED_IN = {"racetest", "motorsport"}
+
+
 def test_field_families_default_is_winner_only_for_existing_sports():
-    """No-op proof: every shipped sport keeps the default {"winner"} field-eligibility."""
+    """No-op proof: every NON-opted-in sport keeps the default {"winner"} field-eligibility."""
     for cfg in sports.all_sports():
-        if cfg.sport_id == "racetest":
+        if cfg.sport_id in _OPTED_IN:
             continue
         assert cfg.field_families == frozenset({"winner"})
 
@@ -168,7 +172,7 @@ def test_tournament_key_separates_sprint_and_other_races(racetest):
 
 def test_tournament_key_fn_is_noop_for_existing_sports():
     for cfg in sports.all_sports():
-        if cfg.sport_id != "racetest":
+        if cfg.sport_id not in _OPTED_IN:
             assert cfg.tournament_key_of({"event_ticker": "X"}) is None
 
 
@@ -188,7 +192,7 @@ def test_role_namespace_keeps_driver_and_constructor_distinct(racetest):
 
 def test_role_fn_is_noop_for_existing_sports():
     for cfg in sports.all_sports():
-        if cfg.sport_id != "racetest":
+        if cfg.sport_id not in _OPTED_IN:
             assert cfg.role_of("winner") == ""
 
 
