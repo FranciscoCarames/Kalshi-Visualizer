@@ -73,6 +73,12 @@ class Opportunity(BaseModel):
     # Guaranteed payout floor + gross ROI on cost (PR 13).
     payout_floor_c: float | None = None
     roi_pct: float | None = None
+    # "Beyond the strict rule" (PR 29): edge_class ("strict" | "risk_budget" | "near_miss") + the convex
+    # per-unit profit bounds (worst == best for a flat dutch book; worst is the bounded loss, best the $1
+    # bonus for a containment risk-budget candidate). None on rows with no buy-plan.
+    edge_class: str | None = None
+    worst_case_profit_c: float | None = None
+    best_case_profit_c: float | None = None
     bucket: str | None = None
     status: str | None = None
     tradable_now: str | None = None

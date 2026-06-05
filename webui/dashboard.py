@@ -48,6 +48,31 @@ _OPP_COLUMNS = [
     {"name": "tradable", "label": "Tradable", "field": "tradable"},
     {"name": "caveat", "label": "Caveat", "field": "caveat"},
 ]
+# "Beyond the strict rule" (PR 29). Risk-budget leads with the convex economics (max loss / max profit /
+# upside:risk); worst-case ROC is a labelled secondary. Near-miss shows the overpay (= guaranteed loss).
+_RISK_COLUMNS = [
+    {"name": "new", "label": "", "field": "new", "align": "center"},
+    {"name": "sport", "label": "Sport", "field": "sport", "sortable": True},
+    {"name": "name", "label": "Participant / chain", "field": "name", "sortable": True},
+    {"name": "detail", "label": "Detail", "field": "detail"},
+    {"name": "cost", "label": "Cost ¢", "field": "cost", "sortable": True},
+    {"name": "max_loss", "label": "Max loss ¢", "field": "max_loss", "sortable": True},
+    {"name": "max_profit", "label": "Max profit ¢", "field": "max_profit", "sortable": True},
+    {"name": "ratio", "label": "Upside:risk", "field": "ratio", "sortable": True},
+    {"name": "roc", "label": "Worst-case ROC %", "field": "roc", "sortable": True},
+    {"name": "tradable", "label": "Tradable", "field": "tradable"},
+    {"name": "caveat", "label": "Caveat", "field": "caveat"},
+]
+_NEARMISS_COLUMNS = [
+    {"name": "new", "label": "", "field": "new", "align": "center"},
+    {"name": "sport", "label": "Sport", "field": "sport", "sortable": True},
+    {"name": "name", "label": "Match", "field": "name", "sortable": True},
+    {"name": "detail", "label": "Direction", "field": "detail"},
+    {"name": "cost", "label": "Cost ¢", "field": "cost", "sortable": True},
+    {"name": "overpay", "label": "Overpay ¢", "field": "overpay", "sortable": True},
+    {"name": "tradable", "label": "Tradable", "field": "tradable"},
+    {"name": "note", "label": "Note", "field": "note"},
+]
 _BACKLOG_COLUMNS = [
     {"name": "sport", "label": "Sport", "field": "sport", "sortable": True},
     {"name": "name", "label": "Participant / match", "field": "name", "sortable": True},
@@ -125,6 +150,18 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         show_review_sw = ui.switch("Review", value=True)
         show_blocked_sw = ui.switch("Blocked", value=True)
         ui.button("Clear filters", on_click=lambda: _clear_filters())
+
+    # --- "Beyond the strict rule" — two opt-in sections past the actionable line (PR 29) ---
+    with ui.row().classes("items-end gap-4 flex-wrap"):
+        ui.label("Beyond the strict rule:").classes("text-sm text-gray-500 self-center")
+        rb_switch = ui.switch("Risk-budget candidates", value=False)
+        rb_max_loss = ui.number("Max loss ¢", value=config.RISK_BUDGET_DEFAULT_MAX_LOSS_C,
+                                min=1, max=config.RISK_BUDGET_MAX_LOSS_C, format="%.0f").classes("w-28")
+        rb_min_ratio = ui.number("Min upside:risk", value=0, min=0, max=20, step=0.5,
+                                 format="%.1f").classes("w-32")
+        nm_switch = ui.switch("Near-miss books", value=False)
+        nm_max_over = ui.number("Max overpay ¢", value=config.NEAR_MISS_DEFAULT_OVER_C,
+                                min=1, max=config.NEAR_MISS_MAX_OVER_C, format="%.0f").classes("w-28")
     chips = ui.row().classes("gap-2 flex-wrap")
 
     freshness = ui.label().classes("text-sm")
@@ -263,6 +300,22 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
     blocked = ui.table(columns=_OPP_COLUMNS, rows=[], row_key="opportunity_id",
                        selection="single", pagination=10).classes("w-full overflow-x-auto")
     blocked.on_select(_on_select(blocked))
+
+    # Risk-budget: containment near-misses (bounded loss, convex upside) — default hidden, toggled on.
+    rb_label = ui.label("🟡 Risk-budget candidates — cost slightly over 100¢ for a BOUNDED loss and a "
+                        "CONVEX upside (broader-but-not-deeper pays +$1). GROSS of fees; NOT locked."
+                        ).classes("text-lg font-bold")
+    rb_table = ui.table(columns=_RISK_COLUMNS, rows=[], row_key="opportunity_id",
+                        selection="single", pagination=10).classes("w-full overflow-x-auto")
+    rb_table.on_select(_on_select(rb_table))
+
+    # Near-miss books: flat-payout watchlist (a guaranteed gross loss as a bundle) — default hidden.
+    nm_label = ui.label("🔭 Near-miss books (watchlist) — sum just OVER the payout floor: FLAT payout, so a "
+                        "guaranteed gross loss as a bundle. Watch for a mispriced leg; NOT an edge."
+                        ).classes("text-lg font-bold")
+    nm_table = ui.table(columns=_NEARMISS_COLUMNS, rows=[], row_key="opportunity_id",
+                        selection="single", pagination=10).classes("w-full overflow-x-auto")
+    nm_table.on_select(_on_select(nm_table))
 
     with ui.expansion("📉 Recently actionable (left the actionable set)").classes("w-full"):
         backlog = ui.table(columns=_BACKLOG_COLUMNS, rows=[], row_key="name",
@@ -405,6 +458,23 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             lbl.set_visibility(sw.value)
             tbl.set_visibility(sw.value)
 
+        # "Beyond the strict rule": filter the (already membership/threshold-filtered) view by the live
+        # band controls; no rescan. Each section is hidden until its switch is on; its inputs disable too.
+        if rb_switch.value:
+            rbv = vm.risk_budget_view(view, max_loss_c=int(rb_max_loss.value or 0),
+                                      min_ratio_tenths=round(float(rb_min_ratio.value or 0) * 10))
+            rb_table.rows = [vm.risk_budget_row(o, new_ids) for o in rbv]
+        rb_label.set_visibility(rb_switch.value)
+        rb_table.set_visibility(rb_switch.value)
+        rb_max_loss.set_enabled(rb_switch.value)
+        rb_min_ratio.set_enabled(rb_switch.value)
+        if nm_switch.value:
+            nmv = vm.near_miss_view(view, max_over_c=int(nm_max_over.value or 0))
+            nm_table.rows = [vm.near_miss_row(o, new_ids) for o in nmv]
+        nm_label.set_visibility(nm_switch.value)
+        nm_table.set_visibility(nm_switch.value)
+        nm_max_over.set_enabled(nm_switch.value)
+
         win_s = config.BACKLOG_WINDOWS[window_select.value]
         bl = engine.backlog(win_s if win_s is not None else config.SNAPSHOT_RETENTION_SECONDS)
         backlog.rows = [vm.backlog_row(b, tz) for b in bl]
@@ -469,7 +539,8 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
     export_btn.on_click(do_export)
     # Every control re-renders from the stored snapshot — none of them fetches.
     for ctrl in (tz_select, persist_select, window_select, show_ids, sport_sel, tour_sel,
-                 participant_in, min_size_in, active_sw, show_review_sw, show_blocked_sw):
+                 participant_in, min_size_in, active_sw, show_review_sw, show_blocked_sw,
+                 rb_switch, rb_max_loss, rb_min_ratio, nm_switch, nm_max_over):
         ctrl.on_value_change(lambda _=None: refresh())
 
     def tick_age() -> None:

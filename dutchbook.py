@@ -54,6 +54,11 @@ from glossary import BLOCKERS
 # `tradable_now` flag distinguishes them (mirrors how EXECUTABLE_VIOLATION is routed).
 EXECUTABLE_DUTCH_BOOK = "EXECUTABLE_DUTCH_BOOK"
 
+# A near-miss dutch book: a MECE book that costs SLIGHTLY OVER its payout floor — a FLAT-payout guaranteed
+# gross loss as a bundle, surfaced as an opt-in watchlist (never actionable). Distinct status + `near_miss`
+# bucket so it can never leak into the strict actionable/blocked sets.
+NEAR_MISS_DUTCH_BOOK = "NEAR_MISS_DUTCH_BOOK"
+
 # A discriminator so a consumer can tell a dutch-book finding from a containment-check row.
 CHECK_TYPE = "dutch_book"
 
@@ -154,6 +159,36 @@ def _settlement_caveat(rows: list[dict[str, Any]]) -> str:
     return BLOCKERS["game_settlement"] if any(r.get("kind") == _GAME_FAMILY for r in rows) else ""
 
 
+def _select_edge(candidates: list[dict[str, Any] | None],
+                 near_miss_max_over_c: int) -> tuple[dict[str, Any] | None, str | None]:
+    """Pick ONE finding per event from the priced direction candidates: **strict XOR near-miss**.
+
+    `gap_c` (= payout floor − cost) is the per-unit gross gap for any direction (2-way or n-way). The single
+    best (max-gap) candidate decides: a positive gap is a strict dutch book (today's behaviour); otherwise,
+    when the opt-in band is on and the overpay (= −gap) is in `[1, near_miss_max_over_c]`, it's a near-miss
+    watchlist row. Strict ALWAYS wins (the max-gap candidate is positive iff any direction fires), so an
+    event never yields both. `near_miss_max_over_c = 0` (default) → strict-only, byte-for-byte unchanged."""
+    priced = [c for c in candidates if c is not None]
+    if not priced:
+        return None, None
+    best = max(priced, key=lambda c: c["gap_c"])
+    if best["gap_c"] > 0:
+        return best, "strict"
+    if near_miss_max_over_c > 0 and -near_miss_max_over_c <= best["gap_c"] <= -1:
+        return best, "near_miss"
+    return None, None
+
+
+def _classify_edge(edge_class: str, tradable_now: str, base_caveat: str) -> tuple[str, str, str]:
+    """(status, bucket, settlement_caveat) for a finding by edge class. A near-miss gets the distinct
+    NEAR_MISS_DUTCH_BOOK status + `near_miss` bucket (never actionable/blocked) and prepends the flat-loss
+    watchlist note to its caveat; a strict book routes actionable/blocked by tradability, as before."""
+    if edge_class == "near_miss":
+        caveat = "; ".join(p for p in (BLOCKERS["near_miss_flat"], base_caveat) if p)
+        return NEAR_MISS_DUTCH_BOOK, "near_miss", caveat
+    return EXECUTABLE_DUTCH_BOOK, ("actionable" if tradable_now.startswith("Yes") else "blocked"), base_caveat
+
+
 def _direction_candidate(side: str, a: dict[str, Any], b: dict[str, Any]) -> dict[str, Any] | None:
     """Build the candidate for one direction ('buy_yes' = underround, 'buy_no' = overround).
 
@@ -180,11 +215,13 @@ def _direction_candidate(side: str, a: dict[str, Any], b: dict[str, Any]) -> dic
     }
 
 
-def _detect_pair(event_ticker: str, markets: list[dict[str, Any]]) -> dict[str, Any] | None:
+def _detect_pair(event_ticker: str, markets: list[dict[str, Any]],
+                 near_miss_max_over_c: int = 0) -> dict[str, Any] | None:
     """Detect a dutch book on a single 2-outcome match event, or None.
 
     Requires EXACTLY two distinct-participant markets (the only shape we can prove MECE for the
-    2-outcome case). >2 or single-sided events are out of scope and skipped.
+    2-outcome case). >2 or single-sided events are out of scope and skipped. `near_miss_max_over_c` > 0
+    additionally surfaces a near-miss watchlist row when no strict book fires (see `_select_edge`).
     """
     if len(markets) != 2:
         return None
@@ -198,13 +235,11 @@ def _detect_pair(event_ticker: str, markets: list[dict[str, Any]]) -> dict[str, 
     times = [t for t in (a.get("time_value"), b.get("time_value")) if t]
     resolve_time = min(times) if times else None
 
-    # Both directions; at most one can have gap_c > 0 (bid ≤ ask), but pick the max defensively.
-    candidates = [c for c in (_direction_candidate("buy_yes", a, b),
-                              _direction_candidate("buy_no", a, b)) if c is not None]
-    fired = [c for c in candidates if c["gap_c"] > 0]
-    if not fired:
+    # Both directions; strict wins, else an opt-in near-miss. At most one fires per event (_select_edge).
+    candidates = [_direction_candidate("buy_yes", a, b), _direction_candidate("buy_no", a, b)]
+    best, edge_class = _select_edge(candidates, near_miss_max_over_c)
+    if best is None:
         return None
-    best = max(fired, key=lambda c: c["gap_c"])
 
     side = best["side"]
     direction = "underround" if side == "buy_yes" else "overround"
@@ -230,20 +265,27 @@ def _detect_pair(event_ticker: str, markets: list[dict[str, Any]]) -> dict[str, 
         if s and s != "active":
             blockers.append(BLOCKERS["inactive"].format(leg=_leg_label(row), status=s))
 
-    reason = (
-        f"{direction}: {side.replace('_', ' ')} both legs costs {best['cost_c']}¢ < 100¢ "
-        f"→ {gap_c}¢ gross per unit, under normal one-winner settlement "
-        f"({label_a} {best['price_a']}¢ + {label_b} {best['price_b']}¢)"
-    )
+    if edge_class == "near_miss":
+        reason = (
+            f"near-miss {direction}: {side.replace('_', ' ')} both legs costs {best['cost_c']}¢ ≥ 100¢ "
+            f"→ {-gap_c}¢ gross LOSS per unit if taken as a bundle (flat payout); watchlist only "
+            f"({label_a} {best['price_a']}¢ + {label_b} {best['price_b']}¢)"
+        )
+    else:
+        reason = (
+            f"{direction}: {side.replace('_', ' ')} both legs costs {best['cost_c']}¢ < 100¢ "
+            f"→ {gap_c}¢ gross per unit, under normal one-winner settlement "
+            f"({label_a} {best['price_a']}¢ + {label_b} {best['price_b']}¢)"
+        )
 
     # Stage-1 schema: stable opportunity_id + relationship_type + dashboard bucket + REQUIRED
     # blocked_reason. Id recipe = the check type + the event + the SORTED participant keys, so it is
-    # leg-order-independent and unique per event (one finding per event). A dutch book is actionable
-    # when tradable (the settlement caveat is advisory, not a blocker), else blocked; blocked_reason is
-    # non-empty IFF blocked.
+    # leg-order-independent and unique per event (one finding per event). A strict dutch book is actionable
+    # when tradable, else blocked; a near-miss gets its own watchlist bucket. blocked_reason non-empty IFF
+    # blocked (so a near-miss carries its watchlist note in settlement_caveat, not blocked_reason).
     keys = sorted([str(a.get("player_key") or ""), str(b.get("player_key") or "")])
     oid = data.opportunity_id(CHECK_TYPE, event_ticker, keys[0], keys[1])
-    bucket = "actionable" if tradable_now.startswith("Yes") else "blocked"
+    status, bucket, settlement_caveat = _classify_edge(edge_class, tradable_now, _settlement_caveat([a, b]))
     blockers_str = "; ".join(blockers)
     blocked_reason = (blockers_str or "not executable now") if bucket == "blocked" else ""
 
@@ -253,7 +295,8 @@ def _detect_pair(event_ticker: str, markets: list[dict[str, Any]]) -> dict[str, 
         "opportunity_id": oid,
         "bucket": bucket,
         "blocked_reason": blocked_reason,
-        "status": EXECUTABLE_DUTCH_BOOK,
+        "status": status,
+        "edge_class": edge_class,
         "direction": direction,
         "event_ticker": event_ticker,
         "series": a.get("series", ""),
@@ -270,17 +313,21 @@ def _detect_pair(event_ticker: str, markets: list[dict[str, Any]]) -> dict[str, 
         # market_status from the same both-legs-active check that drives tradability.
         "market_status": "active" if both_active else "inactive",
         "blockers": blockers_str,
-        # Non-blocking settlement caveat (per-game books only); advisory, never affects tradability/bucket.
-        "settlement_caveat": _settlement_caveat([a, b]),
+        # Non-blocking settlement caveat (per-game books only, + the flat-loss note for a near-miss);
+        # advisory, never affects tradability/bucket.
+        "settlement_caveat": settlement_caveat,
         # Two-leg buy-only action plan (same vocabulary as consistency rows, so the dashboard reuses it).
         "action_1_side": side, "action_1_contract": label_a, "action_1_price_c": best["price_a"],
         "action_1_text": _buy_text(side, label_a, best["price_a"]),
         "action_2_side": side, "action_2_contract": label_b, "action_2_price_c": best["price_b"],
         "action_2_text": _buy_text(side, label_b, best["price_b"]),
-        # Profit / sizing (mirrors consistency's exec_* keys; gross of fees/slippage).
+        # Profit / sizing (mirrors consistency's exec_* keys; gross of fees/slippage). A MECE book pays its
+        # floor in EVERY state, so the per-unit profit is flat (worst == best == gap_c, negative on a
+        # near-miss = the guaranteed bundle loss).
         "cost_c": best["cost_c"],
         "payout_floor_c": 100,   # a 2-way book pays exactly 100¢ in every state (PR 13 schema parity)
         "exec_gap_c": gap_c,
+        "worst_case_profit_c": gap_c, "best_case_profit_c": gap_c,
         "exec_min_size": min_size,
         "exec_max_profit_dollars": round(gap_c * min_size / 100, 2) if min_size is not None else None,
         "reason": reason,
@@ -364,20 +411,18 @@ def _record(diag: dict | None, kind: str, event_ticker: str, reason: str) -> Non
 
 
 def _detect_n_way(event_ticker: str, rows: list[dict[str, Any]], cfg: Any,
-                  diag: dict | None = None) -> dict[str, Any] | None:
+                  diag: dict | None = None, near_miss_max_over_c: int = 0) -> dict[str, Any] | None:
     """Detect an n-outcome dutch book on one MECE event (currently soccer 3-way games), or None."""
     proof = prove_mece(rows, cfg)
     if not proof.ok:
         _record(diag, "rejected", event_ticker, proof.reason)
         return None
     n = len(rows)
-    candidates = [c for c in (_n_direction_candidate("buy_yes", rows),
-                              _n_direction_candidate("buy_no", rows)) if c is not None]
-    fired = [c for c in candidates if c["gap_c"] > 0]
-    if not fired:
+    candidates = [_n_direction_candidate("buy_yes", rows), _n_direction_candidate("buy_no", rows)]
+    best, edge_class = _select_edge(candidates, near_miss_max_over_c)
+    if best is None:
         _record(diag, "eligible_non_firing", event_ticker, "priced, no positive gap")
         return None
-    best = max(fired, key=lambda c: c["gap_c"])
     side = best["side"]
     direction = "underround" if side == "buy_yes" else "overround"
     word = "buy YES" if side == "buy_yes" else "buy NO"
@@ -409,7 +454,7 @@ def _detect_n_way(event_ticker: str, rows: list[dict[str, Any]], cfg: Any,
     # Id recipe = check type + event + SORTED participant keys (leg-order-independent, one finding/event).
     keys = sorted(str(r.get("player_key") or "") for r in rows)
     oid = data.opportunity_id(CHECK_TYPE, event_ticker, *keys)
-    bucket = "actionable" if tradable_now.startswith("Yes") else "blocked"
+    status, bucket, settlement_caveat = _classify_edge(edge_class, tradable_now, _settlement_caveat(rows))
     blockers_str = "; ".join(blockers)
     blocked_reason = (blockers_str or "not executable now") if bucket == "blocked" else ""
     # a/b are the real participants (teams) so the participant filter matches a chosen team regardless of
@@ -420,8 +465,12 @@ def _detect_n_way(event_ticker: str, rows: list[dict[str, Any]], cfg: Any,
     pa = team_rows[0]
     pb = team_rows[1] if len(team_rows) > 1 else team_rows[0]
     times = [t for t in (r.get("time_value") for r in rows) if t]
-    reason = (f"{direction}: {word} all {n} legs costs {cost}c < {floor}c payout floor "
-              f"-> {gap_c}c gross per unit, under normal one-winner settlement")
+    if edge_class == "near_miss":
+        reason = (f"near-miss {direction}: {word} all {n} legs costs {cost}c >= {floor}c payout floor "
+                  f"-> {-gap_c}c gross LOSS per unit if taken as a bundle (flat payout); watchlist only")
+    else:
+        reason = (f"{direction}: {word} all {n} legs costs {cost}c < {floor}c payout floor "
+                  f"-> {gap_c}c gross per unit, under normal one-winner settlement")
 
     return {
         "check_type": CHECK_TYPE,
@@ -429,7 +478,8 @@ def _detect_n_way(event_ticker: str, rows: list[dict[str, Any]], cfg: Any,
         "opportunity_id": oid,
         "bucket": bucket,
         "blocked_reason": blocked_reason,
-        "status": EXECUTABLE_DUTCH_BOOK,
+        "status": status,
+        "edge_class": edge_class,
         "direction": direction,
         "event_ticker": event_ticker,
         "series": rows[0].get("series", ""),
@@ -442,11 +492,14 @@ def _detect_n_way(event_ticker: str, rows: list[dict[str, Any]], cfg: Any,
         "tradable_now": tradable_now,
         "market_status": "active" if all_active else "inactive",
         "blockers": blockers_str,
-        # Non-blocking settlement caveat (soccer 3-way games are per-game → carry it); advisory only.
-        "settlement_caveat": _settlement_caveat(rows),
+        # Non-blocking settlement caveat (soccer 3-way games are per-game → carry it; + flat-loss note on a
+        # near-miss); advisory only.
+        "settlement_caveat": settlement_caveat,
         # Full N-leg plan in `legs`; action_1/2 backfilled from the first two legs so the unified 2-leg
         # columns + lifecycle still render. payout_floor_c is the (n-1)*100 (overround) / 100 (underround).
         "legs": legs, "n_legs": n, "payout_floor_c": floor,
+        # Flat payout across all MECE states → worst == best == gap_c (negative on a near-miss).
+        "worst_case_profit_c": gap_c, "best_case_profit_c": gap_c,
         "action_1_side": legs[0]["side"], "action_1_contract": legs[0]["contract"],
         "action_1_price_c": legs[0]["price_c"], "action_1_text": legs[0]["text"],
         "action_2_side": legs[1]["side"], "action_2_contract": legs[1]["contract"],
@@ -599,13 +652,18 @@ def _detect_field(event_ticker: str, rows: list[dict[str, Any]], cfg: Any,
 
 
 def find_dutch_books(rows: list[dict[str, Any]],
-                     _diag: dict | None = None) -> list[dict[str, Any]]:
+                     _diag: dict | None = None, *,
+                     near_miss_max_over_c: int = 0) -> list[dict[str, Any]]:
     """Scan per-player contract rows and return one dutch-book finding per qualifying event (possibly
     empty). Two-way rows are grouped by ``event_ticker`` (**soccer 3-way games dispatch to
     ``_detect_n_way``, every other 2-way sport keeps ``_detect_pair`` byte-identical**); tournament-winner
     field rows are grouped separately and dispatched to ``_detect_field`` (overround-only). The optional
     ``_diag`` dict collects rejected + eligible-non-firing n-way/field candidates (for Debug / live smoke).
-    """
+
+    ``near_miss_max_over_c`` > 0 additionally surfaces FLAT-payout near-miss watchlist rows (a 2-way or
+    n-way MECE book overpriced by up to that many cents) — strict findings still win per event. It is NOT
+    applied to ``_detect_field`` (a winner-field overround is convex on a subset, not a flat guaranteed
+    loss, so the near-miss framing would be wrong). 0 (default) → strict-only, byte-for-byte unchanged."""
     groups: dict[str, list[dict[str, Any]]] = {}
     field_groups: dict[str, list[dict[str, Any]]] = {}
     for row in rows or []:
@@ -621,9 +679,9 @@ def find_dutch_books(rows: list[dict[str, Any]],
     for event_ticker, markets in groups.items():
         cfg = sports.sport_for_series(markets[0].get("series"))
         if cfg.sport_id == "soccer":
-            finding = _detect_n_way(event_ticker, markets, cfg, _diag)
+            finding = _detect_n_way(event_ticker, markets, cfg, _diag, near_miss_max_over_c)
         else:
-            finding = _detect_pair(event_ticker, markets)
+            finding = _detect_pair(event_ticker, markets, near_miss_max_over_c)
         if finding is not None:
             out.append(finding)
     for event_ticker, markets in field_groups.items():

@@ -25,8 +25,10 @@ from glossary import BLOCKERS, WATCHLIST_NOTE
 
 # Statuses that represent an actual price inconsistency with a buy direction (get a Buy YES / Buy NO
 # action plan). WIDE_QUOTE is deliberately excluded: ordering is consistent there, so it's
-# watchlist-only, not an opportunity to act on.
-ACTION_STATUSES = {"EXECUTABLE_VIOLATION", "DISPLAY_VIOLATION", "QUOTE_SIZE_MISSING"}
+# watchlist-only, not an opportunity to act on. RISK_BUDGET_CANDIDATE (a containment near-miss that costs
+# slightly OVER 100¢ — bounded loss, convex upside) joins the set so it reuses the same Buy YES / Buy NO
+# action plan + `scenario_payoffs` payoff model; it is gated behind the opt-in risk-budget band.
+ACTION_STATUSES = {"EXECUTABLE_VIOLATION", "DISPLAY_VIOLATION", "QUOTE_SIZE_MISSING", "RISK_BUDGET_CANDIDATE"}
 
 # The containment ladder is now per-sport (sports.py). These module-level names are back-compat
 # aliases that REFERENCE the tennis ladder (never copies), so `from consistency import NODE_ORDER`
@@ -68,6 +70,10 @@ STATUS_GROUP = {
     # import). A real gross discrepancy but ALWAYS settlement-caveated / review-only (never Actionable),
     # so it groups as a Warning, not Broken.
     "EXECUTABLE_SYNTHETIC_BUNDLE": "Warning",
+    # Risk-budget candidate (containment near-miss, convex) + near-miss dutch book (flat watchlist). Both
+    # are "beyond the strict rule" — past the actionable line, so a distinct Watchlist group.
+    "RISK_BUDGET_CANDIDATE": "Risk-budget",
+    "NEAR_MISS_DUTCH_BOOK": "Watchlist",
     "DISPLAY_VIOLATION": "Warning",
     "WIDE_QUOTE": "Warning",
     "MISSING_QUOTE": "Missing data",
@@ -294,11 +300,18 @@ def _rule_flag(child: dict[str, Any], parent: dict[str, Any]) -> tuple[str, str]
 
 
 def _classify(
-    child: dict[str, Any], parent: dict[str, Any], equivalence: bool
+    child: dict[str, Any], parent: dict[str, Any], equivalence: bool,
+    risk_budget_max_loss_c: int = 0,
 ) -> dict[str, Any]:
     """Compare a child (deeper) against a parent (broader). Executable and display tests are
     independent: a missing display blocks only the display test; a missing firm bid/ask or
-    size blocks only the executable test."""
+    size blocks only the executable test.
+
+    `risk_budget_max_loss_c` > 0 opts into RISK_BUDGET_CANDIDATE: a CONTAINMENT (non-equivalence) near-miss
+    with firm, sized legs whose executable gap is in `[-risk_budget_max_loss_c, 0]` — it costs at most that
+    many cents over 100¢ for a bounded loss and convex upside. 0 (the default) disables it entirely, so the
+    strict classification is byte-for-byte unchanged. Never emitted for equivalence pairs (no convex upside;
+    a rule-risk settlement state)."""
     cd, pd_ = _num(child.get("display_c")), _num(parent.get("display_c"))
 
     # --- executable test: firm legs + positive sizes only ---
@@ -368,6 +381,13 @@ def _classify(
     elif not display_evaluable:
         status = "MISSING_QUOTE"
         reason = "no display price on a leg"
+    elif (not equivalence and risk_budget_max_loss_c > 0 and sizes_ok
+          and exec_gap is not None and -risk_budget_max_loss_c <= exec_gap <= 0):
+        # Containment near-miss (opt-in): firm + sized, child bid ≤ parent ask but within the loss budget.
+        # Costs 100 − exec_gap ¢ (≥100) for a bounded worst-case loss of −exec_gap ¢ and convex upside.
+        status = "RISK_BUDGET_CANDIDATE"
+        reason = (f"near-miss containment: child bid {best['short_bid_c']}c ≤ parent ask {best['long_ask_c']}c "
+                  f"(gap {exec_gap}c) → cost {100 - exec_gap}c, worst-case loss {-exec_gap}c, convex upside")
     elif worst in ("Wide", "Very wide"):
         status = "WIDE_QUOTE"
         reason = f"ordering consistent but wide quote (child {cq}, parent {pq})"
@@ -387,7 +407,10 @@ def _classify(
         "exec_direction_label": None, "exec_long_side": None, "exec_long_ask_c": None,
         "exec_short_side": None, "exec_short_bid_c": None,
     }
-    if status == "EXECUTABLE_VIOLATION" and best is not None:
+    if status in ("EXECUTABLE_VIOLATION", "RISK_BUDGET_CANDIDATE") and best is not None:
+        # Same trade-construction fields for both: a strict violation (gap > 0) and a risk-budget near-miss
+        # (gap ≤ 0). exec_gap_c is the per-unit worst-case profit (negative for a near-miss = the loss);
+        # sizes_ok is guaranteed for both, so exec_min_size / exec_max_profit_dollars are never None here.
         gap_c, min_size = best["gap"], best.get("min_size")
         exec_fields = {
             "exec_gap_c": gap_c,
@@ -428,6 +451,11 @@ def _classify(
     both_active = _is_active(child) and _is_active(parent)
     if status == "EXECUTABLE_VIOLATION" and both_active:
         tradable_now = "Yes — rule-dependent" if rule_flag else "Yes"
+    elif status == "RISK_BUDGET_CANDIDATE" and both_active:
+        # Honest leg-tradability: both legs are firm, sized, and open, so the position IS placeable now —
+        # it just isn't a strict locked edge (that's conveyed by the risk_budget bucket + the convex
+        # loss/upside columns). Containment-only, so never "rule-dependent".
+        tradable_now = "Yes"
     else:
         tradable_now = "No"
 
@@ -569,6 +597,17 @@ def _row(player: str, player_key: str, chain: str, child: dict | None, parent: d
         "child_category": _sport_for_row(child).category_labels.get(child.get("kind"), "Other") if child else "",
         "parent_category": _sport_for_row(parent).category_labels.get(parent.get("kind"), "Other") if parent else "",
     }
+    # Convex payoff structure — reuse `scenario_payoffs` (no recompute) so risk-budget candidates (and
+    # executable violations) carry worst-case / best-case profit + worst-case ROC. `edge_class` tags the
+    # row for the scanner/UI ("strict" locked edge vs "risk_budget" near-miss); "" for everything else.
+    # Returns None for rows with no buy-plan (CLEAN / missing) → all four stay None.
+    payoff = scenario_payoffs(result, units=result.get("exec_min_size"))
+    result["edge_class"] = ("risk_budget" if result["status"] == "RISK_BUDGET_CANDIDATE"
+                            else "strict" if result["status"] == "EXECUTABLE_VIOLATION" else "")
+    result["worst_case_profit_c"] = payoff["worst_case_profit_c"] if payoff else None
+    result["best_case_profit_c"] = payoff["best_case_profit_c"] if payoff else None
+    result["roc_pct"] = payoff["roc_pct"] if payoff else None
+
     # Dashboard bucket + REQUIRED blocked_reason (Stage 1): blocked_reason is non-empty IFF the row is
     # bucketed `blocked`. Reuse the plain-English `blockers`; fall back to a generic reason if a blocked
     # row somehow carries none (keeps the iff-invariant total).
@@ -578,8 +617,12 @@ def _row(player: str, player_key: str, chain: str, child: dict | None, parent: d
     return result
 
 
-def build_checks(df: pd.DataFrame) -> pd.DataFrame:
-    """Build the full layer-consistency table from the per-player contract DataFrame."""
+def build_checks(df: pd.DataFrame, *, risk_budget_max_loss_c: int = 0) -> pd.DataFrame:
+    """Build the full layer-consistency table from the per-player contract DataFrame.
+
+    `risk_budget_max_loss_c` > 0 opts into RISK_BUDGET_CANDIDATE rows on the containment checks (see
+    `_classify`); 0 (the default) leaves the classification byte-for-byte unchanged — so the Streamlit app
+    and every existing caller are a pure no-op, and only the scanner (which passes the band) surfaces them."""
     columns = [
         "player", "player_key", "chain",
         "relationship_type", "opportunity_id", "bucket", "blocked_reason",
@@ -596,6 +639,8 @@ def build_checks(df: pd.DataFrame) -> pd.DataFrame:
         "exec_direction_label", "exec_long_side", "exec_long_ask_c", "exec_short_side",
         "exec_short_bid_c", "child_ticker", "parent_ticker", "child_url", "parent_url",
         "child_category", "parent_category",
+        # "Beyond the strict rule" — convex payoff for risk-budget candidates (+ edge_class tag).
+        "edge_class", "worst_case_profit_c", "best_case_profit_c", "roc_pct",
     ]
     if df is None or df.empty:
         return pd.DataFrame(columns=columns)
@@ -644,7 +689,8 @@ def build_checks(df: pd.DataFrame) -> pd.DataFrame:
                                 child_node=child_node, parent_node=parent_node, tournament=_tournament,
                                 relationship_type=rel, opp_id=oid))
             else:
-                out.append(_row(player, player_key, chain, child, parent, _classify(child, parent, False),
+                out.append(_row(player, player_key, chain, child, parent,
+                                _classify(child, parent, False, risk_budget_max_loss_c),
                                 child_node=child_node, parent_node=parent_node, tournament=_tournament,
                                 relationship_type=rel, opp_id=oid))
 
@@ -665,7 +711,8 @@ def build_checks(df: pd.DataFrame) -> pd.DataFrame:
             chain = f"{deeper_node} ≤ {broader_node}"
             rel = "containment_transitive"
             oid = opportunity_id(rel, player_key, _tournament, deeper_node, broader_node)
-            out.append(_row(player, player_key, chain, child, parent, _classify(child, parent, False),
+            out.append(_row(player, player_key, chain, child, parent,
+                            _classify(child, parent, False, risk_budget_max_loss_c),
                             child_node=deeper_node, parent_node=broader_node, tournament=_tournament,
                             relationship_type=rel, opp_id=oid))
 
@@ -814,8 +861,8 @@ def scenario_payoffs(check_row: dict[str, Any], units: Any = None) -> dict[str, 
 # Trader-dashboard buckets. Pure mapping from one consistency-check row to the dashboard section it
 # belongs in — reads only fields already produced by build_checks; no math, no side effects.
 DASHBOARD_BUCKETS = (
-    "actionable", "review_signal", "blocked", "near_edge", "display_signal", "wide_signal",
-    "data_quality", "clean",
+    "actionable", "review_signal", "blocked", "risk_budget", "near_miss", "near_edge",
+    "display_signal", "wide_signal", "data_quality", "clean",
 )
 
 
@@ -825,6 +872,8 @@ def bucket_of(check_row: dict[str, Any]) -> str:
     - actionable     : firm executable cross that is tradable now (incl. rule-dependent, shown with a caveat)
     - review_signal  : a priced/sized/active settlement-caveated discrepancy to REVIEW, never auto-tradable
                        (synthetic exact-score bundle — exact score is not the match-winner)
+    - risk_budget    : a containment near-miss costing slightly over 100¢ — bounded loss, convex upside
+                       (opt-in; never an arbitrage). The near_miss dutch-book bucket is set by `dutchbook`.
     - blocked        : a real/firm cross that cannot be traded now (no size, or an inactive/finalized leg)
     - near_edge      : consistent but within NEAR_EDGE_MIN_C cents of crossing, on Tight/OK quotes
     - display_signal : display-only inconsistency (DISPLAY_VIOLATION)
@@ -838,6 +887,10 @@ def bucket_of(check_row: dict[str, Any]) -> str:
         # is never auto-tradable. When priced/sized/active its tradable_now is "Review rules" -> a distinct
         # review_signal bucket (just below actionable); a no-size / inactive bundle ("No") -> blocked.
         return "review_signal" if str(check_row.get("tradable_now") or "").startswith("Review") else "blocked"
+    if status == "RISK_BUDGET_CANDIDATE":
+        # Its own bucket regardless of tradable_now — a near-miss is never strict-actionable, so this never
+        # leaks into `actionable` even though its legs may be tradable ("Yes").
+        return "risk_budget"
     if status in ("EXECUTABLE_VIOLATION", "EXECUTABLE_DUTCH_BOOK"):
         # Firm executable edges: tradable now -> actionable, else blocked (no size / inactive leg). A
         # dutch book carries no rule caveat (plain Yes/No); a per-game book's settlement caveat is advisory.

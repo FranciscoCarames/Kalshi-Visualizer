@@ -43,6 +43,96 @@ def opp_row(o: dict[str, Any], new_ids: set[str]) -> dict[str, Any]:
     }
 
 
+# --- "Beyond the strict rule" (PR 29) — risk-budget candidates + near-miss books -----
+# Pure band-filters + display-row builders for the two opt-in sections. They run over the already
+# membership/threshold-filtered `view`, so sport/tournament/participant filters still apply; the band
+# controls (max-loss ¢ + min upside:risk for risk-budget; max-overpay ¢ for near-miss) are the extra
+# narrowing. Integer cents throughout; min upside:risk is compared as integer tenths (no float ratio).
+def risk_budget_view(opps: Iterable[dict[str, Any]] | None, *, max_loss_c: float,
+                     min_ratio_tenths: int = 0) -> list[dict[str, Any]]:
+    """Risk-budget candidates whose worst-case loss ≤ `max_loss_c` ¢ and (optionally) whose upside:risk ≥
+    `min_ratio_tenths`/10. A worst-case loss of 0 (cost exactly 100¢ — zero downside, convex upside) is the
+    premium case and always passes the ratio gate."""
+    out: list[dict[str, Any]] = []
+    for o in (opps or []):
+        if o.get("bucket") != "risk_budget":
+            continue
+        wc = o.get("worst_case_profit_c")
+        if _isna(wc):
+            continue
+        risk = -wc                                    # worst-case loss ¢ (≥ 0)
+        if risk > max_loss_c:
+            continue
+        bc = o.get("best_case_profit_c")
+        if min_ratio_tenths and risk > 0 and not _isna(bc):
+            if bc * 10 < min_ratio_tenths * risk:     # exact integer compare: best/risk ≥ ratio
+                continue
+        out.append(o)
+    return out
+
+
+def near_miss_view(opps: Iterable[dict[str, Any]] | None, *, max_over_c: float) -> list[dict[str, Any]]:
+    """Near-miss dutch books overpriced by 1..`max_over_c` ¢ over their payout floor (a flat-payout
+    guaranteed loss as a bundle — watchlist only)."""
+    out: list[dict[str, Any]] = []
+    for o in (opps or []):
+        if o.get("bucket") != "near_miss":
+            continue
+        g = o.get("exec_gap_c")
+        if _isna(g):
+            continue
+        if 1 <= -g <= max_over_c:                      # overpay = −gap
+            out.append(o)
+    return out
+
+
+def _upside_risk(worst: Any, best: Any) -> Any:
+    """Upside:risk ratio for display. '∞' when there's zero downside (risk 0 = the premium case);
+    None when either side is missing."""
+    if _isna(worst):
+        return None
+    risk = -worst
+    if risk == 0:
+        return "∞"
+    return None if _isna(best) else round(best / risk, 1)
+
+
+def risk_budget_row(o: dict[str, Any], new_ids: set[str]) -> dict[str, Any]:
+    """Display row for the risk-budget table: leads with the convex economics (max loss / max profit /
+    upside:risk); worst-case ROC is a labelled secondary, never the headline (it's honestly negative)."""
+    wc, bc = o.get("worst_case_profit_c"), o.get("best_case_profit_c")
+    return {
+        "opportunity_id": o.get("opportunity_id"),
+        "new": "🆕" if o.get("opportunity_id") in new_ids else "",
+        "sport": o.get("sport_label") or o.get("sport") or "",
+        "name": o.get("name") or "", "detail": o.get("detail") or "",
+        "cost": o.get("cost_c"),
+        "max_loss": None if _isna(wc) else -wc,
+        "max_profit": None if _isna(bc) else bc,
+        "ratio": _upside_risk(wc, bc),
+        "roc": o.get("roi_pct"),                       # worst-case ROC (gross, negative) — labelled, secondary
+        "tradable": o.get("tradable_now") or "",
+        "caveat": "; ".join(p for p in (o.get("settlement_caveat"), o.get("blocked_reason"))
+                            if isinstance(p, str) and p),
+    }
+
+
+def near_miss_row(o: dict[str, Any], new_ids: set[str]) -> dict[str, Any]:
+    """Display row for the near-miss watchlist: the cost, the overpay (= guaranteed bundle loss), and the
+    flat-loss note. Never frames it as an edge."""
+    g = o.get("exec_gap_c")
+    return {
+        "opportunity_id": o.get("opportunity_id"),
+        "new": "🆕" if o.get("opportunity_id") in new_ids else "",
+        "sport": o.get("sport_label") or o.get("sport") or "",
+        "name": o.get("name") or "", "detail": o.get("detail") or "",
+        "cost": o.get("cost_c"),
+        "overpay": None if _isna(g) else -g,
+        "tradable": o.get("tradable_now") or "",
+        "note": o.get("settlement_caveat") or "",
+    }
+
+
 def backlog_row(b: dict[str, Any], tz: str) -> dict[str, Any]:
     dur = b.get("duration_s")
     return {
@@ -74,6 +164,16 @@ def explanation_lines(opp: dict[str, Any], *, show_ids: bool = False) -> list[st
         f"Tradable now: {opp.get('tradable_now')}   ·   Relationship: {opp.get('relationship_type')}"
         f"   ·   Market: {opp.get('market_status')}",
     ]
+    if opp.get("bucket") == "risk_budget":
+        wc, bc = opp.get("worst_case_profit_c"), opp.get("best_case_profit_c")
+        loss = "—" if _isna(wc) else -wc
+        lines.append(f"Risk-budget (bounded loss, convex upside): max loss {loss}¢   ·   "
+                     f"max profit {'—' if _isna(bc) else bc}¢   ·   upside:risk {_upside_risk(wc, bc)}   ·   "
+                     "GROSS of fees — NOT locked.")
+    elif opp.get("bucket") == "near_miss":
+        g = opp.get("exec_gap_c")
+        lines.append(f"Near-miss watchlist: overpay {'—' if _isna(g) else -g}¢ over the "
+                     f"{opp.get('payout_floor_c')}¢ floor — a guaranteed gross loss as a bundle, NOT an edge.")
     if opp.get("settlement_caveat"):
         lines.append(f"Settlement caveat: {opp.get('settlement_caveat')}")
     if opp.get("blocked_reason"):
