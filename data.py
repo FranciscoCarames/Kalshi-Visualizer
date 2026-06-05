@@ -167,6 +167,57 @@ def to_cents(value: Any) -> int | None:
         return None
 
 
+# Kalshi dollar fields whose precision we care about for the subpenny guard. (No-side and last are
+# included so a subpenny resting price on any tradable side is caught.)
+_PRICE_DOLLAR_FIELDS = (
+    "yes_bid_dollars", "yes_ask_dollars", "no_bid_dollars", "no_ask_dollars", "last_price_dollars",
+)
+
+
+def price_is_subpenny(value: Any) -> bool:
+    """True iff a Kalshi ``_dollars`` string carries SUBPENNY precision — i.e. ``Decimal(value) * 100`` is
+    NOT an integer. Whole-cent prices render with trailing zeros (``"0.0300"`` → ``3.00`` → integral, NOT
+    subpenny); only e.g. ``"0.3725"`` → ``37.25`` is subpenny. Empty/missing/unparseable → False (no claim).
+    Counting decimal places is the WRONG test (``"0.0300"`` has 4 places but is whole-cent)."""
+    if value is None:
+        return False
+    text = str(value).strip()
+    if text == "":
+        return False
+    try:
+        return (Decimal(text) * 100) % 1 != 0
+    except (InvalidOperation, ValueError):
+        return False
+
+
+def market_has_subpenny(market: dict[str, Any]) -> bool:
+    """True iff a market quotes on a SUBPENNY / non-cent tick — checked two ways because metadata may be
+    absent or surprising: (a) any raw ``_dollars`` price string fails the integral-cents test, OR (b) the
+    ``price_level_structure`` / ``price_ranges`` metadata declares a non-cent minimum tick. Kalshi's
+    variable-tick is a platform feature, so this guard runs every scan (not just a one-time probe). The
+    engine flags such rows (``subpenny`` column) rather than silently rounding them in ``to_cents``."""
+    if any(price_is_subpenny(market.get(f)) for f in _PRICE_DOLLAR_FIELDS):
+        return True
+    return _tick_metadata_subpenny(market)
+
+
+def _tick_metadata_subpenny(market: dict[str, Any]) -> bool:
+    """Best-effort read of ``price_level_structure`` / ``price_ranges`` for a non-cent minimum tick. Tolerant
+    of shape drift (dict or list of ranges); returns False when no parseable non-cent tick is found."""
+    blobs: list[Any] = []
+    for key in ("price_level_structure", "price_ranges"):
+        v = market.get(key)
+        if isinstance(v, dict):
+            blobs.append(v)
+        elif isinstance(v, list):
+            blobs.extend(x for x in v if isinstance(x, dict))
+    for b in blobs:
+        for tick_key in ("min_tick", "tick", "tick_size", "minimum_tick_size", "increment"):
+            if tick_key in b and price_is_subpenny(b.get(tick_key)):
+                return True
+    return False
+
+
 def _parse_ts(value: Any) -> datetime | None:
     if not value:
         return None
@@ -552,9 +603,16 @@ def build_contracts(
         markets = event.get("markets") or []
         competition = (event.get("product_metadata") or {}).get("competition", "")
         event_ticker = event.get("event_ticker", "")
-        tournament, tournament_source = tournament_of(
-            competition, series_ticker, event_ticker, event.get("title", "")
-        )
+        # Sport-specific event-instance grouping (e.g. motorsport: competition + race/session + season),
+        # computed ONCE PER EVENT. Falls back to the default competition-based key when the sport defines no
+        # hook (every existing sport) — so this branch is a no-op for tennis/NBA/WNBA/golf/soccer/MLB/NHL.
+        custom_key = cfg.tournament_key_of(event)
+        if custom_key is not None:
+            tournament, tournament_source = custom_key
+        else:
+            tournament, tournament_source = tournament_of(
+                competition, series_ticker, event_ticker, event.get("title", "")
+            )
         names = [((m.get("yes_sub_title") or "").strip()) for m in markets]
         # Deep link to THIS event's page (lists the player markets) — built once per event.
         event_url = kalshi_market_url(series_ticker, series_title, event_ticker)
@@ -573,6 +631,16 @@ def build_contracts(
             mapping_confidence = ident.confidence
             mapping_reason = ident.reason
             competitor = ident.raw_value if ident.confidence == "high" else ""
+
+            # Structured, per-sport market classification: family, stage, ladder node + eligibility.
+            # Resolved BEFORE the final player_key/display so a role namespace (derived from the CLASSIFIED
+            # family — not the identity path, which a driver and an F1 Top Constructor can share) and the
+            # display/alias all observe the final key.
+            mc = cfg.classify(series_ticker, market)
+            kind = mc.family
+            category = cfg.category_labels.get(kind, "Other")
+            stage = mc.stage
+
             # Participant typing (drives the participant selector + the n-outcome detector). A real
             # competitor is selectable; a synthetic non-participant outcome (e.g. soccer's Tie) gets a
             # per-event key so it never merges across events and is never selectable. Sport-agnostic via
@@ -582,15 +650,15 @@ def build_contracts(
                 participant_type, is_participant = "tie", False
             else:
                 participant_type, is_participant = "participant", True
+                # Role-namespace the key from the CLASSIFIED family so two roles that share an id path
+                # (e.g. motorsport driver vs constructor) never merge in (player_key, tournament) grouping.
+                # No-op for every sport that defines no role_fn.
+                role = cfg.role_of(kind)
+                if role:
+                    player_key = f"{role}:{player_key}"
             # Clean, user-facing name via the single shared helper (alias > source > titleized
             # fallback). Internal identifiers are kept as separate fields for debug/export.
             display = display_player_name({"player_key": player_key, "player_name_raw": name})
-
-            # Structured, per-sport market classification: family, stage, ladder node + eligibility.
-            mc = cfg.classify(series_ticker, market)
-            kind = mc.family
-            category = cfg.category_labels.get(kind, "Other")
-            stage = mc.stage
 
             # Opponent only for the head-to-head family (tennis: "match"; NBA: "series").
             if cfg.match_family and kind == cfg.match_family:
@@ -611,6 +679,10 @@ def build_contracts(
             last_c = to_cents(market.get("last_price_dollars"))
             bid_size = to_float(market.get("yes_bid_size_fp"))
             ask_size = to_float(market.get("yes_ask_size_fp"))
+            # Variable-tick guard: flag rows priced on a subpenny / non-cent tick. `to_cents` ROUNDS such
+            # prices, so an edge computed off the rounded value could be false — downstream detectors skip a
+            # flagged row instead of trusting it. Always False for the current whole-cent sports (no-op).
+            subpenny = market_has_subpenny(market)
 
             # NO-side prices (Kalshi reports these directly). On Kalshi's unified book
             # no_ask == 1 - yes_bid exactly, but we read the real fields so the displayed "Buy NO"
@@ -653,6 +725,7 @@ def build_contracts(
                     "competition": competition,
                     "tournament": tournament,
                     "tournament_source": tournament_source,
+                    "subpenny": subpenny,
                     # Structured classification: sport-agnostic ladder placement + eligibility.
                     # Ineligible/unsupported markets (per-game, props, …) never enter ladder checks
                     # and surface in the unmapped table with `classification_reason`.

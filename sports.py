@@ -47,12 +47,24 @@ class IdentityResolver:
     candidate_paths: tuple[str, ...]
     id_label: str = "competitor"          # used in the high-confidence reason text
     display_field: str = "yes_sub_title"
+    # Optional per-VALUE validator: when set, a found candidate value is "high" confidence only if it passes
+    # (e.g. UUID-shaped); a value that fails is still used as the key but marked "low" (collision-prone).
+    # Default None → any candidate hit is high (byte-for-byte the existing behavior for all 7 sports). Needed
+    # because some fields (e.g. motorsport `custom_strike.Participant`) can be a plain NAME, not a stable id.
+    id_validator: Callable[[Any], bool] | None = None
 
     def resolve(self, market: dict[str, Any]) -> IdentityResult:
         name = str((market.get(self.display_field) or "")).strip()
         for path in self.candidate_paths:
             val = _dig(market, path)
             if val:
+                if self.id_validator is not None and not self.id_validator(val):
+                    # Value present but not a stable id (e.g. a team NAME): key on it, flag low confidence.
+                    return IdentityResult(
+                        participant_key=str(val), display_name=name, confidence="low",
+                        source_field="id_unverified", raw_value=str(val),
+                        reason=f"{self.id_label} value {val!r} is not id-shaped; keyed but may drift/collide",
+                    )
                 return IdentityResult(
                     participant_key=str(val), display_name=name, confidence="high",
                     source_field="competitor_uuid", raw_value=str(val),
@@ -133,10 +145,40 @@ class SportConfig:
     # Human-readable label for the "winner" family. The default suits tennis/golf/soccer (the event IS a
     # tournament); NBA/WNBA/MLB override with their championship wording (see data._contract_label).
     winner_label: str = "Win the tournament"
+    # ---- Motorsport-shaped adapter hooks (all DEFAULTED → byte-for-byte no-op for existing sports) ------
+    # Families that form a one-winner MECE FIELD (overround-only dutch book via dutchbook._detect_field).
+    # Default {"winner"} preserves every existing sport; a field sport can add pole/fastest_lap/constructor/
+    # team/race_winner so those one-winner fields are detected too.
+    field_families: frozenset[str] = field(default_factory=lambda: frozenset({"winner"}))
+    # Optional per-sport grouping key, computed ONCE PER EVENT (data.tournament_of). Returns (key, source)
+    # or None to fall back to the default competition-based key. Lets a sport build an event-instance key
+    # (e.g. motorsport: competition + race/session + season) instead of the broad competition string.
+    tournament_key_fn: Callable[["SportConfig", dict], tuple[str, str] | None] | None = None
+    # Optional per-GROUP ladder selector (consistency.build_checks). Returns the LadderSpec for THIS group's
+    # rows (e.g. motorsport: the competition-specific ladder) so a sport with several disjoint per-competition
+    # ladders never emits cross-competition MISSING_LAYER noise. Default None → the static cfg.ladder.
+    ladder_fn: Callable[["SportConfig", list], "LadderSpec"] | None = None
+    # Optional role tag derived from the CLASSIFIED family (NOT the identity path — an F1 Top Constructor
+    # shares the driver UUID path). Returns a non-empty role to namespace player_key as "role:key" so a
+    # driver and a same-named team never merge in (player_key, tournament) grouping. Default None → no tag.
+    role_fn: Callable[["SportConfig", str], str] | None = None
 
     # ---- convenience API (engine calls these) --------------------------------------------
     def family_of(self, series_ticker: str) -> str:
         return self.family_fn(self, series_ticker)
+
+    def ladder_for(self, rows: list) -> "LadderSpec":
+        """The containment ladder for a specific group's rows — per-group when ``ladder_fn`` is set
+        (e.g. motorsport's per-competition ladders), else the static ``cfg.ladder`` (all existing sports)."""
+        return self.ladder_fn(self, rows) if self.ladder_fn else self.ladder
+
+    def tournament_key_of(self, event: dict[str, Any]) -> tuple[str, str] | None:
+        """Sport-specific event-instance grouping key, or None to use the default competition path."""
+        return self.tournament_key_fn(self, event) if self.tournament_key_fn else None
+
+    def role_of(self, family: str) -> str:
+        """Participant-role tag for ``family`` (namespaces player_key), or '' when the sport has none."""
+        return self.role_fn(self, family) if self.role_fn else ""
 
     def division_of(self, series_ticker: str) -> str:
         return self.division_fn(self, series_ticker)

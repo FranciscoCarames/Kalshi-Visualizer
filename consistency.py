@@ -651,6 +651,14 @@ def build_checks(df: pd.DataFrame, *, risk_budget_max_loss_c: int = 0) -> pd.Dat
     if "tournament" not in df.columns:
         df = df.assign(tournament="")
 
+    # Variable-tick guard: a subpenny-priced row's cents are ROUNDED (data.to_cents), so it must not form a
+    # trusted containment edge. Exclude such rows from ladder checks (they stay visible in the raw contracts
+    # frame / diagnostics). No-op for the current whole-cent sports; guard for test frames lacking the column.
+    if "subpenny" in df.columns:
+        df = df[~df["subpenny"].fillna(False).astype(bool)]
+        if df.empty:
+            return pd.DataFrame(columns=columns)
+
     out: list[dict] = []
     # Group by the STABLE player_key (never the display name) AND tournament: two distinct competitors
     # who share a display name must not merge, and one competitor's two tournaments must not merge.
@@ -660,9 +668,11 @@ def build_checks(df: pd.DataFrame, *, risk_budget_max_loss_c: int = 0) -> pd.Dat
         nodes = build_player_nodes(rows)
         if not nodes:
             continue
-        # The containment ladder is per-sport — resolve it from this group's series.
+        # The containment ladder is per-sport, and per-GROUP when the sport defines `ladder_fn`
+        # (e.g. motorsport's per-competition ladders) — so a group only checks its own competition's rungs
+        # and never emits cross-competition MISSING_LAYER noise. Defaults to the static `cfg.ladder`.
         cfg = _sport_for_rows(rows)
-        ladder = cfg.ladder
+        ladder = cfg.ladder_for(rows)
 
         # Adjacent containment pairs (market sources only). Id recipe: the relationship type + the
         # stable (player_key, tournament) group + the node pair — unique per group since each adjacent
