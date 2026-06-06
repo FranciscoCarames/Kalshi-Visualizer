@@ -27,5 +27,8 @@ snapshots.db
 # Local Claude Code session settings
 .claude/
 
+# Scratch / temp working dirs (audits, throwaway docs) — never tracked
+.codex_tmp/
+
 # Local kss planning shell (topics, milestones, codebase snapshots) — keep out of the repo
 .kss/

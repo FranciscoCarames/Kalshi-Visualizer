@@ -5,7 +5,7 @@ in-process, so a standalone NiceGUI app over a seeded tmp store renders fully �
 needed.
 
 Anything that needs a REAL browser (a native file-download dialog, websocket reconnect) is out of scope for
-the headless User and is covered by the manual release checklist instead (docs/RELEASE_CHECKLIST.md).
+the headless User and is covered by the manual "Before hosting" checks instead (docs/DEPLOYMENT.md).
 """
 from __future__ import annotations
 
@@ -93,7 +93,7 @@ async def test_new_snapshot_surfaces_via_poll(user: User, seeded_db) -> None:
 # NOTE: the headless User sees server-side elements/labels, NOT Quasar table / AG-Grid ROW DATA (rendered
 # client-side) and cannot drive table-ROW selection (a content click doesn't fire the table's on_select).
 # So the actionable-row text and the click→open-detail interaction are manual checks
-# (docs/RELEASE_CHECKLIST.md). Here we assert the detail + diagnostics SECTIONS build without error; the
+# (docs/DEPLOYMENT.md "Before hosting"). Here we assert the detail + diagnostics SECTIONS build without error; the
 # detail/diagnostics CONTENT builders are exhaustively unit-tested (test_viewmodel / test_webui).
 @pytest.mark.nicegui_main_file(MAIN)
 async def test_detail_and_diagnostics_sections_render(user: User, seeded_db) -> None:
@@ -111,7 +111,7 @@ async def test_detail_and_diagnostics_sections_render(user: User, seeded_db) -> 
 async def test_ux_defaults_render(user: User, seeded_db) -> None:
     """The Dark mode toggle, the row-selection tip, and the Blocked toggle (hidden by default) render. The
     selected-row highlight + the resolution-criteria expansion need a real row-click selection, which the
-    headless User can't drive — manual checks (docs/RELEASE_CHECKLIST.md)."""
+    headless User can't drive — manual checks (docs/DEPLOYMENT.md "Before hosting")."""
     _seed(seeded_db, [_actionable_opp()],
           frames=[{"sport": "tennis", "frame_type": "contracts", "schema_version": 1, "rows": _contracts()}])
     await user.open("/")

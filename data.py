@@ -804,8 +804,8 @@ def build_contracts(
 
 def non_other_families(cfg: sports.SportConfig) -> tuple[str, ...]:
     """A sport's family LABELS excluding the catch-all "other" bucket — the cross-sport fetch scope that
-    skips props/awards. Single-sourced so the Streamlit cross-sport path (`app.py`) and the `/scan` API
-    path (`api.fetch_dep`) can't drift; matters once a prefix-owned sport (e.g. MLB) has ~110 prop series.
+    skips props/awards. Single-sourced so the cross-sport fetch path (`fetch.load_contracts`) and the
+    `/scan` API path (`api.fetch_dep`) can't drift; matters once a prefix-owned sport (e.g. MLB) has ~110 prop series.
     A sport with no "other" key yields all its labels (no behavior change)."""
     return tuple(sorted({v for k, v in cfg.category_labels.items() if k != "other"}))
 

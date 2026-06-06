@@ -549,9 +549,9 @@ def _num(v: Any) -> Any:
 
 
 def detail_chain(prows: list[dict[str, Any]], sport: str) -> list[dict[str, Any]]:
-    """The containment progression chain (broad → deep) for one participant, mirroring the Streamlit
-    detail (app.py): one row per ladder node with its representative price. [] for a sport with no
-    ladder (e.g. golf-less / unknown). Reuses consistency.build_player_nodes + representative."""
+    """The containment progression chain (broad → deep) for one participant: one row per ladder node
+    with its representative price. [] for a sport with no ladder (e.g. golf-less / unknown). Reuses
+    consistency.build_player_nodes + representative."""
     cfg = sports.get_sport(sport)
     order = getattr(cfg.ladder, "node_order", ()) if cfg.ladder else ()
     if not order:

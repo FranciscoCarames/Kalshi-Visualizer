@@ -261,7 +261,7 @@ def test_ignores_props_and_three_outcome_game():
 
 # --- Robustness: the production DataFrame->records path (NaN, not None) -------------
 def test_pandas_records_roundtrip_fires():
-    # app.py feeds dutchbook.find_dutch_books(df.to_dict("records")) — exercise that exact path.
+    # the engine feeds dutchbook.find_dutch_books(df.to_dict("records")) — exercise that exact path.
     a = market("A", player_key="a", yes_bid_c=43, yes_ask_c=45)
     b = market("B", player_key="b", yes_bid_c=46, yes_ask_c=48)
     rows = pd.DataFrame([a, b]).to_dict("records")
