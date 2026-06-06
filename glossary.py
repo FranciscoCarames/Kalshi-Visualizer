@@ -7,7 +7,8 @@ help and the docs from drifting apart.
 
 Two tiers per glossary term:
   - ``short`` : one line, shown in the app (tooltips + the collapsible glossary).
-  - ``long``  : the in-depth version, rendered into the Google Doc / docs/GLOSSARY.md.
+  - ``long``  : the in-depth version, exported on demand by ``scripts/export_glossary.py``
+                (generated, not committed) and published to the Google Doc.
 
 ``BLOCKERS`` holds the reason templates for *why an opportunity is not tradable right now* (some take
 ``{leg}`` / ``{status}`` placeholders). ``WATCHLIST_NOTE`` is shown for consistent-but-wide rows that
@@ -281,7 +282,7 @@ WATCHLIST_NOTE = (
 )
 
 # Map a consistency column / concept to the glossary key whose `short` text explains it.
-# Used by app.py so every tooltip is single-sourced, and by tests to catch orphan jargon.
+# Used by the dashboard so every tooltip is single-sourced, and by tests to catch orphan jargon.
 COLUMN_HELP: dict[str, str] = {
     "Tradable now": "Tradable now",
     "Executable gap (¢)": "Executable inconsistency vs arbitrage",

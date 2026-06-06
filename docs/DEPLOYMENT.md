@@ -11,7 +11,7 @@ market data) per the agreed decisions below.
 |---|---|
 | Host environment | **Linux + systemd** (primary). Windows/NSSM is the only alternative. **No day-one Docker** (deferred follow-up) |
 | Access control | **Open on the internal network** — no login. Data is read-only public market data |
-| Data refresh | **Scheduled auto-scan (REQUIRED, default-on)** — a systemd timer calls `POST /scan` every 2–5 min |
+| Data refresh | **In-process auto-scan (default-on)** — `serve.py` runs a periodic scan loop. An external systemd timer is an optional alternative; **disable it when the in-process loop is on** |
 
 ---
 
@@ -43,11 +43,12 @@ session cookie is signed with the secret). For a quick trusted-LAN test you may 
   **fragments the data** (divergent snapshots), runs a scan loop per worker, and multiplies the request
   rate past Kalshi's free-tier limit (aggregate = `15 × N`). `serve.py` warns if `WEB_CONCURRENCY>1` /
   `--workers` is set. The 15/s cap is safe only for a single process.
-- **Auto-scan: prefer the in-process scheduler.** `python serve.py` runs a built-in periodic scan loop
-  (default-on; cadence via the dashboard's Auto-refresh toggle). The optional systemd `scan.timer` below is
-  **safe but redundant** alongside it — and only loosely deduped (`SCAN_MIN_INTERVAL_SECONDS=8`), so a
-  3-minute external fire can still add the occasional extra scan. **Disable the `scan.timer` when relying on
-  the in-process scheduler** (use the timer only if you run the app under a manager that can't keep the loop alive).
+- **Auto-scan: the in-process scheduler is the default and the one story.** `python serve.py` runs a
+  built-in periodic scan loop (default-on; cadence via the dashboard's Auto-refresh toggle). This is what
+  keeps the data fresh — **no external scheduler is required.** The optional systemd `scan.timer` in §3/§4
+  is an **alternative** for hosts where a process manager can't keep the in-process loop alive; it is only
+  loosely deduped (`SCAN_MIN_INTERVAL_SECONDS=8`), so **disable the `scan.timer` whenever the in-process
+  loop is on** (running both double-scans). Pick exactly one.
 
 ---
 
@@ -149,9 +150,10 @@ WantedBy=multi-user.target
 ```
 `sudo systemctl enable --now kalshi-dashboard`. **One process, one worker, one DB file** (§1).
 
-### Scheduled auto-scan as a systemd timer (REQUIRED — see §4)
+### Optional: scheduled auto-scan as a systemd timer (alternative to the in-process loop — see §4)
 
-The `X-Scan-Token` header must be **conditional** (sent only when `SCAN_TOKEN` is set), so the timer runs
+Only set this up if you are **not** relying on the in-process auto-scan loop (see §1) — otherwise the two
+double-scan. The `X-Scan-Token` header must be **conditional** (sent only when `SCAN_TOKEN` is set), so the timer runs
 a small wrapper `/opt/kalshi-dashboard/scan.sh` (install mode **0755**), NOT an inline `curl`:
 ```bash
 #!/usr/bin/env bash
@@ -187,18 +189,47 @@ deploy repo's `deploy/` directory — copy them in and `systemctl daemon-reload`
 
 ### Windows alternative (only if the host is Windows)
 
-Run `serve.py` under **NSSM** as a single auto-restart service (secrets in machine env vars), a **Task
-Scheduler** job (every 2–5 min) for the scan, and a **Windows Firewall** private-network rule. Kill a
-stale port by owning PID:
+Run `serve.py` under **NSSM** as a single auto-restart service (secrets in machine env vars) and a
+**Windows Firewall** private-network rule. The in-process loop keeps data fresh; only add a **Task
+Scheduler** scan job if you are not using it (see §1/§4). Kill a stale port by owning PID:
 `Get-NetTCPConnection -LocalPort <port> | Select -Expand OwningProcess | Stop-Process -Id $_`.
+
+### Quick LAN access from a Windows dev box
+
+To open the dashboard from another computer on the same network without a full systemd setup (loopback
+`127.0.0.1` is the safe default and reachable only from the same machine):
+
+```powershell
+# 1. Find this machine's LAN IP (e.g. 192.168.1.42)
+(Get-NetIPAddress -AddressFamily IPv4 | Where-Object {
+    $_.IPAddress -notlike '169.*' -and $_.IPAddress -ne '127.0.0.1' }).IPAddress
+
+# 2. Set a real storage secret (REQUIRED for any non-loopback bind) + bind all interfaces, then run
+$env:NICEGUI_STORAGE_SECRET = "long-random-string"   # python -c "import secrets; print(secrets.token_hex(32))"
+$env:API_HOST = "0.0.0.0"                              # default API_PORT is 8000
+python serve.py                                        # or .\serve_lan.ps1, which sets these for you
+
+# 3. Allow the port through the firewall ONCE, in an Administrator PowerShell
+New-NetFirewallRule -DisplayName "Kalshi dashboard (8000)" -Direction Inbound `
+    -Action Allow -Protocol TCP -LocalPort 8000 -Profile Private
+```
+
+Then browse `http://<this-machine-LAN-IP>:8000` from any device on the same subnet. Troubleshooting: a
+non-loopback bind without `NICEGUI_STORAGE_SECRET` refuses to start (set it, or
+`ALLOW_DEV_STORAGE_SECRET_ON_LAN=1` for a trusted-LAN test); env vars must be set in the **same**
+PowerShell session that launches `serve.py`; if it loads only on the server machine you are still bound
+to loopback (re-check `$env:API_HOST`). Keep `-Profile Private` so the rule never applies on public Wi-Fi.
 
 ---
 
-## 4. Scheduled auto-scan (keeps data fresh)
+## 4. Optional external scan scheduler
 
-Auto-scan is **REQUIRED and default-on**: the dashboard only updates when a scan runs (its own UI timer
-just re-reads the store), so freshness must advance with **NO manual action**. On Linux this is the
-systemd timer in §3; the mechanics below apply to any scheduler.
+Auto-scan is **default-on via the in-process loop** (see §1): the dashboard only updates when a scan runs
+(its own UI timer just re-reads the store), and the in-process loop advances freshness with **NO manual
+action** — so for most deployments **nothing here is needed**. This section is for the *alternative* path,
+when you run the app under a manager that can't keep the in-process loop alive and instead drive scans
+from an external scheduler (systemd timer / cron / Task Scheduler). **Use the in-process loop OR an
+external scheduler, never both** (they double-scan). The mechanics below apply to any external scheduler.
 
 **`POST /scan` is NON-BLOCKING (202).** It returns immediately with
 `202 {status, since, last_snapshot_id}` and runs the scan in a background thread; the cron just
@@ -218,6 +249,42 @@ under Kalshi's rate limit. Observe progress with `GET /scan/status` (`status` �
   `curl -s -X POST -H "X-Scan-Token: $SCAN_TOKEN" http://localhost:8000/scan >/dev/null` (otherwise 401).
 - Scan scope = **core series, all sports** (tennis + NBA + WNBA + golf + soccer + MLB + NHL). Full-scan breadth is a
   possible follow-up, not part of this deployment.
+
+---
+
+## 4b. Before hosting (pre-flight checklist)
+
+Run this once before exposing a build (it folds in the old release checklist — automated suite covers the
+engine + pure builders; the steps below cover what a headless test can't):
+
+**Automated gates (must be green)**
+- [ ] `pytest -q` — full suite green (engine, dutch-book/synthetic detectors, viewmodel, API, headless
+      NiceGUI browser smoke in `tests/test_browser.py`).
+- [ ] `ruff check .` — clean.
+- [ ] `python -c "import serve, api, webui.dashboard"` — imports clean.
+
+**Boot + live scan**
+- [ ] `python serve.py` → `GET /` 200, `/healthz` 200, `/coverage` 200, `/metrics` 200 (JSON counters +
+      heartbeat).
+- [ ] `POST /scan?wait=true` (loopback) → 202; `GET /scan/status` → `done`; `/coverage` shows
+      `meta_present: true` with non-zero counters; the dashboard shows the scanned opportunities.
+
+**Manual UI (real browser — not covered by the headless User)**
+- [ ] **Click an opportunity row** → the participant-detail panel fills (ladder / spreads / expected /
+      all-contracts; charts for a containment row).
+- [ ] **⬇ Export (ZIP)** downloads a snapshot zip (opportunities + per-sport frame CSVs + manifest).
+- [ ] AG-Grids in Diagnostics & debug page/filter/sort; filters narrow every section and "Clear filters"
+      restores; a new scan updates the tables without a manual reload.
+
+**Security / LAN exposure (only if hosting beyond loopback)**
+- [ ] `NICEGUI_STORAGE_SECRET` set to a long random string (serve.py refuses a non-loopback bind without it).
+- [ ] `SCAN_TOKEN` set if `POST /scan` is reachable on the LAN: without the header → 401; with
+      `-H "X-Scan-Token: <value>"` → 202. The scheduled-scan caller (if any) sends the header.
+- [ ] Single worker only (snapshot store + Kalshi throttle + viewer count are process-local).
+
+**Docs / sign-off**
+- [ ] `README.md` + `CLAUDE.md` reflect the shipped feature set; Google Drive **Project Brief** +
+      **Technical Documentation** updated to match (owner-triggered — publishes externally).
 
 ---
 

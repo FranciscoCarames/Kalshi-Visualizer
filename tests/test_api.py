@@ -116,7 +116,7 @@ def test_coverage_no_meta_and_empty(client):
     # No snapshot yet -> honest empty, not faked.
     empty = c.get("/coverage").json()
     assert empty["meta_present"] is False and empty["scanned"] == 0 and empty["fetched_at"] is None
-    # A snapshot with no meta (e.g. written by the Streamlit app) -> meta_present False, counts not faked.
+    # A snapshot with no meta (e.g. written by an older writer) -> meta_present False, counts not faked.
     store.write_snapshot("2026-06-03 12:00:00 UTC", [op("a")], db_path=db)
     nom = c.get("/coverage").json()
     assert nom["meta_present"] is False and nom["fetched_at"] is not None and nom["scanned"] == 0

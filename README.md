@@ -1,40 +1,68 @@
 # Kalshi Visualizer — Multi-Sport Executable-Inconsistency Dashboard
 
-A small, read-only [NiceGUI](https://nicegui.io/)-on-[FastAPI](https://fastapi.tiangolo.com/) app
-(run via `serve.py`) that pulls live
-[Kalshi](https://kalshi.com/) prediction-market data for **tennis (ATP/WTA), NBA, WNBA, golf, soccer, MLB, NHL, and motorsport (F1/NASCAR/IndyCar/MotoGP)**.
-It surfaces two classes of opportunity across related contracts:
+A small, read-only [NiceGUI](https://nicegui.io/)-on-[FastAPI](https://fastapi.tiangolo.com/) dashboard
+(run via `serve.py`) over live [Kalshi](https://kalshi.com/) prediction-market data for **tennis
+(ATP/WTA), NBA, WNBA, golf, soccer, MLB, NHL, and motorsport (F1/NASCAR/IndyCar/MotoGP)**. It finds two
+classes of opportunity across a participant's related contracts and ranks them best-first.
 
 1. **Layer-consistency violations** — a deeper outcome must not price above a prerequisite that
-   contains it (e.g. *Win Tournament ≤ Reach Final ≤ Reach Semifinal*). Framed as buy-only
-   opportunities: **Buy YES** on the broader leg, **Buy NO** on the deeper leg.
-2. **Dutch-book arbitrage** — a mutually-exclusive-and-exhaustive pair of 2-outcome markets where
-   covering both outcomes costs under 100¢. True arbitrage: both legs are outcomes of the *same*
-   event and settle together, so no settlement-rule caveat applies.
+   contains it (e.g. *Win Tournament ≤ Reach Final ≤ Reach Semifinal*). Framed as buy-only:
+   **Buy YES** on the broader leg, **Buy NO** on the deeper leg.
+2. **Dutch-book edges** — a mutually-exclusive set of binary markets whose every outcome can be
+   covered for under the guaranteed payout floor.
 
-Results are split into Actionable / Blocked / Near-edge sections with collapsed diagnostics, per-player
-detail, and debug. The dashboard auto-refreshes on a timer under a process-wide rate throttle.
+Findings are ranked into **Actionable / Review / Blocked** with collapsed diagnostics and a
+per-participant detail panel. A background scan refreshes a SQLite snapshot store under a process-wide
+rate throttle, and the browser re-reads the latest snapshot on a timer.
+
+> **Read-only by design.** No trading, no authentication, no order placement. Every reported edge is
+> **gross and top-of-book** — see [Known limits](#known-limits).
+
+---
+
+## Quickstart
+
+```bash
+pip install -r requirements.txt          # requests, pandas, fastapi, nicegui, uvicorn
+python serve.py                          # dashboard at /, REST API alongside it
+```
+
+The dashboard opens at `/`; the data is public, so no API key is required. The REST API serves
+`/opportunities`, `/coverage`, `/backlog`, `/alerts`, `/metrics`, `/healthz` (liveness), `/readyz`
+(readiness — `ready`/`degraded`/`not_ready`: DB writable + a fresh snapshot), and `POST /scan` (a
+non-blocking, singleflighted scan). Background auto-scan is on by default. For office-LAN hosting (bind
+safety, systemd service + scan timer, the clean deploy artifact), see
+[`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
+
+### Tests
+
+```bash
+pip install -r requirements-dev.txt      # adds pytest, pytest-asyncio, ruff
+pytest -q                                # pure layers + in-process engine/API + headless NiceGUI smoke
+ruff check .                             # lint
+```
+
+Verify without a browser: `pytest -q`; `python -c "import serve, api, webui.dashboard"`; and a `serve.py`
+boot (`GET /`, `/healthz`, `/metrics` → 200, `/readyz` → ready/degraded). The NiceGUI dashboard has
+headless browser smoke tests (`tests/test_browser.py`, via `nicegui.testing` — no selenium).
 
 ---
 
 ## Layer Consistency Checker
 
-The main table compares contracts that have a provable logical **containment** relationship and flags
-**executable inconsistencies** (a firm bid/ask cross with order size behind it). It is deliberately
-conservative:
+The ladder compares contracts with a provable **containment** relationship and flags **executable
+inconsistencies** — a firm bid/ask cross with order size behind it. It is deliberately conservative:
 
 - **Executable test** uses firm YES bid/ask **and positive order sizes**, compared in exact integer
-  cents. A child YES bid above the parent YES ask is `EXECUTABLE_VIOLATION` (the only *Broken*
-  status).
-- **Display test** compares the display %; a breach is `DISPLAY_VIOLATION` (a *Warning*, since it
-  may not be tradable).
-- Wide/empty books, missing sizes, missing layers, and unprovable relationships are surfaced as
-  `WIDE_QUOTE` / `MISSING_QUOTE` / `QUOTE_SIZE_MISSING` / `MISSING_LAYER` / `UNKNOWN_RELATIONSHIP`
-  — **never** mislabelled as violations.
-- **Match-alignment** rows (winning your current match ⇔ reaching the next stage) are included only
-  when the round maps confidently, and always carry a `RULE_CHECK_REQUIRED` / `RULE_MISMATCH` flag:
-  findings are called *executable inconsistencies*, **not arbitrage**, because the two markets'
-  settlement rules are not auto-verified.
+  cents. A child YES bid above the parent YES ask is `EXECUTABLE_VIOLATION` — the only *Broken* status.
+- **Display test** compares the display %; a breach is `DISPLAY_VIOLATION` (a *Warning*, may not be tradable).
+- Wide/empty books, missing sizes, missing layers, and unprovable relationships surface as
+  `WIDE_QUOTE` / `MISSING_QUOTE` / `QUOTE_SIZE_MISSING` / `MISSING_LAYER` / `UNKNOWN_RELATIONSHIP` —
+  **never** mislabelled as violations.
+- **Match-alignment** rows (winning your current match ⇔ reaching the next stage) are included only when
+  the round maps confidently, and always carry a `RULE_CHECK_REQUIRED` / `RULE_MISMATCH` flag. These are
+  called *executable inconsistencies*, **not arbitrage**, because the two markets' settlement rules are
+  not auto-verified.
 
 ### Containment ladders by sport
 
@@ -46,109 +74,91 @@ conservative:
 | Golf | Top 20 ⊇ Top 10 ⊇ Top 5 ⊇ Win Tournament |
 | Soccer (World Cup) | Reach Round of 16 ⊇ Reach Quarterfinals ⊇ Reach Semifinals ⊇ Reach Finals |
 | MLB | Reach Playoffs ⊇ Win League ⊇ Win World Series |
-| NHL | Reach Playoffs ⊇ Win Conference ⊇ Win Championship |
+| NHL | Reach Playoffs ⊇ Win Conference ⊇ Win Stanley Cup |
+| Motorsport | per-race finishing position, e.g. Top 10 ⊇ Top 5 ⊇ Podium ⊇ Win Race |
 
 ---
 
 ## Dutch-Book Detector (`dutchbook.py`)
 
-A **separate check family** from the containment ladder, in its own Streamlit-free module. Handles the
-**2-outcome case**: any event with exactly two distinct-participant binary markets (a head-to-head
-match/series, or a single game). Those two markets are mutually exclusive and, for the draw-free sports
-supported, exhaustive — MECE by construction.
+A **separate check family** from the containment ladder, in its own UI-free module. It covers a MECE
+(mutually-exclusive-and-exhaustive) set of binary markets, in two directions — both expressed as **buys**,
+never sells:
 
-Two directions, both expressed as pairs of BUYS (never "sell"):
+- **Underround → Buy YES on all legs.** `Σ yes_ask < 100¢` — one outcome wins and pays 100¢.
+- **Overround → Buy NO on all legs.** `Σ no_ask < (n−1)·100¢` — every loser's NO pays 100¢.
 
-- **Underround → Buy YES on both.** `yes_ask_A + yes_ask_B < 100¢` — one side wins and pays 100¢,
-  so the locked profit per unit is `100 − cost`.
-- **Overround → Buy NO on both.** `no_ask_A + no_ask_B < 100¢` — the loser's NO pays 100¢, same
-  locked profit math.
+The two directions are mutually exclusive (`bid ≤ ask`), so at most one fires per event. All comparisons
+are exact integer cents; the status is `EXECUTABLE_DUTCH_BOOK`. The wording stays conservative — a **gross
+two-way pricing discrepancy under normal one-winner settlement**, never "riskless" or "true arbitrage".
 
-The two directions are mutually exclusive (`bid ≤ ask` always), so at most one fires per event. All
-comparisons are exact integer cents. Status `EXECUTABLE_DUTCH_BOOK`; its own dashboard section.
+Shapes handled: **2-outcome** head-to-head match/series or single game; **soccer 3-way** games
+(Home/Away/Tie); and **tournament-winner fields** (≥3 "win" markets). A winner field is mutually exclusive
+(one champion) but not provably exhaustive, so it is **overround-only** on the priceable subset of
+entrants — safe because an untraded or unlisted winner only pays more.
 
-Beyond the 2-outcome case the module also covers **soccer 3-way games** (Home/Away/Tie, both directions)
-and **tournament-winner fields** (≥3 "win the tournament" markets). A winner field is mutually exclusive
-(one champion) but not provably exhaustive, so it is **overround-only**: Buy NO on the priceable subset of
-entrants, which is safe because an untraded or unlisted winner only pays more (floor `(k−1)×100¢` for the
-`k` legs bought, `gap = Σ yes_bid(subset) − 100`). Empty-book longshots are skipped; many legs are illiquid
-so these are often only partly fillable.
+**Coverage:** tennis matches; NBA/WNBA/NHL playoff series; per-game (`KX*GAME`) for NBA/WNBA/MLB/NHL;
+soccer 3-way games; one-winner fields (all sports, including motorsport race winners). Per-game and
+`KX*GAME` books carry a non-blocking `settlement_caveat` (a postponed/suspended game can settle
+differently). Props and advancement markets are excluded; `KXMLBSERIES` is excluded as non-MECE (a
+regular-season series can tie 2-2), while NHL's `KXNHLSERIES` is a clean best-of-7 and stays in. Unknown
+series are always excluded.
 
-**Sport coverage:** tennis matches + NBA/WNBA/NHL playoff series + per-game (`KX*GAME`) for NBA/WNBA/MLB/NHL +
-soccer 3-way games + tournament-winner fields (all sports). MLB and NHL also have NBA-shape futures ladders
-(MLB: Reach Playoffs ⊇ Win League ⊇ Win World Series; NHL: Reach Playoffs ⊇ Win Conference ⊇ Win
-Championship); MLB and NHL game books carry the per-game `settlement_caveat` (a postponed/suspended game
-can settle differently). Props and advancement markets are excluded (`KXMLBSERIES` too — a regular-season
-series can tie 2-2, so it isn't MECE; NHL's `KXNHLSERIES` IS a clean best-of-7 playoff series, so it stays
-in). Unknown series are always excluded.
+A third family, the **synthetic exact-score bundle** (`synthetic_bundle.py`), replicates "this player wins
+their match" from the MECE set of set-scores and prices it against two independent hedges. Because an exact
+score settles differently from a match-winner on a retirement, every finding is settlement-caveated and
+routed **review-only, never Actionable**.
 
 ---
 
 ## Multi-Sport Engine (`sports.py`)
 
-One detection engine, swappable data per sport. Each sport is a `SportConfig` holding the series
-prefixes, a structured identity resolver (stable competitor UUID → normalized name fallback), market
-classification (family + ladder node + eligibility), the containment ladder, and labels. Adding a
-sport is a matter of dropping in a new `SportConfig` and calling `register()`. Unknown series resolve
-to the explicit `UNKNOWN` sport — never silently to tennis.
+One detection engine, swappable data per sport. Each sport is a `SportConfig` holding the series prefixes,
+a structured identity resolver (stable competitor UUID → normalized name fallback), market classification
+(family + ladder node + eligibility), the containment ladder, and labels. Adding a sport is a single
+`register(SportConfig(...))` call. Unknown series resolve to an explicit `UNKNOWN` sport — never silently
+to tennis.
 
-Registered sports:
-
-| Sport | Series prefixes / ownership | Identity key | Match family |
+| Sport | Series ownership | Identity key | Dutch-book shape |
 |---|---|---|---|
-| Tennis 🎾 | `KXATP*`, `KXWTA*` | `custom_strike.tennis_competitor` UUID | `match` |
-| NBA 🏀 | `KXNBA*` | `custom_strike.basketball_team` UUID | `match` (playoff series) |
-| WNBA 🏀 | `KXWNBA*` | `custom_strike.basketball_team` UUID | `match` (playoff series) |
-| Golf ⛳ | `exact_series` (`KXPGATOP5/10/20`, `KXPGATOUR`) | `custom_strike.golf_competitor` UUID | — (no dutch books) |
-| Soccer ⚽ | `exact_series` (`KXWC*` World Cup) | `custom_strike.soccer_team` UUID | — (3-way games) |
-| MLB ⚾ | `KXMLB*` (allow-list) | `custom_strike.baseball_team` UUID | — (`KXMLBGAME` games) |
-| NHL 🏒 | `KXNHL*` (allow-list) | `custom_strike.hockey_team` UUID | `match` (playoff series) |
+| Tennis 🎾 | `KXATP*`, `KXWTA*` | `tennis_competitor` UUID | head-to-head matches |
+| NBA 🏀 | `KXNBA*` | `basketball_team` UUID | playoff series + games |
+| WNBA 🏀 | `KXWNBA*` | `basketball_team` UUID | playoff series + games |
+| Golf ⛳ | `exact_series` (`KXPGATOP5/10/20`, `KXPGATOUR`) | `golf_competitor` UUID | winner field only |
+| Soccer ⚽ | `exact_series` (`KXWC*` World Cup) | `soccer_team` UUID | 3-way games + winner field |
+| MLB ⚾ | `KXMLB*` (allow-list) | `baseball_team` UUID | `KXMLBGAME` games + winner field |
+| NHL 🏒 | `KXNHL*` (allow-list) | `hockey_team` UUID | `KXNHLSERIES` + `KXNHLGAME` + field |
+| Motorsport 🏁 | `KXF1`/`KXNASCAR`/`KXINDY`/`KXMOTOGP` | driver/team UUID or constructor name | one-winner field overround |
+
+Contracts are grouped by `(participant_key, tournament)`; the tournament key is season-scoped so
+co-loaded seasons never form a false cross-season ladder. Tournament is a **client-side filter**, not a
+fetch gate — all events for a sport are loaded and the user narrows in the UI.
 
 ---
 
 ## How it works
 
-Kalshi organizes contracts as **Series → Event → Market (outcome)**. The app:
+Kalshi organizes contracts as **Series → Event → Market (outcome)**. Each scan:
 
-1. **Fetches** the selected sport's series. An optional **"Scan all"** checkbox dynamically discovers
-   every series matching the sport's prefixes for extra contract types. Series list is cached 3600 s;
-   contracts are cached for `REFRESH_TTL` (30 s).
-2. **Classifies** each market by type (family + stage + ladder node) using the sport's `SportConfig`.
-3. **Indexes** contracts by the participant's stable identity key (competitor/team UUID, or name
-   fallback) so the same participant merges across all series.
-4. **Stamps** each contract with a never-empty `tournament` grouping key (`data.tournament_of`).
-   Containment ladders group by `(participant_key, tournament)` — ladders never mix across
-   tournaments, and a fallback key never collapses to an empty string.
-5. **Tournament is a client-side filter**, not a fetch gate — all events for a sport are included,
-   and the user narrows by tournament in the sidebar. The French Open is one of several tennis
-   tournaments, not a special case.
-
-### Discovery modes
-
-- **Default (fast):** fetch only the sport's `default_series` — typically 6 well-known series.
-- **Scan all (default ON):** dynamically discover every series matching the sport's prefixes; widens
-  coverage to set-winner, exact-score, per-game, and other contract types.
+1. **Fetches** the enabled contract families' series (the hosted path uses each sport's core series;
+   family toggles are the only control that changes what's fetched).
+2. **Classifies** every market by type (family + stage + ladder node) via its `SportConfig`.
+3. **Indexes** contracts by the participant's stable identity key (competitor/team UUID, or a low-confidence
+   name fallback) so one participant merges across all series.
+4. **Stamps** each contract with a never-empty `tournament` grouping key (`data.tournament_of`), so ladders
+   never mix across tournaments and a fallback never collapses to an empty string.
+5. **Detects** containment violations, dutch books, and synthetic bundles, ranks them, and writes a
+   snapshot the dashboard reads.
 
 ### Pricing columns
 
-Rather than a single implied probability, each row exposes:
+Rather than a single implied probability, each row exposes the components so a price is never opaque:
 
 - **Display %** — YES midpoint when the bid/ask spread is reasonable (≤ 20¢), otherwise last trade,
-  otherwise blank. An empty `0.00/1.00` order book is never disguised as a fake 50%.
-- **YES mid % / Last % / YES bid % / YES ask % / Spread ¢** — the raw components.
-- **Quote** — quality flag (Tight / OK / Wide / Very wide / One-sided / No quote) so an unreliable
-  price is immediately visible.
-
-### Stage 0 dashboard clarity (shipped)
-
-- **Timezone selector** with Lisbon as the default; comparison math stays exact UTC, only display
-  converts.
-- **Always-visible data-freshness strip** (per-second ticks) showing data age and coverage — no
-  stale data passes silently.
-- **"Show IDs & codes" toggle** to surface raw tickers, event IDs, and other debug fields without
-  cluttering the default view.
-- **Debug and diagnostics** hidden behind an Advanced toggle; the opportunity-ranking bar chart was
-  removed as misleading (the Actionable table is the ranking surface).
+  otherwise blank. An empty `0.00/1.00` book is never disguised as a fake 50%.
+- **YES mid / Last / YES bid / YES ask / Spread ¢** — the raw components.
+- **Quote** — a quality flag (Tight / OK / Wide / Very wide / One-sided / No quote / Crossed) so an
+  unreliable price is immediately visible.
 
 ---
 
@@ -156,58 +166,22 @@ Rather than a single implied probability, each row exposes:
 
 | File | Responsibility |
 |---|---|
-| `config.py` | Base URL, series tickers, thresholds, rate-limit + refresh knobs, timezone options |
+| `config.py` | Base URL, series tickers, thresholds, rate-limit + refresh knobs |
 | `kalshi_client.py` | Read-only HTTP: paginated GET, Retry-After/exponential backoff, process-wide throttle |
-| `sports.py` | Sport abstraction — `SportConfig`, registry, `sport_for_series`; imports only `config` + stdlib |
-| `data.py` | Parsing, `tournament_of`, `build_contracts` (all events, all sports), cent-exact pricing helpers (no Streamlit) |
-| `consistency.py` | Containment ladder + match-alignment classifier, `build_checks`, `bucket_of`, buy-only action plans (no Streamlit) |
-| `dutchbook.py` | Dutch-book / MECE arbitrage detector — 2-outcome events (no Streamlit) |
-| `glossary.py` | `GLOSSARY`, `BLOCKERS`, `WATCHLIST_NOTE`, `help_for` — single-sourced terminology (no Streamlit) |
-| `filters.py` | `apply_membership` (tournament/family/layer/event/participant/volume) + `apply_thresholds` (size/quote/status) (no Streamlit) |
-| `viz.py` | `payoff_chart_data` + `ladder_prices` — tidy chart frames (no Streamlit) |
-| `serve.py` / `api.py` | FastAPI engine API + NiceGUI dashboard entrypoint — the sole UI (Streamlit retired) |
-| `webui/` | NiceGUI dashboard (`dashboard.py`) + pure `viewmodel.py` / `diagnostics.py` cores |
-| `tests/` | pytest suite — pure-logic layers, the in-process engine + REST API, and headless NiceGUI smoke (no network) |
+| `sports.py` | Sport abstraction — `SportConfig`, registry, `sport_for_series` (imports only `config` + stdlib) |
+| `data.py` | Parsing, `tournament_of`, `build_contracts` (all events, all sports), cent-exact pricing helpers |
+| `consistency.py` | Containment ladder + match-alignment classifier, `build_checks`, `bucket_of`, buy-only plans |
+| `dutchbook.py` | Dutch-book / MECE detector (2-way, soccer 3-way, winner field) |
+| `synthetic_bundle.py` | N-leg exact-score bundle detector (review-only) |
+| `scanner.py` | Cross-sport `unified_opportunities` over the whole loaded universe |
+| `store.py` / `lifecycle.py` | SQLite snapshot store + new/changed/recently-actionable diffs |
+| `api.py` / `serve.py` | FastAPI REST API + NiceGUI dashboard on one app — the sole UI |
+| `webui/` | NiceGUI `dashboard.py` + pure `viewmodel.py` / `diagnostics.py` cores |
+| `glossary.py` / `filters.py` / `viz.py` | Single-sourced terms; two-pass filters; tidy chart frames |
+| `tests/` | pytest suite — pure-logic layers, the in-process engine + REST API, headless NiceGUI smoke |
 
-`data.py`, `consistency.py`, `dutchbook.py`, `sports.py`, `glossary.py`, `filters.py`, and `viz.py`
-are **Streamlit-free** and independently testable.
-
----
-
-## Setup & run
-
-The **FastAPI + NiceGUI** server (`serve.py`) is the opportunity-first dashboard + a typed REST API on
-one port — the sole UI (the legacy Streamlit app was retired).
-
-```bash
-pip install -r requirements.txt          # requests, pandas, fastapi, nicegui, uvicorn
-python serve.py                          # FastAPI + NiceGUI dashboard at /, REST at /opportunities etc.
-```
-
-The dashboard opens at `/`. Background auto-refresh is on by default (configurable in the controls).
-Data is public — no API key required. The REST API serves `/healthz` (liveness), **`/readyz`**
-(readiness — `ready`/`degraded`/`not_ready`: DB writable + a fresh snapshot), `/coverage`, and a
-low-cardinality `/metrics` (scan counters + heartbeat) for monitoring. `POST /scan` triggers a scan (the
-dashboard's own "Scan now" button is non-force — it respects the refresh TTL); on a LAN, set `SCAN_TOKEN`
-to require an `X-Scan-Token` header on `POST /scan` (off by default). `SNAPSHOT_DB_PATH` points the
-snapshot store at a writable path. For office-LAN hosting, `scripts/build_deploy_repo.py` builds a clean
-runtime-only deploy artifact and `deploy/` ships the systemd + scan-timer + `scan.sh` templates — see
-`docs/DEPLOYMENT.md`.
-
-## Tests
-
-Pure logic + the in-process engine are covered by unit tests (no network); the NiceGUI dashboard has
-**headless browser smoke tests** (`tests/test_browser.py`, via `nicegui.testing` — no selenium).
-
-```bash
-pip install -r requirements-dev.txt      # adds pytest, pytest-asyncio, ruff
-pytest -q                                # full suite (engine + API + viewmodel + browser smoke)
-ruff check .                             # lint
-```
-
-Verify without a browser: `pytest -q`; `python -c "import serve, api, webui.dashboard"`; and a `serve.py`
-boot (`GET /`, `/healthz`, `/metrics` → 200 and `/readyz` → ready/degraded). See
-`docs/RELEASE_CHECKLIST.md` for the full pre-ship checklist.
+`data.py`, `consistency.py`, `dutchbook.py`, `sports.py`, `glossary.py`, `filters.py`, and `viz.py` are
+**free of UI imports** (no `nicegui`, no `streamlit`) and independently testable.
 
 ---
 
@@ -215,57 +189,27 @@ boot (`GET /`, `/healthz`, `/metrics` → 200 and `/readyz` → ready/degraded).
 
 Each contract carries a `mapping_confidence` (high when keyed to the stable competitor UUID; low for a
 name-only fallback) and a `mapping_reason`. The per-participant detail view shows an explicit
-**expected-vs-found** progression ladder (a missing layer is surfaced explicitly, not implied), and
-offers a **per-participant export** (JSON snapshot + CSV) of contracts and consistency comparisons.
-
-Directly beneath the progression ladder, the detail view shows **raw stage-ladder spreads** — the
-percentage-point and cents gaps between adjacent layers. These are raw price differences only (not a
-probability model); an inverted spread is the same inconsistency the consistency table flags. Each row
-shows the worse of the two layers' **Quote** quality; a `missing_price` row is shown blank rather than
+**expected-vs-found** progression ladder (a missing layer is surfaced, not implied) and offers a
+**per-participant export** (JSON snapshot + CSV). Beneath it, **raw stage-ladder spreads** show the
+percentage-point and cents gaps between adjacent layers — raw price differences, not a probability model;
+each row shows the worse of the two layers' quote quality, and a missing price is shown blank rather than
 as a misleading number.
 
 ---
 
-## Architecture (shipped) & roadmap
-
-The engine was migrated behind a **FastAPI** back-end (typed REST API: `/healthz`, `/readyz`,
-`/opportunities`, `/coverage`, `/metrics`, `/scan`, `/alerts`, …) with a **NiceGUI** opportunity-first
-dashboard mounted on the same server (`serve.py`), hardened for office-LAN hosting (readiness probe,
-env-driven DB path, non-force manual scan, a Linux-first runbook, and a clean deploy-repo builder +
-`deploy/` systemd templates). A SQLite **snapshot store** persists each scan (opportunities + per-sport
-evidence frames); a **ScanManager** singleflights scans behind a non-blocking `POST /scan`. The dashboard
-surfaces
-ranked Actionable / Review / Blocked sections, a participant-detail panel, a diagnostics/debug section with
-AG-Grids, truthful empty states, snapshot export, and live freshness — all reading the engine in-process.
-It is the sole UI (the legacy Streamlit `app.py` was retired). See [`docs/ROADMAP.md`](docs/ROADMAP.md) for
-the staged history and [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) for office-LAN hosting.
-
-The synthetic exact-score bundle is hedged two ways — against the **match-winner** market and against the
-**advance / win-tournament** market the match implies (winning a quarterfinal ≡ reaching the semifinal),
-emitted independently and review-only.
-
-Remaining (not yet built): the advancement-field detector (n-outcome reach-a-stage fields) and field
-underround — both need an exhaustiveness proof. See **Known limits** below for what the edges deliberately
-do not model.
-
----
-
-## Known limits (not modeled)
+## Known limits
 
 Every edge the app reports — `exec_gap_c`, ROI, "Gross profit $", "Max units" — is **gross and
 top-of-book**. The engine never silently nets execution costs into the actionability decision, so a finding
-can look positive yet be unprofitable in practice. Three limits are **documented but not built** (until the
-owner opts in); they are single-sourced in `glossary.py` (term **"Known limits"**):
+can look positive yet be unprofitable in practice. Three costs are **documented but not modeled** (until
+the owner opts in; single-sourced in `glossary.py`, term **"Known limits"**):
 
-- **Net-of-fees not modeled.** Kalshi's trading / settlement fees are not subtracted; a thin gross gap can
-  turn net-negative after fees. Fee metadata may be captured for honest caveats, but it never drives the
-  gap — "gross-only" means "don't silently net fees", not "ignore fees".
-- **Position limits & collateral not modeled.** Sizes are the top-of-book quote size; the app does not
-  account for Kalshi's per-market position caps or the collateral needed to hold every leg, so "Max units"
-  and "Gross profit" assume you can take the full quoted size.
-- **Full-depth execution not modeled.** Prices and sizes are **top-of-book only**; filling more than the
-  top resting size walks the book to worse prices. The app does not model depth, so the displayed size is
-  the max at the quoted price, not the total tradable edge.
+- **Fees not modeled.** Kalshi's trading/settlement fees are not subtracted; a thin gross gap can turn
+  net-negative. "Gross-only" means "don't silently net fees", not "ignore fees".
+- **Position limits & collateral not modeled.** Sizes are the top-of-book quote size; per-market position
+  caps and the collateral to hold every leg are not accounted for.
+- **Full-depth execution not modeled.** Prices and sizes are top-of-book only; filling past the top resting
+  size walks the book to worse prices.
 
 Treat every edge as an upper bound on what the quotes imply, not a guaranteed take-home.
 
@@ -273,12 +217,11 @@ Treat every edge as an upper bound on what the quotes imply, not a guaranteed ta
 
 ## Notes
 
-- Read-only / on-demand snapshot. No trading, no stored history, no authentication required.
-- Between rounds (no open events for a sport), the app shows an informational message rather than an
+- Read-only / on-demand snapshot. No trading, no authentication, no order placement.
+- Between rounds (no open events for a sport), the dashboard shows an informational message rather than an
   empty table — empty results are valid, not errors.
-- Failed series are reported in the in-app **Debug** expander — never silently dropped.
-- The rate throttle is **process-wide only** — multiple processes/containers each have their own
-  limiter; aggregate rate = `MAX_RPS × process count`.
-- The Kalshi **web** site is bot-throttled (HTTP 429), so automated link-reachability checks from this
-  environment are unreliable. Links point at the specific market via the verified deep-link format;
-  `scripts/check_links.py` does a best-effort live check meant to run from an unthrottled network.
+- Failed series are reported in the in-app **Debug** section — never silently dropped.
+- The rate throttle is **process-wide only** — run a single worker; multiple processes each get their own
+  limiter (aggregate rate = `MAX_RPS × process count`).
+- See [`docs/STATUS.md`](docs/STATUS.md) for shipped state, current limits, and approved next work, and
+  [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) for office-LAN hosting.

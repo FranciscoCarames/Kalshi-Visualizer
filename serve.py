@@ -7,7 +7,7 @@ Run: ``python serve.py``  (UI at ``/``, REST at ``/opportunities`` etc., OpenAPI
 
 **Bind / LAN safety (PR 19a).** The bind address/port are env-overridable (``API_HOST``/``API_PORT``) so
 the same code serves loopback-only (the safe default, ``127.0.0.1``) or the whole LAN
-(``API_HOST=0.0.0.0`` — see ``docs/LAN_ACCESS.md``). Before binding, ``bind_safety`` enforces two rules:
+(``API_HOST=0.0.0.0`` — see ``docs/DEPLOYMENT.md``). Before binding, ``bind_safety`` enforces two rules:
 the dashboard has **no auth** and NiceGUI signs its session cookie with the storage secret, so exposing it
 on a non-loopback host with only the dev-fallback secret is refused (set ``NICEGUI_STORAGE_SECRET``, or
 ``ALLOW_DEV_STORAGE_SECRET_ON_LAN=1`` to override on a trusted LAN); and the snapshot store + Kalshi
@@ -125,7 +125,7 @@ if __name__ == "__main__":
     _enforce_bind_safety(_host)
     if _host not in _LOOPBACK_HOSTS:
         print(f"Serving on http://{_host}:{_port}  ·  reach it from the LAN at "
-              f"http://<this-machine-LAN-IP>:{_port}  (see docs/LAN_ACCESS.md)")
+              f"http://<this-machine-LAN-IP>:{_port}  (see docs/DEPLOYMENT.md)")
     # Start the in-process auto-scan loop HERE (runtime only) so `import serve` / the test harnesses never
     # spawn a background scan. It drives the NON-force scan; the ScanManager TTL/budget/singleflight guards
     # bound every tick. (When using this, disable the optional systemd scan.timer — see docs/DEPLOYMENT.md.)

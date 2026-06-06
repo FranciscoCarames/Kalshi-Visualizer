@@ -1,7 +1,9 @@
-"""Render the in-depth glossary (the `long` definitions) to docs/GLOSSARY.md.
+"""Render the in-depth glossary (the `long` definitions) to markdown, on demand.
 
-Single source of truth is ``glossary.GLOSSARY`` — the same dict the app uses for its one-line
-in-app help, so the app and the docs can never disagree. Run from the repo root:
+Single source of truth is ``glossary.GLOSSARY`` — the same dict the dashboard uses for its one-line
+in-app help, so the app and the exported doc can never disagree. The output (``docs/GLOSSARY.md``) is
+**generated on demand, not committed** — regenerate it whenever you need the in-depth reference. Run
+from the repo root:
 
     python scripts/export_glossary.py
 
@@ -23,7 +25,7 @@ DOCS_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file_
 
 def render_markdown() -> str:
     lines = [
-        "# French Open Kalshi Viewer — Glossary",
+        "# Kalshi Visualizer — Glossary",
         "",
         "Plain-language definitions of every term the app uses. The app shows the one-line summary; "
         "this document is the in-depth version. Both come from the same source (`glossary.py`), so "

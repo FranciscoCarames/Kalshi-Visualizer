@@ -32,7 +32,7 @@ ACTION_STATUSES = {"EXECUTABLE_VIOLATION", "DISPLAY_VIOLATION", "QUOTE_SIZE_MISS
 
 # The containment ladder is now per-sport (sports.py). These module-level names are back-compat
 # aliases that REFERENCE the tennis ladder (never copies), so `from consistency import NODE_ORDER`
-# (app.py) and the tennis consistency tests resolve exactly as before. Multi-sport code resolves the
+# and the tennis consistency tests resolve exactly as before. Multi-sport code resolves the
 # ladder from each row/group's series via `_sport_for_row(s)` below.
 NODE_ORDER = sports.TENNIS.ladder.node_order
 ADJACENT_PAIRS = sports.TENNIS.ladder.adjacent_pairs
