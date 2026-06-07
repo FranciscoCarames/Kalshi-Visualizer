@@ -275,6 +275,32 @@ def test_net_of_fees_does_not_affect_ranking():
     assert [o["opportunity_id"] for o in vm.rank_opps(opps, "edge")] == base == ["b", "a", "c"]
 
 
+def _liq_contract(series, player, bid_sz, ask_sz, spread, *, status="active", bid_c=40, ask_c=None, vol=0):
+    return {"series": series, "player": player, "contract": f"{player} win", "market_ticker": "T",
+            "status": status, "yes_bid_size": bid_sz, "yes_ask_size": ask_sz, "yes_bid_c": bid_c,
+            "yes_ask_c": ask_c if ask_c is not None else bid_c + spread, "spread_cents": spread, "volume": vol}
+
+
+def test_liquidity_panel_aggregates_by_sport_and_ranks():
+    cs = [
+        _liq_contract("KXATPMATCH", "Alcaraz", 100, 80, 2),    # tennis, tradable depth min(100,80)=80
+        _liq_contract("KXATPMATCH", "Sinner", 50, 50, 1),      # tennis, depth 50
+        _liq_contract("KXWCGAME", "Spain", 200, 30, 5),        # soccer, depth 30
+        _liq_contract("KXATPMATCH", "Done", 90, 90, 1, status="finalized"),     # excluded: not active
+        _liq_contract("KXATPMATCH", "Empty", 99, 99, 0, bid_c=0, ask_c=100),    # excluded: empty 0/100 book
+    ]
+    panel = vm.liquidity_panel(cs, n=5)
+    # Per-sport depth is summed: Tennis 80+50=130 (top), Soccer 30. UNKNOWN/non-qualifying excluded.
+    assert panel["top_sports"][0] == ("Tennis", 130)
+    assert ("Soccer (World Cup)", 30) in panel["top_sports"]
+    # Top contracts ranked by thinner-side depth desc; entries are (label, depth, spread¢).
+    assert [c[1] for c in panel["top_contracts"]] == [80, 50, 30]
+    assert panel["top_contracts"][0][0].startswith("Alcaraz") and panel["top_contracts"][0][2] == 2
+    # None / empty safe.
+    assert vm.liquidity_panel(None) == {"top_sports": [], "top_contracts": []}
+    assert vm.liquidity_panel([]) == {"top_sports": [], "top_contracts": []}
+
+
 def test_severity_badges_are_structural_and_ordered():
     # blocked_reason (blocker) + settlement_caveat (advisory) -> blocker sorts first.
     o = op("x", bucket="blocked", blocked_reason="A leg is finalized.")

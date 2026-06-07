@@ -278,7 +278,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                              # PR B: ids to flash green ONCE on the snapshot-change rerender; reset to empty
                              # immediately after, so ordinary filter rerenders never replay the animation.
                              "flash_now": set(),
-                             "liquidity_msg": None,    # "most liquid now" (#12a), recomputed per snapshot
+                             "liquidity_panel": None,  # "most liquid now" panel (PR F), recomputed per snapshot
                              "volatility_msg": None}   # "most volatile now" (#12b), recomputed per snapshot
 
     ui.add_css(_SELECTED_ROW_CSS)        # selected-row highlight (#14) — see module note
@@ -409,8 +409,8 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
     # Per-bucket counts status line (PR 4): shown vs in-scope per bucket, hidden-by-toggle made explicit.
     counts_line = ui.label().classes("text-sm text-gray-600").style("font-variant-numeric: tabular-nums")
     banner = ui.label().classes("text-sm font-medium")
-    # `liquidity` / `volatility` telemetry labels are created LOWER (PR 6), inside a collapsed
-    # "not an opportunity signal" section, so they sit out of the opportunity flow.
+    # The "most liquid now" panel (PR F, visible) and the `volatility` telemetry label (collapsed) are
+    # created LOWER, both clearly labelled "not an opportunity signal" so they sit out of the opportunity flow.
 
     # --- explanation panel (row click) ---
     dialog = ui.dialog()
@@ -675,11 +675,24 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         backlog = ui.table(columns=_BACKLOG_COLUMNS, rows=[], row_key="name",
                            pagination=10).classes("w-full overflow-x-auto")
 
-    # Market telemetry (PR 6) — deepest-book / largest-move leaders are SNAPSHOT TELEMETRY, not opportunity
-    # signals. Kept OUT of the opportunity flow in a collapsed section with neutral (never green/actionable)
-    # styling so they're never mistaken for an edge. Labels populated in rerender (snapshot-scoped).
+    # "Most liquid now" panel (PR F) — a VISIBLE (not collapsed) two-column card of the deepest tradable
+    # sports + contracts this snapshot. Still SNAPSHOT TELEMETRY, not an opportunity signal: neutral grey,
+    # explicitly labelled, never green/actionable. Populated in rerender; hidden when nothing has a real book.
+    liquidity_card = ui.column().classes("w-full gap-1 mt-2")
+    with liquidity_card:
+        ui.label("Most liquid now — telemetry, not an opportunity signal").classes(
+            "text-sm font-bold text-gray-500")
+        with ui.row().classes("gap-12 flex-wrap"):
+            with ui.column().classes("gap-0"):
+                ui.label("Top sports (tradable depth)").classes("text-xs text-gray-500")
+                liq_sports = ui.column().classes("gap-0")
+            with ui.column().classes("gap-0"):
+                ui.label("Top contracts (depth · spread)").classes("text-xs text-gray-500")
+                liq_contracts = ui.column().classes("gap-0")
+
+    # Market telemetry (PR 6) — the largest-move leader is SNAPSHOT TELEMETRY, not an opportunity signal.
+    # Kept OUT of the opportunity flow in a collapsed section with neutral styling. Populated in rerender.
     with ui.expansion("Market telemetry — not an opportunity signal").classes("w-full"):
-        liquidity = ui.label().classes("text-sm text-gray-600")
         volatility = ui.label().classes("text-sm text-gray-600")
 
     # Participant/team detail (PR 24) — populated on opp row-click from the STORED frames (no fetch).
@@ -826,7 +839,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         state["ever_seen"].update(state["opps"].keys())     # after classify, so 'returned' detection works
         state["options"] = vm.derive_options(opps)
         state["backlog"] = bundle["backlog"]
-        state["liquidity_msg"] = vm.liquidity_leader(bundle["contracts"])   # #12a (snapshot-scoped)
+        state["liquidity_panel"] = vm.liquidity_panel(bundle["contracts"])  # PR F (snapshot-scoped panel)
         state["volatility_msg"] = vm.volatility_leader(bundle["vol_frames"])   # #12b (snapshot-scoped)
         sport_sel.options = state["options"]["sports"]
         tour_sel.options = state["options"]["tournaments"]
@@ -924,9 +937,17 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             vm.bucket_counts(opps, filters),
             {"review_signal": show_review_sw.value, "blocked": show_blocked_sw.value,
              "risk_budget": rb_switch.value, "near_miss": nm_switch.value}))
-        liq = state.get("liquidity_msg")          # "most liquid now" (#12a) — snapshot-scoped, display only
-        liquidity.set_text(liq or "")
-        liquidity.set_visibility(bool(liq))
+        # "Most liquid now" panel (PR F) — fill the two visible columns; hide the card when nothing qualifies.
+        panel = state.get("liquidity_panel") or {"top_sports": [], "top_contracts": []}
+        liq_sports.clear()
+        liq_contracts.clear()
+        with liq_sports:
+            for _lbl, _depth in panel["top_sports"]:
+                ui.label(f"{_lbl}: {_depth} contracts").classes("text-sm text-gray-600")
+        with liq_contracts:
+            for _lbl, _size, _spread in panel["top_contracts"]:
+                ui.label(f"{_lbl} — {_size} @ touch · {_spread}¢").classes("text-sm text-gray-600")
+        liquidity_card.set_visibility(bool(panel["top_sports"] or panel["top_contracts"]))
         vol = state.get("volatility_msg")         # "most volatile now" (#12b) — snapshot-scoped, display only
         volatility.set_text(vol or "")
         volatility.set_visibility(bool(vol))
@@ -1035,6 +1056,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         (actionable, "Actionable opportunities"), (review, "Review-signal opportunities"),
         (blocked, "Blocked opportunities"), (watchlist_table, "Watchlist — bounded-loss bets and overpriced books"),
         (watchlist_expansion, "Watchlist — not actionable now"), (backlog, "Recently-actionable backlog"),
+        (liquidity_card, "Most liquid now — telemetry, not an opportunity signal"),
         (detail_expansion, "Selected participant detail"), (diagnostics_expansion, "Diagnostics and debug"),
     ):
         _el.props(f'aria-label="{_aria}"')
