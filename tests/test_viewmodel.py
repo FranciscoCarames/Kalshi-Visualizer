@@ -131,9 +131,12 @@ def test_filter_opps_participant_or_match_by_key():
 
 
 # --- ranking modes (#1/#9) — payoff geometry, no probability ----------------------------------------
-def _o(oid, bucket="actionable", gap=None, roi=None, wc=None, bc=None):
+def _o(oid, bucket="actionable", gap=None, roi=None, wc=None, bc=None,
+       child_c=None, parent_c=None, soc=None, sop=None):
     return {"opportunity_id": oid, "bucket": bucket, "exec_gap_c": gap, "roi_pct": roi,
-            "worst_case_profit_c": wc, "best_case_profit_c": bc}
+            "worst_case_profit_c": wc, "best_case_profit_c": bc,
+            "child_display_c": child_c, "parent_display_c": parent_c,
+            "spread_over_child": soc, "spread_over_parent": sop}
 
 
 def test_risk_budget_geometry_from_payoff_fields():
@@ -159,6 +162,35 @@ def test_unknown_risk_budget_geometry_sorts_last():
     assert [o["opportunity_id"] for o in vm.rank_opps(rows, "spread_upside")] == ["known", "missing"]
     rows2 = [_o("hasinputs", "risk_budget", gap=-2, roi=5.0, wc=-2, bc=8), _o("none", "risk_budget")]
     assert [o["opportunity_id"] for o in vm.rank_opps(rows2, "blended")][-1] == "none"
+
+
+def test_spread_ratio_ranks_higher_probability_outright_first():
+    # spread/outright is scale-invariant: 3/2 and 30/20 both have spread_over_child 0.5. The rank mode is
+    # probability-LED, so the 30/20 pair (deeper outright 20) must rank ABOVE the 3/2 pair (deeper 2).
+    rows = [_o("longshot", "risk_budget", child_c=2, parent_c=3, soc=0.5, sop=1 / 3),
+            _o("meaningful", "risk_budget", child_c=20, parent_c=30, soc=0.5, sop=10 / 30)]
+    assert [o["opportunity_id"] for o in vm.rank_opps(rows, "spread_ratio")] == ["meaningful", "longshot"]
+
+
+def test_spread_ratio_breaks_ties_by_lower_spread_over_child():
+    # Equal deeper outright -> the lower display spread/outright (relative risk) wins.
+    rows = [_o("wide", "risk_budget", child_c=20, parent_c=30, soc=0.5, sop=10 / 30),
+            _o("tight", "risk_budget", child_c=20, parent_c=24, soc=0.2, sop=4 / 24)]
+    assert [o["opportunity_id"] for o in vm.rank_opps(rows, "spread_ratio")] == ["tight", "wide"]
+
+
+def test_spread_ratio_falls_back_to_edge_for_non_risk_budget():
+    rows = [_o("a", "actionable", gap=2), _o("b", "actionable", gap=9)]
+    assert [o["opportunity_id"] for o in vm.rank_opps(rows, "spread_ratio")] == ["b", "a"]
+
+
+def test_spread_ratio_unknown_outright_sorts_last():
+    # An older snapshot lacking child_display_c (or a zero/No-quote outright) sorts after rows that have it.
+    rows = [_o("has", "risk_budget", child_c=10, parent_c=15, soc=0.5, sop=1 / 3),
+            _o("missing", "risk_budget"),
+            _o("zero", "risk_budget", child_c=0, parent_c=0)]
+    ordered = [o["opportunity_id"] for o in vm.rank_opps(rows, "spread_ratio")]
+    assert ordered[0] == "has" and set(ordered[1:]) == {"missing", "zero"}
 
 
 def test_blended_uses_edge_roi_geometry_no_probability():
@@ -187,6 +219,7 @@ def test_mode_switch_no_rescan():
     rows = [_o("a", "actionable", gap=2, roi=30.0), _o("b", "actionable", gap=9, roi=5.0)]
     assert [o["opportunity_id"] for o in vm.rank_opps(rows, "edge")] == ["b", "a"]
     assert [o["opportunity_id"] for o in vm.rank_opps(rows, "blended")] == ["a", "b"]
+    assert [o["opportunity_id"] for o in vm.rank_opps(rows, "spread_ratio")] == ["b", "a"]  # non-risk -> edge
     assert [o["opportunity_id"] for o in rows] == ["a", "b"]             # pure: input list not mutated
 
 

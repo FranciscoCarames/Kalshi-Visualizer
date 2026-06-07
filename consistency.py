@@ -272,6 +272,26 @@ def _worst_quality(a: str, b: str) -> str:
     return a if _QUALITY_RANK.get(a, 0) >= _QUALITY_RANK.get(b, 0) else b
 
 
+# --- Probability-context display outrights (risk-budget "spread / outright" view) -------------------
+# `display_c` is the app's DISPLAY OUTRIGHT price (YES midpoint when the quote is reasonable, else last
+# trade — never a fake 50% on an empty book), NOT necessarily a pure midpoint. The display spread is the
+# broader − deeper outright gap; each ratio is the spread relative to one leg's display outright, and is
+# None when its denominator is missing or ≤ 0 (a No-quote / degenerate book has no usable ratio).
+def _disp_c(row: dict[str, Any] | None) -> int | None:
+    return _num(row.get("display_c")) if row else None
+
+
+def _disp_spread(parent: dict[str, Any] | None, child: dict[str, Any] | None) -> int | None:
+    p, c = _disp_c(parent), _disp_c(child)
+    return (p - c) if (p is not None and c is not None) else None
+
+
+def _disp_ratio(parent: dict[str, Any] | None, child: dict[str, Any] | None, leg: str) -> float | None:
+    s = _disp_spread(parent, child)
+    den = _disp_c(parent) if leg == "parent" else _disp_c(child)
+    return (s / den) if (s is not None and den is not None and den > 0) else None
+
+
 def _buy_no_c(row: dict[str, Any]) -> int | None:
     """Cents to BUY NO on this leg — the literal "Buy NO" price.
 
@@ -550,6 +570,13 @@ def _row(player: str, player_key: str, chain: str, child: dict | None, parent: d
         "parent_contract": parent_contract,
         "child_display_pct": child.get("display_pct") if child else None,
         "parent_display_pct": parent.get("display_pct") if parent else None,
+        # Probability-context display outrights (risk-budget "spread / outright" view). spread = broader −
+        # deeper display outright; a ratio is None when its denominator ≤ 0 (No-quote/degenerate book).
+        "parent_display_c": _disp_c(parent),
+        "child_display_c": _disp_c(child),
+        "display_spread_c": _disp_spread(parent, child),
+        "spread_over_parent": _disp_ratio(parent, child, "parent"),
+        "spread_over_child": _disp_ratio(parent, child, "child"),
         "child_bid_pct": child.get("yes_bid_pct") if child else None,
         "parent_ask_pct": parent.get("yes_ask_pct") if parent else None,
         "executable_gap": comp.get("executable_gap"),
@@ -630,6 +657,8 @@ def build_checks(df: pd.DataFrame, *, risk_budget_max_loss_c: int = 0) -> pd.Dat
         "child_event_ticker", "parent_event_ticker", "layers",
         "child_contract", "parent_contract", "child_display_pct",
         "parent_display_pct", "child_bid_pct", "parent_ask_pct", "executable_gap",
+        # Probability-context display outrights for the risk-budget spread/outright view.
+        "parent_display_c", "child_display_c", "display_spread_c", "spread_over_parent", "spread_over_child",
         "display_gap", "status", "status_group", "rule_flag", "reason", "volume",
         "resolve_time", "comp_quote_quality", "child_status", "parent_status", "tournament",
         "tradable_now", "blockers", "watchlist_note",

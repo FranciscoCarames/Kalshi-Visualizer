@@ -162,11 +162,14 @@ def test_lifecycle_ignores_risk_budget_and_near_miss():
 
 
 # --- viewmodel: the two opt-in sections' pure band-filters + display rows ------------------------------
-def _rb(oid, *, worst, best, cost=102):
+def _rb(oid, *, worst, best, cost=102, child_c=None, parent_c=None, soc=None, sop=None):
     return {"opportunity_id": oid, "bucket": "risk_budget", "source": "containment", "sport": "tennis",
             "sport_label": "Tennis", "name": "Alcaraz", "detail": "Win ≤ Final", "cost_c": cost,
             "worst_case_profit_c": worst, "best_case_profit_c": best, "roi_pct": -2.9,
-            "tradable_now": "Yes", "settlement_caveat": "", "blocked_reason": ""}
+            "tradable_now": "Yes", "settlement_caveat": "", "blocked_reason": "",
+            "child_display_c": child_c, "parent_display_c": parent_c,
+            "display_spread_c": (None if (child_c is None or parent_c is None) else parent_c - child_c),
+            "spread_over_child": soc, "spread_over_parent": sop}
 
 
 def _nm(oid, *, gap, cost=102):
@@ -184,6 +187,20 @@ def test_risk_budget_view_filters_by_max_loss_and_ratio():
     assert ids(vm.risk_budget_view(opps, max_loss_c=5, min_ratio_tenths=200)) == {"loss2", "premium"}
 
 
+def test_risk_budget_view_filters_by_min_outright_and_ratio():
+    opps = [_rb("longshot", worst=-1, best=99, child_c=2, parent_c=3, soc=0.5),
+            _rb("meaningful", worst=-4, best=96, child_c=20, parent_c=30, soc=0.5),
+            _rb("tight", worst=-2, best=98, child_c=20, parent_c=24, soc=0.2),
+            _rb("nofield", worst=-1, best=99)]   # older snapshot: no display-outright fields
+    ids = lambda rows: {r["opportunity_id"] for r in rows}  # noqa: E731
+    # Both filters off -> unchanged (all within max_loss 5; nofield kept).
+    assert ids(vm.risk_budget_view(opps, max_loss_c=5)) == {"longshot", "meaningful", "tight", "nofield"}
+    # Min child outright 10¢ removes the 2¢ longshot AND the field-less row (can't prove it passes).
+    assert ids(vm.risk_budget_view(opps, max_loss_c=5, min_outright_c=10)) == {"meaningful", "tight"}
+    # Max spread/outright 0.30 caps relative risk: keeps the 0.2 row, drops the 0.5 rows + field-less row.
+    assert ids(vm.risk_budget_view(opps, max_loss_c=5, max_spread_ratio_hundredths=30)) == {"tight"}
+
+
 def test_near_miss_view_filters_by_overpay():
     opps = [_nm("o2", gap=-2), _nm("o4", gap=-4), _nm("o0", gap=0)]
     ids = lambda rows: {r["opportunity_id"] for r in rows}  # noqa: E731
@@ -195,6 +212,17 @@ def test_risk_budget_row_leads_with_convex_economics():
     r = vm.risk_budget_row(_rb("x", worst=-3, best=97), set())
     assert r["max_loss"] == 3 and r["max_profit"] == 97 and r["ratio"] == round(97 / 3, 1)
     assert vm.risk_budget_row(_rb("p", worst=0, best=100), set())["ratio"] == "∞"   # zero-downside premium
+
+
+def test_risk_budget_row_surfaces_display_outright_context():
+    # Executable economics (max_loss/ratio) stay; display-outright context rides alongside, rounded.
+    r = vm.risk_budget_row(_rb("d", worst=-3, best=97, child_c=20, parent_c=30, soc=10 / 20, sop=10 / 30), set())
+    assert r["max_loss"] == 3 and r["ratio"] == round(97 / 3, 1)        # executable context unchanged
+    assert r["child_outright"] == 20 and r["parent_outright"] == 30 and r["display_spread"] == 10
+    assert r["spread_over_child"] == 0.5 and r["spread_over_parent"] == round(10 / 30, 2)
+    # Older snapshot without the fields -> all None, no crash.
+    bare = vm.risk_budget_row(_rb("b", worst=-3, best=97), set())
+    assert bare["child_outright"] is None and bare["spread_over_child"] is None
 
 
 def test_near_miss_row_shows_overpay_and_note_not_edge():

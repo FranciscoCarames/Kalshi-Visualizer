@@ -101,6 +101,13 @@ _RISK_COLUMNS = [
     {"name": "max_profit", "label": "Max profit ¢", "field": "max_profit", "sortable": True},
     {"name": "ratio", "label": "Upside:risk", "field": "ratio", "sortable": True},
     {"name": "roc", "label": "Worst-case ROC %", "field": "roc", "sortable": True},
+    # Probability context (DISPLAY OUTRIGHT, not executable): both outrights, the display spread, and the
+    # spread/outright ratios that drive the "Outright + spread" rank mode + the new filters.
+    {"name": "parent_outright", "label": "Parent outright ¢", "field": "parent_outright", "sortable": True},
+    {"name": "child_outright", "label": "Child outright ¢", "field": "child_outright", "sortable": True},
+    {"name": "display_spread", "label": "Display spread ¢", "field": "display_spread", "sortable": True},
+    {"name": "spread_over_parent", "label": "Spread÷parent", "field": "spread_over_parent", "sortable": True},
+    {"name": "spread_over_child", "label": "Spread÷child", "field": "spread_over_child", "sortable": True},
     {"name": "tradable", "label": "Tradable", "field": "tradable"},
     {"name": "caveat", "label": "Caveat", "field": "caveat"},
 ]
@@ -193,8 +200,9 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                                    label="Backlog window")
         rank_sel = ui.select(vm.RANK_MODES, value=vm.RANK_MODE_DEFAULT, label="Rank by").tooltip(
             "Within each section: Per-unit edge ¢, Spread upside (risk-budget geometry: upside:risk, then "
-            "spread, then lower max loss), or Blended (edge + ROI % + geometry). Gross — not a probability "
-            "model.")
+            "spread, then lower max loss), Outright + spread (risk-budget: highest deeper display outright "
+            "first, then lowest display spread÷outright), or Blended (edge + ROI % + geometry). Gross — not "
+            "a probability model.")
         show_ids = ui.switch("Show IDs & codes", value=False)
         rules_sw = ui.switch("Resolution criteria", value=False).tooltip(
             "Show each contract's settlement rules in the click panel and auto-open them in the detail view.")
@@ -243,6 +251,18 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                                 min=1, max=config.RISK_BUDGET_MAX_LOSS_C, format="%.0f").classes("w-28")
         rb_min_ratio = ui.number("Min upside:risk", value=0, min=0, max=20, step=0.5,
                                  format="%.1f").classes("w-32")
+        # Probability-context filters (display outright, not executable). Min child outright removes
+        # longshots; max spread÷outright caps relative risk. Both 0 = off.
+        rb_min_outright = ui.number("Min child outright ¢",
+                                    value=config.RISK_BUDGET_DEFAULT_MIN_OUTRIGHT_C, min=0, max=100,
+                                    step=1, format="%.0f").classes("w-36").tooltip(
+            "Hide risk-budget rows whose deeper (child) display outright is below this ¢. 0 = off. "
+            "Removes near-impossible longshots.")
+        rb_max_ratio = ui.number("Max spread÷outright",
+                                 value=config.RISK_BUDGET_DEFAULT_MAX_SPREAD_RATIO_HUNDREDTHS / 100,
+                                 min=0, max=10, step=0.05, format="%.2f").classes("w-36").tooltip(
+            "Hide risk-budget rows whose deeper display spread÷outright exceeds this. 0 = off. "
+            "Caps relative risk (scale-invariant — does not remove longshots on its own).")
         nm_switch = ui.switch("Near-miss books", value=False)
         nm_max_over = ui.number("Max overpay ¢", value=config.NEAR_MISS_DEFAULT_OVER_C,
                                 min=1, max=config.NEAR_MISS_MAX_OVER_C, format="%.0f").classes("w-28")
@@ -655,13 +675,18 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         # "Beyond the strict rule": filter the (already membership/threshold-filtered) view by the live
         # band controls; no rescan. Each section is hidden until its switch is on; its inputs disable too.
         if rb_switch.value:
-            rbv = vm.risk_budget_view(view, max_loss_c=int(rb_max_loss.value or 0),
-                                      min_ratio_tenths=round(float(rb_min_ratio.value or 0) * 10))
+            rbv = vm.risk_budget_view(
+                view, max_loss_c=int(rb_max_loss.value or 0),
+                min_ratio_tenths=round(float(rb_min_ratio.value or 0) * 10),
+                min_outright_c=int(rb_min_outright.value or 0),
+                max_spread_ratio_hundredths=round(float(rb_max_ratio.value or 0) * 100))
             rb_table.rows = [vm.risk_budget_row(o, new_ids, chg) for o in rbv]
         rb_label.set_visibility(rb_switch.value)
         rb_table.set_visibility(rb_switch.value)
         rb_max_loss.set_enabled(rb_switch.value)
         rb_min_ratio.set_enabled(rb_switch.value)
+        rb_min_outright.set_enabled(rb_switch.value)
+        rb_max_ratio.set_enabled(rb_switch.value)
         if nm_switch.value:
             nmv = vm.near_miss_view(view, max_over_c=int(nm_max_over.value or 0))
             nm_table.rows = [vm.near_miss_row(o, new_ids, chg) for o in nmv]
@@ -773,6 +798,8 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         (show_blocked_sw, "Show the Blocked section"), (clear_btn, "Clear all filters"),
         (rb_switch, "Show risk-budget candidates"), (rb_max_loss, "Risk-budget max loss in cents"),
         (rb_min_ratio, "Risk-budget minimum upside-to-risk ratio"),
+        (rb_min_outright, "Risk-budget minimum child display outright in cents"),
+        (rb_max_ratio, "Risk-budget maximum child display spread-to-outright ratio"),
         (nm_switch, "Show near-miss books"), (nm_max_over, "Near-miss max overpay in cents"),
         (actionable, "Actionable opportunities"), (review, "Review-signal opportunities"),
         (blocked, "Blocked opportunities"), (rb_table, "Risk-budget candidates"),
@@ -788,7 +815,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
     # Filter / display controls re-render PURELY in-memory from the cached snapshot (no store, no fetch).
     for ctrl in (tz_select, rank_sel, show_ids, sport_sel, tour_sel, participant_sel, min_size_in, active_sw,
                  show_review_sw, show_blocked_sw, rb_switch, rb_max_loss, rb_min_ratio,
-                 nm_switch, nm_max_over):
+                 rb_min_outright, rb_max_ratio, nm_switch, nm_max_over):
         ctrl.on_value_change(lambda _=None: rerender())
     diagnostics_expansion.on_value_change(lambda _=None: rerender())   # render diagnostics when opened
     # Alert-persistence + backlog-window parameterize STORE reads, so they go through reload_data.
