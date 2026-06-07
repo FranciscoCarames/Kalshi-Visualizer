@@ -48,12 +48,24 @@ _A11Y_CSS = (
     "body.a11y-large .text-xs { font-size: 0.9rem; }"
 )
 
+# Green flash on new rows (PR B) — a one-shot fade applied to the indicator cell of a row that is new or
+# newly-actionable THIS snapshot (driven by `_flash`, set only on the snapshot-change rerender and cleared
+# right after, so filter re-renders never replay it). `animation: … 1` runs once; honoured-down for users
+# who prefer reduced motion. Green works on both themes (semi-transparent over the cell).
+_FLASH_CSS = (
+    "@keyframes oppFlash { from { background-color: rgba(34, 197, 94, 0.55); } "
+    "to { background-color: transparent; } }\n"
+    ".opp-flash { animation: oppFlash 1.8s ease-out 1; }\n"
+    "@media (prefers-reduced-motion: reduce) { .opp-flash { animation: none; } }"
+)
+
 # Change-signal (#3) — a Quasar body-cell slot on the indicator column rendering a COLOURED, shaped marker
 # of how each opportunity moved since the last scan: green ▲ (edge up), red ▼ (edge down), amber ↩
 # (returned), a blue "new" badge — colour AND icon/shape (never colour alone). The new-actionable 🆕 takes
 # priority. Persistent per snapshot (no fade animation), so a plain filter re-render never replays it.
+# The cell also carries the PR B one-shot `opp-flash` class when `props.row._flash` is set.
 _CHANGE_CELL_SLOT = (
-    '<q-td :props="props" class="text-center">'
+    '<q-td :props="props" class="text-center" :class="props.row._flash ? \'opp-flash\' : \'\'">'
     '<span v-if="props.row.new">{{ props.row.new }}</span>'
     '<q-icon v-else-if="props.row._change==\'up\'" name="arrow_upward" color="positive" size="sm">'
     '<q-tooltip>edge up since the last scan</q-tooltip></q-icon>'
@@ -219,11 +231,15 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                              # change-signal (#3): per-opp up/down/new/returned vs the PREVIOUS snapshot,
                              # recomputed once per new snapshot; `ever_seen` distinguishes new from returned.
                              "changes": {}, "ever_seen": set(),
+                             # PR B: ids to flash green ONCE on the snapshot-change rerender; reset to empty
+                             # immediately after, so ordinary filter rerenders never replay the animation.
+                             "flash_now": set(),
                              "liquidity_msg": None,    # "most liquid now" (#12a), recomputed per snapshot
                              "volatility_msg": None}   # "most volatile now" (#12b), recomputed per snapshot
 
     ui.add_css(_SELECTED_ROW_CSS)        # selected-row highlight (#14) — see module note
     ui.add_css(_A11Y_CSS)                 # accessibility (#10): focus-visible ring + opt-in larger text
+    ui.add_css(_FLASH_CSS)                # green flash on new rows (PR B), one-shot per snapshot
     # Dark theme is the default (PR A2). The dark_mode element MUST live at page top-level, not inside the
     # settings dialog: a QDialog mounts its children lazily, so a value=True nested there wouldn't apply
     # until the dialog is first opened. The toggle switch (in the dialog) drives this element by reference.
@@ -723,7 +739,10 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         # -> no phantom deltas). First paint shows none. Computed once here; rerender just re-displays it.
         prev_opps, was_first = state["opps"], state["first"]
         new_id = cov.get("snapshot_id")
-        if was_first or new_id == state.get("rendered_snapshot_id"):
+        # The snapshot actually ADVANCED (not the first paint, not a same-snapshot poll/control reload). Drives
+        # both the change-signal and the PR B flash, so neither fires on a phantom re-read of the same snapshot.
+        advanced = not was_first and new_id != state.get("rendered_snapshot_id")
+        if not advanced:
             state["changes"] = {}
         else:
             state["changes"] = vm.classify_changes(prev_opps, {o.get("opportunity_id"): o for o in opps},
@@ -754,7 +773,13 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         n_ch = len(al["blocked_changes"])
         changed.set_text(f"🔁 {n_ch} changed while blocked" if n_ch else "")
         state["rendered_snapshot_id"] = cov.get("snapshot_id")
+        # PR B green flash: highlight rows that are NEW this snapshot (change=='new') or newly-actionable.
+        # Only when the snapshot advanced (never first paint or a same-snapshot poll). One-shot: set, render,
+        # then clear so subsequent filter rerenders within this snapshot don't replay the animation.
+        state["flash_now"] = ({oid for oid, c in state["changes"].items() if c == "new"} | new_ids
+                              if advanced else set())
         rerender(force_diagnostics=True)
+        state["flash_now"] = set()
 
     async def reload_data() -> None:
         bundle = await run.io_bound(_read_bundle, *_read_args())   # store I/O off the event loop
@@ -769,6 +794,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         opps = state.get("opps_list") or []
         new_ids = state.get("new_ids") or set()
         chg = state.get("changes") or {}      # per-snapshot change-signal; re-displayed, never re-derived here
+        flash = state.get("flash_now") or set()   # PR B: non-empty only on the snapshot-change rerender
         cov = state.get("cov") or {}
         filters = _current_filters()
         view = vm.rank_opps(vm.filter_opps(opps, **filters), rank_sel.value)   # display-time re-sort, no rescan
@@ -779,9 +805,9 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         empty.set_text(msg or "")
         empty.set_visibility(msg is not None)
 
-        actionable.rows = [vm.opp_row(o, new_ids, chg) for o in view if o.get("bucket") == "actionable"]
-        review.rows = [vm.opp_row(o, new_ids, chg) for o in view if o.get("bucket") == "review_signal"]
-        blocked.rows = [vm.opp_row(o, new_ids, chg) for o in view if o.get("bucket") == "blocked"]
+        actionable.rows = [vm.opp_row(o, new_ids, chg, flash) for o in view if o.get("bucket") == "actionable"]
+        review.rows = [vm.opp_row(o, new_ids, chg, flash) for o in view if o.get("bucket") == "review_signal"]
+        blocked.rows = [vm.opp_row(o, new_ids, chg, flash) for o in view if o.get("bucket") == "blocked"]
         for lbl, tbl, sw in ((review_label, review, show_review_sw), (blocked_label, blocked, show_blocked_sw)):
             lbl.set_visibility(sw.value)
             tbl.set_visibility(sw.value)
@@ -794,7 +820,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                 min_ratio_tenths=round(float(rb_min_ratio.value or 0) * 10),
                 min_outright_c=int(rb_min_outright.value or 0),
                 max_spread_ratio_hundredths=round(float(rb_max_ratio.value or 0) * 100))
-            rb_table.rows = [vm.risk_budget_row(o, new_ids, chg) for o in rbv]
+            rb_table.rows = [vm.risk_budget_row(o, new_ids, chg, flash) for o in rbv]
         rb_label.set_visibility(rb_switch.value)
         rb_table.set_visibility(rb_switch.value)
         rb_max_loss.set_enabled(rb_switch.value)
@@ -803,7 +829,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         rb_max_ratio.set_enabled(rb_switch.value)
         if nm_switch.value:
             nmv = vm.near_miss_view(view, max_over_c=int(nm_max_over.value or 0))
-            nm_table.rows = [vm.near_miss_row(o, new_ids, chg) for o in nmv]
+            nm_table.rows = [vm.near_miss_row(o, new_ids, chg, flash) for o in nmv]
         nm_label.set_visibility(nm_switch.value)
         nm_table.set_visibility(nm_switch.value)
         nm_max_over.set_enabled(nm_switch.value)
