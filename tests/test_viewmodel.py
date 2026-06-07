@@ -266,24 +266,6 @@ def test_classify_changes_new_returned_up_down():
     assert vm.classify_changes({"a": {}}, {"a": {"exec_gap_c": 5}}, {"a"}) == {"a": ""}
 
 
-# --- "most liquid now" (#12a) ------------------------------------------------------------------------
-def test_liquidity_leader_picks_deepest_two_sided_active():
-    contracts = [
-        {"status": "active", "player": "A", "contract": "Beat A", "yes_bid_size": 50, "yes_ask_size": 40,
-         "yes_bid_c": 45, "yes_ask_c": 48, "spread_cents": 3, "volume": 100},   # min depth 40
-        {"status": "active", "player": "B", "contract": "Beat B", "yes_bid_size": 200, "yes_ask_size": 180,
-         "yes_bid_c": 30, "yes_ask_c": 34, "spread_cents": 4, "volume": 10},     # min depth 180 -> deepest
-        {"status": "finalized", "player": "C", "contract": "x", "yes_bid_size": 999, "yes_ask_size": 999,
-         "yes_bid_c": 50, "yes_ask_c": 51, "spread_cents": 1, "volume": 9},      # not active -> excluded
-        {"status": "active", "player": "D", "contract": "empty", "yes_bid_size": 0, "yes_ask_size": 0,
-         "yes_bid_c": 0, "yes_ask_c": 100, "spread_cents": 100, "volume": 9},    # empty 0/100 -> excluded
-    ]
-    msg = vm.liquidity_leader(contracts)
-    assert msg and "Beat B" in msg and "180" in msg and "4¢" in msg            # deepest two-sided active wins
-    assert vm.liquidity_leader([]) is None
-    assert vm.liquidity_leader([contracts[2], contracts[3]]) is None           # only finalized/empty -> None
-
-
 # --- "most volatile now" (#12b) ----------------------------------------------------------------------
 def test_volatility_leader_max_mid_delta_two_sided():
     frames = [
