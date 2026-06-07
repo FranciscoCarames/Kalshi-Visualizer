@@ -85,6 +85,12 @@ _ACTION_CELL_SLOT = (
 )
 
 
+def _notify(message: str, *, type: str = "info", position: str = "top-right") -> None:
+    """Single entry point for transient toasts (PR A2). Defaults to the top-right corner so toasts don't
+    cover the controls/rows the user is reading. Call within a page context (like ui.notify itself)."""
+    ui.notify(message, type=type, position=position)
+
+
 def _aggrid_options(rows: list[dict[str, Any]], fields: list[tuple[str, str]]) -> dict[str, Any]:
     """Client-side AG-Grid options (pagination + per-column filter/sort) over already-in-memory rows.
     `fields` is a list of (field, header) pairs. The grid does the paging/filtering/sorting in the browser,
@@ -218,6 +224,10 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
 
     ui.add_css(_SELECTED_ROW_CSS)        # selected-row highlight (#14) — see module note
     ui.add_css(_A11Y_CSS)                 # accessibility (#10): focus-visible ring + opt-in larger text
+    # Dark theme is the default (PR A2). The dark_mode element MUST live at page top-level, not inside the
+    # settings dialog: a QDialog mounts its children lazily, so a value=True nested there wouldn't apply
+    # until the dialog is first opened. The toggle switch (in the dialog) drives this element by reference.
+    _darkmode = ui.dark_mode(value=True)
     ui.label("🎯 Kalshi opportunity engine — cross-sport").classes("text-2xl font-bold")
     ui.label("Opportunities across all sports, ranked best→worst. Core series, gross of fees — "
              "NOT all of Kalshi.").classes("text-sm text-gray-500")
@@ -246,8 +256,8 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         ui.label("Settings").classes("text-lg font-bold")
         ui.label("Display").classes("text-sm font-bold mt-2")
         with ui.row().classes("items-end gap-4 flex-wrap"):
-            _darkmode = ui.dark_mode()
-            dark_sw = ui.switch("Dark mode",
+            # `_darkmode` is created at page top-level (above) so dark applies on load; this switch toggles it.
+            dark_sw = ui.switch("Dark mode", value=True,
                                 on_change=lambda e: _darkmode.enable() if e.value else _darkmode.disable()
                                 ).tooltip("Toggle a dark theme.")
             larger_sw = ui.switch("Larger text").tooltip(
@@ -265,7 +275,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             show_blocked_sw = ui.switch("Blocked", value=False).tooltip(   # hidden by default (PR S5)
                 "Show the Blocked section — opportunities that exist but aren't currently tradable.")
         with ui.row().classes("items-end gap-4 flex-wrap"):
-            rb_switch = ui.switch("Speculative bounded-loss structures", value=False)
+            rb_switch = ui.switch("Speculative bounded-loss structures", value=True)  # PR A2: on (collapsed in PR C)
             rb_max_loss = ui.number("Max loss ¢", value=config.RISK_BUDGET_DEFAULT_MAX_LOSS_C,
                                     min=1, max=config.RISK_BUDGET_MAX_LOSS_C, format="%.0f").classes("w-28")
             rb_min_ratio = ui.number("Min upside:risk", value=0, min=0, max=20, step=0.5,
@@ -282,7 +292,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                                      min=0, max=10, step=0.05, format="%.2f").classes("w-36").tooltip(
                 "Hide speculative rows whose deeper display spread÷outright exceeds this. 0 = off. "
                 "Caps relative risk (scale-invariant — does not remove longshots on its own).")
-            nm_switch = ui.switch("Near-miss books", value=False)
+            nm_switch = ui.switch("Near-miss books", value=True)  # PR A2: on (collapsed in PR C)
             nm_max_over = ui.number("Max overpay ¢", value=config.NEAR_MISS_DEFAULT_OVER_C,
                                     min=1, max=config.NEAR_MISS_MAX_OVER_C, format="%.0f").classes("w-28")
         ui.label("Filters & thresholds").classes("text-sm font-bold mt-2")
@@ -736,7 +746,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         new_ids = {r.get("opportunity_id") for r in al["new_actionable"]}
         fresh = new_ids - state["seen_new"]
         if fresh and not state["first"]:
-            ui.notify(f"🆕 {len(fresh)} newly actionable", type="positive")
+            _notify(f"🆕 {len(fresh)} newly actionable", type="positive")
         state["seen_new"] = new_ids
         state["new_ids"] = new_ids
         state["first"] = False
@@ -847,7 +857,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
 
     async def do_scan() -> None:
         scan_btn.disable()        # stale-while-scanning: only the Scan button is disabled; filters keep working
-        n = ui.notification("Scanning (core series)…", spinner=True, timeout=None)
+        n = ui.notification("Scanning (core series)…", spinner=True, timeout=None, position="top-right")
         try:
             st = await run.io_bound(engine.run_scan_now)    # NON-force (PR S3); network I/O off the event loop
             await reload_data()                              # surface the new snapshot immediately for this client
@@ -880,7 +890,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         it to the browser. Reads the STORED snapshot only — no fetch."""
         cov = engine.coverage()
         if cov.get("snapshot_id") is None:
-            ui.notify("Nothing to export yet — run a scan first.", type="warning")
+            _notify("Nothing to export yet — run a scan first.", type="warning")
             return
         filters = _current_filters()
         view = vm.filter_opps(engine.latest_opportunities(), **filters)
@@ -891,7 +901,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             snapshot_id=cov["snapshot_id"], fetched_at=cov.get("fetched_at"), opportunities=view,
             coverage=cov, frames=engine.frames(), backlog=backlog, backlog_window=win_label, filters=filters)
         ui.download.content(blob, f"kalshi-snapshot-{cov['snapshot_id']}.zip", "application/zip")
-        ui.notify(f"Exported snapshot {cov['snapshot_id']} · {len(view)} opportunities", type="positive")
+        _notify(f"Exported snapshot {cov['snapshot_id']} · {len(view)} opportunities", type="positive")
 
     # Accessibility (#10): an explicit aria-label on every control + each data table + the key expansions,
     # so a screen reader announces a meaningful name (emoji/short labels and the unlabelled tables aren't
