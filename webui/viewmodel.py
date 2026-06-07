@@ -47,8 +47,64 @@ def classify_changes(prev: dict[str, dict], cur: dict[str, dict], ever_seen: set
     return out
 
 
+# --- per-row severity badges (PR 2) ---------------------------------------------------
+# Row-SPECIFIC caveats only (universal gross/top-of-book limits live once in the limitation strip, NOT
+# per row — see glossary.KNOWN_LIMIT_BADGES). The mapper keys on STRUCTURAL fields first (rule_flag,
+# tradable_now, presence of settlement_caveat / blocked_reason, quote_quality) — NO free-text matching,
+# which is brittle (blocked_reason can be concatenated prose). Severity drives ordering + the row chip
+# colour; the label always carries the meaning (colour is never the only signal).
+_SEVERITY_RANK = {"blocker": 0, "review_required": 1, "advisory": 2, "info": 3}
+_SEVERITY_SHORT = {"blocker": "Blocker", "review_required": "Review", "advisory": "Caveat", "info": "Info"}
+
+
+def severity_badges(o: dict[str, Any]) -> list[dict[str, str]]:
+    """Structured, row-specific caveat badges for one opportunity, highest severity first. Each badge is
+    ``{label, severity, tooltip, source}`` with severity in info|advisory|review_required|blocker."""
+    out: list[dict[str, str]] = []
+    seen: set[str] = set()
+
+    def add(label: str, severity: str, tooltip: str, source: str) -> None:
+        if label not in seen:
+            seen.add(label)
+            out.append({"label": label, "severity": severity, "tooltip": tooltip, "source": source})
+
+    if str(o.get("rule_flag") or "") in ("RULE_CHECK_REQUIRED", "RULE_MISMATCH"):
+        add("Rule review required", "review_required",
+            "Two markets that should settle the same, but their settlement rules aren't confirmed to "
+            "match — review them before trading.", "rule_flag")
+    if str(o.get("tradable_now") or "") == "Review rules":
+        add("Review rules", "review_required",
+            "Settlement basis differs across the legs — review the rules before treating this as an edge.",
+            "tradable_now")
+    sc = o.get("settlement_caveat")
+    if isinstance(sc, str) and sc:
+        add("Settlement caveat", "advisory", sc, "settlement_caveat")
+    br = o.get("blocked_reason")
+    if isinstance(br, str) and br:
+        add("Blocked", "blocker", br, "blocked_reason")
+    qq = o.get("quote_quality")
+    if qq in ("Wide", "Very wide"):
+        add("Wide quote", "advisory", f"{qq} bid/ask spread — the displayed edge may not be executable.",
+            "quote_quality")
+    elif qq in ("No quote", "Crossed", "One-sided"):
+        add("No firm quote", "blocker", f"{qq} book — no firm two-sided price to trade against.",
+            "quote_quality")
+    out.sort(key=lambda b: _SEVERITY_RANK.get(b["severity"], 9))
+    return out
+
+
+def _stamp_severity(row: dict[str, Any], o: dict[str, Any]) -> dict[str, Any]:
+    """Add the TOP row-specific severity to a display row: ``_sev`` (severity key, for the cell colour) and
+    ``_sev_label`` (short chip text). Empty strings when the row carries no row-specific caveat."""
+    badges = severity_badges(o)
+    top = badges[0] if badges else None
+    row["_sev"] = top["severity"] if top else ""
+    row["_sev_label"] = _SEVERITY_SHORT.get(top["severity"], "") if top else ""
+    return row
+
+
 def opp_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str] | None = None) -> dict[str, Any]:
-    return {
+    return _stamp_severity({
         "opportunity_id": o.get("opportunity_id"),
         "new": "🆕" if o.get("opportunity_id") in new_ids else "",
         "_change": (changes or {}).get(o.get("opportunity_id"), ""),
@@ -61,7 +117,7 @@ def opp_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str] | None
         # actionable game book still surfaces its postponement risk.
         "caveat": "; ".join(p for p in (o.get("settlement_caveat"), o.get("blocked_reason"))
                             if isinstance(p, str) and p),
-    }
+    }, o)
 
 
 # --- "Beyond the strict rule" (PR 29) — risk-budget candidates + near-miss books -----
@@ -138,7 +194,7 @@ def risk_budget_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str
     upside:risk); worst-case ROC is a labelled secondary, never the headline (it's honestly negative)."""
     wc, bc = o.get("worst_case_profit_c"), o.get("best_case_profit_c")
     _r2 = lambda x: None if _num_or_none(x) is None else round(x, 2)   # noqa: E731 — display rounding
-    return {
+    return _stamp_severity({
         "opportunity_id": o.get("opportunity_id"),
         "new": "🆕" if o.get("opportunity_id") in new_ids else "",
         "_change": (changes or {}).get(o.get("opportunity_id"), ""),
@@ -160,7 +216,7 @@ def risk_budget_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str
         "spread_over_child": _r2(o.get("spread_over_child")),
         "caveat": "; ".join(p for p in (o.get("settlement_caveat"), o.get("blocked_reason"))
                             if isinstance(p, str) and p),
-    }
+    }, o)
 
 
 def near_miss_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str] | None = None) -> dict[str, Any]:
