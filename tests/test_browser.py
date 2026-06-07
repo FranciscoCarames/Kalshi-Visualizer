@@ -115,6 +115,14 @@ async def test_ux_defaults_render(user: User, seeded_db) -> None:
     _seed(seeded_db, [_actionable_opp()],
           frames=[{"sport": "tennis", "frame_type": "contracts", "schema_version": 1, "rows": _contracts()}])
     await user.open("/")
-    await user.should_see("Dark mode")                       # PR S5 theme toggle
+    await user.should_see("Dark mode")                       # PR S5 theme toggle (now in the settings dialog)
     await user.should_see("click any row to open its full breakdown")  # selection-hint copy
     await user.should_see("Blocked")                         # toggle still present (default off)
+
+
+# --- market telemetry is its own "not an opportunity signal" section (PR 6) -----------
+@pytest.mark.nicegui_main_file(MAIN)
+async def test_market_telemetry_is_a_labelled_non_signal_section(user: User, seeded_db) -> None:
+    _seed(seeded_db, [_actionable_opp()])
+    await user.open("/")
+    await user.should_see("Market telemetry")                # collapsed section, out of the opportunity flow
