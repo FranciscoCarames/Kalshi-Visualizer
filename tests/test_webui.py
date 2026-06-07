@@ -221,6 +221,61 @@ def test_rows_stamp_top_severity_for_the_cell_chip():
     assert clean["_sev"] == "" and clean["_sev_label"] == ""
 
 
+def test_action_plan_summary_two_leg_uses_own_floor():
+    o = op("a", bucket="actionable")
+    o["payout_floor_c"] = 100
+    aps = vm.action_plan_summary(o)
+    assert "Buy YES" in aps["summary"] and " + " in aps["summary"]      # both legs concatenated
+    assert aps["cost"] == "93¢" and aps["floor"] == "100¢" and aps["max_units"] == "100"
+    assert aps["is_complete"] and aps["missing_fields"] == []
+    assert "cost 93¢" in aps["line"] and "floor 100¢" in aps["line"]
+
+
+def test_action_plan_summary_nleg_not_faked_as_two_leg():
+    o = op("b", bucket="review_signal")
+    o["n_legs"], o["payout_floor_c"] = 4, 100
+    o["legs"] = [{"text": f"Buy YES — S{i}"} for i in range(4)]
+    aps = vm.action_plan_summary(o)
+    assert aps["summary"] == "4-leg plan — open details for legs" and " + " not in aps["summary"]
+
+
+def test_action_plan_summary_no_hardcoded_100_floor_and_conservative_on_missing():
+    o = op("c", bucket="blocked")
+    o["payout_floor_c"] = 200                                  # e.g. a field overround floors above 100
+    assert vm.action_plan_summary(o)["floor"] == "200¢"        # echoes the opp's OWN floor, not a constant
+    o2 = op("d")
+    o2["cost_c"] = o2["payout_floor_c"] = None
+    aps2 = vm.action_plan_summary(o2)
+    assert {"cost", "floor"} <= set(aps2["missing_fields"])
+    assert aps2["cost"] == "—" and aps2["floor"] == "—" and not aps2["is_complete"]
+
+
+def test_leg_rows_enriches_from_lookup_and_blanks_unresolved():
+    o = op("x")
+    o["legs"] = [
+        {"text": "Buy YES — A @ 45¢", "side": "Buy YES", "price_c": 45, "size": 30,
+         "ticker": "T-a", "url": "u1", "contract": "Reach Final"},
+        {"text": "Buy NO — B @ 52¢", "price_c": 52, "ticker": "T-gone", "url": "u2"},
+    ]
+    rows = vm.leg_rows(o, {"T-a": {"status": "active", "quote_quality": "Tight"}})
+    assert len(rows) == 2
+    assert (rows[0]["status"], rows[0]["quote_quality"]) == ("active", "Tight")
+    assert rows[0]["evidence_source"] == "contract_lookup" and rows[0]["price"] == "45¢" and rows[0]["size"] == "30"
+    # unresolved ticker -> blanks + warning, never fabricated; side parsed from text when absent.
+    assert rows[1]["status"] == "" and rows[1]["quote_quality"] == "" and rows[1]["side"] == "Buy NO"
+    assert rows[1]["warning"] == "unavailable in snapshot" and rows[1]["evidence_source"] == "opportunity"
+
+
+def test_leg_rows_empty_when_no_legs():
+    assert vm.leg_rows(op("y")) == []                          # op() carries no legs -> nothing to show
+
+
+def test_opp_row_carries_action_plan_line():
+    o = op("z", bucket="actionable")
+    o["payout_floor_c"] = 100
+    assert "Buy YES" in vm.opp_row(o, set())["action"]
+
+
 def test_ts_disp_and_backlog_row():
     assert vm.ts_disp(None, "UTC") == "—"
     assert vm.ts_disp(1000.0, "UTC") != "—"             # formats an epoch

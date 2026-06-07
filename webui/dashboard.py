@@ -77,6 +77,12 @@ _CAVEAT_CELL_SLOT = (
     '{{ props.row.caveat }}</q-td>'
 )
 
+# Action-plan cell (PR 3): the self-contained buy plan wraps so both legs + cost/floor/units stay readable
+# in the row without opening detail (N-leg findings say "N-leg plan — open details", never faked as 2-leg).
+_ACTION_CELL_SLOT = (
+    '<q-td :props="props" style="white-space: normal; max-width: 26rem;">{{ props.row.action }}</q-td>'
+)
+
 
 def _aggrid_options(rows: list[dict[str, Any]], fields: list[tuple[str, str]]) -> dict[str, Any]:
     """Client-side AG-Grid options (pagination + per-column filter/sort) over already-in-memory rows.
@@ -95,6 +101,7 @@ _OPP_COLUMNS = [
     {"name": "sport", "label": "Sport", "field": "sport", "sortable": True},
     {"name": "name", "label": "Participant / match", "field": "name", "sortable": True},
     {"name": "detail", "label": "Detail", "field": "detail"},
+    {"name": "action", "label": "Action plan", "field": "action"},   # PR 3: self-contained buy plan
     {"name": "edge", "label": "Gross edge ¢", "field": "edge", "sortable": True},
     {"name": "roi", "label": "ROI %", "field": "roi", "sortable": True},
     {"name": "units", "label": "Max units", "field": "units", "sortable": True},
@@ -175,6 +182,17 @@ _DETAIL_CONTRACT_COLUMNS = [
     {"name": "quote", "label": "Quote", "field": "quote"},
     {"name": "volume", "label": "Volume", "field": "volume", "sortable": True},
     {"name": "status", "label": "Status", "field": "status"},
+]
+# Structured per-leg evidence (PR 3) — shown in the explanation dialog. status / quote come from the stored
+# contracts via contract_lookup; blank cells mean "unavailable in snapshot" (never inferred).
+_LEG_COLUMNS = [
+    {"name": "leg", "label": "Leg", "field": "leg"},
+    {"name": "side", "label": "Side", "field": "side"},
+    {"name": "market", "label": "Market", "field": "market"},
+    {"name": "price", "label": "Price", "field": "price"},
+    {"name": "size", "label": "Size", "field": "size"},
+    {"name": "status", "label": "Status", "field": "status"},
+    {"name": "quote_quality", "label": "Quote", "field": "quote_quality"},
 ]
 
 
@@ -302,6 +320,19 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             out.append((label, str(rules) if rules else None))
         return out
 
+    def _contract_lookup_for(opp: dict[str, Any]) -> dict[str, dict[str, Any]]:
+        """Build a ticker -> stored-contract map for an opportunity's legs (no fetch), so leg_rows can
+        enrich per-leg status / quote quality. Unresolved tickers are simply absent (leg_rows blanks them)."""
+        sport = opp.get("sport") or None
+        lk: dict[str, dict[str, Any]] = {}
+        for leg in (opp.get("legs") or []):
+            tkr = leg.get("ticker") or ""
+            if tkr and tkr not in lk:
+                row = engine.contract_by_ticker(tkr, sport=sport)
+                if row:
+                    lk[tkr] = row
+        return lk
+
     def open_panel(opp: dict[str, Any]) -> None:
         dialog.clear()
         lines = vm.explanation_lines(opp, show_ids=show_ids.value)
@@ -322,6 +353,12 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             ui.separator()
             for line in lines[2:]:
                 ui.label(line)
+            # Structured buy plan (PR 3): the exact legs with per-leg status / quote from the stored
+            # contracts (blank = unavailable in snapshot, never inferred).
+            legrows = vm.leg_rows(opp, _contract_lookup_for(opp))
+            if legrows:
+                ui.label("Buy plan (legs)").classes("text-sm font-bold mt-2")
+                ui.table(columns=_LEG_COLUMNS, rows=legrows, row_key="leg").classes("w-full")
             if rules_sw.value:        # global "Resolution criteria" toggle — per-leg settlement rules
                 ui.separator()
                 ui.label("📜 Resolution criteria").classes("text-sm font-bold")
@@ -506,6 +543,8 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         _t.add_slot("body-cell-new", _CHANGE_CELL_SLOT)
     for _t in (actionable, review, blocked, rb_table):   # wrap row-specific caveats (PR 2 — visible, not tooltip)
         _t.add_slot("body-cell-caveat", _CAVEAT_CELL_SLOT)
+    for _t in (actionable, review, blocked):             # wrap the self-contained action plan (PR 3)
+        _t.add_slot("body-cell-action", _ACTION_CELL_SLOT)
     # Compact empty states (PR 2): a shown-but-empty section renders a small message row, not a bare grid.
     for _t, _msg in ((actionable, "No actionable opportunities in the current filters."),
                      (review, "No review-signal opportunities in the current filters."),
