@@ -157,9 +157,11 @@ def test_dashboard_imports_and_registers_page():
 def test_opp_row_new_marker_and_fields():
     o = op("AAA", bucket="actionable")
     r = vm.opp_row(o, {"AAA"})
-    assert r["new"] == "🆕" and r["opportunity_id"] == "AAA"
+    assert r["new"] is True and r["opportunity_id"] == "AAA"   # bare bool (no emoji) -> a NEW badge in the cell
     assert r["sport"] == "Tennis" and r["edge"] == 7 and r["units"] == 100 and r["profit"] == 7.0
-    assert vm.opp_row(o, set())["new"] == ""            # not new -> blank marker
+    # Action is legs-only now (compact): the cost/floor suffix is dropped (it lives in the detail panel).
+    assert "cost" not in r["action"].lower() and "floor" not in r["action"].lower()
+    assert vm.opp_row(o, set())["new"] is False         # not new -> bare False, never an emoji marker
 
 
 def test_opp_row_handles_none_numbers():
@@ -175,7 +177,7 @@ def test_opp_row_change_marker():
     assert vm.opp_row(o, set(), {"x": "up"})["_change"] == "up"     # stamped from the changes map
     assert vm.opp_row(o, set(), {"x": "down"})["_change"] == "down"
     r = vm.opp_row(o, {"x"}, {"x": "new"})                          # new-actionable marker is independent
-    assert r["new"] == "🆕" and r["_change"] == "new"
+    assert r["new"] is True and r["_change"] == "new"
 
 
 def test_rows_flash_only_for_flash_ids():
@@ -208,38 +210,23 @@ def test_speculative_rows_drop_tradable_and_positive_framing():
             assert term not in blob
 
 
-def test_watchlist_row_merges_buckets_with_type_and_nonimperative_structure():
-    # PR C: one merged row per bucket. Bounded-loss bet keeps its convex economics; near-miss keeps overpay;
-    # each blanks the other type's numeric fields. Structure is DESCRIPTIVE (no imperative "Buy …").
-    rb = op("RB", bucket="risk_budget")
+def test_split_watchlist_row_schemas_are_distinct():
+    # The watchlist is split into two sections with DISTINCT row shapes: bounded-loss exposes convex
+    # economics (max_loss / ratio / spread ratios) and NO overpay; near-miss exposes overpay + a flat-loss
+    # note and NO max_loss / ratio. Neither is auto-placeable, so neither carries a "tradable" field.
+    rb = op("RB", bucket="risk_budget", tradable_now="Yes")
     rb["worst_case_profit_c"], rb["best_case_profit_c"] = -3, 97
-    rrow = vm.watchlist_row(rb, set())
-    assert rrow["type"] == "Bounded-loss bet"
-    assert rrow["max_loss"] == 3 and rrow["overpay"] is None          # bounded-loss filled, near-miss blank
-    assert "Buy" not in rrow["structure"] and "YES" in rrow["structure"]   # non-imperative, still informative
-    nrow = vm.watchlist_row(op("NM", bucket="near_miss", exec_gap_c=-2), set())
-    assert nrow["type"] == "Overpriced book"
-    assert nrow["overpay"] == 2 and nrow["max_loss"] is None          # near-miss filled, bounded-loss blank
-    assert "watchlist" not in nrow                                    # the Type column replaces the old marker
-    # Both rows must still pass the watchlist value blacklist (no edge / positive / tradable framing).
+    rrow = vm.risk_budget_row(rb, set())
+    assert rrow["max_loss"] == 3 and "ratio" in rrow and "spread_over_child" in rrow
+    assert "overpay" not in rrow and "tradable" not in rrow
+    nrow = vm.near_miss_row(op("NM", bucket="near_miss", tradable_now="Yes", exec_gap_c=-2), set())
+    assert nrow["overpay"] == 2 and "note" in nrow
+    assert "max_loss" not in nrow and "ratio" not in nrow and "tradable" not in nrow
+    # Neither row leaks positive / edge / imperative framing (the watchlist value blacklist).
     for row in (rrow, nrow):
         blob = " ".join(str(v) for v in row.values()).lower()
-        for term in ("actionable", "arbitrage", "tradable", "locked", "riskless", "guaranteed"):
+        for term in ("actionable", "arbitrage", "tradable", "locked", "riskless", "guaranteed", "buy "):
             assert term not in blob
-
-
-def test_watchlist_view_orders_bounded_loss_first_and_respects_include_flags():
-    rb = op("RB", bucket="risk_budget")
-    rb["worst_case_profit_c"], rb["best_case_profit_c"] = -3, 97
-    nm = op("NM", bucket="near_miss", exec_gap_c=-2)
-    # Bounded-loss bets come first regardless of input order (each subset filters by its own bucket).
-    both = vm.watchlist_view([nm, rb], include_rb=True, include_nm=True, max_loss_c=5, max_over_c=5)
-    assert [o["opportunity_id"] for o in both] == ["RB", "NM"]
-    only_rb = vm.watchlist_view([rb, nm], include_rb=True, include_nm=False, max_loss_c=5, max_over_c=5)
-    only_nm = vm.watchlist_view([rb, nm], include_rb=False, include_nm=True, max_loss_c=5, max_over_c=5)
-    assert [o["opportunity_id"] for o in only_rb] == ["RB"]
-    assert [o["opportunity_id"] for o in only_nm] == ["NM"]
-    assert vm.watchlist_view([rb, nm], include_rb=False, include_nm=False, max_loss_c=5, max_over_c=5) == []
 
 
 def test_kalshi_fee_c_general_taker_schedule():
@@ -281,24 +268,26 @@ def _liq_contract(series, player, bid_sz, ask_sz, spread, *, status="active", bi
             "yes_ask_c": ask_c if ask_c is not None else bid_c + spread, "spread_cents": spread, "volume": vol}
 
 
-def test_liquidity_panel_aggregates_by_sport_and_ranks():
+def test_liquidity_panel_aggregates_ranks_tightest_and_most_traded():
     cs = [
-        _liq_contract("KXATPMATCH", "Alcaraz", 100, 80, 2),    # tennis, tradable depth min(100,80)=80
-        _liq_contract("KXATPMATCH", "Sinner", 50, 50, 1),      # tennis, depth 50
-        _liq_contract("KXWCGAME", "Spain", 200, 30, 5),        # soccer, depth 30
+        _liq_contract("KXATPMATCH", "Alcaraz", 100, 80, 2, vol=10),    # tennis, depth min(100,80)=80
+        _liq_contract("KXATPMATCH", "Sinner", 50, 50, 1, vol=500),     # tennis, depth 50, tightest, most vol
+        _liq_contract("KXWCGAME", "Spain", 200, 30, 5, vol=50),        # soccer, depth 30
         _liq_contract("KXATPMATCH", "Done", 90, 90, 1, status="finalized"),     # excluded: not active
         _liq_contract("KXATPMATCH", "Empty", 99, 99, 0, bid_c=0, ask_c=100),    # excluded: empty 0/100 book
     ]
     panel = vm.liquidity_panel(cs, n=5)
-    # Per-sport depth is summed: Tennis 80+50=130 (top), Soccer 30. UNKNOWN/non-qualifying excluded.
+    # Per-sport depth summed: Tennis 80+50=130 (top), Soccer 30. Top contracts by thinner-side depth desc.
     assert panel["top_sports"][0] == ("Tennis", 130)
     assert ("Soccer (World Cup)", 30) in panel["top_sports"]
-    # Top contracts ranked by thinner-side depth desc; entries are (label, depth, spread¢).
     assert [c[1] for c in panel["top_contracts"]] == [80, 50, 30]
     assert panel["top_contracts"][0][0].startswith("Alcaraz") and panel["top_contracts"][0][2] == 2
-    # None / empty safe.
-    assert vm.liquidity_panel(None) == {"top_sports": [], "top_contracts": []}
-    assert vm.liquidity_panel([]) == {"top_sports": [], "top_contracts": []}
+    # Tightest = smallest spread first (Sinner, 1¢); most traded = highest volume first (Sinner, 500).
+    assert panel["tightest"][0][0].startswith("Sinner") and panel["tightest"][0][1] == 1
+    assert panel["most_traded"][0][0].startswith("Sinner") and panel["most_traded"][0][1] == 500
+    # None / empty safe (all four lists present).
+    empty = {"top_sports": [], "top_contracts": [], "tightest": [], "most_traded": []}
+    assert vm.liquidity_panel(None) == empty and vm.liquidity_panel([]) == empty
 
 
 def test_severity_badges_are_structural_and_ordered():

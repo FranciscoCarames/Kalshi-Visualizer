@@ -193,12 +193,13 @@ def opp_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str] | None
     nf = net_of_fees(o)            # PR E: DISPLAY-ONLY net-of-fees estimate (default-hidden columns)
     return _stamp_severity({
         "opportunity_id": o.get("opportunity_id"),
-        "new": "🆕" if o.get("opportunity_id") in new_ids else "",
+        "new": o.get("opportunity_id") in new_ids,   # bool → a coloured "NEW" badge in the cell slot
         "_change": (changes or {}).get(o.get("opportunity_id"), ""),
         "_flash": o.get("opportunity_id") in (flash_ids or set()),   # PR B: one-shot green flash this snapshot
         "sport": o.get("sport_label") or o.get("sport") or "",
         "name": o.get("name") or "", "detail": o.get("detail") or "",
-        "action": action_plan_summary(o)["line"],   # mandatory self-contained buy plan (PR 3)
+        # Compact: just the legs (cost/floor live in the click→detail panel; "Max units" is its own column).
+        "action": action_plan_summary(o)["summary"],
         "edge": o.get("exec_gap_c"), "roi": o.get("roi_pct"), "units": o.get("exec_min_size"),
         "profit": o.get("exec_max_profit_dollars"),
         # Net-of-fees ESTIMATE (PR E) — display only; blank when a leg price/units is missing. Never ranks.
@@ -288,7 +289,7 @@ def risk_budget_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str
     _r2 = lambda x: None if _num_or_none(x) is None else round(x, 2)   # noqa: E731 — display rounding
     return _stamp_severity({
         "opportunity_id": o.get("opportunity_id"),
-        "new": "🆕" if o.get("opportunity_id") in new_ids else "",
+        "new": o.get("opportunity_id") in new_ids,   # bool → a coloured "NEW" badge in the cell slot
         "_change": (changes or {}).get(o.get("opportunity_id"), ""),
         "_flash": o.get("opportunity_id") in (flash_ids or set()),   # PR B: one-shot green flash this snapshot
         "sport": o.get("sport_label") or o.get("sport") or "",
@@ -320,7 +321,7 @@ def near_miss_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str] 
     g = o.get("exec_gap_c")
     return {
         "opportunity_id": o.get("opportunity_id"),
-        "new": "🆕" if o.get("opportunity_id") in new_ids else "",
+        "new": o.get("opportunity_id") in new_ids,   # bool → a coloured "NEW" badge in the cell slot
         "_change": (changes or {}).get(o.get("opportunity_id"), ""),
         "_flash": o.get("opportunity_id") in (flash_ids or set()),   # PR B: one-shot green flash this snapshot
         "sport": o.get("sport_label") or o.get("sport") or "",
@@ -330,60 +331,6 @@ def near_miss_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str] 
         "watchlist": "Watchlist",
         "note": o.get("settlement_caveat") or "",
     }
-
-
-# --- merged Watchlist (PR C) — one table over both speculative buckets --------------------------------
-# The two opt-in buckets (risk_budget = bounded-loss bets; near_miss = overpriced books) share one
-# "Watchlist — not actionable now" table. `watchlist_row` delegates to the per-bucket builders above (so
-# their economics never diverge), then adds a Type chip + a DESCRIPTIVE, NON-IMPERATIVE Structure line, and
-# blanks the other type's numeric columns. Honest framing only: no "tradable" field, no imperative "Buy …",
-# none of the positive/edge vocabulary (see test_speculative_rows_drop_tradable_and_positive_framing).
-_WATCHLIST_BLANKS = ("max_loss", "max_profit", "ratio", "roc", "parent_outright", "child_outright",
-                     "display_spread", "spread_over_parent", "spread_over_child", "overpay")
-
-
-def _watchlist_structure(o: dict[str, Any]) -> str:
-    """A descriptive (never imperative) one-line structure for a bounded-loss bet: the action-plan legs with
-    the "Buy" command stripped, so the watchlist describes the structure without telling anyone to trade."""
-    line = action_plan_summary(o)["line"]
-    return line.replace("Buy YES", "YES").replace("Buy NO", "NO")
-
-
-def watchlist_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str] | None = None,
-                  flash_ids: set[str] | None = None) -> dict[str, Any]:
-    """One merged watchlist row. Branches on `o["bucket"]`, reuses the existing per-bucket builder, then
-    stamps `type` + `structure` (and blanks the other type's numeric fields). Never frames the row as an
-    edge or a placeable trade."""
-    if o.get("bucket") == "risk_budget":
-        row = risk_budget_row(o, new_ids, changes, flash_ids)
-        row["type"] = "Bounded-loss bet"
-        row["structure"] = _watchlist_structure(o)
-        row["note"] = row.pop("caveat", "") or ""        # unify the text column name
-        row["overpay"] = None
-    else:                                                  # near_miss — an overpriced book (flat loss as a bundle)
-        row = near_miss_row(o, new_ids, changes, flash_ids)
-        row["type"] = "Overpriced book"
-        row["structure"] = "Watch only — flat payout below cost (loss as a bundle)"
-        row.pop("watchlist", None)                         # the Type column replaces the standalone marker
-        for k in _WATCHLIST_BLANKS[:-1]:                   # blank bounded-loss-only fields (keep overpay)
-            row[k] = None
-    return row
-
-
-def watchlist_view(opps: Iterable[dict[str, Any]] | None, *, include_rb: bool, include_nm: bool,
-                   max_loss_c: float, min_ratio_tenths: int = 0, min_outright_c: float = 0,
-                   max_spread_ratio_hundredths: int = 0, max_over_c: float = 0) -> list[dict[str, Any]]:
-    """The merged watchlist opps: bounded-loss bets (when `include_rb`) FIRST, then overpriced books (when
-    `include_nm`). Each subset is produced by its existing band-filter view and is already in `rank_opps`
-    order, so we concatenate without re-sorting."""
-    out: list[dict[str, Any]] = []
-    if include_rb:
-        out.extend(risk_budget_view(opps, max_loss_c=max_loss_c, min_ratio_tenths=min_ratio_tenths,
-                                    min_outright_c=min_outright_c,
-                                    max_spread_ratio_hundredths=max_spread_ratio_hundredths))
-    if include_nm:
-        out.extend(near_miss_view(opps, max_over_c=max_over_c))
-    return out
 
 
 def backlog_row(b: dict[str, Any], tz: str) -> dict[str, Any]:
@@ -722,8 +669,9 @@ def liquidity_panel(contracts: Iterable[dict[str, Any]] | None, n: int = 5) -> d
     signal). Only `active`, genuinely two-sided books (bid>0, ask<100, both sizes>0) count, and a market's
     tradable liquidity = `min(bid_size, ask_size)` (the depth on the thinner side), tiebroken by a tighter
     spread then volume. Per-sport depth is the SUM of that across the sport's qualifying markets (UNKNOWN
-    sport excluded). Returns
-    ``{top_sports: [(label, depth)…], top_contracts: [(label, depth, spread¢)…]}`` — both empty/None-safe."""
+    sport excluded). Returns ``{top_sports: [(label, depth)…], top_contracts: [(label, depth, spread¢)…],
+    tightest: [(label, spread¢, depth)…], most_traded: [(label, volume)…]}`` (volume is the documented proxy
+    for transaction activity — Kalshi exposes no transaction count). All lists empty/None-safe."""
     per_sport: dict[str, float] = {}
     rows: list[tuple[float, float, float, str]] = []
     for c in contracts or []:
@@ -742,10 +690,14 @@ def liquidity_panel(contracts: Iterable[dict[str, Any]] | None, n: int = 5) -> d
             per_sport[cfg.label] = per_sport.get(cfg.label, 0.0) + depth
         rows.append((depth, spread, _num_or_none(c.get("volume")) or 0, _contract_label(c)))
     top_sports = sorted(per_sport.items(), key=lambda kv: (-kv[1], kv[0]))[:n]
-    rows.sort(key=lambda r: (-r[0], r[1], -r[2], r[3]))          # depth desc, spread asc, volume desc, label
+    by_depth = sorted(rows, key=lambda r: (-r[0], r[1], -r[2], r[3]))       # depth desc, spread asc, vol desc
+    by_spread = sorted(rows, key=lambda r: (r[1], -r[0], r[3]))             # spread asc (tightest), depth desc
+    by_volume = sorted(rows, key=lambda r: (-r[2], -r[0], r[3]))            # volume desc (most traded)
     return {
         "top_sports": [(label, int(depth)) for label, depth in top_sports],
-        "top_contracts": [(label, int(depth), int(spread)) for depth, spread, _vol, label in rows[:n]],
+        "top_contracts": [(label, int(depth), int(spread)) for depth, spread, _v, label in by_depth[:n]],
+        "tightest": [(label, int(spread), int(depth)) for depth, spread, _v, label in by_spread[:n]],
+        "most_traded": [(label, int(vol)) for _d, _s, vol, label in by_volume[:n]],
     }
 
 
