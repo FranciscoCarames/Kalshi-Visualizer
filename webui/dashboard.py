@@ -96,6 +96,18 @@ _ACTION_CELL_SLOT = (
     '<q-td :props="props" style="white-space: normal; max-width: 26rem;">{{ props.row.action }}</q-td>'
 )
 
+# Watchlist cell slots (PR C): a neutral grey Type chip (never green/actionable), plus wrapping Structure
+# and Note cells so the descriptive legs + note stay readable without dominating the row height.
+_TYPE_CELL_SLOT = (
+    '<q-td :props="props"><q-badge color="grey-7" outline>{{ props.row.type }}</q-badge></q-td>'
+)
+_STRUCTURE_CELL_SLOT = (
+    '<q-td :props="props" style="white-space: normal; max-width: 26rem;">{{ props.row.structure }}</q-td>'
+)
+_NOTE_CELL_SLOT = (
+    '<q-td :props="props" style="white-space: normal; max-width: 22rem;">{{ props.row.note }}</q-td>'
+)
+
 
 def _notify(message: str, *, type: str = "info", position: str = "top-right") -> None:
     """Single entry point for transient toasts (PR A2). Defaults to the top-right corner so toasts don't
@@ -128,37 +140,35 @@ _OPP_COLUMNS = [
     {"name": "tradable", "label": "Tradable", "field": "tradable"},
     {"name": "caveat", "label": "Caveat", "field": "caveat"},
 ]
-# "Beyond the strict rule" (PR 29). Risk-budget leads with the convex economics (max loss / max profit /
-# upside:risk); worst-case ROC is a labelled secondary. Near-miss shows the overpay (= guaranteed loss).
-_RISK_COLUMNS = [
-    {"name": "new", "label": "", "field": "new", "align": "center"},
+# Merged Watchlist (PR C) — ONE table over both opt-in buckets (bounded-loss bets + overpriced books). A
+# Type column distinguishes them; each row blanks the other type's numeric fields. The probability-context
+# columns (worst-case ROC + the display-outright group) are DEFAULT-HIDDEN via `visible-columns` so the
+# table reads compactly — PR D adds the per-table chooser to reveal them. The leading `new` column is
+# `required` so it can never be hidden.
+_WATCHLIST_COLUMNS = [
+    {"name": "new", "label": "", "field": "new", "align": "center", "required": True},
+    {"name": "type", "label": "Type", "field": "type", "sortable": True},
     {"name": "sport", "label": "Sport", "field": "sport", "sortable": True},
     {"name": "name", "label": "Participant / chain", "field": "name", "sortable": True},
     {"name": "detail", "label": "Detail", "field": "detail"},
+    {"name": "structure", "label": "Structure", "field": "structure"},
     {"name": "cost", "label": "Cost ¢", "field": "cost", "sortable": True},
     {"name": "max_loss", "label": "Max loss ¢", "field": "max_loss", "sortable": True},
     {"name": "max_profit", "label": "Max profit ¢", "field": "max_profit", "sortable": True},
     {"name": "ratio", "label": "Upside:risk", "field": "ratio", "sortable": True},
+    {"name": "overpay", "label": "Overpay ¢", "field": "overpay", "sortable": True},
+    {"name": "note", "label": "Note", "field": "note"},
+    # Probability context (DISPLAY OUTRIGHT, not executable) — default-hidden; PR D's chooser reveals them.
     {"name": "roc", "label": "Worst-case ROC %", "field": "roc", "sortable": True},
-    # Probability context (DISPLAY OUTRIGHT, not executable): both outrights, the display spread, and the
-    # spread/outright ratios that drive the "Outright + spread" rank mode + the new filters.
     {"name": "parent_outright", "label": "Parent outright ¢", "field": "parent_outright", "sortable": True},
     {"name": "child_outright", "label": "Child outright ¢", "field": "child_outright", "sortable": True},
     {"name": "display_spread", "label": "Display spread ¢", "field": "display_spread", "sortable": True},
     {"name": "spread_over_parent", "label": "Spread÷parent", "field": "spread_over_parent", "sortable": True},
     {"name": "spread_over_child", "label": "Spread÷child", "field": "spread_over_child", "sortable": True},
-    {"name": "caveat", "label": "Caveat", "field": "caveat"},
 ]
-_NEARMISS_COLUMNS = [
-    {"name": "new", "label": "", "field": "new", "align": "center"},
-    {"name": "sport", "label": "Sport", "field": "sport", "sortable": True},
-    {"name": "name", "label": "Match", "field": "name", "sortable": True},
-    {"name": "detail", "label": "Direction", "field": "detail"},
-    {"name": "cost", "label": "Cost ¢", "field": "cost", "sortable": True},
-    {"name": "overpay", "label": "Overpay ¢", "field": "overpay", "sortable": True},
-    {"name": "watchlist", "label": "", "field": "watchlist"},
-    {"name": "note", "label": "Note", "field": "note"},
-]
+# The compact default-visible set (the prob-context columns above are hidden until PR D's chooser adds them).
+_WATCHLIST_DEFAULT_VISIBLE = ["new", "type", "sport", "name", "detail", "structure", "cost",
+                              "max_loss", "max_profit", "ratio", "overpay", "note"]
 _BACKLOG_COLUMNS = [
     {"name": "sport", "label": "Sport", "field": "sport", "sortable": True},
     {"name": "name", "label": "Participant / match", "field": "name", "sortable": True},
@@ -226,6 +236,9 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
     # `new_ids`/`backlog`/`cov` are snapshot-scoped data the in-memory rerender reads without touching
     # the store. (P2: store reads happen in reload_data; rerender is pure in-memory.)
     state: dict[str, Any] = {"opps": {}, "opps_list": [], "seen_new": set(), "new_ids": set(),
+                             # PR C: ids already seen in the watchlist buckets, so the toast only fires for
+                             # genuinely NEW candidates (seeded on the first snapshot — no toast on load).
+                             "seen_watchlist": set(),
                              "first": True, "options": {}, "cov": {}, "backlog": [],
                              "rendered_snapshot_id": "__unseeded__", "selected": None,
                              # change-signal (#3): per-opp up/down/new/returned vs the PREVIOUS snapshot,
@@ -554,17 +567,6 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                           selection="single", pagination=15).classes("w-full overflow-x-auto opp-sel")
     actionable.on_select(_on_select(actionable))
 
-    # Risk-budget: containment near-misses (bounded loss, convex upside) — default hidden, toggled on.
-    # Placed immediately AFTER Actionable (#2): when its switch is on, the risk-adjusted candidates sit
-    # right below the actionable set (not below Review/Blocked). Visibility stays gated in rerender().
-    rb_label = ui.label("Speculative bounded-loss structures — cost slightly over 100¢ for a BOUNDED loss "
-                        "and a CONVEX upside (broader-but-not-deeper pays +$1). GROSS of fees; NOT an edge, "
-                        "NOT actionable."
-                        ).classes("text-lg font-bold")
-    rb_table = ui.table(columns=_RISK_COLUMNS, rows=[], row_key="opportunity_id",
-                        selection="single", pagination=10).classes("w-full overflow-x-auto opp-sel")
-    rb_table.on_select(_on_select(rb_table))
-
     review_label = ui.label("🔎 Review signal (settlement-caveated — review the rules, never auto-tradable)"
                             ).classes("text-lg font-bold")
     review = ui.table(columns=_OPP_COLUMNS, rows=[], row_key="opportunity_id",
@@ -576,26 +578,35 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                        selection="single", pagination=10).classes("w-full overflow-x-auto opp-sel")
     blocked.on_select(_on_select(blocked))
 
-    # Near-miss books: flat-payout watchlist (a guaranteed gross loss as a bundle) — default hidden.
-    nm_label = ui.label("🔭 Near-miss books (watchlist) — sum just OVER the payout floor: FLAT payout, so a "
-                        "guaranteed gross loss as a bundle. Watch for a mispriced leg; NOT an edge."
-                        ).classes("text-lg font-bold")
-    nm_table = ui.table(columns=_NEARMISS_COLUMNS, rows=[], row_key="opportunity_id",
-                        selection="single", pagination=10).classes("w-full overflow-x-auto opp-sel")
-    nm_table.on_select(_on_select(nm_table))
-    _sel_tables.extend([actionable, review, blocked, rb_table, nm_table])
+    # Merged Watchlist (PR C) — bounded-loss bets + overpriced books in ONE collapsed section, so the ~300
+    # not-actionable rows never bury the actionable set. The title carries a live count (set in rerender);
+    # the whole expansion hides when both watchlist switches are off. Default ON but collapsed (PR A2 + C).
+    watchlist_expansion = ui.expansion("🔭 Watchlist — not actionable now", value=False).classes("w-full")
+    with watchlist_expansion:
+        ui.label("Not edges, not actionable: bounded-loss bets (capped downside, convex upside) and "
+                 "overpriced books (flat loss as a bundle). GROSS of fees.").classes("text-xs text-gray-500")
+        watchlist_table = ui.table(columns=_WATCHLIST_COLUMNS, rows=[], row_key="opportunity_id",
+                                   selection="single", pagination=10).classes("w-full overflow-x-auto opp-sel")
+    watchlist_table.on_select(_on_select(watchlist_table))
+    # Default-hide the probability-context columns so the table reads compactly (PR D adds the live chooser).
+    # An array prop — set on `_props` (NiceGUI's path for non-string props); PR D drives it dynamically.
+    watchlist_table._props["visible-columns"] = list(_WATCHLIST_DEFAULT_VISIBLE)
+
+    _sel_tables.extend([actionable, review, blocked, watchlist_table])
     for _t in _sel_tables:        # colour the change-signal indicator column on every opportunity table (#3)
         _t.add_slot("body-cell-new", _CHANGE_CELL_SLOT)
-    for _t in (actionable, review, blocked, rb_table):   # wrap row-specific caveats (PR 2 — visible, not tooltip)
+    for _t in (actionable, review, blocked):   # wrap row-specific caveats (PR 2 — visible, not tooltip)
         _t.add_slot("body-cell-caveat", _CAVEAT_CELL_SLOT)
     for _t in (actionable, review, blocked):             # wrap the self-contained action plan (PR 3)
         _t.add_slot("body-cell-action", _ACTION_CELL_SLOT)
+    watchlist_table.add_slot("body-cell-type", _TYPE_CELL_SLOT)          # neutral grey Type chip (PR C)
+    watchlist_table.add_slot("body-cell-structure", _STRUCTURE_CELL_SLOT)  # wrapping descriptive legs
+    watchlist_table.add_slot("body-cell-note", _NOTE_CELL_SLOT)          # wrapping note
     # Compact empty states (PR 2): a shown-but-empty section renders a small message row, not a bare grid.
     for _t, _msg in ((actionable, "No actionable opportunities in the current filters."),
                      (review, "No review-signal opportunities in the current filters."),
                      (blocked, "No blocked opportunities in the current filters."),
-                     (rb_table, "No speculative bounded-loss structures in the current filters."),
-                     (nm_table, "No near-miss books in the current filters.")):
+                     (watchlist_table, "No watchlist candidates in the current filters.")):
         _t.props(f'no-data-label="{_msg}"')
 
     with ui.expansion("📉 Recently actionable (left the actionable set)").classes("w-full"):
@@ -768,6 +779,14 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             _notify(f"🆕 {len(fresh)} newly actionable", type="positive")
         state["seen_new"] = new_ids
         state["new_ids"] = new_ids
+        # New-watchlist toast (PR C) — rate-limited: seeded on the first snapshot (no toast for the ~300 rows
+        # on load), then one neutral, summarized toast per snapshot for genuinely new bounded-loss/overpriced
+        # candidates. Skipped when both watchlist switches are off (don't ping about a hidden section).
+        wl_ids = {o.get("opportunity_id") for o in opps if o.get("bucket") in ("risk_budget", "near_miss")}
+        fresh_wl = wl_ids - state["seen_watchlist"]
+        if fresh_wl and not was_first and (rb_switch.value or nm_switch.value):
+            _notify(f"🔭 {len(fresh_wl)} new watchlist candidate(s)", type="info")
+        state["seen_watchlist"] = wl_ids
         state["first"] = False
         banner.set_text(f"🆕 {len(new_ids)} newly actionable" if new_ids else "")
         n_ch = len(al["blocked_changes"])
@@ -812,27 +831,25 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             lbl.set_visibility(sw.value)
             tbl.set_visibility(sw.value)
 
-        # "Beyond the strict rule": filter the (already membership/threshold-filtered) view by the live
-        # band controls; no rescan. Each section is hidden until its switch is on; its inputs disable too.
-        if rb_switch.value:
-            rbv = vm.risk_budget_view(
-                view, max_loss_c=int(rb_max_loss.value or 0),
-                min_ratio_tenths=round(float(rb_min_ratio.value or 0) * 10),
-                min_outright_c=int(rb_min_outright.value or 0),
-                max_spread_ratio_hundredths=round(float(rb_max_ratio.value or 0) * 100))
-            rb_table.rows = [vm.risk_budget_row(o, new_ids, chg, flash) for o in rbv]
-        rb_label.set_visibility(rb_switch.value)
-        rb_table.set_visibility(rb_switch.value)
-        rb_max_loss.set_enabled(rb_switch.value)
-        rb_min_ratio.set_enabled(rb_switch.value)
-        rb_min_outright.set_enabled(rb_switch.value)
-        rb_max_ratio.set_enabled(rb_switch.value)
-        if nm_switch.value:
-            nmv = vm.near_miss_view(view, max_over_c=int(nm_max_over.value or 0))
-            nm_table.rows = [vm.near_miss_row(o, new_ids, chg, flash) for o in nmv]
-        nm_label.set_visibility(nm_switch.value)
-        nm_table.set_visibility(nm_switch.value)
-        nm_max_over.set_enabled(nm_switch.value)
+        # Merged Watchlist (PR C): filter the (already membership/threshold-filtered) view by the live band
+        # controls; no rescan. Bounded-loss bets first, then overpriced books. The whole collapsed section
+        # hides when both switches are off; its title carries the live count; the band inputs disable too.
+        include_rb, include_nm = rb_switch.value, nm_switch.value
+        wl = vm.watchlist_view(
+            view, include_rb=include_rb, include_nm=include_nm,
+            max_loss_c=int(rb_max_loss.value or 0),
+            min_ratio_tenths=round(float(rb_min_ratio.value or 0) * 10),
+            min_outright_c=int(rb_min_outright.value or 0),
+            max_spread_ratio_hundredths=round(float(rb_max_ratio.value or 0) * 100),
+            max_over_c=int(nm_max_over.value or 0)) if (include_rb or include_nm) else []
+        watchlist_table.rows = [vm.watchlist_row(o, new_ids, chg, flash) for o in wl]
+        watchlist_expansion.set_text(f"🔭 Watchlist — not actionable now ({len(wl)})")
+        watchlist_expansion.set_visibility(include_rb or include_nm)
+        rb_max_loss.set_enabled(include_rb)
+        rb_min_ratio.set_enabled(include_rb)
+        rb_min_outright.set_enabled(include_rb)
+        rb_max_ratio.set_enabled(include_rb)
+        nm_max_over.set_enabled(include_nm)
 
         backlog.rows = [vm.backlog_row(b, tz) for b in (state.get("backlog") or [])]
 
@@ -951,8 +968,8 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         (rb_max_ratio, "Speculative maximum child display spread-to-outright ratio"),
         (nm_switch, "Show near-miss books"), (nm_max_over, "Near-miss max overpay in cents"),
         (actionable, "Actionable opportunities"), (review, "Review-signal opportunities"),
-        (blocked, "Blocked opportunities"), (rb_table, "Speculative bounded-loss structures"),
-        (nm_table, "Near-miss books"), (backlog, "Recently-actionable backlog"),
+        (blocked, "Blocked opportunities"), (watchlist_table, "Watchlist — bounded-loss bets and overpriced books"),
+        (watchlist_expansion, "Watchlist — not actionable now"), (backlog, "Recently-actionable backlog"),
         (detail_expansion, "Selected participant detail"), (diagnostics_expansion, "Diagnostics and debug"),
     ):
         _el.props(f'aria-label="{_aria}"')

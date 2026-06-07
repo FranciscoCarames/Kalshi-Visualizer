@@ -208,6 +208,40 @@ def test_speculative_rows_drop_tradable_and_positive_framing():
             assert term not in blob
 
 
+def test_watchlist_row_merges_buckets_with_type_and_nonimperative_structure():
+    # PR C: one merged row per bucket. Bounded-loss bet keeps its convex economics; near-miss keeps overpay;
+    # each blanks the other type's numeric fields. Structure is DESCRIPTIVE (no imperative "Buy …").
+    rb = op("RB", bucket="risk_budget")
+    rb["worst_case_profit_c"], rb["best_case_profit_c"] = -3, 97
+    rrow = vm.watchlist_row(rb, set())
+    assert rrow["type"] == "Bounded-loss bet"
+    assert rrow["max_loss"] == 3 and rrow["overpay"] is None          # bounded-loss filled, near-miss blank
+    assert "Buy" not in rrow["structure"] and "YES" in rrow["structure"]   # non-imperative, still informative
+    nrow = vm.watchlist_row(op("NM", bucket="near_miss", exec_gap_c=-2), set())
+    assert nrow["type"] == "Overpriced book"
+    assert nrow["overpay"] == 2 and nrow["max_loss"] is None          # near-miss filled, bounded-loss blank
+    assert "watchlist" not in nrow                                    # the Type column replaces the old marker
+    # Both rows must still pass the watchlist value blacklist (no edge / positive / tradable framing).
+    for row in (rrow, nrow):
+        blob = " ".join(str(v) for v in row.values()).lower()
+        for term in ("actionable", "arbitrage", "tradable", "locked", "riskless", "guaranteed"):
+            assert term not in blob
+
+
+def test_watchlist_view_orders_bounded_loss_first_and_respects_include_flags():
+    rb = op("RB", bucket="risk_budget")
+    rb["worst_case_profit_c"], rb["best_case_profit_c"] = -3, 97
+    nm = op("NM", bucket="near_miss", exec_gap_c=-2)
+    # Bounded-loss bets come first regardless of input order (each subset filters by its own bucket).
+    both = vm.watchlist_view([nm, rb], include_rb=True, include_nm=True, max_loss_c=5, max_over_c=5)
+    assert [o["opportunity_id"] for o in both] == ["RB", "NM"]
+    only_rb = vm.watchlist_view([rb, nm], include_rb=True, include_nm=False, max_loss_c=5, max_over_c=5)
+    only_nm = vm.watchlist_view([rb, nm], include_rb=False, include_nm=True, max_loss_c=5, max_over_c=5)
+    assert [o["opportunity_id"] for o in only_rb] == ["RB"]
+    assert [o["opportunity_id"] for o in only_nm] == ["NM"]
+    assert vm.watchlist_view([rb, nm], include_rb=False, include_nm=False, max_loss_c=5, max_over_c=5) == []
+
+
 def test_severity_badges_are_structural_and_ordered():
     # blocked_reason (blocker) + settlement_caveat (advisory) -> blocker sorts first.
     o = op("x", bucket="blocked", blocked_reason="A leg is finalized.")

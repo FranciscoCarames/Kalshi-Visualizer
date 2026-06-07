@@ -328,6 +328,60 @@ def near_miss_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str] 
     }
 
 
+# --- merged Watchlist (PR C) — one table over both speculative buckets --------------------------------
+# The two opt-in buckets (risk_budget = bounded-loss bets; near_miss = overpriced books) share one
+# "Watchlist — not actionable now" table. `watchlist_row` delegates to the per-bucket builders above (so
+# their economics never diverge), then adds a Type chip + a DESCRIPTIVE, NON-IMPERATIVE Structure line, and
+# blanks the other type's numeric columns. Honest framing only: no "tradable" field, no imperative "Buy …",
+# none of the positive/edge vocabulary (see test_speculative_rows_drop_tradable_and_positive_framing).
+_WATCHLIST_BLANKS = ("max_loss", "max_profit", "ratio", "roc", "parent_outright", "child_outright",
+                     "display_spread", "spread_over_parent", "spread_over_child", "overpay")
+
+
+def _watchlist_structure(o: dict[str, Any]) -> str:
+    """A descriptive (never imperative) one-line structure for a bounded-loss bet: the action-plan legs with
+    the "Buy" command stripped, so the watchlist describes the structure without telling anyone to trade."""
+    line = action_plan_summary(o)["line"]
+    return line.replace("Buy YES", "YES").replace("Buy NO", "NO")
+
+
+def watchlist_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str] | None = None,
+                  flash_ids: set[str] | None = None) -> dict[str, Any]:
+    """One merged watchlist row. Branches on `o["bucket"]`, reuses the existing per-bucket builder, then
+    stamps `type` + `structure` (and blanks the other type's numeric fields). Never frames the row as an
+    edge or a placeable trade."""
+    if o.get("bucket") == "risk_budget":
+        row = risk_budget_row(o, new_ids, changes, flash_ids)
+        row["type"] = "Bounded-loss bet"
+        row["structure"] = _watchlist_structure(o)
+        row["note"] = row.pop("caveat", "") or ""        # unify the text column name
+        row["overpay"] = None
+    else:                                                  # near_miss — an overpriced book (flat loss as a bundle)
+        row = near_miss_row(o, new_ids, changes, flash_ids)
+        row["type"] = "Overpriced book"
+        row["structure"] = "Watch only — flat payout below cost (loss as a bundle)"
+        row.pop("watchlist", None)                         # the Type column replaces the standalone marker
+        for k in _WATCHLIST_BLANKS[:-1]:                   # blank bounded-loss-only fields (keep overpay)
+            row[k] = None
+    return row
+
+
+def watchlist_view(opps: Iterable[dict[str, Any]] | None, *, include_rb: bool, include_nm: bool,
+                   max_loss_c: float, min_ratio_tenths: int = 0, min_outright_c: float = 0,
+                   max_spread_ratio_hundredths: int = 0, max_over_c: float = 0) -> list[dict[str, Any]]:
+    """The merged watchlist opps: bounded-loss bets (when `include_rb`) FIRST, then overpriced books (when
+    `include_nm`). Each subset is produced by its existing band-filter view and is already in `rank_opps`
+    order, so we concatenate without re-sorting."""
+    out: list[dict[str, Any]] = []
+    if include_rb:
+        out.extend(risk_budget_view(opps, max_loss_c=max_loss_c, min_ratio_tenths=min_ratio_tenths,
+                                    min_outright_c=min_outright_c,
+                                    max_spread_ratio_hundredths=max_spread_ratio_hundredths))
+    if include_nm:
+        out.extend(near_miss_view(opps, max_over_c=max_over_c))
+    return out
+
+
 def backlog_row(b: dict[str, Any], tz: str) -> dict[str, Any]:
     dur = b.get("duration_s")
     return {
