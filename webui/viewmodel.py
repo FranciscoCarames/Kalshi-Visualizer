@@ -12,6 +12,7 @@ exec_min_size / market_status); richer quote/layer filters need the persisted *c
 """
 from __future__ import annotations
 
+import math
 import urllib.parse
 from collections import Counter
 from datetime import datetime, timezone
@@ -189,6 +190,7 @@ def leg_rows(opp: dict[str, Any],
 
 def opp_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str] | None = None,
             flash_ids: set[str] | None = None) -> dict[str, Any]:
+    nf = net_of_fees(o)            # PR E: DISPLAY-ONLY net-of-fees estimate (default-hidden columns)
     return _stamp_severity({
         "opportunity_id": o.get("opportunity_id"),
         "new": "🆕" if o.get("opportunity_id") in new_ids else "",
@@ -199,6 +201,8 @@ def opp_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str] | None
         "action": action_plan_summary(o)["line"],   # mandatory self-contained buy plan (PR 3)
         "edge": o.get("exec_gap_c"), "roi": o.get("roi_pct"), "units": o.get("exec_min_size"),
         "profit": o.get("exec_max_profit_dollars"),
+        # Net-of-fees ESTIMATE (PR E) — display only; blank when a leg price/units is missing. Never ranks.
+        "fees": nf["total_fees_c"], "net_edge": nf["net_edge_c"], "net_profit": nf["net_profit_dollars"],
         "tradable": o.get("tradable_now") or "",
         # The non-blocking per-game settlement caveat (PR 6) shows alongside any blocked_reason, so an
         # actionable game book still surfaces its postponement risk.
@@ -414,6 +418,12 @@ def explanation_lines(opp: dict[str, Any], *, show_ids: bool = False) -> list[st
         f"Tradable now: {opp.get('tradable_now')}   ·   Relationship: {opp.get('relationship_type')}"
         f"   ·   Market: {opp.get('market_status')}",
     ]
+    nf = net_of_fees(opp)        # PR E: net-of-fees ESTIMATE — display only; never affects ranking
+    if not nf["missing"]:
+        lines.append(
+            f"Est. net of fees: fees ${nf['total_fees_c'] / 100:.2f}   ·   net edge {nf['net_edge_c']}¢"
+            f"   ·   net max profit ${nf['net_profit_dollars']}"
+            "   (general taker-fee estimate — display only; does not affect ranking)")
     if opp.get("bucket") == "risk_budget":
         wc, bc = opp.get("worst_case_profit_c"), opp.get("best_case_profit_c")
         loss = "—" if _isna(wc) else -wc
@@ -547,6 +557,51 @@ _BLEND_W = {"edge": 0.35, "roi": 0.45, "geom": 0.2}
 
 def _num_or_none(x: Any) -> float | None:
     return x if isinstance(x, (int, float)) and x == x else None
+
+
+# --- Net-of-fees ESTIMATE (PR E) — DISPLAY ONLY, never touches ranking/bucketing/actionability ----------
+# Kalshi's published GENERAL taker-fee schedule: fee = ceil(0.07 × C × P × (1−P)) per fill, in cents, where
+# C = contracts and P = price in dollars (0 at P=0 or P=1). This is an ESTIMATE: it's the general schedule,
+# not a universal rate — some products use different/maker schedules — and it's gross of nothing else. The
+# UI labels every net number "Est." and "general taker-fee estimate"; rank_opps / _edge / bucket_of never
+# read these fields (see test_net_of_fees_does_not_affect_ranking).
+def kalshi_fee_c(contracts: float, price_c: float) -> int:
+    """Estimated Kalshi general taker fee for `contracts` at `price_c` cents, in integer cents (rounded up).
+    Zero at the 0¢/100¢ endpoints. Returns 0 for non-positive/invalid contracts."""
+    c, p = _num_or_none(contracts), _num_or_none(price_c)
+    if c is None or p is None or c <= 0 or p <= 0 or p >= 100:
+        return 0
+    pf = p / 100.0
+    fee_c = 0.07 * c * pf * (1 - pf) * 100
+    return math.ceil(round(fee_c, 9))      # round off binary FP dust before the ceil (175.0000…3 -> 175)
+
+
+def net_of_fees(opp: dict[str, Any], units: float | None = None) -> dict[str, Any]:
+    """DISPLAY-ONLY net-of-fees estimate for one opportunity. Sums the estimated general taker fee over
+    every leg's buy price (legs[].price_c, falling back to the 2-leg action_*_price_c) for `units` contracts
+    (default: the opp's exec_min_size). Returns ``{total_fees_c, net_edge_c, net_profit_dollars,
+    is_estimate, missing}``. When any required input (units / gap / a leg price) is missing, every net is
+    BLANK (None) and ``missing`` is True — fees are never treated as 0 just because a price is absent."""
+    u = _num_or_none(units if units is not None else opp.get("exec_min_size"))
+    gap = _num_or_none(opp.get("exec_gap_c"))
+    legs = opp.get("legs")
+    if isinstance(legs, list) and legs:
+        prices = [leg.get("price_c") for leg in legs]
+    else:                                                      # 2-leg shapes without a synthesized legs list
+        prices = [opp.get("action_1_price_c"), opp.get("action_2_price_c")]
+    prices = [_num_or_none(p) for p in prices]
+    if u is None or u <= 0 or gap is None or not prices or any(p is None for p in prices):
+        return {"total_fees_c": None, "net_edge_c": None, "net_profit_dollars": None,
+                "is_estimate": True, "missing": True}
+    total_fees_c = sum(kalshi_fee_c(u, p) for p in prices)
+    net_profit_c = gap * u - total_fees_c                      # gross profit (gap × units) minus fees
+    return {
+        "total_fees_c": total_fees_c,
+        "net_edge_c": round(net_profit_c / u),                # per-unit net edge ¢ (display)
+        "net_profit_dollars": round(net_profit_c / 100, 2),
+        "is_estimate": True,
+        "missing": False,
+    }
 
 
 def _edge(o: dict[str, Any]) -> float:
