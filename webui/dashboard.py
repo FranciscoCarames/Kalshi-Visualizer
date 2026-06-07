@@ -161,9 +161,16 @@ _OPP_COLUMNS = [
     {"name": "roi", "label": "ROI %", "field": "roi", "sortable": True},
     {"name": "units", "label": "Max units", "field": "units", "sortable": True},
     {"name": "profit", "label": "Max gross profit", "field": "profit", "sortable": True},
+    # Net-of-fees ESTIMATE (PR E) — DEFAULT-HIDDEN; the "Show net of fees" switch (and the column chooser)
+    # reveal them. Labelled "Est." (a general taker-fee estimate, display only — never affects ranking).
+    {"name": "net_edge", "label": "Est. net edge ¢", "field": "net_edge", "sortable": True},
+    {"name": "net_profit", "label": "Est. net max profit", "field": "net_profit", "sortable": True},
+    {"name": "fees", "label": "Est. fees ¢", "field": "fees", "sortable": True},
     {"name": "tradable", "label": "Tradable", "field": "tradable"},
     {"name": "caveat", "label": "Caveat", "field": "caveat"},
 ]
+# Net-of-fees columns (PR E) — default-hidden in the opp tables; toggled by the "Show net of fees" switch.
+_NET_COLUMNS = ("net_edge", "net_profit", "fees")
 # Merged Watchlist (PR C) — ONE table over both opt-in buckets (bounded-loss bets + overpriced books). A
 # Type column distinguishes them; each row blanks the other type's numeric fields. The probability-context
 # columns (worst-case ROC + the display-outright group) are DEFAULT-HIDDEN via `visible-columns` so the
@@ -321,6 +328,11 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             show_ids = ui.switch("Show IDs & codes", value=False)
             rules_sw = ui.switch("Resolution criteria", value=False).tooltip(
                 "Show each contract's settlement rules in the click panel and auto-open them in the detail view.")
+            # Net-of-fees ESTIMATE (PR E) — reveal the default-hidden net columns on the opp tables. Wired
+            # below (after the column choosers exist). Display only; an estimate; never affects ranking.
+            show_net_sw = ui.switch("Show net of fees", value=False).tooltip(
+                "Reveal estimated net-of-fees columns (general taker-fee estimate). Display only — does not "
+                "affect ranking, bucketing, or actionability.")
         ui.label("Sections").classes("text-sm font-bold mt-2")
         with ui.row().classes("items-end gap-4 flex-wrap"):
             show_review_sw = ui.switch("Review", value=True).tooltip(
@@ -643,12 +655,21 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         _t.props(f'no-data-label="{_msg}"')
 
     # Per-table column show/hide (PR D) — wire the Settings "Columns" selects now that the tables exist. The
-    # watchlist keeps the probability-context columns hidden by default (the rest are shown).
+    # opp tables hide the net-of-fees columns by default (PR E); the watchlist hides the prob-context columns.
     _wl_hidden = tuple(c["name"] for c in _WATCHLIST_COLUMNS if c["name"] not in _WATCHLIST_DEFAULT_VISIBLE)
-    wire_column_chooser(cols_actionable, actionable, _OPP_COLUMNS)
-    wire_column_chooser(cols_review, review, _OPP_COLUMNS)
-    wire_column_chooser(cols_blocked, blocked, _OPP_COLUMNS)
+    _opp_choosers = ((cols_actionable, actionable), (cols_review, review), (cols_blocked, blocked))
+    for _sel, _tbl in _opp_choosers:
+        wire_column_chooser(_sel, _tbl, _OPP_COLUMNS, default_hidden=_NET_COLUMNS)
     wire_column_chooser(cols_watchlist, watchlist_table, _WATCHLIST_COLUMNS, default_hidden=_wl_hidden)
+
+    # "Show net of fees" (PR E) — a convenience toggle that reveals/hides the net columns across all three
+    # opp tables at once, keeping each table's column chooser in sync (setting select.value re-runs its
+    # apply). Net-of-fees is an ESTIMATE and DISPLAY ONLY — it never changes ranking/bucketing/actionability.
+    def _toggle_net(show: bool) -> None:
+        for _sel, _tbl in _opp_choosers:
+            cur = [n for n in (_sel.value or []) if n not in _NET_COLUMNS]
+            _sel.value = cur + list(_NET_COLUMNS) if show else cur     # triggers the chooser's on_value_change
+    show_net_sw.on_value_change(lambda e: _toggle_net(bool(e.value)))
 
     with ui.expansion("📉 Recently actionable (left the actionable set)").classes("w-full"):
         backlog = ui.table(columns=_BACKLOG_COLUMNS, rows=[], row_key="name",
@@ -1010,6 +1031,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         (nm_switch, "Show near-miss books"), (nm_max_over, "Near-miss max overpay in cents"),
         (cols_actionable, "Actionable table columns"), (cols_review, "Review table columns"),
         (cols_blocked, "Blocked table columns"), (cols_watchlist, "Watchlist table columns"),
+        (show_net_sw, "Show estimated net-of-fees columns"),
         (actionable, "Actionable opportunities"), (review, "Review-signal opportunities"),
         (blocked, "Blocked opportunities"), (watchlist_table, "Watchlist — bounded-loss bets and overpriced books"),
         (watchlist_expansion, "Watchlist — not actionable now"), (backlog, "Recently-actionable backlog"),

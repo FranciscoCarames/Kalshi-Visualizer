@@ -242,6 +242,39 @@ def test_watchlist_view_orders_bounded_loss_first_and_respects_include_flags():
     assert vm.watchlist_view([rb, nm], include_rb=False, include_nm=False, max_loss_c=5, max_over_c=5) == []
 
 
+def test_kalshi_fee_c_general_taker_schedule():
+    # ceil to integer cents; max fee at p=50 (0.07 * C * 0.25 * 100); 0 at the 0/100 endpoints.
+    assert vm.kalshi_fee_c(100, 50) == 175 and isinstance(vm.kalshi_fee_c(100, 50), int)
+    assert vm.kalshi_fee_c(1, 50) == 2                     # ceil(1.75) -> 2 (rounds UP)
+    assert vm.kalshi_fee_c(100, 0) == 0 and vm.kalshi_fee_c(100, 100) == 0   # endpoints: no fee
+    assert vm.kalshi_fee_c(0, 50) == 0 and vm.kalshi_fee_c(-5, 50) == 0      # non-positive contracts: 0
+
+
+def test_net_of_fees_is_estimate_and_blanks_on_missing_price():
+    o = op("a")        # action_1/2_price_c = 45/48, exec_gap_c = 7, exec_min_size = 100; no legs -> uses prices
+    nf = vm.net_of_fees(o)
+    assert nf["is_estimate"] is True and nf["missing"] is False
+    assert nf["total_fees_c"] == vm.kalshi_fee_c(100, 45) + vm.kalshi_fee_c(100, 48)
+    # net profit = gross (gap x units) minus fees, in dollars.
+    assert nf["net_profit_dollars"] == round((7 * 100 - nf["total_fees_c"]) / 100, 2)
+    assert nf["net_profit_dollars"] < 7 * 100 / 100        # fees make net strictly below gross
+    # A missing leg price -> every net BLANK (never treated as 0 fees).
+    bad = op("b")
+    bad["action_1_price_c"] = None
+    nfb = vm.net_of_fees(bad)
+    assert nfb["missing"] is True
+    assert nfb["total_fees_c"] is None and nfb["net_edge_c"] is None and nfb["net_profit_dollars"] is None
+
+
+def test_net_of_fees_does_not_affect_ranking():
+    opps = [op("a", exec_gap_c=5), op("b", exec_gap_c=9), op("c", exec_gap_c=2)]
+    base = [o["opportunity_id"] for o in vm.rank_opps(opps, "edge")]
+    # Injecting net-of-fees fields onto the opps must NOT change the order (ranking is strictly gross).
+    for o in opps:
+        o["net_edge_c"], o["net_profit_dollars"], o["fees_c"] = 1, 1.0, 999
+    assert [o["opportunity_id"] for o in vm.rank_opps(opps, "edge")] == base == ["b", "a", "c"]
+
+
 def test_severity_badges_are_structural_and_ordered():
     # blocked_reason (blocker) + settlement_caveat (advisory) -> blocker sorts first.
     o = op("x", bucket="blocked", blocked_reason="A leg is finalized.")
