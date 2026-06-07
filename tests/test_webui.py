@@ -178,6 +178,23 @@ def test_opp_row_change_marker():
     assert r["new"] == "🆕" and r["_change"] == "new"
 
 
+def test_speculative_rows_drop_tradable_and_positive_framing():
+    # Risk-budget (speculative bounded-loss) row: even with active legs, the BUNDLE is not auto-placeable,
+    # so the row must not surface a "tradable" field (PR 1 de-risking).
+    o = op("RB", bucket="risk_budget", tradable_now="Yes")
+    o["worst_case_profit_c"], o["best_case_profit_c"] = -3, 97
+    rb = vm.risk_budget_row(o, set())
+    assert "tradable" not in rb
+    # Near-miss watchlist row: no tradable, explicit Watchlist marker.
+    nm = vm.near_miss_row(op("NM", bucket="near_miss", tradable_now="Yes", exec_gap_c=-2), set())
+    assert "tradable" not in nm and nm["watchlist"] == "Watchlist"
+    # No positive edge/actionability framing leaks into the displayed values of either speculative row.
+    for row in (rb, nm):
+        blob = " ".join(str(v) for v in row.values()).lower()
+        for term in ("actionable", "arbitrage", "tradable", "locked", "riskless", "guaranteed"):
+            assert term not in blob
+
+
 def test_ts_disp_and_backlog_row():
     assert vm.ts_disp(None, "UTC") == "—"
     assert vm.ts_disp(1000.0, "UTC") != "—"             # formats an epoch

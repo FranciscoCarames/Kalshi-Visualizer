@@ -249,11 +249,11 @@ def _min_size(a: Any, b: Any) -> Any:
 
 def spread_certainty_label(rule_flag: str) -> str:
     """Honest certainty wording for an executable inconsistency. Strict containment pairs
-    (no rule flag) lock a gross spread; match-alignment pairs depend on settlement rules
-    matching, which we never confirm — so they are only ever 'rule-dependent'."""
+    (no rule flag) secure a gross, top-of-book spread; match-alignment pairs depend on settlement
+    rules matching, which we never confirm — so they are only ever 'rule-dependent'."""
     if rule_flag in ("RULE_CHECK_REQUIRED", "RULE_MISMATCH"):
         return "Rule-dependent gross spread"
-    return "Locked gross spread"
+    return "Gross top-book spread"
 
 
 def _leg(row: dict[str, Any], side: str) -> tuple[int | None, Any]:

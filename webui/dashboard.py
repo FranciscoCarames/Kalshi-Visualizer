@@ -82,10 +82,10 @@ _OPP_COLUMNS = [
     {"name": "sport", "label": "Sport", "field": "sport", "sortable": True},
     {"name": "name", "label": "Participant / match", "field": "name", "sortable": True},
     {"name": "detail", "label": "Detail", "field": "detail"},
-    {"name": "edge", "label": "Edge ¢", "field": "edge", "sortable": True},
+    {"name": "edge", "label": "Gross edge ¢", "field": "edge", "sortable": True},
     {"name": "roi", "label": "ROI %", "field": "roi", "sortable": True},
     {"name": "units", "label": "Max units", "field": "units", "sortable": True},
-    {"name": "profit", "label": "Gross $", "field": "profit", "sortable": True},
+    {"name": "profit", "label": "Max gross profit", "field": "profit", "sortable": True},
     {"name": "tradable", "label": "Tradable", "field": "tradable"},
     {"name": "caveat", "label": "Caveat", "field": "caveat"},
 ]
@@ -108,7 +108,6 @@ _RISK_COLUMNS = [
     {"name": "display_spread", "label": "Display spread ¢", "field": "display_spread", "sortable": True},
     {"name": "spread_over_parent", "label": "Spread÷parent", "field": "spread_over_parent", "sortable": True},
     {"name": "spread_over_child", "label": "Spread÷child", "field": "spread_over_child", "sortable": True},
-    {"name": "tradable", "label": "Tradable", "field": "tradable"},
     {"name": "caveat", "label": "Caveat", "field": "caveat"},
 ]
 _NEARMISS_COLUMNS = [
@@ -118,7 +117,7 @@ _NEARMISS_COLUMNS = [
     {"name": "detail", "label": "Direction", "field": "detail"},
     {"name": "cost", "label": "Cost ¢", "field": "cost", "sortable": True},
     {"name": "overpay", "label": "Overpay ¢", "field": "overpay", "sortable": True},
-    {"name": "tradable", "label": "Tradable", "field": "tradable"},
+    {"name": "watchlist", "label": "", "field": "watchlist"},
     {"name": "note", "label": "Note", "field": "note"},
 ]
 _BACKLOG_COLUMNS = [
@@ -199,10 +198,10 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         window_select = ui.select(list(config.BACKLOG_WINDOWS), value=config.BACKLOG_DEFAULT,
                                    label="Backlog window")
         rank_sel = ui.select(vm.RANK_MODES, value=vm.RANK_MODE_DEFAULT, label="Rank by").tooltip(
-            "Within each section: Per-unit edge ¢, Spread upside (risk-budget geometry: upside:risk, then "
-            "spread, then lower max loss), Outright + spread (risk-budget: highest deeper display outright "
-            "first, then lowest display spread÷outright), or Blended (edge + ROI % + geometry). Gross — not "
-            "a probability model.")
+            "Within each section: Per-unit edge ¢, Spread upside (speculative bounded-loss geometry: "
+            "upside:risk, then spread, then lower max loss), Outright + spread (speculative: highest deeper "
+            "display outright first, then lowest display spread÷outright), or Blended (edge + ROI % + "
+            "geometry). Gross — not a probability model.")
         show_ids = ui.switch("Show IDs & codes", value=False)
         rules_sw = ui.switch("Resolution criteria", value=False).tooltip(
             "Show each contract's settlement rules in the click panel and auto-open them in the detail view.")
@@ -214,13 +213,13 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         larger_sw.on_value_change(
             lambda e: ui.query("body").classes(add="a11y-large") if e.value
             else ui.query("body").classes(remove="a11y-large"))
-        scan_btn = ui.button("⟳ Scan now (core series)")
+        scan_btn = ui.button("⟳ Refresh snapshot")
         export_btn = ui.button("⬇ Export (ZIP)")
         # Auto-refresh: drive the in-process scan scheduler (NON-force, TTL/budget-guarded). This control is
         # SERVER-WIDE shared state — one scheduler loop per process — so a change affects every viewer
         # (intended for a single-owner / small-LAN tool). The fetch cadence is the scan, not this widget.
         auto_sw = ui.switch("Auto-refresh", value=scan_scheduler.scheduler.enabled).tooltip(
-            "Periodically re-scan in the background (server-wide). Off = manual 'Scan now' only.")
+            "Periodically re-scan in the background (server-wide). Off = manual 'Refresh snapshot' only.")
         interval_sel = ui.select(config.AUTO_SCAN_INTERVAL_OPTIONS,
                                   value=scan_scheduler.scheduler.interval_s, label="Every (s)").tooltip(
             "How often the background auto-scan runs.")
@@ -246,7 +245,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
     # --- "Beyond the strict rule" — two opt-in sections past the actionable line (PR 29) ---
     with ui.row().classes("items-end gap-4 flex-wrap"):
         ui.label("Beyond the strict rule:").classes("text-sm text-gray-500 self-center")
-        rb_switch = ui.switch("Risk-budget candidates", value=False)
+        rb_switch = ui.switch("Speculative bounded-loss structures", value=False)
         rb_max_loss = ui.number("Max loss ¢", value=config.RISK_BUDGET_DEFAULT_MAX_LOSS_C,
                                 min=1, max=config.RISK_BUDGET_MAX_LOSS_C, format="%.0f").classes("w-28")
         rb_min_ratio = ui.number("Min upside:risk", value=0, min=0, max=20, step=0.5,
@@ -446,8 +445,9 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
     # Risk-budget: containment near-misses (bounded loss, convex upside) — default hidden, toggled on.
     # Placed immediately AFTER Actionable (#2): when its switch is on, the risk-adjusted candidates sit
     # right below the actionable set (not below Review/Blocked). Visibility stays gated in rerender().
-    rb_label = ui.label("🟡 Risk-budget candidates — cost slightly over 100¢ for a BOUNDED loss and a "
-                        "CONVEX upside (broader-but-not-deeper pays +$1). GROSS of fees; NOT locked."
+    rb_label = ui.label("Speculative bounded-loss structures — cost slightly over 100¢ for a BOUNDED loss "
+                        "and a CONVEX upside (broader-but-not-deeper pays +$1). GROSS of fees; NOT an edge, "
+                        "NOT actionable."
                         ).classes("text-lg font-bold")
     rb_table = ui.table(columns=_RISK_COLUMNS, rows=[], row_key="opportunity_id",
                         selection="single", pagination=10).classes("w-full overflow-x-auto opp-sel")
@@ -789,20 +789,21 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         (tz_select, "Time zone"), (persist_select, "New-actionable banner persistence"),
         (window_select, "Backlog window"), (show_ids, "Show IDs and codes"),
         (rules_sw, "Show resolution criteria"), (dark_sw, "Dark mode"), (larger_sw, "Larger text"),
-        (scan_btn, "Scan now (core series)"), (export_btn, "Export snapshot ZIP"),
+        (scan_btn, "Refresh snapshot"), (export_btn, "Export snapshot ZIP"),
         (auto_sw, "Auto-refresh in the background"), (interval_sel, "Auto-scan interval (seconds)"),
         (sport_sel, "Filter by sport"), (tour_sel, "Filter by tournament"),
         (rank_sel, "Rank opportunities by"),
         (participant_sel, "Filter by players or matches"), (min_size_in, "Minimum tradable size"),
         (active_sw, "Active markets only"), (show_review_sw, "Show the Review-signal section"),
         (show_blocked_sw, "Show the Blocked section"), (clear_btn, "Clear all filters"),
-        (rb_switch, "Show risk-budget candidates"), (rb_max_loss, "Risk-budget max loss in cents"),
-        (rb_min_ratio, "Risk-budget minimum upside-to-risk ratio"),
-        (rb_min_outright, "Risk-budget minimum child display outright in cents"),
-        (rb_max_ratio, "Risk-budget maximum child display spread-to-outright ratio"),
+        (rb_switch, "Show speculative bounded-loss structures"),
+        (rb_max_loss, "Speculative max loss in cents"),
+        (rb_min_ratio, "Speculative minimum upside-to-risk ratio"),
+        (rb_min_outright, "Speculative minimum child display outright in cents"),
+        (rb_max_ratio, "Speculative maximum child display spread-to-outright ratio"),
         (nm_switch, "Show near-miss books"), (nm_max_over, "Near-miss max overpay in cents"),
         (actionable, "Actionable opportunities"), (review, "Review-signal opportunities"),
-        (blocked, "Blocked opportunities"), (rb_table, "Risk-budget candidates"),
+        (blocked, "Blocked opportunities"), (rb_table, "Speculative bounded-loss structures"),
         (nm_table, "Near-miss books"), (backlog, "Recently-actionable backlog"),
         (detail_expansion, "Selected participant detail"), (diagnostics_expansion, "Diagnostics and debug"),
     ):

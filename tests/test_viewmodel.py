@@ -409,7 +409,7 @@ def test_sum_row_maxima_only_actionable_nan_safe():
 # --- truthful empty states (PR 26a) ---------------------------------------------------
 def test_empty_state_no_scan_and_scanning():
     assert vm.empty_state(cov=None, total_opps=0, shown_opps=0) == \
-        "No scan yet — press “Scan now (core series)”."
+        "No scan yet — press “Refresh snapshot”."
     assert vm.empty_state(cov={"fetched_at": None}, total_opps=0, shown_opps=0,
                           scan_status={"status": "in_progress"}) == "Scanning… results will appear here."
 
