@@ -178,6 +178,19 @@ def test_opp_row_change_marker():
     assert r["new"] == "🆕" and r["_change"] == "new"
 
 
+def test_rows_flash_only_for_flash_ids():
+    # PR B: a row flashes green ONLY when its id is in the (one-shot, snapshot-scoped) flash set. A plain
+    # filter rerender passes no flash set, so nothing replays — `_flash` is a bare bool (no positive copy).
+    o = op("x", bucket="actionable")
+    assert vm.opp_row(o, set())["_flash"] is False                 # no flash set -> never flashes
+    assert vm.opp_row(o, set(), {}, {"x"})["_flash"] is True       # in the flash set -> flashes once
+    assert vm.opp_row(o, set(), {}, {"other"})["_flash"] is False  # other ids -> no flash
+    rb = op("RB", bucket="risk_budget")
+    rb["worst_case_profit_c"], rb["best_case_profit_c"] = -3, 97
+    assert vm.risk_budget_row(rb, set(), {}, {"RB"})["_flash"] is True
+    assert vm.near_miss_row(op("NM", bucket="near_miss", exec_gap_c=-2), set(), {}, {"NM"})["_flash"] is True
+
+
 def test_speculative_rows_drop_tradable_and_positive_framing():
     # Risk-budget (speculative bounded-loss) row: even with active legs, the BUNDLE is not auto-placeable,
     # so the row must not surface a "tradable" field (PR 1 de-risking).

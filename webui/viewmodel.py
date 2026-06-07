@@ -187,11 +187,13 @@ def leg_rows(opp: dict[str, Any],
     return out
 
 
-def opp_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str] | None = None) -> dict[str, Any]:
+def opp_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str] | None = None,
+            flash_ids: set[str] | None = None) -> dict[str, Any]:
     return _stamp_severity({
         "opportunity_id": o.get("opportunity_id"),
         "new": "🆕" if o.get("opportunity_id") in new_ids else "",
         "_change": (changes or {}).get(o.get("opportunity_id"), ""),
+        "_flash": o.get("opportunity_id") in (flash_ids or set()),   # PR B: one-shot green flash this snapshot
         "sport": o.get("sport_label") or o.get("sport") or "",
         "name": o.get("name") or "", "detail": o.get("detail") or "",
         "action": action_plan_summary(o)["line"],   # mandatory self-contained buy plan (PR 3)
@@ -274,7 +276,8 @@ def _upside_risk(worst: Any, best: Any) -> Any:
     return None if _isna(best) else round(best / risk, 1)
 
 
-def risk_budget_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str] | None = None) -> dict[str, Any]:
+def risk_budget_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str] | None = None,
+                    flash_ids: set[str] | None = None) -> dict[str, Any]:
     """Display row for the risk-budget table: leads with the convex economics (max loss / max profit /
     upside:risk); worst-case ROC is a labelled secondary, never the headline (it's honestly negative)."""
     wc, bc = o.get("worst_case_profit_c"), o.get("best_case_profit_c")
@@ -283,6 +286,7 @@ def risk_budget_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str
         "opportunity_id": o.get("opportunity_id"),
         "new": "🆕" if o.get("opportunity_id") in new_ids else "",
         "_change": (changes or {}).get(o.get("opportunity_id"), ""),
+        "_flash": o.get("opportunity_id") in (flash_ids or set()),   # PR B: one-shot green flash this snapshot
         "sport": o.get("sport_label") or o.get("sport") or "",
         "name": o.get("name") or "", "detail": o.get("detail") or "",
         "cost": o.get("cost_c"),
@@ -304,7 +308,8 @@ def risk_budget_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str
     }, o)
 
 
-def near_miss_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str] | None = None) -> dict[str, Any]:
+def near_miss_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str] | None = None,
+                  flash_ids: set[str] | None = None) -> dict[str, Any]:
     """Display row for the near-miss watchlist: the cost, the overpay (= guaranteed bundle loss), and the
     flat-loss note. Watchlist only — never frames it as an edge, and never surfaces tradable_now (the
     bundle is a guaranteed gross loss, not a placeable trade)."""
@@ -313,6 +318,7 @@ def near_miss_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str] 
         "opportunity_id": o.get("opportunity_id"),
         "new": "🆕" if o.get("opportunity_id") in new_ids else "",
         "_change": (changes or {}).get(o.get("opportunity_id"), ""),
+        "_flash": o.get("opportunity_id") in (flash_ids or set()),   # PR B: one-shot green flash this snapshot
         "sport": o.get("sport_label") or o.get("sport") or "",
         "name": o.get("name") or "", "detail": o.get("detail") or "",
         "cost": o.get("cost_c"),
