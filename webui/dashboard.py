@@ -318,9 +318,9 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
     freshness = ui.label().classes("text-sm").style("font-variant-numeric: tabular-nums")
     # Per-bucket counts status line (PR 4): shown vs in-scope per bucket, hidden-by-toggle made explicit.
     counts_line = ui.label().classes("text-sm text-gray-600").style("font-variant-numeric: tabular-nums")
-    liquidity = ui.label().classes("text-sm text-blue-700")   # "most liquid now" (#12a)
-    volatility = ui.label().classes("text-sm text-purple-700")   # "most volatile now" (#12b)
     banner = ui.label().classes("text-sm font-medium")
+    # `liquidity` / `volatility` telemetry labels are created LOWER (PR 6), inside a collapsed
+    # "not an opportunity signal" section, so they sit out of the opportunity flow.
 
     # --- explanation panel (row click) ---
     dialog = ui.dialog()
@@ -575,6 +575,13 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
     with ui.expansion("📉 Recently actionable (left the actionable set)").classes("w-full"):
         backlog = ui.table(columns=_BACKLOG_COLUMNS, rows=[], row_key="name",
                            pagination=10).classes("w-full overflow-x-auto")
+
+    # Market telemetry (PR 6) — deepest-book / largest-move leaders are SNAPSHOT TELEMETRY, not opportunity
+    # signals. Kept OUT of the opportunity flow in a collapsed section with neutral (never green/actionable)
+    # styling so they're never mistaken for an edge. Labels populated in rerender (snapshot-scoped).
+    with ui.expansion("Market telemetry — not an opportunity signal").classes("w-full"):
+        liquidity = ui.label().classes("text-sm text-gray-600")
+        volatility = ui.label().classes("text-sm text-gray-600")
 
     # Participant/team detail (PR 24) — populated on opp row-click from the STORED frames (no fetch).
     detail_expansion = ui.expansion("🔬 Selected participant detail (click an opportunity)").classes("w-full")
