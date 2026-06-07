@@ -50,6 +50,38 @@ def test_min_size_is_nan_safe():
     assert len(vm.filter_opps([_opp("n", bucket="actionable", size=nan)], min_size=10)) == 1
 
 
+# --- per-bucket counts (PR 4) ---------------------------------------------------------
+def test_bucket_counts_membership_vs_threshold_split():
+    opps = [
+        _opp("a", bucket="actionable", source="containment", size=1),      # spared -> shown despite tiny size
+        _opp("r1", bucket="review_signal", source="containment", size=500),
+        _opp("r2", bucket="review_signal", source="containment", size=1),   # threshold drops at min_size
+        _opp("b", bucket="blocked", sport="nba", source="containment", size=500),  # membership drops on sport
+    ]
+    c = vm.bucket_counts(opps, {})                                          # no filters -> all equal totals
+    assert c["actionable"] == {"total": 1, "in_scope": 1, "shown": 1}
+    assert c["review_signal"]["total"] == 2 and c["review_signal"]["shown"] == 2
+    c2 = vm.bucket_counts(opps, {"sports": ["tennis"]})                     # membership hides the nba blocked row
+    assert c2["blocked"]["total"] == 1 and c2["blocked"]["in_scope"] == 0
+    c3 = vm.bucket_counts(opps, {"min_size": 50})                           # threshold hides the tiny review row
+    assert c3["review_signal"]["in_scope"] == 2 and c3["review_signal"]["shown"] == 1
+    assert c3["actionable"]["shown"] == 1                                   # Actionable spared from thresholds
+
+
+def test_bucket_counts_line_distinguishes_toggle_and_threshold():
+    counts = {"actionable": {"total": 4, "in_scope": 4, "shown": 4},
+              "review_signal": {"total": 3, "in_scope": 3, "shown": 3},
+              "blocked": {"total": 9, "in_scope": 9, "shown": 9},
+              "risk_budget": {"total": 0, "in_scope": 0, "shown": 0}}
+    line = vm.bucket_counts_line(counts, {"review_signal": True, "blocked": False})
+    assert "Actionable: 4 shown" in line and "Review: 3 shown" in line
+    assert "Blocked: hidden by settings (9 in scope)" in line              # toggle-off, content exists
+    assert "Speculative" not in line                                       # 0 in scope -> omitted
+    line2 = vm.bucket_counts_line({"review_signal": {"total": 3, "in_scope": 3, "shown": 1}},
+                                  {"review_signal": True})
+    assert "Review: 1 shown / 3 in scope" in line2                         # threshold-hidden -> shown/in-scope
+
+
 # --- derive_options -------------------------------------------------------------------
 def test_derive_options_only_present_sorted():
     opps = [_opp("a", sport="tennis", tournament="French Open"),

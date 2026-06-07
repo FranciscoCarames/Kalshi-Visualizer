@@ -298,7 +298,10 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                                 min=1, max=config.NEAR_MISS_MAX_OVER_C, format="%.0f").classes("w-28")
     chips = ui.row().classes("gap-2 flex-wrap")
 
-    freshness = ui.label().classes("text-sm")
+    # `tabular-nums` keeps the live age digits a constant width so the per-second tick doesn't reflow (PR 4).
+    freshness = ui.label().classes("text-sm").style("font-variant-numeric: tabular-nums")
+    # Per-bucket counts status line (PR 4): shown vs in-scope per bucket, hidden-by-toggle made explicit.
+    counts_line = ui.label().classes("text-sm text-gray-600").style("font-variant-numeric: tabular-nums")
     liquidity = ui.label().classes("text-sm text-blue-700")   # "most liquid now" (#12a)
     volatility = ui.label().classes("text-sm text-purple-700")   # "most volatile now" (#12b)
     banner = ui.label().classes("text-sm font-medium")
@@ -774,8 +777,15 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
 
         backlog.rows = [vm.backlog_row(b, tz) for b in (state.get("backlog") or [])]
 
-        # scope banner (with the PR 21a counters) + filter chips + URL state
+        # scope banner (with the PR 21a counters) + per-bucket counts + filter chips + URL state
         freshness.set_text(vm.scope_banner(cov, tz))
+        # Per-bucket counts (PR 4): computed from the FULL snapshot + current filters (in-memory; no store
+        # read), reusing filter_opps so the numbers match the rendered tables. Toggle state -> "hidden by
+        # settings" wording. `opps` is the full snapshot list; `filters` are the membership+threshold values.
+        counts_line.set_text(vm.bucket_counts_line(
+            vm.bucket_counts(opps, filters),
+            {"review_signal": show_review_sw.value, "blocked": show_blocked_sw.value,
+             "risk_budget": rb_switch.value, "near_miss": nm_switch.value}))
         liq = state.get("liquidity_msg")          # "most liquid now" (#12a) — snapshot-scoped, display only
         liquidity.set_text(liq or "")
         liquidity.set_visibility(bool(liq))
