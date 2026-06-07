@@ -115,6 +115,30 @@ def _notify(message: str, *, type: str = "info", position: str = "top-right") ->
     ui.notify(message, type=type, position=position)
 
 
+def wire_column_chooser(select: Any, table: Any, columns: list[dict[str, Any]], *,
+                        default_hidden: tuple[str, ...] = ()) -> None:
+    """Per-table column show/hide (PR D). Drives Quasar's `visible-columns` from a multi-select: every
+    non-`required` column can be hidden/shown; `required` columns (the leading 'new' marker) are always on
+    and never offered. `default_hidden` names columns hidden on first render (still selectable). The select
+    is created empty in the Settings dialog; this populates its options/value and wires the handler once the
+    table exists. Uses `_props['visible-columns']` — the array prop has no string-only `.props()` form, so
+    this is NiceGUI's supported path for a list prop (then `table.update()` pushes it)."""
+    required = [c["name"] for c in columns if c.get("required")]
+    order = [c["name"] for c in columns if not c.get("required")]      # column order, minus required
+    select.options = {c["name"]: (c["label"] or c["name"]) for c in columns if not c.get("required")}
+    visible = [n for n in order if n not in default_hidden]
+    select.value = list(visible)
+    select.update()
+
+    def _apply(selected: list[str] | None) -> None:
+        chosen = set(selected or [])
+        table._props["visible-columns"] = required + [n for n in order if n in chosen]
+        table.update()
+
+    select.on_value_change(lambda e: _apply(e.value))
+    _apply(visible)                                                    # set the initial visible-columns
+
+
 def _aggrid_options(rows: list[dict[str, Any]], fields: list[tuple[str, str]]) -> dict[str, Any]:
     """Client-side AG-Grid options (pagination + per-column filter/sort) over already-in-memory rows.
     `fields` is a list of (field, header) pairs. The grid does the paging/filtering/sorting in the browser,
@@ -128,7 +152,7 @@ def _aggrid_options(rows: list[dict[str, Any]], fields: list[tuple[str, str]]) -
     }
 
 _OPP_COLUMNS = [
-    {"name": "new", "label": "", "field": "new", "align": "center"},
+    {"name": "new", "label": "", "field": "new", "align": "center", "required": True},  # PR D: never hideable
     {"name": "sport", "label": "Sport", "field": "sport", "sortable": True},
     {"name": "name", "label": "Participant / match", "field": "name", "sortable": True},
     {"name": "detail", "label": "Detail", "field": "detail"},
@@ -350,6 +374,18 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                 "How often the background auto-scan runs.")
             auto_sw.on_value_change(lambda e: scan_scheduler.scheduler.set_enabled(bool(e.value)))
             interval_sel.on_value_change(lambda e: scan_scheduler.scheduler.set_interval(int(e.value)))
+        # Per-table column show/hide (PR D). Empty selects here; options/value/handler are wired below once
+        # the tables exist (the dialog is built before them). The leading 'new' marker is required → not listed.
+        ui.label("Columns").classes("text-sm font-bold mt-2")
+        with ui.row().classes("items-end gap-4 flex-wrap"):
+            cols_actionable = ui.select({}, multiple=True, label="Actionable").props(
+                "dense options-dense").classes("min-w-[12rem]")
+            cols_review = ui.select({}, multiple=True, label="Review").props(
+                "dense options-dense").classes("min-w-[12rem]")
+            cols_blocked = ui.select({}, multiple=True, label="Blocked").props(
+                "dense options-dense").classes("min-w-[12rem]")
+            cols_watchlist = ui.select({}, multiple=True, label="Watchlist").props(
+                "dense options-dense").classes("min-w-[12rem]")
         with ui.row().classes("gap-2 mt-2"):
             export_btn = ui.button("⬇ Export (ZIP)")
             ui.button("Close", on_click=settings_dialog.close)
@@ -588,9 +624,6 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         watchlist_table = ui.table(columns=_WATCHLIST_COLUMNS, rows=[], row_key="opportunity_id",
                                    selection="single", pagination=10).classes("w-full overflow-x-auto opp-sel")
     watchlist_table.on_select(_on_select(watchlist_table))
-    # Default-hide the probability-context columns so the table reads compactly (PR D adds the live chooser).
-    # An array prop — set on `_props` (NiceGUI's path for non-string props); PR D drives it dynamically.
-    watchlist_table._props["visible-columns"] = list(_WATCHLIST_DEFAULT_VISIBLE)
 
     _sel_tables.extend([actionable, review, blocked, watchlist_table])
     for _t in _sel_tables:        # colour the change-signal indicator column on every opportunity table (#3)
@@ -608,6 +641,14 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                      (blocked, "No blocked opportunities in the current filters."),
                      (watchlist_table, "No watchlist candidates in the current filters.")):
         _t.props(f'no-data-label="{_msg}"')
+
+    # Per-table column show/hide (PR D) — wire the Settings "Columns" selects now that the tables exist. The
+    # watchlist keeps the probability-context columns hidden by default (the rest are shown).
+    _wl_hidden = tuple(c["name"] for c in _WATCHLIST_COLUMNS if c["name"] not in _WATCHLIST_DEFAULT_VISIBLE)
+    wire_column_chooser(cols_actionable, actionable, _OPP_COLUMNS)
+    wire_column_chooser(cols_review, review, _OPP_COLUMNS)
+    wire_column_chooser(cols_blocked, blocked, _OPP_COLUMNS)
+    wire_column_chooser(cols_watchlist, watchlist_table, _WATCHLIST_COLUMNS, default_hidden=_wl_hidden)
 
     with ui.expansion("📉 Recently actionable (left the actionable set)").classes("w-full"):
         backlog = ui.table(columns=_BACKLOG_COLUMNS, rows=[], row_key="name",
@@ -967,6 +1008,8 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         (rb_min_outright, "Speculative minimum child display outright in cents"),
         (rb_max_ratio, "Speculative maximum child display spread-to-outright ratio"),
         (nm_switch, "Show near-miss books"), (nm_max_over, "Near-miss max overpay in cents"),
+        (cols_actionable, "Actionable table columns"), (cols_review, "Review table columns"),
+        (cols_blocked, "Blocked table columns"), (cols_watchlist, "Watchlist table columns"),
         (actionable, "Actionable opportunities"), (review, "Review-signal opportunities"),
         (blocked, "Blocked opportunities"), (watchlist_table, "Watchlist — bounded-loss bets and overpriced books"),
         (watchlist_expansion, "Watchlist — not actionable now"), (backlog, "Recently-actionable backlog"),
