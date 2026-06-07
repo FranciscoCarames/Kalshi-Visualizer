@@ -281,6 +281,24 @@ WATCHLIST_NOTE = (
     "just wide."
 )
 
+# Universal "known limits" rendered as an always-visible strip above the opportunity tables, so the
+# gross / top-of-book caveats are seen where rows are read (NOT repeated per-row). Authored DIRECTLY as the
+# UI source of truth — short (label, tooltip) pairs — and kept aligned with the GLOSSARY["Known limits"]
+# prose above (do not parse that prose). These apply to EVERY row; row-specific caveats get their own badge.
+KNOWN_LIMIT_STRIP = (
+    "All edge / profit / ROI / size values are GROSS and TOP-OF-BOOK — before fees, collateral, and "
+    "full-depth execution. Treat every edge as an upper bound."
+)
+KNOWN_LIMIT_BADGES: list[tuple[str, str]] = [
+    ("Gross", "Every edge / profit / ROI is GROSS — exchange trading/settlement fees are not subtracted."),
+    ("Top-of-book", "Prices and sizes are TOP-OF-BOOK only; filling more than the top size walks the book "
+                    "to worse prices (not modeled)."),
+    ("Fees not modeled", "Kalshi fees are documented but never netted into the gap — a thin gross edge can "
+                         "turn net-negative after fees."),
+    ("Depth not modeled", "Order-book depth beyond the top quote isn't modeled, so 'Max units' is the top "
+                          "resting size, not the total tradable edge."),
+]
+
 # Map a consistency column / concept to the glossary key whose `short` text explains it.
 # Used by the dashboard so every tooltip is single-sourced, and by tests to catch orphan jargon.
 COLUMN_HELP: dict[str, str] = {

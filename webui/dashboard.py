@@ -14,6 +14,7 @@ from typing import Any
 from nicegui import app, run, ui
 
 import config
+import glossary
 import presence
 import scan_scheduler
 from webui import engine, export
@@ -62,6 +63,18 @@ _CHANGE_CELL_SLOT = (
     '<q-tooltip>returned this scan</q-tooltip></q-icon>'
     '<q-badge v-else-if="props.row._change==\'new\'" color="primary">new</q-badge>'
     '</q-td>'
+)
+
+# Caveat-cell slot (PR 2): let a row-specific caveat WRAP and stay readable instead of being truncated to a
+# single ellipsised line. Visible text (not a tooltip — tooltips fail keyboard/mobile users); capped width
+# so it doesn't dominate the row. A leading severity chip (PR 2b) is COLOUR + TEXT (never colour alone):
+# blocker=red, review=amber, advisory=grey — colour mapped here in the UI layer from the row's `_sev` key.
+_CAVEAT_CELL_SLOT = (
+    '<q-td :props="props" style="white-space: normal; max-width: 22rem;">'
+    '<q-badge v-if="props.row._sev" class="q-mr-xs" '
+    ':color="props.row._sev===\'blocker\' ? \'negative\' : '
+    'props.row._sev===\'review_required\' ? \'warning\' : \'grey-7\'">{{ props.row._sev_label }}</q-badge>'
+    '{{ props.row.caveat }}</q-td>'
 )
 
 
@@ -295,6 +308,17 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         with dialog, ui.card().classes("w-[36rem]"):
             ui.label(lines[0]).classes("text-lg font-bold")
             ui.label(lines[1]).classes("text-sm text-gray-500")
+            # Row-specific severity badges (PR 2b) — colour + text + the full caveat as accessible body text
+            # (not a tooltip), highest severity first. Universal limits live in the page-level strip.
+            badges = vm.severity_badges(opp)
+            if badges:
+                with ui.row().classes("items-center gap-2 flex-wrap"):
+                    for b in badges:
+                        _color = {"blocker": "negative", "review_required": "warning"}.get(
+                            b["severity"], "grey-7")
+                        ui.badge(b["label"]).props(f"color={_color}")
+                for b in badges:
+                    ui.label(f"{b['label']}: {b['tooltip']}").classes("text-xs text-gray-600")
             ui.separator()
             for line in lines[2:]:
                 ui.label(line)
@@ -433,6 +457,12 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         return handler
 
     ui.separator()
+    # Universal "known limits" strip (PR 2) — always visible above the tables so the gross / top-of-book
+    # caveats are read WHERE the rows are, once (not repeated per row). Single-sourced from glossary.
+    with ui.row().classes("items-center gap-2 flex-wrap"):
+        ui.label(glossary.KNOWN_LIMIT_STRIP).classes("text-xs text-gray-500")
+        for _lbl, _tip in glossary.KNOWN_LIMIT_BADGES:
+            ui.badge(_lbl).props("color=grey-7 outline").tooltip(_tip)
     ui.label("Tip: click any row to open its full breakdown (resolution rules · ladder · contracts) below."
              ).classes("text-xs text-gray-500")
     ui.label("✅ Actionable now").classes("text-lg font-bold")
@@ -474,6 +504,15 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
     _sel_tables.extend([actionable, review, blocked, rb_table, nm_table])
     for _t in _sel_tables:        # colour the change-signal indicator column on every opportunity table (#3)
         _t.add_slot("body-cell-new", _CHANGE_CELL_SLOT)
+    for _t in (actionable, review, blocked, rb_table):   # wrap row-specific caveats (PR 2 — visible, not tooltip)
+        _t.add_slot("body-cell-caveat", _CAVEAT_CELL_SLOT)
+    # Compact empty states (PR 2): a shown-but-empty section renders a small message row, not a bare grid.
+    for _t, _msg in ((actionable, "No actionable opportunities in the current filters."),
+                     (review, "No review-signal opportunities in the current filters."),
+                     (blocked, "No blocked opportunities in the current filters."),
+                     (rb_table, "No speculative bounded-loss structures in the current filters."),
+                     (nm_table, "No near-miss books in the current filters.")):
+        _t.props(f'no-data-label="{_msg}"')
 
     with ui.expansion("📉 Recently actionable (left the actionable set)").classes("w-full"):
         backlog = ui.table(columns=_BACKLOG_COLUMNS, rows=[], row_key="name",

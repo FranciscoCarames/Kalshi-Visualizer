@@ -33,6 +33,18 @@ def test_dutch_book_copy_is_conservative_and_single_sourced():
     assert glossary.help_for("Gross edge (¢)") == db["short"]
 
 
+def test_known_limit_badges_structured_and_universal():
+    """The limitation strip is a structured (label, tooltip) constant authored as the UI source of truth —
+    short labels, real tooltips, and the four universal gross/top-of-book limits present."""
+    assert glossary.KNOWN_LIMIT_STRIP.strip()
+    assert glossary.KNOWN_LIMIT_BADGES, "must define at least one universal limit badge"
+    labels = {lbl for lbl, _ in glossary.KNOWN_LIMIT_BADGES}
+    assert {"Gross", "Top-of-book", "Fees not modeled", "Depth not modeled"} <= labels
+    for lbl, tip in glossary.KNOWN_LIMIT_BADGES:
+        assert lbl.strip() and len(lbl) <= 24, f"badge label not short: {lbl!r}"
+        assert tip.strip() and len(tip) > len(lbl), f"badge {lbl!r} needs a real tooltip"
+
+
 def test_blockers_are_non_empty_and_format_cleanly():
     assert glossary.BLOCKERS
     for key, template in glossary.BLOCKERS.items():
