@@ -65,16 +65,17 @@ _CHANGE_CELL_SLOT = (
     '</q-td>'
 )
 
-# Caveat-cell slot (PR 2): let a row-specific caveat WRAP and stay readable instead of being truncated to a
-# single ellipsised line. Visible text (not a tooltip — tooltips fail keyboard/mobile users); capped width
-# so it doesn't dominate the row. A leading severity chip (PR 2b) is COLOUR + TEXT (never colour alone):
-# blocker=red, review=amber, advisory=grey — colour mapped here in the UI layer from the row's `_sev` key.
+# Caveat-cell slot (PR A compaction): show a COMPACT, content-descriptive chip (COLOUR + TEXT — blocker=red,
+# review=amber, advisory=grey, mapped here from the row's `_sev` key) instead of the full caveat prose, which
+# wrapped into 8+ line-tall rows. The full text stays accessible by CLICKING the row → the detail panel
+# (open_panel renders every caveat as body text — keyboard/mobile reachable, not hover-only); the tooltip
+# here only SUPPLEMENTS it for mouse users. `_caveat_tag` is the top badge's short label (PR 2 severity).
 _CAVEAT_CELL_SLOT = (
-    '<q-td :props="props" style="white-space: normal; max-width: 22rem;">'
-    '<q-badge v-if="props.row._sev" class="q-mr-xs" '
+    '<q-td :props="props" class="text-center">'
+    '<q-badge v-if="props.row._sev" '
     ':color="props.row._sev===\'blocker\' ? \'negative\' : '
-    'props.row._sev===\'review_required\' ? \'warning\' : \'grey-7\'">{{ props.row._sev_label }}</q-badge>'
-    '{{ props.row.caveat }}</q-td>'
+    'props.row._sev===\'review_required\' ? \'warning\' : \'grey-7\'">{{ props.row._caveat_tag }}'
+    '<q-tooltip max-width="22rem">{{ props.row.caveat }}</q-tooltip></q-badge></q-td>'
 )
 
 # Action-plan cell (PR 3): the self-contained buy plan wraps so both legs + cost/floor/units stay readable
@@ -293,18 +294,20 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                 "display outright first, then lowest display spread÷outright), or Blended (edge + ROI % + "
                 "geometry). Gross — not a probability model.")
             window_select = ui.select(list(config.BACKLOG_WINDOWS), value=config.BACKLOG_DEFAULT,
-                                       label="Backlog window")
+                                       label="Backlog window").props("stack-label").classes("min-w-[11rem]")
         ui.label("Time & refresh").classes("text-sm font-bold mt-2")
         with ui.row().classes("items-end gap-4 flex-wrap"):
             tz_select = ui.select(config.TIMEZONE_OPTIONS, value=config.TIMEZONE_DEFAULT, label="Time zone")
             persist_select = ui.select(list(config.ALERT_PERSISTENCE_OPTIONS), label="New-actionable banner",
-                                       value=next(iter(config.ALERT_PERSISTENCE_OPTIONS)))
+                                       value=next(iter(config.ALERT_PERSISTENCE_OPTIONS))
+                                       ).props("stack-label").classes("min-w-[13rem]")
             # Auto-refresh: drive the in-process scan scheduler (NON-force, TTL/budget-guarded). SERVER-WIDE
             # shared state — one scheduler loop per process — so a change affects every viewer.
             auto_sw = ui.switch("Auto-refresh", value=scan_scheduler.scheduler.enabled).tooltip(
                 "Periodically re-scan in the background (server-wide). Off = manual 'Refresh snapshot' only.")
             interval_sel = ui.select(config.AUTO_SCAN_INTERVAL_OPTIONS,
-                                      value=scan_scheduler.scheduler.interval_s, label="Every (s)").tooltip(
+                                      value=scan_scheduler.scheduler.interval_s, label="Every (s)"
+                                      ).props("stack-label").classes("min-w-[8rem]").tooltip(
                 "How often the background auto-scan runs.")
             auto_sw.on_value_change(lambda e: scan_scheduler.scheduler.set_enabled(bool(e.value)))
             interval_sel.on_value_change(lambda e: scan_scheduler.scheduler.set_interval(int(e.value)))
@@ -513,14 +516,11 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         return handler
 
     ui.separator()
-    # Universal "known limits" strip (PR 2) — always visible above the tables so the gross / top-of-book
-    # caveats are read WHERE the rows are, once (not repeated per row). Single-sourced from glossary.
-    with ui.row().classes("items-center gap-2 flex-wrap"):
-        ui.label(glossary.KNOWN_LIMIT_STRIP).classes("text-xs text-gray-500")
-        for _lbl, _tip in glossary.KNOWN_LIMIT_BADGES:
-            ui.badge(_lbl).props("color=grey-7 outline").tooltip(_tip)
-    ui.label("Tip: click any row to open its full breakdown (resolution rules · ladder · contracts) below."
-             ).classes("text-xs text-gray-500")
+    # Compact honesty line (PR A declutter) — the gross / top-of-book disclosure stays visible above the
+    # tables, but as ONE short line instead of the verbose strip + 4 badges (the per-aspect detail still
+    # lives in the glossary / help). The "Tip: click any row…" guidance is dropped (rows are selectable and
+    # the detail panel speaks for itself). Single-sourced from glossary.
+    ui.label(glossary.KNOWN_LIMIT_LINE).classes("text-xs text-gray-500")
     ui.label("✅ Actionable now").classes("text-lg font-bold")
     # `overflow-x-auto` (PR 26a responsive pass): the wide opportunity tables scroll horizontally on a
     # narrow screen instead of overflowing the viewport. The control rows already wrap (flex-wrap).
