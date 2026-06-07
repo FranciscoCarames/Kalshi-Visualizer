@@ -221,43 +221,8 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
     ui.label("Opportunities across all sports, ranked best→worst. Core series, gross of fees — "
              "NOT all of Kalshi.").classes("text-sm text-gray-500")
 
-    # --- display + scan controls ---
-    with ui.row().classes("items-end gap-4 flex-wrap"):
-        tz_select = ui.select(config.TIMEZONE_OPTIONS, value=config.TIMEZONE_DEFAULT, label="Time zone")
-        persist_select = ui.select(list(config.ALERT_PERSISTENCE_OPTIONS), label="New-actionable banner",
-                                   value=next(iter(config.ALERT_PERSISTENCE_OPTIONS)))
-        window_select = ui.select(list(config.BACKLOG_WINDOWS), value=config.BACKLOG_DEFAULT,
-                                   label="Backlog window")
-        rank_sel = ui.select(vm.RANK_MODES, value=vm.RANK_MODE_DEFAULT, label="Rank by").tooltip(
-            "Within each section: Per-unit edge ¢, Spread upside (speculative bounded-loss geometry: "
-            "upside:risk, then spread, then lower max loss), Outright + spread (speculative: highest deeper "
-            "display outright first, then lowest display spread÷outright), or Blended (edge + ROI % + "
-            "geometry). Gross — not a probability model.")
-        show_ids = ui.switch("Show IDs & codes", value=False)
-        rules_sw = ui.switch("Resolution criteria", value=False).tooltip(
-            "Show each contract's settlement rules in the click panel and auto-open them in the detail view.")
-        _darkmode = ui.dark_mode()
-        dark_sw = ui.switch("Dark mode",
-                            on_change=lambda e: _darkmode.enable() if e.value else _darkmode.disable()
-                            ).tooltip("Toggle a dark theme.")
-        larger_sw = ui.switch("Larger text").tooltip("Increase text size across the dashboard for readability.")
-        larger_sw.on_value_change(
-            lambda e: ui.query("body").classes(add="a11y-large") if e.value
-            else ui.query("body").classes(remove="a11y-large"))
-        scan_btn = ui.button("⟳ Refresh snapshot")
-        export_btn = ui.button("⬇ Export (ZIP)")
-        # Auto-refresh: drive the in-process scan scheduler (NON-force, TTL/budget-guarded). This control is
-        # SERVER-WIDE shared state — one scheduler loop per process — so a change affects every viewer
-        # (intended for a single-owner / small-LAN tool). The fetch cadence is the scan, not this widget.
-        auto_sw = ui.switch("Auto-refresh", value=scan_scheduler.scheduler.enabled).tooltip(
-            "Periodically re-scan in the background (server-wide). Off = manual 'Refresh snapshot' only.")
-        interval_sel = ui.select(config.AUTO_SCAN_INTERVAL_OPTIONS,
-                                  value=scan_scheduler.scheduler.interval_s, label="Every (s)").tooltip(
-            "How often the background auto-scan runs.")
-        auto_sw.on_value_change(lambda e: scan_scheduler.scheduler.set_enabled(bool(e.value)))
-        interval_sel.on_value_change(lambda e: scan_scheduler.scheduler.set_interval(int(e.value)))
-
-    # --- filters (narrow the STORED snapshot — NONE of these fetches) ---
+    # --- primary controls (ALWAYS on the page) — the decision-critical filters + refresh + a gear that opens
+    # everything else. Safety/freshness (below) and these primary filters never hide behind settings (PR 5).
     with ui.row().classes("items-end gap-4 flex-wrap"):
         sport_sel = ui.select({}, multiple=True, label="Sport").classes("min-w-[8rem]").props("dense")
         tour_sel = ui.select([], multiple=True, label="Tournament").classes("min-w-[10rem]").props("dense")
@@ -266,36 +231,87 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         participant_sel = ui.select({}, multiple=True, with_input=True, label="Players / matches"
                                     ).classes("min-w-[14rem]").props("dense use-chips")
         min_size_in = ui.number("Min size", min=0, format="%.0f").classes("w-28")
-        active_sw = ui.switch("Active only").tooltip("Hide non-active (finalized/settled) markets.")
-        show_review_sw = ui.switch("Review", value=True).tooltip(
-            "Show the Review-signal section — settlement-caveated, never auto-tradable.")
-        show_blocked_sw = ui.switch("Blocked", value=False).tooltip(   # hidden by default (PR S5)
-            "Show the Blocked section — opportunities that exist but aren't currently tradable.")
+        scan_btn = ui.button("⟳ Refresh snapshot")
         clear_btn = ui.button("Clear filters", on_click=lambda: _clear_filters())
+        settings_btn = ui.button(icon="settings").props("flat round").tooltip(
+            "Settings — display, sections, thresholds, time & refresh")
 
-    # --- "Beyond the strict rule" — two opt-in sections past the actionable line (PR 29) ---
-    with ui.row().classes("items-end gap-4 flex-wrap"):
-        ui.label("Beyond the strict rule:").classes("text-sm text-gray-500 self-center")
-        rb_switch = ui.switch("Speculative bounded-loss structures", value=False)
-        rb_max_loss = ui.number("Max loss ¢", value=config.RISK_BUDGET_DEFAULT_MAX_LOSS_C,
-                                min=1, max=config.RISK_BUDGET_MAX_LOSS_C, format="%.0f").classes("w-28")
-        rb_min_ratio = ui.number("Min upside:risk", value=0, min=0, max=20, step=0.5,
-                                 format="%.1f").classes("w-32")
-        # Probability-context filters (display outright, not executable). Min child outright removes
-        # longshots; max spread÷outright caps relative risk. Both 0 = off.
-        rb_min_outright = ui.number("Min child outright ¢",
-                                    value=config.RISK_BUDGET_DEFAULT_MIN_OUTRIGHT_C, min=0, max=100,
-                                    step=1, format="%.0f").classes("w-36").tooltip(
-            "Hide risk-budget rows whose deeper (child) display outright is below this ¢. 0 = off. "
-            "Removes near-impossible longshots.")
-        rb_max_ratio = ui.number("Max spread÷outright",
-                                 value=config.RISK_BUDGET_DEFAULT_MAX_SPREAD_RATIO_HUNDREDTHS / 100,
-                                 min=0, max=10, step=0.05, format="%.2f").classes("w-36").tooltip(
-            "Hide risk-budget rows whose deeper display spread÷outright exceeds this. 0 = off. "
-            "Caps relative risk (scale-invariant — does not remove longshots on its own).")
-        nm_switch = ui.switch("Near-miss books", value=False)
-        nm_max_over = ui.number("Max overpay ¢", value=config.NEAR_MISS_DEFAULT_OVER_C,
-                                min=1, max=config.NEAR_MISS_MAX_OVER_C, format="%.0f").classes("w-28")
+    # --- settings panel (gear) — SECONDARY/preference controls only (PR 5). A modal dialog (not a permanent
+    # drawer) so it never pushes the opportunity rows down. EVERY control below is the SAME object referenced
+    # elsewhere (handlers/bindings/_seed/aria unchanged) — only its parent container moved into the dialog.
+    # State persists across rerender/poll (in-memory); browser-reload persistence is intentionally NOT added.
+    settings_dialog = ui.dialog()
+    with settings_dialog, ui.card().classes("w-[36rem]"):
+        ui.label("Settings").classes("text-lg font-bold")
+        ui.label("Display").classes("text-sm font-bold mt-2")
+        with ui.row().classes("items-end gap-4 flex-wrap"):
+            _darkmode = ui.dark_mode()
+            dark_sw = ui.switch("Dark mode",
+                                on_change=lambda e: _darkmode.enable() if e.value else _darkmode.disable()
+                                ).tooltip("Toggle a dark theme.")
+            larger_sw = ui.switch("Larger text").tooltip(
+                "Increase text size across the dashboard for readability.")
+            larger_sw.on_value_change(
+                lambda e: ui.query("body").classes(add="a11y-large") if e.value
+                else ui.query("body").classes(remove="a11y-large"))
+            show_ids = ui.switch("Show IDs & codes", value=False)
+            rules_sw = ui.switch("Resolution criteria", value=False).tooltip(
+                "Show each contract's settlement rules in the click panel and auto-open them in the detail view.")
+        ui.label("Sections").classes("text-sm font-bold mt-2")
+        with ui.row().classes("items-end gap-4 flex-wrap"):
+            show_review_sw = ui.switch("Review", value=True).tooltip(
+                "Show the Review-signal section — settlement-caveated, never auto-tradable.")
+            show_blocked_sw = ui.switch("Blocked", value=False).tooltip(   # hidden by default (PR S5)
+                "Show the Blocked section — opportunities that exist but aren't currently tradable.")
+        with ui.row().classes("items-end gap-4 flex-wrap"):
+            rb_switch = ui.switch("Speculative bounded-loss structures", value=False)
+            rb_max_loss = ui.number("Max loss ¢", value=config.RISK_BUDGET_DEFAULT_MAX_LOSS_C,
+                                    min=1, max=config.RISK_BUDGET_MAX_LOSS_C, format="%.0f").classes("w-28")
+            rb_min_ratio = ui.number("Min upside:risk", value=0, min=0, max=20, step=0.5,
+                                     format="%.1f").classes("w-32")
+            # Probability-context filters (display outright, not executable). Min child outright removes
+            # longshots; max spread÷outright caps relative risk. Both 0 = off.
+            rb_min_outright = ui.number("Min child outright ¢",
+                                        value=config.RISK_BUDGET_DEFAULT_MIN_OUTRIGHT_C, min=0, max=100,
+                                        step=1, format="%.0f").classes("w-36").tooltip(
+                "Hide speculative rows whose deeper (child) display outright is below this ¢. 0 = off. "
+                "Removes near-impossible longshots.")
+            rb_max_ratio = ui.number("Max spread÷outright",
+                                     value=config.RISK_BUDGET_DEFAULT_MAX_SPREAD_RATIO_HUNDREDTHS / 100,
+                                     min=0, max=10, step=0.05, format="%.2f").classes("w-36").tooltip(
+                "Hide speculative rows whose deeper display spread÷outright exceeds this. 0 = off. "
+                "Caps relative risk (scale-invariant — does not remove longshots on its own).")
+            nm_switch = ui.switch("Near-miss books", value=False)
+            nm_max_over = ui.number("Max overpay ¢", value=config.NEAR_MISS_DEFAULT_OVER_C,
+                                    min=1, max=config.NEAR_MISS_MAX_OVER_C, format="%.0f").classes("w-28")
+        ui.label("Filters & thresholds").classes("text-sm font-bold mt-2")
+        with ui.row().classes("items-end gap-4 flex-wrap"):
+            active_sw = ui.switch("Active only").tooltip("Hide non-active (finalized/settled) markets.")
+            rank_sel = ui.select(vm.RANK_MODES, value=vm.RANK_MODE_DEFAULT, label="Rank by").tooltip(
+                "Within each section: Per-unit edge ¢, Spread upside (speculative bounded-loss geometry: "
+                "upside:risk, then spread, then lower max loss), Outright + spread (speculative: highest deeper "
+                "display outright first, then lowest display spread÷outright), or Blended (edge + ROI % + "
+                "geometry). Gross — not a probability model.")
+            window_select = ui.select(list(config.BACKLOG_WINDOWS), value=config.BACKLOG_DEFAULT,
+                                       label="Backlog window")
+        ui.label("Time & refresh").classes("text-sm font-bold mt-2")
+        with ui.row().classes("items-end gap-4 flex-wrap"):
+            tz_select = ui.select(config.TIMEZONE_OPTIONS, value=config.TIMEZONE_DEFAULT, label="Time zone")
+            persist_select = ui.select(list(config.ALERT_PERSISTENCE_OPTIONS), label="New-actionable banner",
+                                       value=next(iter(config.ALERT_PERSISTENCE_OPTIONS)))
+            # Auto-refresh: drive the in-process scan scheduler (NON-force, TTL/budget-guarded). SERVER-WIDE
+            # shared state — one scheduler loop per process — so a change affects every viewer.
+            auto_sw = ui.switch("Auto-refresh", value=scan_scheduler.scheduler.enabled).tooltip(
+                "Periodically re-scan in the background (server-wide). Off = manual 'Refresh snapshot' only.")
+            interval_sel = ui.select(config.AUTO_SCAN_INTERVAL_OPTIONS,
+                                      value=scan_scheduler.scheduler.interval_s, label="Every (s)").tooltip(
+                "How often the background auto-scan runs.")
+            auto_sw.on_value_change(lambda e: scan_scheduler.scheduler.set_enabled(bool(e.value)))
+            interval_sel.on_value_change(lambda e: scan_scheduler.scheduler.set_interval(int(e.value)))
+        with ui.row().classes("gap-2 mt-2"):
+            export_btn = ui.button("⬇ Export (ZIP)")
+            ui.button("Close", on_click=settings_dialog.close)
+    settings_btn.on_click(settings_dialog.open)
     chips = ui.row().classes("gap-2 flex-wrap")
 
     # `tabular-nums` keeps the live age digits a constant width so the per-second tick doesn't reflow (PR 4).
@@ -878,6 +894,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         (window_select, "Backlog window"), (show_ids, "Show IDs and codes"),
         (rules_sw, "Show resolution criteria"), (dark_sw, "Dark mode"), (larger_sw, "Larger text"),
         (scan_btn, "Refresh snapshot"), (export_btn, "Export snapshot ZIP"),
+        (settings_btn, "Open settings"),
         (auto_sw, "Auto-refresh in the background"), (interval_sel, "Auto-scan interval (seconds)"),
         (sport_sel, "Filter by sport"), (tour_sel, "Filter by tournament"),
         (rank_sel, "Rank opportunities by"),
