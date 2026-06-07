@@ -79,6 +79,13 @@ class Opportunity(BaseModel):
     edge_class: str | None = None
     worst_case_profit_c: float | None = None
     best_case_profit_c: float | None = None
+    # Probability-context display outrights (risk-budget "spread / outright" view). display_c is the
+    # DISPLAY OUTRIGHT price (reasonable-quote midpoint, else last trade), NOT executable. None elsewhere.
+    parent_display_c: float | None = None
+    child_display_c: float | None = None
+    display_spread_c: float | None = None
+    spread_over_parent: float | None = None
+    spread_over_child: float | None = None
     bucket: str | None = None
     status: str | None = None
     tradable_now: str | None = None

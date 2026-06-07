@@ -46,6 +46,11 @@ NEAR_EDGE_MIN_C = -5
 RISK_BUDGET_MAX_LOSS_C = 25                 # widest worst-case loss persisted (≈ cost 1.25 vs 1.00 floor)
 RISK_BUDGET_DEFAULT_MAX_LOSS_C = 5          # default UI max-loss filter (¢)
 RISK_BUDGET_DEFAULT_MIN_RATIO_TENTHS = 0    # default min upside:risk × 10 (0 = off; e.g. 30 = 3.0:1)
+# Probability-context filters (display outright, NOT executable; 0 = off, band-defaults-to-0 convention).
+# "spread / outright" is scale-invariant so the rank mode is led by the deeper outright's magnitude; the
+# min-outright floor is what actually removes longshots, the max-ratio caps relative risk.
+RISK_BUDGET_DEFAULT_MIN_OUTRIGHT_C = 0       # min deeper (child) display outright ¢ (0 = off)
+RISK_BUDGET_DEFAULT_MAX_SPREAD_RATIO_HUNDREDTHS = 0  # max child display_spread/outright × 100 (0 = off; 75 = 0.75)
 # Near-miss dutch books: a MECE book overpriced by up to NEAR_MISS_MAX_OVER_C cents over its payout floor —
 # FLAT payout, so a guaranteed gross LOSS as a bundle. Watchlist only; a small band is all that's useful.
 NEAR_MISS_MAX_OVER_C = 5                     # widest overpay persisted (¢ over the payout floor)

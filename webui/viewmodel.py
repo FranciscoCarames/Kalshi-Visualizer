@@ -70,10 +70,17 @@ def opp_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str] | None
 # controls (max-loss ¢ + min upside:risk for risk-budget; max-overpay ¢ for near-miss) are the extra
 # narrowing. Integer cents throughout; min upside:risk is compared as integer tenths (no float ratio).
 def risk_budget_view(opps: Iterable[dict[str, Any]] | None, *, max_loss_c: float,
-                     min_ratio_tenths: int = 0) -> list[dict[str, Any]]:
+                     min_ratio_tenths: int = 0, min_outright_c: float = 0,
+                     max_spread_ratio_hundredths: int = 0) -> list[dict[str, Any]]:
     """Risk-budget candidates whose worst-case loss ≤ `max_loss_c` ¢ and (optionally) whose upside:risk ≥
     `min_ratio_tenths`/10. A worst-case loss of 0 (cost exactly 100¢ — zero downside, convex upside) is the
-    premium case and always passes the ratio gate."""
+    premium case and always passes the ratio gate.
+
+    Two probability-context filters narrow on the DISPLAY OUTRIGHT (not executable risk), each 0 = off:
+    `min_outright_c` keeps only rows whose deeper (child) display outright ≥ that many ¢ (the longshot
+    cut), and `max_spread_ratio_hundredths` keeps only rows whose child display spread/outright ≤ that/100.
+    A row missing the field (e.g. an older snapshot) is HIDDEN only when the corresponding filter is active
+    (it can't prove it passes); with both filters off, behavior is byte-for-byte unchanged."""
     out: list[dict[str, Any]] = []
     for o in (opps or []):
         if o.get("bucket") != "risk_budget":
@@ -87,6 +94,14 @@ def risk_budget_view(opps: Iterable[dict[str, Any]] | None, *, max_loss_c: float
         bc = o.get("best_case_profit_c")
         if min_ratio_tenths and risk > 0 and not _isna(bc):
             if bc * 10 < min_ratio_tenths * risk:     # exact integer compare: best/risk ≥ ratio
+                continue
+        if min_outright_c:
+            co = o.get("child_display_c")
+            if _isna(co) or co < min_outright_c:      # missing / below the longshot floor -> hide
+                continue
+        if max_spread_ratio_hundredths:
+            soc = o.get("spread_over_child")
+            if _isna(soc) or soc * 100 > max_spread_ratio_hundredths:   # missing / over the cap -> hide
                 continue
         out.append(o)
     return out
@@ -122,6 +137,7 @@ def risk_budget_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str
     """Display row for the risk-budget table: leads with the convex economics (max loss / max profit /
     upside:risk); worst-case ROC is a labelled secondary, never the headline (it's honestly negative)."""
     wc, bc = o.get("worst_case_profit_c"), o.get("best_case_profit_c")
+    _r2 = lambda x: None if _num_or_none(x) is None else round(x, 2)   # noqa: E731 — display rounding
     return {
         "opportunity_id": o.get("opportunity_id"),
         "new": "🆕" if o.get("opportunity_id") in new_ids else "",
@@ -133,6 +149,13 @@ def risk_budget_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str
         "max_profit": None if _isna(bc) else bc,
         "ratio": _upside_risk(wc, bc),
         "roc": o.get("roi_pct"),                       # worst-case ROC (gross, negative) — labelled, secondary
+        # Probability context (DISPLAY OUTRIGHT, not executable): both outrights, the display spread, and
+        # the spread/outright ratios that drive the "Outright + spread" rank mode + the new filters.
+        "parent_outright": _num_or_none(o.get("parent_display_c")),
+        "child_outright": _num_or_none(o.get("child_display_c")),
+        "display_spread": _num_or_none(o.get("display_spread_c")),
+        "spread_over_parent": _r2(o.get("spread_over_parent")),
+        "spread_over_child": _r2(o.get("spread_over_child")),
         "tradable": o.get("tradable_now") or "",
         "caveat": "; ".join(p for p in (o.get("settlement_caveat"), o.get("blocked_reason"))
                             if isinstance(p, str) and p),
@@ -253,7 +276,8 @@ def filter_opps(opps: Iterable[dict[str, Any]], *, sports: Iterable[str] | None 
 # before Review before Blocked …), and a mode only re-orders WITHIN a bucket. Pure in-memory re-sort of
 # the cached opportunities — no rescan, no store read. Risk-budget geometry comes from the existing PR29
 # payoff fields (worst/best_case_profit_c); a row missing them simply sorts last within its bucket.
-RANK_MODES = {"blended": "Blended", "edge": "Per-unit edge ¢", "spread_upside": "Spread upside"}
+RANK_MODES = {"blended": "Blended", "edge": "Per-unit edge ¢", "spread_upside": "Spread upside",
+              "spread_ratio": "Outright + spread"}
 RANK_MODE_DEFAULT = "blended"
 # Within-bucket Blended weights (renormalized over the components a row actually has). ROI is weighted a
 # touch above absolute edge so the owner's "a 2¢→3¢ gap is a 50% improvement just like 20¢→30¢" shows up —
@@ -332,6 +356,29 @@ def _spread_upside_order(group: list[dict[str, Any]], is_risk: bool) -> list[dic
     return sorted(group, key=key)
 
 
+def _spread_ratio_order(group: list[dict[str, Any]], is_risk: bool) -> list[dict[str, Any]]:
+    """Probability-led order for risk-budget rows: the deeper (child) DISPLAY OUTRIGHT magnitude FIRST
+    (descending — a 30¢/20¢ pair outranks a 3¢/2¢ pair even though both share a 0.5 spread/outright ratio,
+    because spread/outright is scale-invariant), then the lower display spread/outright (child, then
+    parent) as the relative-risk tiebreak. Rows with no usable deeper outright (missing/zero — e.g. an
+    older snapshot lacking these fields, or a No-quote book) sort AFTER all known rows. Non-risk buckets
+    have no display-outright legs -> fall back to per-unit edge."""
+    if not is_risk:
+        return sorted(group, key=lambda o: (-_edge(o), o.get("opportunity_id") or ""))
+
+    def key(o: dict[str, Any]) -> tuple:
+        co = _num_or_none(o.get("child_display_c"))
+        if co is None or co <= 0:                       # no probability context -> last
+            return (1, 0.0, 0.0, 0.0, o.get("opportunity_id") or "")
+        soc = _num_or_none(o.get("spread_over_child"))
+        sop = _num_or_none(o.get("spread_over_parent"))
+        return (0, -co,                                 # higher-probability deeper outright first
+                soc if soc is not None else float("inf"),
+                sop if sop is not None else float("inf"),
+                o.get("opportunity_id") or "")
+    return sorted(group, key=key)
+
+
 def rank_opps(opps: Iterable[dict[str, Any]] | None, mode: str = RANK_MODE_DEFAULT) -> list[dict[str, Any]]:
     """Re-order opportunities by `mode` (see RANK_MODES). Buckets group first; the mode re-orders within a
     bucket only. Pure in-memory — switching modes never rescans or reads the store."""
@@ -345,6 +392,8 @@ def rank_opps(opps: Iterable[dict[str, Any]] | None, mode: str = RANK_MODE_DEFAU
         is_risk = bucket == "risk_budget"
         if mode == "spread_upside":
             out.extend(_spread_upside_order(group, is_risk))
+        elif mode == "spread_ratio":
+            out.extend(_spread_ratio_order(group, is_risk))
         elif mode == "blended":
             out.extend(_blended_order(group, is_risk))
         else:                                           # "edge" (and any unknown mode) -> per-unit edge ¢

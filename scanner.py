@@ -67,6 +67,9 @@ UNIFIED_COLUMNS = [
     # profit drives the convex risk-budget columns (max loss / max profit / upside:risk). roi_pct (above)
     # doubles as the worst-case ROC for risk-budget rows (worst_case_profit_c == exec_gap_c).
     "edge_class", "worst_case_profit_c", "best_case_profit_c",
+    # Probability-context display outrights (risk-budget "spread / outright" view) — None for non-containment
+    # shapes. display_c is the DISPLAY OUTRIGHT price (reasonable-quote midpoint, else last trade).
+    "parent_display_c", "child_display_c", "display_spread_c", "spread_over_parent", "spread_over_child",
 ]
 
 
@@ -183,6 +186,12 @@ def _to_unified_consistency(r: dict[str, Any], cfg) -> dict[str, Any]:
         "edge_class": r.get("edge_class") or "",
         "worst_case_profit_c": _num(r.get("worst_case_profit_c")),
         "best_case_profit_c": _num(r.get("best_case_profit_c")),
+        # Probability-context display outrights (risk-budget spread/outright view).
+        "parent_display_c": _num(r.get("parent_display_c")),
+        "child_display_c": _num(r.get("child_display_c")),
+        "display_spread_c": _num(r.get("display_spread_c")),
+        "spread_over_parent": _num(r.get("spread_over_parent")),
+        "spread_over_child": _num(r.get("spread_over_child")),
     }
     d["participant_keys"], d["participant_labels"] = _participants([(r.get("player_key"), r.get("player"))])
     # broader-YES + deeper-NO guarantees ≥100¢ in every settled state, so the floor is 100 when there's a

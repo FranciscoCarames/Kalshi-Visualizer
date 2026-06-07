@@ -79,6 +79,31 @@ def _check(child, parent, equivalence=False,
             "child_contract": "Deeper", "parent_contract": "Broader"}
 
 
+def test_display_outright_helpers_spread_and_ratios():
+    # spread = broader(parent) − deeper(child) display outright; ratios relative to each leg's outright.
+    parent = leg(display_c=30)
+    child = leg(display_c=20)
+    assert consistency._disp_spread(parent, child) == 10
+    assert consistency._disp_ratio(parent, child, "parent") == 10 / 30
+    assert consistency._disp_ratio(parent, child, "child") == 10 / 20
+    # A missing display leg -> spread/ratios None (no probability context).
+    assert consistency._disp_spread(parent, leg(display_c=None)) is None
+    assert consistency._disp_ratio(parent, leg(display_c=None), "child") is None
+    # A zero (No-quote/degenerate) denominator -> that ratio is None, not a divide-by-zero.
+    assert consistency._disp_ratio(leg(display_c=0), child, "parent") is None
+
+
+def test_row_emits_display_outright_context():
+    child = leg(display_c=20, bid_c=19, ask_c=21)
+    parent = leg(display_c=30, bid_c=29, ask_c=31)
+    row = consistency._row("Alcaraz", "key-a", "Win ≤ Final", child, parent,
+                           consistency._classify(child, parent, equivalence=False),
+                           child_node="Win Tournament", parent_node="Reach Final", tournament="T")
+    assert row["parent_display_c"] == 30 and row["child_display_c"] == 20
+    assert row["display_spread_c"] == 10
+    assert row["spread_over_parent"] == 10 / 30 and row["spread_over_child"] == 10 / 20
+
+
 def test_scenario_payoffs_containment_three_states_and_floor_equals_gap():
     # child bid 37 / ask 38 > parent ask 35 → forward containment executable violation, gap 2.
     child = leg(display_c=37, bid_c=37, ask_c=38)
