@@ -103,6 +103,87 @@ def _stamp_severity(row: dict[str, Any], o: dict[str, Any]) -> dict[str, Any]:
     return row
 
 
+# --- mandatory action-plan summary + structured leg evidence (PR 3) --------------------
+def _cents_str(v: Any) -> str:
+    n = _num_or_none(v)
+    return "—" if n is None else f"{int(round(n))}¢"
+
+
+def _side_from_text(text: Any) -> str:
+    t = str(text or "")
+    if t.startswith("Buy YES"):
+        return "Buy YES"
+    if t.startswith("Buy NO"):
+        return "Buy NO"
+    return ""
+
+
+def action_plan_summary(opp: dict[str, Any]) -> dict[str, Any]:
+    """Self-contained action summary for a row (pure) so the buy plan is readable WITHOUT opening detail.
+    Uses the opportunity's OWN cost/floor fields — it never assumes a 100¢ floor (2-way books floor at
+    100¢, but N-leg / field overrounds and synthetic bundles differ). Conservative when fields are missing:
+    they're listed in `missing_fields` and never invented. N-leg findings are described as N-leg, never as
+    a 2-leg plan. Returns the structured parts + a one-cell `line`."""
+    n = _num_or_none(opp.get("n_legs"))
+    legs = opp.get("legs")
+    if n is not None and n > 2:                       # genuine N-leg (synthetic bundle / n-way) — never faked as 2-leg
+        summary = f"{int(n)}-leg plan — open details for legs"
+    else:
+        texts = [opp.get("action_1_text"), opp.get("action_2_text")]
+        if not any(texts) and isinstance(legs, list) and legs:
+            texts = [leg.get("text") for leg in legs]
+        parts = [str(t) for t in texts if t]
+        summary = " + ".join(parts) if parts else "—"
+    cost, floor, units = opp.get("cost_c"), opp.get("payout_floor_c"), opp.get("exec_min_size")
+    missing = [] if summary != "—" else ["legs"]
+    for k, v in (("cost", cost), ("floor", floor), ("max_units", units)):
+        if _num_or_none(v) is None:
+            missing.append(k)
+    units_str = "—" if _num_or_none(units) is None else str(int(units))
+    return {
+        "summary": summary,
+        "cost": _cents_str(cost),
+        "floor": _cents_str(floor),
+        "max_units": units_str,
+        "gross_edge": _cents_str(opp.get("exec_gap_c")),
+        "line": f"{summary} (cost {_cents_str(cost)} → floor {_cents_str(floor)}, ≤{units_str} units)",
+        "is_complete": not missing,
+        "missing_fields": missing,
+    }
+
+
+def leg_rows(opp: dict[str, Any],
+             contract_lookup: dict[str, dict[str, Any]] | None = None) -> list[dict[str, Any]]:
+    """Structured per-leg evidence for one opportunity (pure). Reads the opportunity's uniform `legs` list
+    (the scanner synthesizes one even for 2-leg shapes). Per-leg `status`/`quote_quality` come from
+    `contract_lookup` (ticker -> stored contract row) ONLY when present; otherwise the field is BLANK and
+    `evidence_source` is 'unresolved' — we never infer per-leg status from the opportunity, nor quote
+    quality from a worst-leg, nor fabricate price/size. Display only — no scanner/store schema change."""
+    lookup = contract_lookup or {}
+    legs = opp.get("legs")
+    if not (isinstance(legs, list) and legs):
+        return []
+    out: list[dict[str, Any]] = []
+    for i, leg in enumerate(legs, start=1):
+        tkr = str(leg.get("ticker") or "")
+        c = lookup.get(tkr) if tkr else None
+        price, size = leg.get("price_c"), leg.get("size")
+        out.append({
+            "leg": f"Leg {i}",
+            "side": leg.get("side") or _side_from_text(leg.get("text")),
+            "market": leg.get("contract") or leg.get("text") or tkr or "—",
+            "price": "" if _num_or_none(price) is None else f"{int(round(price))}¢",
+            "size": "" if _num_or_none(size) is None else str(int(size)),
+            "status": (c or {}).get("status") or "",
+            "quote_quality": (c or {}).get("quote_quality") or "",
+            "url": leg.get("url") or "",
+            "evidence_source": ("contract_lookup" if c else
+                                ("opportunity" if (leg.get("text") or price is not None) else "unresolved")),
+            "warning": "" if (c or not tkr) else "unavailable in snapshot",
+        })
+    return out
+
+
 def opp_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str] | None = None) -> dict[str, Any]:
     return _stamp_severity({
         "opportunity_id": o.get("opportunity_id"),
@@ -110,6 +191,7 @@ def opp_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str] | None
         "_change": (changes or {}).get(o.get("opportunity_id"), ""),
         "sport": o.get("sport_label") or o.get("sport") or "",
         "name": o.get("name") or "", "detail": o.get("detail") or "",
+        "action": action_plan_summary(o)["line"],   # mandatory self-contained buy plan (PR 3)
         "edge": o.get("exec_gap_c"), "roi": o.get("roi_pct"), "units": o.get("exec_min_size"),
         "profit": o.get("exec_max_profit_dollars"),
         "tradable": o.get("tradable_now") or "",
