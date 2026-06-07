@@ -94,12 +94,15 @@ def severity_badges(o: dict[str, Any]) -> list[dict[str, str]]:
 
 
 def _stamp_severity(row: dict[str, Any], o: dict[str, Any]) -> dict[str, Any]:
-    """Add the TOP row-specific severity to a display row: ``_sev`` (severity key, for the cell colour) and
-    ``_sev_label`` (short chip text). Empty strings when the row carries no row-specific caveat."""
+    """Add the TOP row-specific severity to a display row: ``_sev`` (severity key, for the cell colour),
+    ``_sev_label`` (short severity word), and ``_caveat_tag`` (the top badge's content-descriptive label,
+    e.g. "Settlement caveat" — shown in the compact caveat chip). Empty strings when no row-specific
+    caveat. The full caveat prose lives in ``row["caveat"]`` (chip tooltip) and the detail panel."""
     badges = severity_badges(o)
     top = badges[0] if badges else None
     row["_sev"] = top["severity"] if top else ""
     row["_sev_label"] = _SEVERITY_SHORT.get(top["severity"], "") if top else ""
+    row["_caveat_tag"] = top["label"] if top else ""
     return row
 
 

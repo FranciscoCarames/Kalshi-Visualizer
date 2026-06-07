@@ -217,8 +217,10 @@ def test_severity_badges_are_structural_and_ordered():
 def test_rows_stamp_top_severity_for_the_cell_chip():
     blk = vm.opp_row(op("b", bucket="blocked", blocked_reason="A leg is finalized."), set())
     assert blk["_sev"] == "blocker" and blk["_sev_label"] == "Blocker"
+    # PR A: the compact caveat chip shows the content-descriptive top-badge label, full prose stays in `caveat`.
+    assert blk["_caveat_tag"] == "Blocked" and "finalized" in blk["caveat"]
     clean = vm.opp_row(op("c", bucket="actionable"), set())
-    assert clean["_sev"] == "" and clean["_sev_label"] == ""
+    assert clean["_sev"] == "" and clean["_sev_label"] == "" and clean["_caveat_tag"] == ""
 
 
 def test_action_plan_summary_two_leg_uses_own_floor():

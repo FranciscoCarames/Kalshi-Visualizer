@@ -289,6 +289,12 @@ KNOWN_LIMIT_STRIP = (
     "All edge / profit / ROI / size values are GROSS and TOP-OF-BOOK — before fees, collateral, and "
     "full-depth execution. Treat every edge as an upper bound."
 )
+# Compact one-line variant (PR A declutter): the same honesty kept on screen without the 4-badge strip.
+# The full per-aspect detail still lives in KNOWN_LIMIT_BADGES / GLOSSARY["Known limits"] for the help/
+# glossary surfaces — this line is only the always-visible disclosure above the tables.
+KNOWN_LIMIT_LINE = (
+    "Gross, top-of-book estimates — fees / depth / collateral not fully modeled."
+)
 KNOWN_LIMIT_BADGES: list[tuple[str, str]] = [
     ("Gross", "Every edge / profit / ROI is GROSS — exchange trading/settlement fees are not subtracted."),
     ("Top-of-book", "Prices and sizes are TOP-OF-BOOK only; filling more than the top size walks the book "
