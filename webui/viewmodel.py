@@ -411,6 +411,63 @@ def filter_opps(opps: Iterable[dict[str, Any]], *, sports: Iterable[str] | None 
     return rows
 
 
+# --- honest per-bucket counts for the status bar (PR 4) -------------------------------
+# Distinguish hidden-by-membership vs hidden-by-threshold by reusing the EXACT filter_opps path (no
+# duplicated filtering logic — the drift guard): in_scope = membership only; shown = membership + thresholds.
+# Hidden-by-section-toggle is a pure UI concern handled by bucket_counts_line (the toggle state lives in the
+# dashboard). Thresholds spare Actionable / dutch-book, so for those shown == in_scope by construction.
+_MEMBERSHIP_KEYS = ("sports", "tournaments", "participant")
+_BUCKET_LABEL = {"actionable": "Actionable", "review_signal": "Review", "blocked": "Blocked",
+                 "risk_budget": "Speculative", "near_miss": "Near-miss"}
+_BUCKET_ORDER = ["actionable", "review_signal", "blocked", "risk_budget", "near_miss"]
+
+
+def _count_by_bucket(rows: Iterable[dict[str, Any]]) -> dict[str, int]:
+    out: dict[str, int] = {}
+    for o in rows:
+        b = o.get("bucket") or ""
+        out[b] = out.get(b, 0) + 1
+    return out
+
+
+def bucket_counts(opps: Iterable[dict[str, Any]] | None,
+                  filters: dict[str, Any] | None = None) -> dict[str, dict[str, int]]:
+    """Per-bucket {total, in_scope, shown} over the snapshot, reusing filter_opps so the numbers can never
+    drift from what the tables actually render. total = whole snapshot; in_scope = after MEMBERSHIP filters
+    (sport/tournament/participant); shown = after membership + THRESHOLDS (min size / active-only)."""
+    filters = filters or {}
+    rows = list(opps or [])
+    membership = {k: filters[k] for k in _MEMBERSHIP_KEYS if filters.get(k)}
+    total = _count_by_bucket(rows)
+    in_scope = _count_by_bucket(filter_opps(rows, **membership))
+    shown = _count_by_bucket(filter_opps(rows, **filters))
+    return {b: {"total": total.get(b, 0), "in_scope": in_scope.get(b, 0), "shown": shown.get(b, 0)}
+            for b in (set(total) | set(in_scope) | set(shown))}
+
+
+def bucket_counts_line(counts: dict[str, dict[str, int]] | None,
+                       visible: dict[str, bool] | None = None) -> str:
+    """Format the per-bucket counts unambiguously (never mixing "shown / in scope" for one bucket with a raw
+    count for another). A toggled-off section reports its in-scope count as "hidden by settings" so the user
+    knows content exists behind the toggle. Buckets with nothing in scope are omitted. Actionable is always
+    visible. `visible` maps bucket -> toggle state for the opt-in sections."""
+    counts = counts or {}
+    visible = visible or {}
+    parts: list[str] = []
+    for b in _BUCKET_ORDER:
+        c = counts.get(b)
+        if not c or c["in_scope"] == 0:
+            continue
+        label = _BUCKET_LABEL[b]
+        if b != "actionable" and not visible.get(b, False):
+            parts.append(f"{label}: hidden by settings ({c['in_scope']} in scope)")
+        elif c["shown"] < c["in_scope"]:
+            parts.append(f"{label}: {c['shown']} shown / {c['in_scope']} in scope")
+        else:
+            parts.append(f"{label}: {c['shown']} shown")
+    return " · ".join(parts)
+
+
 # --- ranking modes (#1/#9) — payoff GEOMETRY, no probability / no expected-value ---------------------
 # Three display-time orderings over the already-filtered rows; buckets ALWAYS group first (Actionable
 # before Review before Blocked …), and a mode only re-orders WITHIN a bucket. Pure in-memory re-sort of
