@@ -745,6 +745,38 @@ def liquidity_leader(contracts: Iterable[dict[str, Any]] | None) -> str | None:
     return f"Market telemetry: most liquid: {label} — {int(size)} at the touch, {int(-neg_spread)}¢ spread"
 
 
+def liquidity_panel(contracts: Iterable[dict[str, Any]] | None, n: int = 5) -> dict[str, list]:
+    """Top-N most liquid sports + contracts RIGHT NOW (pure, DISPLAY-ONLY telemetry — NOT an opportunity
+    signal). Same qualification as `liquidity_leader`: only `active`, genuinely two-sided books (bid>0,
+    ask<100, both sizes>0) count, and a market's tradable liquidity = `min(bid_size, ask_size)` (the depth
+    on the thinner side), tiebroken by a tighter spread then volume. Per-sport depth is the SUM of that
+    across the sport's qualifying markets (UNKNOWN sport excluded). Returns
+    ``{top_sports: [(label, depth)…], top_contracts: [(label, depth, spread¢)…]}`` — both empty/None-safe."""
+    per_sport: dict[str, float] = {}
+    rows: list[tuple[float, float, float, str]] = []
+    for c in contracts or []:
+        if str(c.get("status") or "") != "active":
+            continue
+        bid_sz, ask_sz = _num_or_none(c.get("yes_bid_size")), _num_or_none(c.get("yes_ask_size"))
+        bid_c, ask_c = _num_or_none(c.get("yes_bid_c")), _num_or_none(c.get("yes_ask_c"))
+        spread = _num_or_none(c.get("spread_cents"))
+        if not bid_sz or not ask_sz or spread is None:           # firm size on BOTH sides + a spread
+            continue
+        if bid_c is None or ask_c is None or bid_c <= 0 or ask_c >= 100:   # reject the empty 0/100 book
+            continue
+        depth = min(bid_sz, ask_sz)
+        cfg = sports.sport_for_series(c.get("series"))
+        if cfg.sport_id != "unknown":
+            per_sport[cfg.label] = per_sport.get(cfg.label, 0.0) + depth
+        rows.append((depth, spread, _num_or_none(c.get("volume")) or 0, _contract_label(c)))
+    top_sports = sorted(per_sport.items(), key=lambda kv: (-kv[1], kv[0]))[:n]
+    rows.sort(key=lambda r: (-r[0], r[1], -r[2], r[3]))          # depth desc, spread asc, volume desc, label
+    return {
+        "top_sports": [(label, int(depth)) for label, depth in top_sports],
+        "top_contracts": [(label, int(depth), int(spread)) for depth, spread, _vol, label in rows[:n]],
+    }
+
+
 def _contract_label(c: dict[str, Any]) -> str:
     name, contract = c.get("player") or "", c.get("contract") or c.get("market_ticker") or "?"
     return f"{name} — {contract}" if name else contract
