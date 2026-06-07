@@ -148,6 +148,8 @@ def risk_budget_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str
         "max_loss": None if _isna(wc) else -wc,
         "max_profit": None if _isna(bc) else bc,
         "ratio": _upside_risk(wc, bc),
+        # NOTE: no "tradable" field — a speculative bounded-loss BUNDLE is not auto-placeable even when its
+        # legs are active, so we never surface tradable_now here (PR 1: de-risk speculative framing).
         "roc": o.get("roi_pct"),                       # worst-case ROC (gross, negative) — labelled, secondary
         # Probability context (DISPLAY OUTRIGHT, not executable): both outrights, the display spread, and
         # the spread/outright ratios that drive the "Outright + spread" rank mode + the new filters.
@@ -156,7 +158,6 @@ def risk_budget_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str
         "display_spread": _num_or_none(o.get("display_spread_c")),
         "spread_over_parent": _r2(o.get("spread_over_parent")),
         "spread_over_child": _r2(o.get("spread_over_child")),
-        "tradable": o.get("tradable_now") or "",
         "caveat": "; ".join(p for p in (o.get("settlement_caveat"), o.get("blocked_reason"))
                             if isinstance(p, str) and p),
     }
@@ -164,7 +165,8 @@ def risk_budget_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str
 
 def near_miss_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str] | None = None) -> dict[str, Any]:
     """Display row for the near-miss watchlist: the cost, the overpay (= guaranteed bundle loss), and the
-    flat-loss note. Never frames it as an edge."""
+    flat-loss note. Watchlist only — never frames it as an edge, and never surfaces tradable_now (the
+    bundle is a guaranteed gross loss, not a placeable trade)."""
     g = o.get("exec_gap_c")
     return {
         "opportunity_id": o.get("opportunity_id"),
@@ -174,7 +176,7 @@ def near_miss_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str] 
         "name": o.get("name") or "", "detail": o.get("detail") or "",
         "cost": o.get("cost_c"),
         "overpay": None if _isna(g) else -g,
-        "tradable": o.get("tradable_now") or "",
+        "watchlist": "Watchlist",
         "note": o.get("settlement_caveat") or "",
     }
 
@@ -214,9 +216,9 @@ def explanation_lines(opp: dict[str, Any], *, show_ids: bool = False) -> list[st
     if opp.get("bucket") == "risk_budget":
         wc, bc = opp.get("worst_case_profit_c"), opp.get("best_case_profit_c")
         loss = "—" if _isna(wc) else -wc
-        lines.append(f"Risk-budget (bounded loss, convex upside): max loss {loss}¢   ·   "
+        lines.append(f"Speculative (bounded loss, convex upside): max loss {loss}¢   ·   "
                      f"max profit {'—' if _isna(bc) else bc}¢   ·   upside:risk {_upside_risk(wc, bc)}   ·   "
-                     "GROSS of fees — NOT locked.")
+                     "GROSS of fees — NOT an edge.")
     elif opp.get("bucket") == "near_miss":
         g = opp.get("exec_gap_c")
         lines.append(f"Near-miss watchlist: overpay {'—' if _isna(g) else -g}¢ over the "
@@ -427,7 +429,7 @@ def liquidity_leader(contracts: Iterable[dict[str, Any]] | None) -> str | None:
     if best is None:
         return None
     (size, neg_spread, _), label = best
-    return f"💧 Most liquid now: {label} — {int(size)} at the touch, {int(-neg_spread)}¢ spread"
+    return f"Market telemetry: most liquid: {label} — {int(size)} at the touch, {int(-neg_spread)}¢ spread"
 
 
 def _contract_label(c: dict[str, Any]) -> str:
@@ -451,7 +453,7 @@ def volatility_leader(frames: list[dict[str, Any]] | None) -> str | None:
     (so it never implies continuous sampling). Truthful when there isn't enough history or nothing moved."""
     frames = list(frames or [])
     if len(frames) < 2:
-        return "📈 Volatility unavailable yet — need at least two recent scans with order books."
+        return "Market telemetry: volatility unavailable yet — need at least two recent scans with order books."
     series: dict[str, list[tuple[Any, float]]] = {}
     labels: dict[str, str] = {}
     for f in frames:
@@ -472,10 +474,10 @@ def volatility_leader(frames: list[dict[str, Any]] | None) -> str | None:
         if best is None or (max_d, len(obs)) > (best[0], best[1]):
             best = (max_d, len(obs), tkr)
     if best is None or best[0] == 0:
-        return "📈 Volatility unavailable yet — prices haven't moved across recent scans."
+        return "Market telemetry: volatility unavailable yet — prices haven't moved across recent scans."
     max_d, obs, tkr = best
     span_min = max(1, round((frames[-1]["fetched_ts"] - frames[0]["fetched_ts"]) / 60))
-    return f"📈 Most volatile now: {labels[tkr]} — moved {max_d:.0f}¢ over {obs} obs in ~{span_min} min"
+    return f"Market telemetry: largest move: {labels[tkr]} — moved {max_d:.0f}¢ over {obs} obs in ~{span_min} min"
 
 
 def derive_options(opps: Iterable[dict[str, Any]]) -> dict[str, Any]:
@@ -507,7 +509,7 @@ def scope_banner(cov: dict[str, Any] | None, tz: str = "UTC", *, stale_after: fl
     kalshi_requests, distinct from the opportunity count). The data AGE is recomputed live from
     `fetched_at` (so a per-second timer keeps it current). Honest when there's no scan / no meta."""
     if not cov or cov.get("fetched_at") is None:
-        return "No scan yet — press “Scan now”."
+        return "No scan yet — press “Refresh snapshot”."
     when = data.fmt_time(cov["fetched_at"], tz, fmt="%H:%M:%S %Z")
     age = data.data_age_seconds(cov["fetched_at"])
     threshold = config.STALE_AFTER_SECONDS if stale_after is None else stale_after
@@ -665,7 +667,7 @@ def relationship_explanation(opp: dict[str, Any]) -> str:
     rel = str(opp.get("relationship_type") or opp.get("source") or "")
     if opp.get("rule_flag") and rel.startswith("containment"):
         return ("Match-alignment equivalence: two DIFFERENT markets that should settle the same — "
-                "rule-dependent, so it isn't guaranteed arbitrage (review the settlement rules).")
+                "rule-dependent, so it isn't a secured gross spread (review the settlement rules).")
     return _REL_EXPLAIN.get(rel, f"Relationship: {rel or 'unknown'} — see the legs above.")
 
 
@@ -786,7 +788,7 @@ def empty_state(*, cov: dict[str, Any] | None, total_opps: int, shown_opps: int,
     if not cov or cov.get("fetched_at") is None:
         if status == "in_progress":
             return "Scanning… results will appear here."
-        return "No scan yet — press “Scan now (core series)”."
+        return "No scan yet — press “Refresh snapshot”."
     if total_opps == 0:
         if status == "error" and err:
             return f"Last scan failed: {err}. Showing the last good snapshot (no opportunities)."

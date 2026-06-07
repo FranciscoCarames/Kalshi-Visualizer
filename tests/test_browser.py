@@ -62,7 +62,7 @@ async def test_renders_core_sections(user: User, seeded_db) -> None:
     await user.should_see("Kalshi opportunity engine")     # header
     await user.should_see("Actionable now")
     await user.should_see("Diagnostics & debug")
-    await user.should_see("Scan now")                       # the manual scan button
+    await user.should_see("Refresh snapshot")               # the manual refresh/scan button
 
 
 # --- truthful empty states (PR 26a) ---------------------------------------------------

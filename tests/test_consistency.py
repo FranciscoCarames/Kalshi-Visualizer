@@ -200,9 +200,12 @@ def test_row_resolve_time_is_earliest_leg():
 
 
 def test_spread_certainty_label():
-    assert consistency.spread_certainty_label("") == "Locked gross spread"
+    assert consistency.spread_certainty_label("") == "Gross top-book spread"
     assert consistency.spread_certainty_label("RULE_MISMATCH") == "Rule-dependent gross spread"
     assert consistency.spread_certainty_label("RULE_CHECK_REQUIRED") == "Rule-dependent gross spread"
+    # Honest wording invariant (CLAUDE.md): user-facing certainty text never says "locked".
+    for flag in ("", "RULE_MISMATCH", "RULE_CHECK_REQUIRED"):
+        assert "locked" not in consistency.spread_certainty_label(flag).lower()
 
 
 def test_cross_without_size_downgrades_to_quote_size_missing():
