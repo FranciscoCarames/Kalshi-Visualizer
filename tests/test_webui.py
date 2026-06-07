@@ -195,6 +195,32 @@ def test_speculative_rows_drop_tradable_and_positive_framing():
             assert term not in blob
 
 
+def test_severity_badges_are_structural_and_ordered():
+    # blocked_reason (blocker) + settlement_caveat (advisory) -> blocker sorts first.
+    o = op("x", bucket="blocked", blocked_reason="A leg is finalized.")
+    o["settlement_caveat"] = "Per-game postponement risk."
+    badges = vm.severity_badges(o)
+    assert [b["severity"] for b in badges][0] == "blocker"
+    assert {"blocker", "advisory"} <= {b["severity"] for b in badges}
+    assert all(set(b) == {"label", "severity", "tooltip", "source"} for b in badges)
+    # rule_flag -> review_required, sourced from the STRUCTURAL field (not free-text matching).
+    oy = op("y")
+    oy["rule_flag"] = "RULE_MISMATCH"
+    rb = vm.severity_badges(oy)
+    assert rb[0]["severity"] == "review_required" and rb[0]["source"] == "rule_flag"
+    # A clean actionable row with no row-specific caveat -> no badges (universal limits live in the strip).
+    clean = op("z", bucket="actionable")
+    clean["settlement_caveat"] = ""
+    assert vm.severity_badges(clean) == []
+
+
+def test_rows_stamp_top_severity_for_the_cell_chip():
+    blk = vm.opp_row(op("b", bucket="blocked", blocked_reason="A leg is finalized."), set())
+    assert blk["_sev"] == "blocker" and blk["_sev_label"] == "Blocker"
+    clean = vm.opp_row(op("c", bucket="actionable"), set())
+    assert clean["_sev"] == "" and clean["_sev_label"] == ""
+
+
 def test_ts_disp_and_backlog_row():
     assert vm.ts_disp(None, "UTC") == "—"
     assert vm.ts_disp(1000.0, "UTC") != "—"             # formats an epoch

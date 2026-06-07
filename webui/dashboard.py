@@ -67,9 +67,14 @@ _CHANGE_CELL_SLOT = (
 
 # Caveat-cell slot (PR 2): let a row-specific caveat WRAP and stay readable instead of being truncated to a
 # single ellipsised line. Visible text (not a tooltip — tooltips fail keyboard/mobile users); capped width
-# so it doesn't dominate the row. Applied to every table that carries a "caveat" column.
+# so it doesn't dominate the row. A leading severity chip (PR 2b) is COLOUR + TEXT (never colour alone):
+# blocker=red, review=amber, advisory=grey — colour mapped here in the UI layer from the row's `_sev` key.
 _CAVEAT_CELL_SLOT = (
-    '<q-td :props="props" style="white-space: normal; max-width: 22rem;">{{ props.row.caveat }}</q-td>'
+    '<q-td :props="props" style="white-space: normal; max-width: 22rem;">'
+    '<q-badge v-if="props.row._sev" class="q-mr-xs" '
+    ':color="props.row._sev===\'blocker\' ? \'negative\' : '
+    'props.row._sev===\'review_required\' ? \'warning\' : \'grey-7\'">{{ props.row._sev_label }}</q-badge>'
+    '{{ props.row.caveat }}</q-td>'
 )
 
 
@@ -303,6 +308,17 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         with dialog, ui.card().classes("w-[36rem]"):
             ui.label(lines[0]).classes("text-lg font-bold")
             ui.label(lines[1]).classes("text-sm text-gray-500")
+            # Row-specific severity badges (PR 2b) — colour + text + the full caveat as accessible body text
+            # (not a tooltip), highest severity first. Universal limits live in the page-level strip.
+            badges = vm.severity_badges(opp)
+            if badges:
+                with ui.row().classes("items-center gap-2 flex-wrap"):
+                    for b in badges:
+                        _color = {"blocker": "negative", "review_required": "warning"}.get(
+                            b["severity"], "grey-7")
+                        ui.badge(b["label"]).props(f"color={_color}")
+                for b in badges:
+                    ui.label(f"{b['label']}: {b['tooltip']}").classes("text-xs text-gray-600")
             ui.separator()
             for line in lines[2:]:
                 ui.label(line)
