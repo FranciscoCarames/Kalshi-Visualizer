@@ -210,6 +210,19 @@ def leg_rows(opp: dict[str, Any],
     return out
 
 
+# World Cup Qualifier Setups (PR1) — a compact, single-sourced badge prefixed onto the detail cell so a
+# flagged row (qualifier-not-winner spread / group YES/NO basket) is recognisable in its existing
+# actionable/blocked section. Full chip styling + the diagnostic section land in later PRs.
+_SETUP_BADGE = "🏆 WC Qualifier"
+
+
+def _detail_with_badge(o: dict[str, Any]) -> str:
+    detail = o.get("detail") or ""
+    if o.get("setup_family") == "wc_qualifier":
+        return f"{_SETUP_BADGE} · {detail}" if detail else _SETUP_BADGE
+    return detail
+
+
 def opp_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str] | None = None,
             flash_ids: set[str] | None = None, *, long_short: bool = False) -> dict[str, Any]:
     nf = net_of_fees(o)            # PR E: DISPLAY-ONLY net-of-fees estimate (default-hidden columns)
@@ -219,7 +232,10 @@ def opp_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str] | None
         "_change": (changes or {}).get(o.get("opportunity_id"), ""),
         "_flash": o.get("opportunity_id") in (flash_ids or set()),   # PR B: one-shot green flash this snapshot
         "sport": o.get("sport_label") or o.get("sport") or "",
-        "name": o.get("name") or "", "detail": o.get("detail") or "",
+        # WC Qualifier Setups (PR1): carry the tag for the detail panel / future PR6 chip + prefix a compact
+        # badge onto the detail cell so a flagged row is visible in its existing actionable/blocked section.
+        "setup_family": o.get("setup_family") or "", "setup_type": o.get("setup_type") or "",
+        "name": o.get("name") or "", "detail": _detail_with_badge(o),
         # Compact: just the legs (cost/floor live in the click→detail panel; "Max units" is its own column).
         "action": action_plan_summary(o, long_short=long_short)["summary"],
         "edge": o.get("exec_gap_c"), "roi": o.get("roi_pct"), "units": o.get("exec_min_size"),

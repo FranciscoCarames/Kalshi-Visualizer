@@ -107,6 +107,10 @@ class Opportunity(BaseModel):
     # Parallel lists key<->label; must be DECLARED or extra="ignore" would drop them.
     participant_keys: list[str] = []
     participant_labels: list[str] = []
+    # World Cup Qualifier Setups (PR1): cross-cutting product tag, separate from bucket/routing. Must be
+    # DECLARED — extra="ignore" would drop them. "" for every non-qualifier row.
+    setup_family: str | None = None
+    setup_type: str | None = None
 
 
 class Coverage(BaseModel):
