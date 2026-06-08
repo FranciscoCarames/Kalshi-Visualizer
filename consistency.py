@@ -78,8 +78,11 @@ STATUS_GROUP = {
     "RISK_BUDGET_CANDIDATE": "Risk-budget",
     "NEAR_MISS_DUTCH_BOOK": "Watchlist",
     # World Cup Qualifier Setups (sibling detectors `exact_order` / `game_support`; literals kept here to
-    # avoid an import). Diagnostic-only heuristics — never executable — so a distinct Qualifier-setup group.
+    # avoid an import). Heuristic / review-only — never Actionable — so a distinct Qualifier-setup group.
+    # EXACT_ORDER_DIAGNOSTIC = the reference top-two bundle tier (also stale snapshots);
+    # SPECULATIVE_TOP2_RELATIVE_VALUE = the promoted review-only top-two idea.
     "EXACT_ORDER_DIAGNOSTIC": "Qualifier setup",
+    "SPECULATIVE_TOP2_RELATIVE_VALUE": "Qualifier setup",
     "GAME_SUPPORT_SIGNAL": "Qualifier setup",
     "DISPLAY_VIOLATION": "Warning",
     "WIDE_QUOTE": "Warning",
@@ -947,9 +950,10 @@ def bucket_of(check_row: dict[str, Any]) -> str:
         # dutch book / hard-floor basket carries no rule caveat (plain Yes/No); the basket's group-settlement
         # caveat is advisory only. (Basket findings self-assign `bucket`; this keeps the router complete.)
         return "actionable" if str(check_row.get("tradable_now") or "").startswith("Yes") else "blocked"
-    if status in ("EXACT_ORDER_DIAGNOSTIC", "GAME_SUPPORT_SIGNAL"):
-        # World Cup Qualifier Setups: diagnostic-only heuristics, NEVER executable. Their own opt-in section
-        # (the detectors also self-assign this bucket; this keeps the router complete + the guard test honest).
+    if status in ("EXACT_ORDER_DIAGNOSTIC", "SPECULATIVE_TOP2_RELATIVE_VALUE", "GAME_SUPPORT_SIGNAL"):
+        # World Cup Qualifier Setups: heuristic / review-only, NEVER Actionable. Their own opt-in section
+        # (the detectors also self-assign this bucket; this keeps the router complete + the guard test
+        # honest). EXACT_ORDER_DIAGNOSTIC also covers stale snapshots from before the two-tier split.
         return "qualifier_setup"
     if status == "QUOTE_SIZE_MISSING":
         return "blocked"

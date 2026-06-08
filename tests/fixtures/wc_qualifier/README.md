@@ -23,8 +23,10 @@ Bosnia and Herzegovina / Canada):
   **no `soccer_team` UUID**, so the join to `KXWCGROUPQUAL` goes through `wc_groups.normalize_country_name`.
   The captured fixtures confirm the qualifier↔order name sets match exactly under normalization.
 - **Settlement is undocumented.** Kalshi documents the generic `/events` params and market fields, but
-  **not** the 2026 exact-order/best-third qualification settlement rules — which is why the exact-order
-  and game-support outputs stay diagnostic-only, never executable.
+  **not** the 2026 exact-order/best-third qualification settlement rules — which is why the top-two
+  bundle (Diagnostic + Speculative tiers) and game-support outputs are review-only / diagnostic and
+  never Actionable. The qualifier is a comparator, not a leg; best-third qualification can make the
+  qualifier pay while the top-two bundle pays zero, so neither tier is arbitrage or a replication.
 
 Re-run the probe from an unthrottled network before relying on these for a merge:
 `python scripts/probe_wc_qualifier_setups.py`.

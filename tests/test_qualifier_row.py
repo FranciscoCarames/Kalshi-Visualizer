@@ -5,9 +5,10 @@ from webui import viewmodel
 
 def _exact_order_opp():
     return {"opportunity_id": "eo1", "bucket": "qualifier_setup", "sport_label": "Soccer (World Cup)",
-            "name": "Egypt", "setup_type": "exact_order_top2_proxy", "qualifier_yes_ask_c": 74,
-            "qualifier_vs_top2_premium_c": -90, "n_legs": 13,
-            "settlement_caveat": "diagnostic PROXY only ... not arbitrage, never executable"}
+            "name": "Egypt", "source": "exact_order", "setup_type": "exact_order_top2_bundle",
+            "status": "EXACT_ORDER_DIAGNOSTIC", "qualifier_yes_ask_c": 74,
+            "qualifier_vs_top2_premium_c": -90, "n_legs": 12,
+            "settlement_caveat": "top-two bundle ... not arbitrage; best-third-place qualification ..."}
 
 
 def _game_support_opp():
@@ -20,17 +21,26 @@ def _game_support_opp():
 def test_exact_order_row_populates_premium_only():
     r = viewmodel.qualifier_row(_exact_order_opp(), new_ids=set())
     assert r["name"] == "Egypt"
-    assert r["setup"] == "Exact-order top-two (proxy)"
-    assert r["qualifier"] == 74 and r["premium"] == -90
+    assert r["setup"] == "Diagnostic top-two bundle"
+    assert r["qualifier"] == 74 and r["premium"] == -90      # numeric (drives the sort)
+    assert r["premium_display"] == "-90¢ more expensive"      # sign-aware display string
     assert r["support"] is None                 # the game-support column stays blank
-    assert r["legs"] == 13 and "proxy" in r["note"].lower()
+    assert r["legs"] == 12 and "best-third" in r["note"].lower()
+
+
+def test_speculative_row_label_and_premium_display():
+    o = dict(_exact_order_opp(), setup_type="exact_order_top2_relative_value",
+             status="SPECULATIVE_TOP2_RELATIVE_VALUE", qualifier_vs_top2_premium_c=10)
+    r = viewmodel.qualifier_row(o, new_ids=set())
+    assert r["setup"] == "Speculative top-two bundle"
+    assert r["premium"] == 10 and r["premium_display"] == "+10¢ cheaper"
 
 
 def test_game_support_row_populates_support_only():
     r = viewmodel.qualifier_row(_game_support_opp(), new_ids=set())
     assert r["setup"] == "Game support (heuristic)"
     assert r["support"] == 470 and r["qualifier"] == 79
-    assert r["premium"] is None                 # the exact-order column stays blank
+    assert r["premium"] is None and r["premium_display"] == ""   # the exact-order column stays blank
     assert "not expected points" in r["note"].lower()
 
 

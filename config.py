@@ -63,6 +63,14 @@ NEAR_MISS_DEFAULT_OVER_C = 3                 # default UI max-overpay filter (¢
 WC_SUPPORT_SCORE_STRONG_C = 400              # min summed 3-game ask-support score to flag (¢)
 WC_QUALIFIER_BAND_C = (35, 80)              # qualify YES ask in [lo, hi] ¢ (excludes longshots + near-locks)
 
+# Exact-order top-two bundle — promotion from the Diagnostic tier to the review-only Speculative
+# relative-value tier (a 12-leg Buy-YES "finish top two" bundle vs the direct qualifier YES comparator).
+# A bundle is promoted ONLY when it is genuinely attractive: cheaper than the qualifier by at least
+# MIN_SPECULATIVE_DISCOUNT_C, with cost < 100¢, no wide legs/comparator, and a real top-of-book size of
+# at least MIN_SPECULATIVE_TOP2_UNITS. Otherwise it stays a Diagnostic reference row. NEVER arbitrage.
+MIN_SPECULATIVE_DISCOUNT_C = 5               # min (qualifier YES ask − bundle cost) to promote (¢)
+MIN_SPECULATIVE_TOP2_UNITS = 5              # min top-of-book size across the 12 bundle legs to promote
+
 # Kalshi web frontend base for per-series market pages.
 KALSHI_WEB_BASE = "https://kalshi.com/markets"
 

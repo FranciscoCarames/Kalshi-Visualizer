@@ -51,18 +51,93 @@ def _full_group(teams=("Alpha", "Bravo", "Charlie", "Delta"), *, order_ask=10, q
 
 
 # --- happy path -------------------------------------------------------------------------------------
-def test_synthetic_happy_path_premium_math():
+def _spec_group():
+    """A group that PROMOTES to the Speculative tier: synth 84 (12×7) < 100, qualifier 94 → premium +10
+    (≥ MIN_SPECULATIVE_DISCOUNT_C), tight quotes, full size."""
+    return _full_group(order_ask=7, qual_ask=94)
+
+
+def test_diagnostic_tier_happy_path():
     out = exact_order.find_exact_order_premiums(_full_group(order_ask=10, qual_ask=50))
     assert len(out) == 4
     for f in out:
-        assert f["status"] == exact_order.EXACT_ORDER_DIAGNOSTIC
+        assert f["status"] == exact_order.EXACT_ORDER_DIAGNOSTIC          # synth 120 ≥ 100 → Diagnostic
+        assert f["relationship_type"] == "exact_order_top2_bundle"
+        assert f["setup_type"] == "exact_order_top2_bundle"
+        assert f["opportunity_class"] == "diagnostic_top2_bundle"
         assert f["bucket"] == "qualifier_setup"
         assert f["tradable_now"] == "Diagnostic only"
         assert f["synthetic_top_two_cost_c"] == 120         # 12 legs × 10¢
         assert f["qualifier_yes_ask_c"] == 50
         assert f["qualifier_vs_top2_premium_c"] == -70       # 50 − 120
-        assert f["n_legs"] == 13                              # 12 orderings + the qualifier
-        assert "proxy" in f["settlement_caveat"].lower()
+        assert f["top2_net_if_top2_c"] == -20                # 100 − 120 (a LOSS even if top two)
+        assert f["top2_loss_if_not_top2_c"] == 120
+        assert f["top2_max_units"] == 100
+        assert f["n_legs"] == 12                             # the qualifier is a COMPARATOR, not a leg
+        assert all(lg["side"] == "buy_yes" for lg in f["legs"])
+        assert not any("qualify" in (lg.get("text") or "").lower() for lg in f["legs"])
+        assert "best-third" in f["settlement_caveat"].lower()
+
+
+def test_speculative_tier_promotion():
+    out = {f["name"]: f for f in exact_order.find_exact_order_premiums(_spec_group())}
+    assert len(out) == 4
+    f = out["Alpha"]
+    assert f["status"] == exact_order.SPECULATIVE_TOP2_RELATIVE_VALUE
+    assert f["relationship_type"] == "exact_order_top2_relative_value"
+    assert f["setup_type"] == "exact_order_top2_relative_value"
+    assert f["opportunity_class"] == "speculative_top2_bundle"
+    assert f["tradable_now"] == "Review execution"
+    assert f["synthetic_top_two_cost_c"] == 84 and f["qualifier_vs_top2_premium_c"] == 10
+    assert f["top2_net_if_top2_c"] == 16 and f["top2_loss_if_not_top2_c"] == 84
+    assert f["top2_max_units"] == 100 and f["wide_bundle_leg_count"] == 0
+    assert f["n_legs"] == 12
+
+
+def test_below_discount_threshold_stays_diagnostic():
+    # synth 84, qualifier 86 → premium 2 < MIN_SPECULATIVE_DISCOUNT_C → stays Diagnostic (still emits).
+    out = exact_order.find_exact_order_premiums(_full_group(order_ask=7, qual_ask=86))
+    assert len(out) == 4
+    assert all(f["status"] == exact_order.EXACT_ORDER_DIAGNOSTIC for f in out)
+
+
+def test_thin_size_stays_diagnostic():
+    rows = _spec_group()
+    for r in rows:                       # shrink every bundle leg below the units floor (still firm > 0)
+        if r["kind"] == "exact_order":
+            r["yes_ask_size"] = 3
+    out = exact_order.find_exact_order_premiums(rows)
+    assert len(out) == 4
+    assert all(f["status"] == exact_order.EXACT_ORDER_DIAGNOSTIC and f["top2_max_units"] == 3 for f in out)
+
+
+def test_wide_bundle_leg_downgrades_affected_teams_only():
+    rows = _spec_group()
+    bad = next(r for r in rows if r["kind"] == "exact_order")   # ordering Alpha,Bravo,Charlie,Delta
+    bad["quote_quality"] = "Wide"
+    out = {f["name"]: f for f in exact_order.find_exact_order_premiums(rows)}
+    assert out["Alpha"]["status"] == exact_order.EXACT_ORDER_DIAGNOSTIC and out["Alpha"]["wide_bundle_leg_count"] >= 1
+    assert out["Bravo"]["status"] == exact_order.EXACT_ORDER_DIAGNOSTIC
+    assert out["Charlie"]["status"] == exact_order.SPECULATIVE_TOP2_RELATIVE_VALUE
+    assert out["Charlie"]["wide_bundle_leg_count"] == 0
+
+
+def test_wide_comparator_downgrades_but_bundle_quality_stays_clean():
+    rows = _spec_group()
+    q = next(r for r in rows if r["series"] == "KXWCGROUPQUAL" and r["player"] == "Alpha")
+    q["quote_quality"] = "Wide"
+    f = {x["name"]: x for x in exact_order.find_exact_order_premiums(rows)}["Alpha"]
+    assert f["status"] == exact_order.EXACT_ORDER_DIAGNOSTIC          # wide COMPARATOR blocks promotion
+    assert f["comparator_quote_quality"] == "Wide"
+    assert f["worst_bundle_quote_quality"] != "Wide" and f["wide_bundle_leg_count"] == 0
+
+
+def test_no_setup_b_hedge_ever_emitted():
+    for rows in (_full_group(), _spec_group()):
+        for f in exact_order.find_exact_order_premiums(rows):
+            assert all(lg["side"] != "buy_no" for lg in f["legs"])           # no qualifier-NO hedge leg
+            assert "qualifier_no" not in str(f.get("relationship_type"))
+            assert not any("qualify" in (lg.get("text") or "").lower() for lg in f["legs"])  # no Leg 13
 
 
 def test_fixture_backed_group_b_premiums():
@@ -74,7 +149,9 @@ def test_fixture_backed_group_b_premiums():
     assert out["Switzerland"]["qualifier_yes_ask_c"] == 94
     assert out["Switzerland"]["synthetic_top_two_cost_c"] == 172
     assert out["Switzerland"]["qualifier_vs_top2_premium_c"] == -78
-    assert out["Bosnia and Herzegovina"]["n_legs"] == 13
+    assert out["Switzerland"]["top2_net_if_top2_c"] == -72         # 100 − 172 (overround → loss even if top two)
+    assert out["Switzerland"]["status"] == exact_order.EXACT_ORDER_DIAGNOSTIC
+    assert out["Bosnia and Herzegovina"]["n_legs"] == 12
 
 
 # --- structural gates (fail closed → no finding, diagnostic counter) --------------------------------
@@ -131,6 +208,29 @@ def test_missing_qualifier_skips_that_team():
     assert "Alpha" not in {f["name"] for f in out} and len(out) == 3
 
 
+def test_inactive_order_leg_skips_affected_teams():
+    rows = _full_group()
+    bad = next(r for r in rows if r["kind"] == "exact_order")   # ordering Alpha,Bravo,Charlie,Delta
+    bad["status"] = "finalized"
+    out = {f["name"] for f in exact_order.find_exact_order_premiums(rows)}
+    assert out == {"Charlie", "Delta"}                          # Alpha + Bravo (its top two) skipped
+
+
+def test_no_quote_qualifier_skips_that_team():
+    rows = _full_group()
+    next(r for r in rows if r["series"] == "KXWCGROUPQUAL" and r["player"] == "Alpha")["quote_quality"] = "No quote"
+    out = {f["name"] for f in exact_order.find_exact_order_premiums(rows)}
+    assert "Alpha" not in out and len(out) == 3
+
+
+def test_missing_order_ask_skips_affected_teams():
+    rows = _full_group()
+    bad = next(r for r in rows if r["kind"] == "exact_order")   # ordering Alpha,Bravo,Charlie,Delta
+    bad["yes_ask_c"] = None
+    out = {f["name"] for f in exact_order.find_exact_order_premiums(rows)}
+    assert out == {"Charlie", "Delta"}
+
+
 # --- exclusion from every other detector ------------------------------------------------------------
 def _contract_rows():
     return (data.build_contracts("KXWCGROUPORDER", [_load("KXWCGROUPORDER-B26.json")])
@@ -161,14 +261,27 @@ def test_exact_order_rows_are_non_participant():
 
 # --- unified mapper + NaN round-trip ----------------------------------------------------------------
 def test_unified_mapper_shape_and_participant_from_qualifier_uuid():
-    f = exact_order.find_exact_order_premiums(_full_group())[0]
+    f = exact_order.find_exact_order_premiums(_full_group())[0]   # Diagnostic tier
     d = scanner._to_unified_exact_order(f, sports.SOCCER)
     assert d["bucket"] == "qualifier_setup" and d["source"] == "exact_order"
-    assert d["exec_gap_c"] is None and d["setup_type"] == "exact_order_top2_proxy"
+    assert d["exec_gap_c"] is None and d["cost_c"] is None
+    assert d["setup_type"] == "exact_order_top2_bundle" and d["opportunity_class"] == "diagnostic_top2_bundle"
     assert d["qualifier_vs_top2_premium_c"] == f["qualifier_vs_top2_premium_c"]
+    assert d["top2_net_if_top2_c"] == f["top2_net_if_top2_c"] and d["top2_max_units"] == f["top2_max_units"]
+    assert d["comparator_quote_quality"] == f["comparator_quote_quality"]
+    assert d["n_legs"] == 12
     # Participant identity is the JOINED QUALIFIER UUID, not an order-market pseudo-key.
     assert d["participant_keys"] == [f["participant_uuid"]]
     assert not any(str(k).startswith("exact_order::") for k in d["participant_keys"])
+
+
+def test_unified_mapper_speculative_tier():
+    f = exact_order.find_exact_order_premiums(_spec_group())[0]
+    d = scanner._to_unified_exact_order(f, sports.SOCCER)
+    assert d["status"] == "SPECULATIVE_TOP2_RELATIVE_VALUE"
+    assert d["setup_type"] == "exact_order_top2_relative_value"
+    assert d["opportunity_class"] == "speculative_top2_bundle"
+    assert consistency.bucket_of(d) == "qualifier_setup"          # NEVER actionable
 
 
 def test_unified_row_survives_dataframe_nan_round_trip():
@@ -178,3 +291,5 @@ def test_unified_row_survives_dataframe_nan_round_trip():
     rt = pd.DataFrame([d], columns=scanner.UNIFIED_COLUMNS).to_dict("records")[0]
     assert rt["status"] == "EXACT_ORDER_DIAGNOSTIC"
     assert scanner._num(rt["qualifier_vs_top2_premium_c"]) == f["qualifier_vs_top2_premium_c"]
+    assert scanner._num(rt["top2_net_if_top2_c"]) == f["top2_net_if_top2_c"]
+    assert rt["opportunity_class"] == "diagnostic_top2_bundle"

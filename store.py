@@ -16,12 +16,15 @@ wall-clock ``now``), so behaviour is reproducible in tests and independent of wh
 from __future__ import annotations
 
 import json
+import logging
 import os
 import sqlite3
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import config
+
+_log = logging.getLogger(__name__)
 
 # Bump when the on-disk schema changes; `_migrate` brings an older file forward. Held in the SQLite
 # `user_version` pragma so no bookkeeping table is needed. v3 adds `snapshot_frames` (per-sport/per-frame
@@ -104,6 +107,18 @@ CREATE TABLE IF NOT EXISTS opportunities (
 CREATE INDEX IF NOT EXISTS ix_opp_snapshot ON opportunities(snapshot_id);
 CREATE INDEX IF NOT EXISTS ix_opp_id       ON opportunities(opportunity_id);
 """ + _FRAMES_SCHEMA + _BACKLOG_SCHEMA
+
+# Read-path performance indexes (PR1). Kept OUTSIDE the versioned schema and (re)applied idempotently on
+# every _connect via _ensure_indexes, so an existing v4 DB self-heals without a schema-version bump:
+#   - (snapshot_id, bucket)        drives actionable_history_since's per-snapshot `WHERE snapshot_id=? AND
+#                                  bucket='actionable'` (only ~9 of ~1126 rows/snapshot, vs expanding all).
+#   - (snapshot_id, opportunity_id) drives latest_rows_by_id's `WHERE snapshot_id=? AND opportunity_id IN(..)`.
+#   - snapshots(fetched_ts, id)    drives the MAX(fetched_ts)/window/order reads.
+_PERF_INDEXES = """
+CREATE INDEX IF NOT EXISTS ix_opp_snap_bucket ON opportunities(snapshot_id, bucket);
+CREATE INDEX IF NOT EXISTS ix_opp_snap_oid    ON opportunities(snapshot_id, opportunity_id);
+CREATE INDEX IF NOT EXISTS ix_snap_ts         ON snapshots(fetched_ts, id);
+"""
 
 
 # --- time normalization (exact UTC; deterministic) -----------------------------------
@@ -215,7 +230,16 @@ def _connect(db_path: str | None) -> sqlite3.Connection:
     conn.execute("PRAGMA journal_mode = WAL")
     conn.execute(f"PRAGMA busy_timeout = {int(config.SNAPSHOT_BUSY_TIMEOUT_MS)}")
     _migrate(conn, resolved)
+    _ensure_indexes(conn)
     return conn
+
+
+def _ensure_indexes(conn: sqlite3.Connection) -> None:
+    """Apply the read-path performance indexes idempotently (CREATE INDEX IF NOT EXISTS). Cheap no-op once
+    they exist; the first connect to a large legacy DB pays the one-time build (the original is untouched —
+    indexes are additive, so rollback is just DROP INDEX). Kept out of the versioned migration so an
+    already-v4 DB self-heals without a schema-version bump."""
+    conn.executescript(_PERF_INDEXES)
 
 
 def _backup_before_migration(conn: sqlite3.Connection, db_path: str) -> None:
@@ -682,6 +706,86 @@ def snapshots_since(window: Any, db_path: str | None = None) -> list[dict[str, A
             return []
         cutoff = newest - seconds
         return _load(conn, "WHERE fetched_ts >= ? ORDER BY fetched_ts ASC, id ASC", (cutoff,))
+    finally:
+        conn.close()
+
+
+def _load_actionable(conn: sqlite3.Connection, clause: str, params: tuple = ()) -> list[dict[str, Any]]:
+    """Like `_load` but each snapshot's `opportunities` is filtered to ``bucket='actionable'`` (JSON-expand
+    ONLY those, ~9 of ~1126/snapshot). Returns EVERY snapshot matching `clause` — with ``opportunities=[]``
+    when none are actionable — so the lifecycle timeline (left_ts / duration) over the full snapshot
+    sequence is preserved."""
+    snaps = conn.execute(
+        f"SELECT id, fetched_at, fetched_ts, meta FROM snapshots {clause}", params).fetchall()
+    out: list[dict[str, Any]] = []
+    expanded = 0
+    for s in snaps:
+        rows = conn.execute(
+            "SELECT data FROM opportunities WHERE snapshot_id = ? AND bucket = 'actionable' ORDER BY rowid",
+            (s["id"],)).fetchall()
+        expanded += len(rows)
+        out.append({
+            "snapshot_id": s["id"],
+            "fetched_at": s["fetched_at"],
+            "fetched_ts": s["fetched_ts"],
+            "meta": json.loads(s["meta"]) if s["meta"] else None,
+            "opportunities": [json.loads(r["data"]) for r in rows],
+        })
+    _log.debug("actionable_history: snapshots=%d json_rows_expanded=%d", len(out), expanded)
+    return out
+
+
+def actionable_history_since(window: Any, db_path: str | None = None) -> list[dict[str, Any]]:
+    """`snapshots_since` narrowed to actionable rows: every snapshot within `window` of the NEWEST stored
+    snapshot (oldest -> newest, same newest-relative boundary as `snapshots_since`), each carrying only its
+    ``bucket='actionable'`` opportunities (``[]`` when none). The cheap source for the §10 backlog and the
+    persistent §8 alert — both consume only actionable rows — avoiding a full ~1M-row JSON expansion.
+    Pair with `latest_rows_by_id` for the current state of opportunities that have since left actionable."""
+    seconds = window.total_seconds() if isinstance(window, timedelta) else float(window)
+    conn = _connect(db_path)
+    try:
+        newest = conn.execute("SELECT MAX(fetched_ts) AS m FROM snapshots").fetchone()["m"]
+        if newest is None:
+            return []
+        cutoff = newest - seconds
+        return _load_actionable(conn, "WHERE fetched_ts >= ? ORDER BY fetched_ts ASC, id ASC", (cutoff,))
+    finally:
+        conn.close()
+
+
+# SQLite's default host-parameter limit is 999; chunk IN(...) lists well under it (1 slot is the snapshot_id).
+_SQLITE_MAX_VARS = 900
+
+
+def latest_rows_by_id(ids: Any, db_path: str | None = None) -> dict[str, dict[str, Any]]:
+    """Full current rows (ANY bucket), keyed by `opportunity_id`, for `ids`, from the SINGLE latest
+    snapshot. Resolves the latest `snapshot_id` ONCE then reads rows from that exact id, so a scan write
+    landing mid-call can never blend two snapshots. Returns ``{}`` on empty/blank `ids`. Chunks the
+    ``IN (...)`` list under the SQLite host-parameter cap and merges the results."""
+    want = [i for i in dict.fromkeys(ids) if i]   # dedup, drop falsy, preserve order
+    if not want:
+        return {}
+    conn = _connect(db_path)
+    try:
+        row = conn.execute(
+            "SELECT id FROM snapshots ORDER BY fetched_ts DESC, id DESC LIMIT 1").fetchone()
+        if row is None:
+            return {}
+        sid = row["id"]
+        out: dict[str, dict[str, Any]] = {}
+        for start in range(0, len(want), _SQLITE_MAX_VARS):
+            chunk = want[start:start + _SQLITE_MAX_VARS]
+            marks = ",".join("?" * len(chunk))
+            rows = conn.execute(
+                f"SELECT data FROM opportunities WHERE snapshot_id = ? AND opportunity_id IN ({marks})",
+                (sid, *chunk)).fetchall()
+            for r in rows:
+                d = json.loads(r["data"])
+                oid = d.get("opportunity_id")
+                if oid is not None and oid not in out:
+                    out[oid] = d
+        _log.debug("latest_rows_by_id: requested=%d resolved=%d snapshot_id=%s", len(want), len(out), sid)
+        return out
     finally:
         conn.close()
 

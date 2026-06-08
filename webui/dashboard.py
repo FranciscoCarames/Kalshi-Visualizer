@@ -94,6 +94,15 @@ def _num_cell_slot(field: str, *, colored: bool = False) -> str:
 
 _EDGE_CELL_SLOT = _num_cell_slot("edge", colored=True)   # gross edge: commas + green/red on change
 
+# Qualifier-minus-top-two-cost cell: sign-aware TEXT (cheaper / more expensive) while Quasar still sorts
+# on the raw numeric `premium` field. Blank when absent (game-support rows carry no premium).
+_PREMIUM_CELL_SLOT = (
+    '<q-td :props="props" class="text-center">'
+    '<span v-if="props.row.premium_display">{{ props.row.premium_display }}'
+    '<q-tooltip>qualifier YES − top-two bundle cost (¢); positive = bundle cheaper</q-tooltip></span>'
+    '<span v-else>{{ props.row.premium }}</span></q-td>'
+)
+
 # Caveat-cell slot (PR A compaction): a COMPACT, content-descriptive severity chip (COLOUR + TEXT —
 # blocker=red, review=amber, advisory=grey) instead of full prose. Full text is on the chip tooltip and in
 # the click→detail panel. Left-aligned with the other text columns.
@@ -226,16 +235,16 @@ _NEARMISS_COLUMNS = [
     {"name": "note", "label": "Note", "field": "note", "align": "left"},
 ]
 
-# Qualifier-setup DIAGNOSTIC table (#4/#5). Diagnostic numbers only — NO gross-edge / ROI / size / profit
-# columns (those are blank for a non-executable signal and would imply tradability). The premium-proxy
-# (exact-order) and the ask-support score (game-support) each populate only their own column.
+# Qualifier-setups table (#4/#5). NO gross-edge / ROI / size / profit columns (those are blank for a
+# non-Actionable signal and would imply tradability). The qualifier-minus-top-two-cost gap (exact-order
+# two tiers) and the ask-support score (game-support) each populate only their own column.
 _QS_COLUMNS = [
     {"name": "new", "label": "", "field": "new", "align": "center", "required": True},
     {"name": "sport", "label": "Sport", "field": "sport", "align": "center", "sortable": True},
     {"name": "name", "label": "Team", "field": "name", "align": "left", "sortable": True},
     {"name": "setup", "label": "Setup", "field": "setup", "align": "left", "sortable": True},
     {"name": "qualifier", "label": "Qualify YES ¢", "field": "qualifier", "align": "center", "sortable": True},
-    {"name": "premium", "label": "Top-two premium ¢ (proxy)", "field": "premium", "align": "center", "sortable": True},
+    {"name": "premium", "label": "Qualifier − top-two cost ¢", "field": "premium", "align": "center", "sortable": True},
     {"name": "support", "label": "Support score ¢", "field": "support", "align": "center", "sortable": True},
     {"name": "legs", "label": "Legs", "field": "legs", "align": "center", "sortable": True},
     {"name": "note", "label": "Note", "field": "note", "align": "left"},
@@ -401,9 +410,10 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                 "Show the Review-signal section — settlement-caveated, never auto-tradable.")
             show_blocked_sw = ui.switch("Blocked", value=False).tooltip(   # hidden by default (PR S5)
                 "Show the Blocked section — opportunities that exist but aren't currently tradable.")
-            qs_switch = ui.switch("Qualifier setups", value=True).tooltip(  # diagnostic-only (default-on, opt-in)
-                "Show the World Cup Qualifier setups section — diagnostic, gross, top-of-book, "
-                "settlement-unverified heuristics. Not arbitrage; never executable.")
+            qs_switch = ui.switch("Qualifier setups", value=True).tooltip(  # opt-in (default-on)
+                "Show the World Cup Qualifier setups section — speculative top-two ideas (review-only) + "
+                "diagnostic reference bundles + game-support signals. Gross, top-of-book, settlement-"
+                "unverified; NOT arbitrage and never Actionable.")
         with ui.row().classes("items-end gap-4 flex-wrap"):
             rb_switch = ui.switch("Speculative bounded-loss structures", value=True)  # PR A2: on (collapsed in PR C)
             rb_max_loss = ui.number("Max loss ¢", value=config.RISK_BUDGET_DEFAULT_MAX_LOSS_C,
@@ -520,9 +530,14 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             # Structured buy plan (PR 3): the exact legs with per-leg status / quote from the stored
             # contracts (blank = unavailable in snapshot, never inferred).
             legrows = vm.leg_rows(opp, _contract_lookup_for(opp), long_short=pos_framing_sw.value)
+            _is_top2 = vm._is_exact_order_bundle(opp)
             if legrows:
-                ui.label("Buy plan (legs)").classes("text-sm font-bold mt-2")
+                ui.label("Top-two bundle (12 legs)" if _is_top2 else "Buy plan (legs)"
+                         ).classes("text-sm font-bold mt-2")
                 ui.table(columns=_LEG_COLUMNS, rows=legrows, row_key="leg").classes("w-full")
+                if _is_top2:
+                    ui.label(f"Comparator (not a leg): {opp.get('name')} qualify YES "
+                             f"@ {opp.get('qualifier_yes_ask_c')}¢").classes("text-sm text-gray-600")
             if rules_sw.value:        # global "Resolution criteria" toggle — per-leg settlement rules
                 ui.separator()
                 ui.label("Resolution criteria").classes("text-sm font-bold")
@@ -536,16 +551,24 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                     ui.label("Resolution rules aren't captured in the latest snapshot."
                              ).classes("text-sm text-gray-500")
             with ui.row():
-                legs = opp.get("legs")
-                if isinstance(legs, list) and legs:           # N-leg: one link per leg with a url
-                    for i, leg in enumerate(legs):
-                        if leg.get("url"):
-                            ui.link(f"Leg {i + 1} market ↗", leg["url"], new_tab=True)
-                else:
+                if _is_top2:
+                    # Filtered bundle legs (no legacy comparator leg) + the qualifier comparator link.
+                    for lr in legrows:
+                        if lr.get("url"):
+                            ui.link(f"{lr['leg']} market ↗", lr["url"], new_tab=True)
                     if opp.get("url"):
-                        ui.link("Leg 1 market ↗", opp["url"], new_tab=True)
-                    if opp.get("url_2"):
-                        ui.link("Leg 2 market ↗", opp["url_2"], new_tab=True)
+                        ui.link("Comparator: qualifier market ↗", opp["url"], new_tab=True)
+                else:
+                    legs = opp.get("legs")
+                    if isinstance(legs, list) and legs:           # N-leg: one link per leg with a url
+                        for i, leg in enumerate(legs):
+                            if leg.get("url"):
+                                ui.link(f"Leg {i + 1} market ↗", leg["url"], new_tab=True)
+                    else:
+                        if opp.get("url"):
+                            ui.link("Leg 1 market ↗", opp["url"], new_tab=True)
+                        if opp.get("url_2"):
+                            ui.link("Leg 2 market ↗", opp["url_2"], new_tab=True)
             ui.button("Close", on_click=dialog.close)
         dialog.open()
 
@@ -691,11 +714,12 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
     blocked.on_select(_on_select(blocked))
 
     # World Cup Qualifier Setups (PR3): a separate, default-on, opt-in DIAGNOSTIC section — kept out of the
-    # strict Actionable/Review/Blocked sections. Populated by the exact-order (#4) premium-proxy + game-
+    # strict Actionable/Review/Blocked sections. Populated by the exact-order (#4) top-two bundles + game-
     # support (#5) signals; the flagged baskets/spreads still live in their own sections (PR1 badge).
     qs_hdr = _section_header(
-        "Qualifier setups — World Cup group-stage diagnostics",
-        "Heuristic, gross, top-of-book, settlement-unverified signals — NOT arbitrage and never executable.")
+        "Qualifier setups — World Cup group-stage ideas & signals",
+        "Speculative top-two ideas (review-only) + diagnostic reference bundles + game-support signals — "
+        "gross, top-of-book, settlement-unverified; NOT arbitrage and never Actionable.")
     qs_table = ui.table(columns=_QS_COLUMNS, rows=[], row_key="opportunity_id", selection="single",
                         pagination=10).props("dense").classes("w-full overflow-x-auto opp-sel")
     qs_table.on_select(_on_select(qs_table))
@@ -739,7 +763,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         _t.add_slot("body-cell-caveat", _CAVEAT_CELL_SLOT)  # compact severity chip
     rb_table.add_slot("body-cell-caveat", _CAVEAT_CELL_SLOT)
     nm_table.add_slot("body-cell-note", _NOTE_CELL_SLOT)    # readable wrapping note
-    qs_table.add_slot("body-cell-note", _NOTE_CELL_SLOT)    # the proxy / not-expected-points caveat
+    qs_table.add_slot("body-cell-note", _NOTE_CELL_SLOT)    # the best-third / not-expected-points caveat
     # Thousands-separated numeric cells (display only; numeric sort preserved). 'edge' is handled above.
     for _t in (actionable, review, blocked):
         for _f in ("roi", "units", "profit", "net_edge", "net_profit", "fees"):
@@ -749,13 +773,14 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         rb_table.add_slot(f"body-cell-{_f}", _num_cell_slot(_f))
     for _f in ("cost", "overpay"):
         nm_table.add_slot(f"body-cell-{_f}", _num_cell_slot(_f))
-    for _f in ("qualifier", "premium", "support", "legs"):
+    for _f in ("qualifier", "support", "legs"):
         qs_table.add_slot(f"body-cell-{_f}", _num_cell_slot(_f))
+    qs_table.add_slot("body-cell-premium", _PREMIUM_CELL_SLOT)   # sign-aware text, numeric sort preserved
     # Compact empty states: a shown-but-empty section renders a small message row, not a bare grid.
     for _t, _msg in ((actionable, "No actionable opportunities in the current filters."),
                      (review, "No review-required opportunities in the current filters."),
                      (blocked, "No blocked opportunities in the current filters."),
-                     (qs_table, "No qualifier-setup diagnostics in the current filters."),
+                     (qs_table, "No qualifier setups in the current filters."),
                      (rb_table, "No bounded-loss bets in the current filters."),
                      (nm_table, "No overpriced books in the current filters.")):
         _t.props(f'no-data-label="{_msg}"')
@@ -1100,7 +1125,9 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         actionable.rows = [vm.opp_row(o, new_ids, chg, flash, long_short=ls) for o in view if o.get("bucket") == "actionable"]
         review.rows = [vm.opp_row(o, new_ids, chg, flash, long_short=ls) for o in view if o.get("bucket") == "review_signal"]
         blocked.rows = [vm.opp_row(o, new_ids, chg, flash, long_short=ls) for o in view if o.get("bucket") == "blocked"]
-        qs_table.rows = [vm.qualifier_row(o, new_ids, chg, flash) for o in view if o.get("bucket") == "qualifier_setup"]
+        qs_table.rows = [vm.qualifier_row(o, new_ids, chg, flash)
+                         for o in vm.order_qualifier_rows(o for o in view
+                                                          if o.get("bucket") == "qualifier_setup")]
         for hdr, tbl, sw in ((review_hdr, review, show_review_sw), (blocked_hdr, blocked, show_blocked_sw),
                              (qs_hdr, qs_table, qs_switch)):
             hdr.set_visibility(sw.value)
@@ -1201,7 +1228,6 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             force = bool((engine.coverage() or {}).get("stale"))
             st = await run.io_bound(engine.run_scan_now, force=force)   # network I/O off the event loop
             await reload_data()                              # surface the new snapshot immediately for this client
-            await reload_data()                              # surface the new snapshot immediately for this client
             status = st.get("status")
             if status == "done":
                 cov = st.get("last_result") or {}
@@ -1269,7 +1295,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         (nm_switch, "Show overpriced books (near-miss)"), (nm_max_over, "Near-miss max overpay in cents"),
         (show_net_sw, "Show estimated net-of-fees columns"),
         (actionable, "Actionable opportunities"), (review, "Review-required opportunities"),
-        (blocked, "Blocked opportunities"), (qs_table, "Qualifier setup diagnostics"),
+        (blocked, "Blocked opportunities"), (qs_table, "Qualifier setups"),
         (rb_table, "Bounded-loss bets"), (rb_expansion, "Bounded-loss bets section"),
         (nm_table, "Overpriced books"), (nm_expansion, "Overpriced books section"),
         (backlog, "Recently-actionable backlog"),
