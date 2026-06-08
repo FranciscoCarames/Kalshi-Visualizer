@@ -75,8 +75,15 @@ def opportunities_in_bucket(bucket: str, db_path: str | None = None) -> list[dic
 
 
 def backlog(window_s: float, db_path: str | None = None) -> list[dict[str, Any]]:
-    """Recently-actionable backlog over the window (§10)."""
-    return lifecycle.recently_actionable(store.snapshots_since(window_s, db_path=db_path))
+    """Recently-actionable backlog over the window (§10).
+
+    Read-path-optimized: pull only actionable rows across the window (not all ~1M opp rows) plus the
+    CURRENT rows of those ids — semantically identical to `recently_actionable(snapshots_since(window))`."""
+    hist = store.actionable_history_since(window_s, db_path=db_path)
+    ids = {r.get("opportunity_id") for snap in hist for r in (snap.get("opportunities") or [])
+           if r.get("opportunity_id")}
+    current = store.latest_rows_by_id(ids, db_path=db_path)
+    return lifecycle.recently_actionable_from_actionable_history(hist, current)
 
 
 def backlog_events(days: float = 7.0, category: str | None = None,
@@ -94,7 +101,10 @@ def alerts(persistence_s: float | None = None, db_path: str | None = None) -> di
     if persistence_s is None:
         new_rows = lifecycle.new_actionable(prev, cur)
     else:
-        history = store.snapshots_since(config.SNAPSHOT_RETENTION_SECONDS, db_path=db_path)
+        # `persisting_new_actionable` only ever inspects actionable rows (its `first_seen` is
+        # actionable_only and its window=None branch is `new_actionable`, both bucket-filtered), so the
+        # actionable-narrowed history is identical input at a fraction of the JSON expansion.
+        history = store.actionable_history_since(config.SNAPSHOT_RETENTION_SECONDS, db_path=db_path)
         new_rows = lifecycle.persisting_new_actionable(history, persistence_s, now_ts=None)
     return {"new_actionable": new_rows, "blocked_changes": lifecycle.blocked_change(prev, cur)}
 

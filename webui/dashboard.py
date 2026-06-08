@@ -1228,7 +1228,6 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             force = bool((engine.coverage() or {}).get("stale"))
             st = await run.io_bound(engine.run_scan_now, force=force)   # network I/O off the event loop
             await reload_data()                              # surface the new snapshot immediately for this client
-            await reload_data()                              # surface the new snapshot immediately for this client
             status = st.get("status")
             if status == "done":
                 cov = st.get("last_result") or {}

@@ -152,16 +152,17 @@ def _reason_left(cur_row: dict[str, Any] | None) -> str:
     return "went clean"
 
 
-def recently_actionable(snapshots: list[dict[str, Any]], *, now_ts: float | None = None
-                        ) -> list[dict[str, Any]]:
-    """Opportunities actionable in SOME snapshot in the given window but NOT in the latest. `snapshots`
-    is the windowed history the caller fetched (`store.snapshots_since(window)`), oldest→newest. Returns
-    §10 fields with numeric became/left timestamps, ordered most-recently-left first."""
-    snaps = _ordered(snapshots)
+def _recently_actionable_core(snaps: list[dict[str, Any]],
+                              current_by_id: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
+    """Shared §10 logic over snapshots `snaps` (oldest→newest) given `current_by_id` = the LATEST
+    snapshot's rows keyed by id (used only for `reason_left`/`current_*` of opps that have LEFT actionable).
+    Both the pure full-history `recently_actionable` and the optimized `*_from_actionable_history` delegate
+    here, so they are identical by construction. `snaps` must contain EVERY snapshot in the window (even
+    ones with no actionable rows) — `left_ts` is the first snapshot strictly after the last actionable one."""
+    snaps = _ordered(snaps)
     if not snaps:
         return []
     latest = snaps[-1]
-    latest_by = _by_id(latest)
     latest_actionable = _actionable_ids(latest)
 
     actionable_snaps: dict[str, list[dict[str, Any]]] = {}
@@ -182,7 +183,7 @@ def recently_actionable(snapshots: list[dict[str, Any]], *, now_ts: float | None
                         if (s.get("fetched_ts") or _NEG_INF) > (last_active_ts or _NEG_INF)), last_active_ts)
         duration_s = (last_active_ts - became_ts) if (became_ts is not None and last_active_ts is not None) else None
         last_row = _by_id(last_active).get(oid, {})
-        cur_row = latest_by.get(oid)
+        cur_row = current_by_id.get(oid)
         out.append({
             "opportunity_id": oid,
             "sport": last_row.get("sport"), "name": last_row.get("name"),
@@ -205,3 +206,25 @@ def recently_actionable(snapshots: list[dict[str, Any]], *, now_ts: float | None
         })
     out.sort(key=lambda d: d["left_ts"] if d["left_ts"] is not None else _NEG_INF, reverse=True)
     return out
+
+
+def recently_actionable(snapshots: list[dict[str, Any]], *, now_ts: float | None = None
+                        ) -> list[dict[str, Any]]:
+    """Opportunities actionable in SOME snapshot in the given window but NOT in the latest. `snapshots`
+    is the windowed history the caller fetched (`store.snapshots_since(window)`), oldest→newest. Returns
+    §10 fields with numeric became/left timestamps, ordered most-recently-left first."""
+    snaps = _ordered(snapshots)
+    current_by_id = _by_id(snaps[-1]) if snaps else {}
+    return _recently_actionable_core(snaps, current_by_id)
+
+
+def recently_actionable_from_actionable_history(
+        actionable_history: list[dict[str, Any]],
+        current_lookup: dict[str, dict[str, Any]] | None,
+        *, now_ts: float | None = None) -> list[dict[str, Any]]:
+    """Read-path-optimized §10 backlog, semantically identical to `recently_actionable` over the full
+    history. `actionable_history` = `store.actionable_history_since(window)` (every snapshot, opps filtered
+    to `bucket='actionable'`); `current_lookup` = `store.latest_rows_by_id(ids)` (full CURRENT rows, any
+    bucket, for the ids that were actionable — supplies `reason_left`/`current_*` for opps that have left
+    actionable, which the narrowed latest snapshot no longer carries)."""
+    return _recently_actionable_core(actionable_history, dict(current_lookup or {}))
