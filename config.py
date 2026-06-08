@@ -56,6 +56,13 @@ RISK_BUDGET_DEFAULT_MAX_SPREAD_RATIO_HUNDREDTHS = 0  # max child display_spread/
 NEAR_MISS_MAX_OVER_C = 5                     # widest overpay persisted (¢ over the payout floor)
 NEAR_MISS_DEFAULT_OVER_C = 3                 # default UI max-overpay filter (¢)
 
+# World Cup game-support signal (#5): an ASK-IMPLIED support score (3·win_ask + draw_ask, summed over a
+# team's 3 group games) — NOT expected points / not a probability (vig-biased upward). A team is FLAGGED
+# (diagnostic-only) when its score is strong AND its qualify YES sits in a "moderately priced" band — i.e.
+# the games look strong but the market hasn't fully priced qualification. Raw top-of-book cents; no de-vig.
+WC_SUPPORT_SCORE_STRONG_C = 400              # min summed 3-game ask-support score to flag (¢)
+WC_QUALIFIER_BAND_C = (35, 80)              # qualify YES ask in [lo, hi] ¢ (excludes longshots + near-locks)
+
 # Kalshi web frontend base for per-series market pages.
 KALSHI_WEB_BASE = "https://kalshi.com/markets"
 
