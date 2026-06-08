@@ -111,6 +111,14 @@ class Opportunity(BaseModel):
     # DECLARED — extra="ignore" would drop them. "" for every non-qualifier row.
     setup_family: str | None = None
     setup_type: str | None = None
+    # Diagnostic-only numeric fields for the qualifier_setup section (PR3 schema; PR4/PR5 fill them). None
+    # on every non-diagnostic row. exact-order #4 premium-proxy + inputs; game-support #5 ask-support score.
+    qualifier_vs_top2_premium_c: float | None = None
+    synthetic_top_two_cost_c: float | None = None
+    qualifier_yes_ask_c: float | None = None
+    ask_support_score_total_c: float | None = None
+    ask_support_score_per_game_c: float | None = None
+    join_confidence: str | None = None
 
 
 class Coverage(BaseModel):

@@ -77,6 +77,10 @@ STATUS_GROUP = {
     # are "beyond the strict rule" — past the actionable line, so a distinct Watchlist group.
     "RISK_BUDGET_CANDIDATE": "Risk-budget",
     "NEAR_MISS_DUTCH_BOOK": "Watchlist",
+    # World Cup Qualifier Setups (sibling detectors `exact_order` / `game_support`; literals kept here to
+    # avoid an import). Diagnostic-only heuristics — never executable — so a distinct Qualifier-setup group.
+    "EXACT_ORDER_DIAGNOSTIC": "Qualifier setup",
+    "GAME_SUPPORT_SIGNAL": "Qualifier setup",
     "DISPLAY_VIOLATION": "Warning",
     "WIDE_QUOTE": "Warning",
     "MISSING_QUOTE": "Missing data",
@@ -908,7 +912,7 @@ def scenario_payoffs(check_row: dict[str, Any], units: Any = None) -> dict[str, 
 # Trader-dashboard buckets. Pure mapping from one consistency-check row to the dashboard section it
 # belongs in — reads only fields already produced by build_checks; no math, no side effects.
 DASHBOARD_BUCKETS = (
-    "actionable", "review_signal", "blocked", "risk_budget", "near_miss", "near_edge",
+    "actionable", "review_signal", "blocked", "risk_budget", "near_miss", "qualifier_setup", "near_edge",
     "display_signal", "wide_signal", "data_quality", "clean",
 )
 
@@ -943,6 +947,10 @@ def bucket_of(check_row: dict[str, Any]) -> str:
         # dutch book / hard-floor basket carries no rule caveat (plain Yes/No); the basket's group-settlement
         # caveat is advisory only. (Basket findings self-assign `bucket`; this keeps the router complete.)
         return "actionable" if str(check_row.get("tradable_now") or "").startswith("Yes") else "blocked"
+    if status in ("EXACT_ORDER_DIAGNOSTIC", "GAME_SUPPORT_SIGNAL"):
+        # World Cup Qualifier Setups: diagnostic-only heuristics, NEVER executable. Their own opt-in section
+        # (the detectors also self-assign this bucket; this keeps the router complete + the guard test honest).
+        return "qualifier_setup"
     if status == "QUOTE_SIZE_MISSING":
         return "blocked"
     if status == "DISPLAY_VIOLATION":
