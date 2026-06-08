@@ -441,8 +441,8 @@ def _clean_title(title: Any) -> str:
 def _contract_label(kind: str, market: dict[str, Any], opponent: str, stage: str,
                     cfg: sports.SportConfig, ladder_node: str | None) -> str:
     """Human-readable description of what a contract pays out on. Winner/advance wording is sport-aware:
-    the winner label comes from `cfg.winner_label` (tennis/golf/soccer keep "Win the tournament";
-    NBA/WNBA → "Win the Championship"; MLB → "Win the World Series"), and an advance leg prefers its
+    the winner label comes from `cfg.winner_label` (tennis/golf keep "Win the tournament"; soccer →
+    "Win the World Cup"; NBA/WNBA → "Win the Championship"; MLB → "Win the World Series"), and an advance leg prefers its
     ladder node (e.g. "Win League" / "Win Conference" / "Top 5") over a generic "Reach {stage}" — the node
     is None only when the stage is unmapped, so the old "Reach {stage}" fallback is preserved."""
     if kind == "match":

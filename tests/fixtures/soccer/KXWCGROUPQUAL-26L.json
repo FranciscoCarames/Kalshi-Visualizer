@@ -1,0 +1,32 @@
+{
+  "_fixture_meta": {"captured": "2026-06-08", "ticker": "KXWCGROUPQUAL-26L", "source": "phase-0 live probe (RO32-to-winner extension)", "note": "per-team group qualifier == Reach Round of 32 (mutually_exclusive=false); rules_primary literally says 'qualify from Group L for the Round of 32'; two sample team markets; live competition is 'FIFA World Cup' (NOT '2026 FIFA World Cup' as older fixtures assume); stage is parsed from the GROUPQUAL ticker segment, not the title"},
+  "event_ticker": "KXWCGROUPQUAL-26L",
+  "title": "Group L Qualifiers",
+  "mutually_exclusive": false,
+  "competition_scope": "Group Qualifiers",
+  "product_metadata": {"competition": "FIFA World Cup", "competition_scope": "Group Qualifiers"},
+  "markets": [
+    {
+      "ticker": "KXWCGROUPQUAL-26L-PAN",
+      "yes_sub_title": "Panama",
+      "strike_type": "structured",
+      "custom_strike": {"soccer_team": "48a29c49-797e-4ca7-bab4-b1d22d724fe4"},
+      "status": "active",
+      "title": "Will Panama qualify from World Cup Group L?",
+      "yes_bid_dollars": "0.3100", "yes_ask_dollars": "0.3200", "last_price_dollars": "0.3200",
+      "yes_bid_size_fp": "1103.92", "yes_ask_size_fp": "10089.26", "volume_fp": "10649.36",
+      "rules_primary": "If Panama is one of the teams to qualify from Group L for the Round of 32 in the 2026 FIFA World Cup, then the market resolves to Yes."
+    },
+    {
+      "ticker": "KXWCGROUPQUAL-26L-GHA",
+      "yes_sub_title": "Ghana",
+      "strike_type": "structured",
+      "custom_strike": {"soccer_team": "5c4b405e-5b26-47cf-bb23-acd90eda9e99"},
+      "status": "active",
+      "title": "Will Ghana qualify from World Cup Group L?",
+      "yes_bid_dollars": "0.5000", "yes_ask_dollars": "0.5100", "last_price_dollars": "0.5100",
+      "yes_bid_size_fp": "2842.95", "yes_ask_size_fp": "71.00", "volume_fp": "23164.81",
+      "rules_primary": "If Ghana is one of the teams to qualify from Group L for the Round of 32 in the 2026 FIFA World Cup, then the market resolves to Yes."
+    }
+  ]
+}

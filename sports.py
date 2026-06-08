@@ -697,23 +697,34 @@ GOLF = register(SportConfig(
 
 
 # --- Soccer (6th sport): 2026 World Cup ---------------------------------------------------------------
-# Owns KXWCGAME (3-way group game Home/Away/Tie — `game` family, the n-outcome dutch book) + KXWCROUND
-# (per-team reach-stage — `advance` ladder) via exact_series. The Tie market reuses a CONSTANT soccer_team
-# UUID across all games, so it's a non-participant draw leg with a per-event synthetic key (tie_fn). No
-# head-to-head series (match_family=""). Values confirmed live (kss research-gates note, 2026-06-04).
+# Owns (via exact_series): KXWCGAME (3-way group game Home/Away/Tie — `game` family, the n-outcome dutch
+# book), KXWCROUND (per-team reach-stage RO16..Final — `advance` ladder), and KXWCGROUPQUAL (per-team
+# "qualify from group for the Round of 32" — the `advance` ladder's BOTTOM rung; modeled by Kalshi as 12
+# per-group events KXWCGROUPQUAL-26A..L, joined per-team by the soccer_team UUID). KXWC is the DORMANT
+# tournament-outright winner ticker — no such series is live yet (2026-06-08 probe: all KXWC* swept, none
+# is a per-team champion field), so it is a GUESS pending verification when the outright lists at kickoff
+# (~2026-06-11). The guess follows Kalshi's own precedent — KXCLUBWC is titled "Club World Cup
+# Championship", i.e. the bare competition prefix IS the winner market (runner-up guess: KXWCWINNER). Until
+# it lists, the "Win the World Cup" rung simply stays unpopulated (a truthful missing layer). The Tie
+# market reuses a CONSTANT soccer_team UUID across all games (non-participant draw leg, per-event synthetic
+# key via tie_fn). No head-to-head series (match_family=""). Reach-stage values confirmed live.
 SOCCER_TIE_UUID = "111193d4-9b1f-4bd8-ab7c-9de252737f05"
-_SOCCER_EXACT = frozenset({"KXWCGAME", "KXWCROUND"})
+_SOCCER_EXACT = frozenset({"KXWCGAME", "KXWCROUND", "KXWCGROUPQUAL", "KXWC"})
 _SOCCER_CATEGORY = {"game": "Match (3-way)", "advance": "Stage advancement",
                     "winner": "Tournament winner", "other": "Other"}
-_SOCCER_STAGE_RANK = {"Round of 16": 1, "Quarterfinals": 2, "Semifinals": 3, "Finals": 4}
+_SOCCER_STAGE_RANK = {"Round of 32": 1, "Round of 16": 2, "Quarterfinals": 3, "Semifinals": 4, "Finals": 5}
 _SOCCER_LADDER = LadderSpec(
-    node_order=("Reach Round of 16", "Reach Quarterfinals", "Reach Semifinals", "Reach Finals"),
-    adjacent_pairs=(("Reach Finals", "Reach Semifinals"),
+    node_order=("Reach Round of 32", "Reach Round of 16", "Reach Quarterfinals",
+                "Reach Semifinals", "Reach Finals", "Win the World Cup"),
+    adjacent_pairs=(("Win the World Cup", "Reach Finals"),
+                    ("Reach Finals", "Reach Semifinals"),
                     ("Reach Semifinals", "Reach Quarterfinals"),
-                    ("Reach Quarterfinals", "Reach Round of 16")),
+                    ("Reach Quarterfinals", "Reach Round of 16"),
+                    ("Reach Round of 16", "Reach Round of 32")),
     match_stage_to_node={},                    # no head-to-head
-    advance_stage_to_node={"Round of 16": "Reach Round of 16", "Quarterfinals": "Reach Quarterfinals",
-                           "Semifinals": "Reach Semifinals", "Finals": "Reach Finals"},
+    advance_stage_to_node={"Round of 32": "Reach Round of 32", "Round of 16": "Reach Round of 16",
+                           "Quarterfinals": "Reach Quarterfinals", "Semifinals": "Reach Semifinals",
+                           "Finals": "Reach Finals"},
 )
 
 
@@ -721,17 +732,23 @@ def _soccer_family(cfg, series_ticker):
     t = (series_ticker or "").upper()
     if t == "KXWCGAME":
         return "game"                                                # 3-way group game (n-outcome dutch book)
-    if t == "KXWCROUND":
-        return "advance"                                             # per-team reach-stage
+    if t in ("KXWCROUND", "KXWCGROUPQUAL"):
+        return "advance"                                             # per-team reach-stage (GROUPQUAL = Reach RO32)
+    if t in cfg.winner_tickers:
+        return "winner"                                              # dormant outright (KXWC) — see header note
     return "other"
 
 
 def _soccer_stage(cfg, family, market):
     if family != "advance":
         return ""
-    # The round lives in the market ticker segment (e.g. KXWCROUND-26RO16-PAR) and/or the title. Check
-    # most-specific first so "Semifinals"/"Quarterfinals" never collapse to "Finals".
+    # The round lives in the market ticker segment (e.g. KXWCROUND-26RO16-PAR / KXWCGROUPQUAL-26L-PAN)
+    # and/or the title. Check most-specific first so "Semifinals"/"Quarterfinals" never collapse to "Finals".
     blob = ((market.get("ticker") or "") + " " + (market.get("title") or "")).upper()
+    # Round of 32 = qualifying from the group stage (KXWCGROUPQUAL "Group X Qualifiers"); also accept an
+    # explicit RO32 marker should KXWCROUND ever list one. "GROUPQUAL" has no "QUAR", so order is safe.
+    if "GROUPQUAL" in blob or "RO32" in blob or "ROUND OF 32" in blob:
+        return "Round of 32"
     if "RO16" in blob or "ROUND OF 16" in blob:
         return "Round of 16"
     if "QUAR" in blob:
@@ -745,7 +762,7 @@ def _soccer_stage(cfg, family, market):
 
 def _soccer_node(cfg, family, stage):
     if family == "winner":
-        return "Win Tournament"                                      # declared for the future outright series
+        return "Win the World Cup"                                   # dormant until the KXWC outright lists
     if family == "advance":
         return cfg.ladder.advance_stage_to_node.get(stage)
     return None                                                      # game is dutch-only, not laddered
@@ -765,7 +782,7 @@ def _soccer_tie(cfg, market):
 SOCCER = register(SportConfig(
     sport_id="soccer", label="Soccer (World Cup)", emoji="⚽",
     series_prefixes=(), default_series=tuple(sorted(_SOCCER_EXACT)),
-    winner_tickers=frozenset(),
+    winner_tickers=frozenset({"KXWC"}),        # dormant outright (guess; see header note) — auto-activates when it lists
     identity=IdentityResolver(candidate_paths=("custom_strike.soccer_team",), id_label="soccer_team"),
     ladder=_SOCCER_LADDER,
     category_labels=_SOCCER_CATEGORY,
@@ -781,6 +798,7 @@ SOCCER = register(SportConfig(
     division_fn=_soccer_division,
     exact_series=_SOCCER_EXACT,
     tie_fn=_soccer_tie,
+    winner_label="Win the World Cup",
 ))
 
 
