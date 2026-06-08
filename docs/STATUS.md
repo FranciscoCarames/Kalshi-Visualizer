@@ -21,8 +21,12 @@ a small trader group.
   ladder + match-alignment classifier (`consistency.py`); the dutch-book / MECE detector
   (`dutchbook.py` — 2-way, soccer 3-way, tournament-winner field); and the synthetic exact-score bundle
   detector (`synthetic_bundle.py`, review-only).
-- **8 sports:** tennis, NBA, WNBA, golf, soccer, MLB, NHL, and motorsport (F1/NASCAR/IndyCar/MotoGP).
-  Adding another is one `register(SportConfig(...))` call.
+- **9 sports:** tennis, NBA, WNBA, golf, soccer, MLB, NHL, motorsport (F1/NASCAR/IndyCar/MotoGP), and
+  NFL. Adding another is one `register(SportConfig(...))` call. NFL ships the core futures ladder (Reach
+  Playoffs ⊇ Win Conference ⊇ Win Super Bowl), the `KXSB` winner-field overround, and the `KXNFLGAME`
+  full-game dutch book gated on a fixed-sum tie proof (`game_mece_by_shape=False` +
+  `dutchbook._proves_fixed_sum`); NFL win totals / exact wins / division winners / quarter-half /
+  spreads / totals / props / awards / draft are deliberately out of scope (classified `other`).
 - **Engine behind a typed API.** A SQLite **snapshot store** (`store.py`) persists each scan; a
   cross-sport `scanner.py` produces a unified ranked table; `lifecycle.py` diffs new / changed /
   recently-actionable; a **FastAPI** REST API (`api.py`: `/healthz`, `/readyz`, `/opportunities`,

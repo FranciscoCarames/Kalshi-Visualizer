@@ -2,7 +2,7 @@
 
 A small, read-only [NiceGUI](https://nicegui.io/)-on-[FastAPI](https://fastapi.tiangolo.com/) dashboard
 (run via `serve.py`) over live [Kalshi](https://kalshi.com/) prediction-market data for **tennis
-(ATP/WTA), NBA, WNBA, golf, soccer, MLB, NHL, and motorsport (F1/NASCAR/IndyCar/MotoGP)**. It finds two
+(ATP/WTA), NBA, WNBA, golf, soccer, MLB, NHL, motorsport (F1/NASCAR/IndyCar/MotoGP), and NFL**. It finds two
 classes of opportunity across a participant's related contracts and ranks them best-first.
 
 1. **Layer-consistency violations** — a deeper outcome must not price above a prerequisite that

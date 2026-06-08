@@ -6,7 +6,7 @@ Guidance for **Claude Code** working in this repository. Self-contained — read
 
 A small, **read-only NiceGUI trader dashboard** (on FastAPI, via `serve.py`) over live
 [Kalshi](https://kalshi.com) prediction-market data for **tennis (ATP/WTA), NBA, WNBA, golf, soccer,
-MLB, NHL, and motorsport (F1/NASCAR/IndyCar/MotoGP)** — 8 sports. It surfaces **executable
+MLB, NHL, motorsport (F1/NASCAR/IndyCar/MotoGP), and NFL** — 9 sports. It surfaces **executable
 inconsistencies** across a participant's related contracts (a deeper outcome must not price above a
 prerequisite that contains it) and **dutch-book arbitrage** on MECE events, as buy-only opportunities
 (**Buy YES / Buy NO**), ranked Actionable / Review / Blocked with collapsed diagnostics and
@@ -42,6 +42,7 @@ Stanley Cup" / default "Win the tournament").
 | MLB | `baseball_team` UUID | `""` | Reach Playoffs ⊇ Win League ⊇ Win World Series; `KXMLBGAME` games. `KXMLBSERIES` excluded as non-MECE (can tie 2-2) |
 | NHL | `hockey_team` UUID | `match` | Reach Playoffs ⊇ Win Conference ⊇ Win Stanley Cup; `KXNHLSERIES` (clean bo7) + `KXNHLGAME` dutch books. Live series wording "1st/2nd Round" → no rung → `UNKNOWN_RELATIONSHIP` |
 | Motorsport | multi-path (driver UUID / team UUID / constructor NAME), role-namespaced `player_key` | `""` | **field sport like golf**; one-winner FIELDS → overround; Top-N/Podium → finishing-position ladder |
+| NFL | `football_team` UUID | `""` | Reach Playoffs (`KXNFLPLAYOFF`) ⊇ Win Conference (`KXNFLAFCCHAMP`/`KXNFLNFCCHAMP`) ⊇ Win Super Bowl (`KXSB` winner field → overround); `KXNFLGAME` games are tie-capable → `game_mece_by_shape=False` gates the dutch book on `dutchbook._proves_fixed_sum` ($0.50-tie / no-tie proof). Props/totals/spreads/division/awards/draft → `other` |
 
 Identity is `custom_strike.<key>`. Classification is an **allow-list** (`family_fn`), not a bare prefix —
 MLB/NHL/motorsport lookalikes & props → `other`. Motorsport: `field_families`
@@ -188,6 +189,9 @@ for under the guaranteed payout floor. **2-outcome** = head-to-head match/game (
 - **Sport-agnostic via `_is_two_way_row`:** eligible families are the sport's `match_family` AND the
   `"game"` family (`KX*GAME`). Props/winner/advance are not two-way → ignored; `UNKNOWN` sport excluded.
   `_detect_pair` enforces a normalized **same-series guard** (both legs must share a series).
+- **Tie-capable games (do not regress):** `game_mece_by_shape=False` (NFL — games can tie) GATES the
+  `"game"` book on `dutchbook._proves_fixed_sum` (exact proof a tie pays `$0.50`/side → 100¢ floor holds,
+  or no tie possible); unproven ⇒ skipped, basis stamped on the finding. Default `True` = identical elsewhere.
 - **One status `EXECUTABLE_DUTCH_BOOK`** carrying `tradable_now` + `blockers`. Routing is the only
   `consistency.py` touch (`bucket_of` + a `STATUS_GROUP` entry; the status string is a guarded literal).
   **Conservative wording — never "riskless"/"locked"/"true arbitrage"** (single-sourced via
