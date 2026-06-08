@@ -47,7 +47,7 @@ from typing import Any, NamedTuple
 
 import data
 import sports
-from glossary import BLOCKERS
+from glossary import BLOCKERS, FIXED_SUM_BASIS
 
 # The one status this module emits. Distinct from consistency's EXECUTABLE_VIOLATION so the ladder's
 # "violation" semantics stay separate; the dashboard router (bucket_of) sends both to the same
@@ -165,6 +165,52 @@ def _settlement_caveat(rows: list[dict[str, Any]]) -> str:
     This is ADVISORY: it never enters `blockers`/`blocked_reason`, so it can't change tradability/bucket.
     """
     return BLOCKERS["game_settlement"] if any(r.get("kind") == _GAME_FAMILY for r in rows) else ""
+
+
+# ---- Fixed-sum game proof (tie-capable games, e.g. NFL) ---------------------------------------------
+# A 2-market game whose sport is NOT MECE-by-shape (cfg.game_mece_by_shape is False) can still tie. The
+# existing 2-way math (_detect_pair, 100¢ floor) is valid ONLY if the settlement rules prove the game is
+# a fixed-sum two-way: either a tie pays $0.50 to EACH side (so Buy-YES-both pays 50+50=100¢ and
+# Buy-NO-both pays 50+50=100¢ on a tie too — the 100¢ floor holds in EVERY state), or no tie is possible.
+# This is a DEDICATED exact-phrase extractor (NOT data.rule_tokens, which only tracks walkover/retire/
+# withdraw/cancel and would never see this text). Conservative: any leg unproven, or legs proving DIFFERENT
+# bases, ⇒ not proved ⇒ the book is skipped. no_tie_winner requires explicit "until a winner is
+# determined" wording — never inferred from "winner"/"final result"/mutually_exclusive.
+_TIE_HALF_PHRASES = ("$0.50 for each", "$.50 for each", "0.50 for each team", "50 cents for each")
+_NO_TIE_PHRASES = ("until a winner is determined", "played until a winner",
+                   "cannot end in a tie", "no ties are possible")
+
+
+class FixedSumProof(NamedTuple):
+    proved: bool
+    basis: str   # "tie_half" | "no_tie_winner" | ""
+    text: str
+
+
+def _rule_text(row: dict[str, Any]) -> str:
+    """Lower-cased settlement text for a leg (both primary + secondary rules)."""
+    return f"{row.get('rules_primary') or ''}\n{row.get('rules_secondary') or ''}".lower()
+
+
+def _leg_fixed_sum_basis(text: str) -> str:
+    """The fixed-sum basis a single leg's rule text proves, or '' (unproven)."""
+    if "tie" in text and any(p in text for p in _TIE_HALF_PHRASES):
+        return "tie_half"
+    if any(p in text for p in _NO_TIE_PHRASES):
+        return "no_tie_winner"
+    return ""
+
+
+def _proves_fixed_sum(rows: list[dict[str, Any]]) -> FixedSumProof:
+    """Prove a tie-capable 2-market game is safe to dutch-book as a 100¢-floor pair (see module note).
+
+    Requires the SAME non-empty basis on EVERY leg (so a missing/ambiguous leg, or legs disagreeing,
+    fails closed). Returns the single-sourced evidence text for stamping onto the finding.
+    """
+    bases = {_leg_fixed_sum_basis(_rule_text(r)) for r in rows}
+    if len(bases) == 1 and "" not in bases:
+        return FixedSumProof(True, next(iter(bases)), FIXED_SUM_BASIS)
+    return FixedSumProof(False, "", "")
 
 
 def _select_edge(candidates: list[dict[str, Any] | None],
@@ -702,6 +748,20 @@ def find_dutch_books(rows: list[dict[str, Any]],
         cfg = sports.sport_for_series(markets[0].get("series"))
         if cfg.sport_id == "soccer":
             finding = _detect_n_way(event_ticker, markets, cfg, _diag, near_miss_max_over_c)
+        elif (not cfg.game_mece_by_shape) and markets and markets[0].get("kind") == _GAME_FAMILY:
+            # Tie-capable game (e.g. NFL): the 2-way book is valid ONLY if settlement proves a fixed-sum
+            # two-way. Gate before _detect_pair (kept byte-identical), then stamp the proof basis onto the
+            # finding so the UI/Debug shows WHY it was considered safe (truthful evidence).
+            proof = _proves_fixed_sum(markets)
+            if not proof.proved:
+                _record(_diag, "rejected", event_ticker, "game not provably fixed-sum: tie risk")
+                finding = None
+            else:
+                finding = _detect_pair(event_ticker, markets, near_miss_max_over_c)
+                if finding is not None:
+                    finding["settlement_basis"] = proof.basis
+                    finding["settlement_caveat"] = "; ".join(
+                        p for p in (finding.get("settlement_caveat", ""), proof.text) if p)
         else:
             finding = _detect_pair(event_ticker, markets, near_miss_max_over_c)
         if finding is not None:

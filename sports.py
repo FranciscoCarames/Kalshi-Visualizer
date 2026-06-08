@@ -162,6 +162,12 @@ class SportConfig:
     # shares the driver UUID path). Returns a non-empty role to namespace player_key as "role:key" so a
     # driver and a same-named team never merge in (player_key, tournament) grouping. Default None → no tag.
     role_fn: Callable[["SportConfig", str], str] | None = None
+    # Whether a 2-market game of this sport is MECE by SHAPE alone (draw-free: exactly one side wins, so
+    # dutchbook._detect_pair is safe to treat the pair as a 100¢-floor book). True (default) = every existing
+    # sport, byte-for-byte no-op. False (NFL) = a tie is possible, so the per-game two-way book is GATED on a
+    # settlement-rule proof (dutchbook._proves_fixed_sum) that the tie settles fixed-sum ($0.50 each) or
+    # cannot occur — otherwise the book is skipped (never a false dutch book on a tie-capable game).
+    game_mece_by_shape: bool = True
 
     # ---- convenience API (engine calls these) --------------------------------------------
     def family_of(self, series_ticker: str) -> str:
@@ -974,6 +980,90 @@ NHL = register(SportConfig(
     node_fn=_nhl_node,
     division_fn=_nhl_division,
     winner_label="Win the Stanley Cup",
+))
+
+
+# --- NFL (9th sport): core futures ladder + full-game moneyline dutch books --------------------------
+# Grounded in a read-only live probe (2026-06-08) of /series (cursor-paginated) + nested-market events:
+#   * Identity: custom_strike.football_team (stable UUID) on every market; yes_sub_title is the team name.
+#   * Futures ladder (NBA/MLB/NHL shape): Reach Playoffs (KXNFLPLAYOFF, mutually_exclusive=False — 14 teams
+#     qualify, so "advance", NOT a one-winner field) ⊇ Win Conference (KXNFLAFCCHAMP / KXNFLNFCCHAMP,
+#     mutually_exclusive=True) ⊇ Win Super Bowl (KXSB — NOT KXNFL-prefixed → owned via winner_tickers).
+#   * KXSB is a one-winner FIELD (32 ME markets) → inherits the default field_families={"winner"} →
+#     dutchbook._detect_field overround when priced. AFC/NFC champ are classified "advance" → no field book
+#     (advance fields out of scope — same seed as the other sports).
+#   * KXNFLGAME (KX*GAME "game" family) is a 2-market single game. NFL games CAN TIE (rules_secondary:
+#     "If the game ends in a tie, the market will resolve to $0.50 for each team"), so the pair is NOT
+#     MECE-by-shape → game_mece_by_shape=False gates it behind dutchbook._proves_fixed_sum (the tie pays
+#     $0.50/side → the 100¢ floor still holds in every state). No head-to-head series → match_family="".
+#   * The "KXNFL" prefix FINDS ~200 series (spreads, totals, quarter/half winners, MVP/awards, draft,
+#     exact-wins, division winners KXNFLAFCEAST/…, props) — family_fn is a STRICT exact-equality allow-list
+#     so every one of those resolves to "other" (discovered, never laddered, filtered out of fetch).
+_NFL_STAGE_RANK = {"Playoffs": 1, "Conference": 2, "Champion": 3}
+_NFL_CATEGORY = {
+    "winner": "Super Bowl", "advance": "Advancement (reach a stage)",
+    "game": "Game (not laddered)", "other": "Other",
+}
+_NFL_LADDER = LadderSpec(
+    node_order=("Reach Playoffs", "Win Conference", "Win Super Bowl"),
+    adjacent_pairs=(("Win Super Bowl", "Win Conference"), ("Win Conference", "Reach Playoffs")),
+    match_stage_to_node={},                                    # no head-to-head series
+    advance_stage_to_node={"Playoffs": "Reach Playoffs", "Conference": "Win Conference"},
+)
+
+
+def _nfl_family(cfg: SportConfig, series_ticker: str) -> str:
+    t = (series_ticker or "").upper()
+    if t == "KXSB":
+        return "winner"                                        # win the Super Bowl (winner field)
+    if t in ("KXNFLPLAYOFF", "KXNFLAFCCHAMP", "KXNFLNFCCHAMP"):
+        return "advance"                                       # reach playoffs / win conference
+    if t == "KXNFLGAME":
+        return "game"                                          # single game — gated 2-outcome dutch book
+    return "other"                                             # spreads/totals/props/awards/draft/divisions
+
+
+def _nfl_stage(cfg: SportConfig, family: str, market: dict[str, Any]) -> str:
+    if family == "winner":
+        return "Champion"
+    if family == "advance":
+        # Playoff-qualifier series → "Playoffs"; the two conference-champ series → "Conference".
+        return "Playoffs" if (market.get("ticker") or "").upper().startswith("KXNFLPLAYOFF") else "Conference"
+    return ""
+
+
+def _nfl_node(cfg: SportConfig, family: str, stage: str) -> str | None:
+    if family == "winner":
+        return "Win Super Bowl"
+    if family == "advance":
+        return cfg.ladder.advance_stage_to_node.get(stage)     # Reach Playoffs / Win Conference
+    return None
+
+
+def _nfl_division(cfg: SportConfig, series_ticker: str) -> str:
+    return ""   # NFL has no ATP/WTA-style division (conference is a ladder rung, not a UI filter)
+
+
+NFL = register(SportConfig(
+    sport_id="nfl", label="NFL", emoji="🏈",
+    series_prefixes=("KXNFL",),
+    default_series=("KXSB", "KXNFLPLAYOFF", "KXNFLAFCCHAMP", "KXNFLNFCCHAMP", "KXNFLGAME"),
+    winner_tickers=frozenset({"KXSB"}),            # Super Bowl winner is not KXNFL-prefixed
+    identity=IdentityResolver(candidate_paths=("custom_strike.football_team",), id_label="football_team"),
+    ladder=_NFL_LADDER,
+    category_labels=_NFL_CATEGORY,
+    round_patterns=(),                             # no head-to-head, no round extraction
+    stage_rank=_NFL_STAGE_RANK,
+    ladder_families=frozenset({"advance", "winner"}),
+    match_family="",                               # single-elim; no head-to-head series. KXNFLGAME rides "game"
+    divisions={},
+    division_label="",
+    family_fn=_nfl_family,
+    stage_fn=_nfl_stage,
+    node_fn=_nfl_node,
+    division_fn=_nfl_division,
+    winner_label="Win the Super Bowl",
+    game_mece_by_shape=False,                       # NFL games can tie → gated on _proves_fixed_sum
 ))
 
 

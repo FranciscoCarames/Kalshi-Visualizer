@@ -23,6 +23,15 @@ from __future__ import annotations
 DUTCH_BOOK_BASIS = ("gross two-way pricing discrepancy, top-of-book, fees not modeled, under normal "
                     "one-winner settlement")
 
+# Single-sourced evidence for a tie-capable game (game_mece_by_shape=False, e.g. NFL) that is still
+# safe to dutch-book because its settlement rules prove a FIXED-SUM 2-way: a tie pays $0.50 to each
+# side (so buying both legs still pays the 100¢ floor in EVERY state — A wins / B wins / tie), or no
+# tie is possible. Stamped onto the finding's settlement_caveat so the UI shows WHY it was considered
+# safe (truthful evidence). Conservative — never "riskless"/"locked"/"true arbitrage".
+FIXED_SUM_BASIS = ("dutch-booked only because the settlement rules prove a fixed-sum two-way (a tie "
+                   "pays $0.50 to each side, so the 100¢ floor holds in every outcome — or no tie is "
+                   "possible); gross, top-of-book, fees not modeled")
+
 # --- Glossary terms (term -> {short, long}) ------------------------------------------
 GLOSSARY: dict[str, dict[str, str]] = {
     "Tradable now": {
@@ -263,9 +272,11 @@ BLOCKERS: dict[str, str] = {
                                     "match — and on a retirement / no-ball-played the score legs resolve "
                                     "to Fair Market Price while the hedge settles cleanly. Review the "
                                     "settlement rules before trading.",
-    "game_settlement": "Per-game settlement risk: if the game is postponed, abandoned, ruled no-contest, "
-                       "or not played as originally scheduled, the legs may not settle together and the "
-                       "gross gap need not hold — review the settlement rules before trading.",
+    "game_settlement": "Per-game settlement risk: if the game is postponed, delayed past its scheduled "
+                       "start window, abandoned, ruled no-contest, or not played as originally scheduled "
+                       "(some leagues then resolve to a fair market price), the legs may not settle "
+                       "together and the gross gap need not hold — review the settlement rules before "
+                       "trading.",
     "field_overround": "One-winner-field overround: this buys NO on the priceable subset of a "
                        "mutually-exclusive field (exactly one winner), not every entrant — safe because an "
                        "untraded or unlisted winner only pays more. Gross, top-of-book; many legs are "
