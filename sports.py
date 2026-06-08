@@ -121,11 +121,19 @@ class GroupBasketRule:
     ``yes_floor=2``; the 4th-placed team never advances → ``no_floor=1``; the best-third rule is exactly WHY
     these are *floors*, not equalities). Buying YES on all legs then pays ≥ ``yes_floor×100¢`` in every
     outcome (and buying NO on all legs ≥ ``no_floor×100¢``) — a hard gross floor, proven from the format,
-    NEVER inferred from discovered prices. Consumed by ``dutchbook.find_group_baskets``."""
+    NEVER inferred from discovered prices. Consumed by ``dutchbook.find_group_baskets``.
+
+    ``yes_ceiling_count`` / ``no_ceiling_count`` are the format's MAXIMUM settle counts for the two
+    directions (e.g. 2026 WC group of 4: up to 3 can qualify when the 3rd-placed team takes a best-third
+    slot → ``yes_ceiling_count=3``; the 4th never qualifies so at most 2 fail → ``no_ceiling_count=2``).
+    They drive a CONDITIONAL best-case (NOT guaranteed — it depends on the best-third outcome); the
+    guaranteed worst-case stays the floor. Default ``None`` ⇒ flat (best == worst == floor gap)."""
     team_count: int
     yes_floor: int
     no_floor: int
     label: str
+    yes_ceiling_count: int | None = None
+    no_ceiling_count: int | None = None
 
 
 @dataclass(frozen=True)
@@ -849,8 +857,11 @@ SOCCER = register(SportConfig(
     winner_label="Win the World Cup",
     # Each KXWCGROUPQUAL-26<G> event is a group of 4 teams; the 2026 format guarantees >=2 qualify (top-2
     # auto-advance) and >=1 fails (the 4th-placed team never advances) → a hard YES floor of 200¢ and NO
-    # floor of 100¢ for the all-four basket. See dutchbook.find_group_baskets.
+    # floor of 100¢ for the all-four basket. The CONDITIONAL ceilings: up to 3 qualify when the 3rd-placed
+    # team takes a best-third slot (YES 300¢), and up to 2 fail otherwise (NO 200¢). See
+    # dutchbook.find_group_baskets.
     group_basket_rules={"KXWCGROUPQUAL": GroupBasketRule(team_count=4, yes_floor=2, no_floor=1,
+                                                         yes_ceiling_count=3, no_ceiling_count=2,
                                                          label="World Cup group")},
 ))
 
