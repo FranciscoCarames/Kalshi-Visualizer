@@ -106,3 +106,27 @@ def test_apply_noop_when_env_unset(monkeypatch):
     monkeypatch.delenv("SNAPSHOT_DB_PATH", raising=False)
     serve._apply_snapshot_db_path()
     assert config.SNAPSHOT_DB_PATH == original
+
+
+# --- AUTO_SCAN_PAUSE_WHEN_IDLE env override (headless 24/7) -----------------------------------
+def test_pause_when_idle_unset_keeps_default():
+    # Unset / blank -> the config default is preserved (env override is opt-in).
+    assert serve.resolve_pause_when_idle(None, True) is True
+    assert serve.resolve_pause_when_idle(None, False) is False
+    assert serve.resolve_pause_when_idle("   ", True) is True
+
+
+def test_pause_when_idle_falsey_selects_headless():
+    # The headless 24/7 selector: any falsey spelling -> scan regardless of viewers (gate off).
+    for raw in ("0", "false", "False", "no", "OFF", " off "):
+        assert serve.resolve_pause_when_idle(raw, True) is False
+
+
+def test_pause_when_idle_truthy_forces_gate_on():
+    for raw in ("1", "true", "YES", "on"):
+        assert serve.resolve_pause_when_idle(raw, False) is True
+
+
+def test_pause_when_idle_unrecognized_falls_back_to_default():
+    assert serve.resolve_pause_when_idle("maybe", True) is True
+    assert serve.resolve_pause_when_idle("maybe", False) is False
