@@ -99,7 +99,8 @@ def test_scope_banner_with_meta_shows_both_counters():
            "kalshi_requests": 48}
     s = vm.scope_banner(cov, "UTC")
     assert "7 opportunities" in s and "30 series · 2 failed" in s
-    assert "1493 contracts scanned · 1098 checks tested" in s and "48 Kalshi requests" in s
+    # Thousands separators on the large counts (readability).
+    assert "1,493 contracts scanned · 1,098 checks tested" in s and "48 Kalshi requests" in s
 
 
 def test_scope_banner_honest_when_no_scan_or_no_meta():

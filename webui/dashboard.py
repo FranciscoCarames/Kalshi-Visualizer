@@ -14,7 +14,6 @@ from typing import Any
 from nicegui import app, run, ui
 
 import config
-import glossary
 import presence
 import scan_scheduler
 from webui import engine, export
@@ -59,53 +58,62 @@ _FLASH_CSS = (
     "@media (prefers-reduced-motion: reduce) { .opp-flash { animation: none; } }"
 )
 
-# Change-signal (#3) — a Quasar body-cell slot on the indicator column rendering a COLOURED, shaped marker
-# of how each opportunity moved since the last scan: green ▲ (edge up), red ▼ (edge down), amber ↩
-# (returned), a blue "new" badge — colour AND icon/shape (never colour alone). The new-actionable 🆕 takes
-# priority. Persistent per snapshot (no fade animation), so a plain filter re-render never replays it.
-# The cell also carries the PR B one-shot `opp-flash` class when `props.row._flash` is set.
+# Change-signal (#3) — a Quasar body-cell slot on the indicator column: a coloured, shaped marker of how
+# each opportunity moved since the last scan. Newly-actionable shows a green "NEW" badge (top priority);
+# otherwise an edge that moved up (green up-arrow) / down (red down-arrow), returned (amber undo), or a
+# newly-appeared opp (blue fiber_new icon) — colour AND icon/text, never colour alone. The cell also carries
+# the one-shot `opp-flash` class (PR B) when `props.row._flash` is set.
 _CHANGE_CELL_SLOT = (
     '<q-td :props="props" class="text-center" :class="props.row._flash ? \'opp-flash\' : \'\'">'
-    '<span v-if="props.row.new">{{ props.row.new }}</span>'
+    '<q-badge v-if="props.row.new" color="positive">NEW</q-badge>'
     '<q-icon v-else-if="props.row._change==\'up\'" name="arrow_upward" color="positive" size="sm">'
     '<q-tooltip>edge up since the last scan</q-tooltip></q-icon>'
     '<q-icon v-else-if="props.row._change==\'down\'" name="arrow_downward" color="negative" size="sm">'
     '<q-tooltip>edge down since the last scan</q-tooltip></q-icon>'
     '<q-icon v-else-if="props.row._change==\'returned\'" name="undo" color="amber-8" size="sm">'
     '<q-tooltip>returned this scan</q-tooltip></q-icon>'
-    '<q-badge v-else-if="props.row._change==\'new\'" color="primary">new</q-badge>'
+    '<q-icon v-else-if="props.row._change==\'new\'" name="fiber_new" color="primary" size="sm">'
+    '<q-tooltip>new this scan</q-tooltip></q-icon>'
     '</q-td>'
 )
 
-# Caveat-cell slot (PR A compaction): show a COMPACT, content-descriptive chip (COLOUR + TEXT — blocker=red,
-# review=amber, advisory=grey, mapped here from the row's `_sev` key) instead of the full caveat prose, which
-# wrapped into 8+ line-tall rows. The full text stays accessible by CLICKING the row → the detail panel
-# (open_panel renders every caveat as body text — keyboard/mobile reachable, not hover-only); the tooltip
-# here only SUPPLEMENTS it for mouse users. `_caveat_tag` is the top badge's short label (PR 2 severity).
+# Numeric-cell slot — DISPLAY-ONLY thousands separators (the slot changes display only; Quasar still sorts
+# on the raw numeric `field`, so sorting is preserved). Finite numbers render with `toLocaleString` (commas,
+# ≤2 decimals); a null/blank/non-finite value (e.g. ratio "∞") passes through untouched. `colored=True`
+# additionally tints the value green/red when the row's edge moved up/down (used for the gross-edge cell).
+def _num_cell_slot(field: str, *, colored: bool = False) -> str:
+    inner = ('<span v-if="props.row.%s != null && isFinite(props.row.%s)">'
+             "{{ Number(props.row.%s).toLocaleString('en-US', {maximumFractionDigits: 2}) }}</span>"
+             '<span v-else>{{ props.row.%s }}</span>') % (field, field, field, field)
+    if colored:
+        cls = ('props.row._change==="up" ? "text-positive text-weight-bold" : '
+               'props.row._change==="down" ? "text-negative text-weight-bold" : ""')
+        return '<q-td :props="props" class="text-center"><span :class=\'%s\'>%s</span></q-td>' % (cls, inner)
+    return '<q-td :props="props" class="text-center">%s</q-td>' % inner
+
+
+_EDGE_CELL_SLOT = _num_cell_slot("edge", colored=True)   # gross edge: commas + green/red on change
+
+# Caveat-cell slot (PR A compaction): a COMPACT, content-descriptive severity chip (COLOUR + TEXT —
+# blocker=red, review=amber, advisory=grey) instead of full prose. Full text is on the chip tooltip and in
+# the click→detail panel. Left-aligned with the other text columns.
 _CAVEAT_CELL_SLOT = (
-    '<q-td :props="props" class="text-center">'
+    '<q-td :props="props" class="text-left">'
     '<q-badge v-if="props.row._sev" '
     ':color="props.row._sev===\'blocker\' ? \'negative\' : '
     'props.row._sev===\'review_required\' ? \'warning\' : \'grey-7\'">{{ props.row._caveat_tag }}'
     '<q-tooltip max-width="22rem">{{ props.row.caveat }}</q-tooltip></q-badge></q-td>'
 )
 
-# Action-plan cell (PR 3): the self-contained buy plan wraps so both legs + cost/floor/units stay readable
-# in the row without opening detail (N-leg findings say "N-leg plan — open details", never faked as 2-leg).
+# Long free-text cells — LEFT-aligned with a comfortable width so the text flows as full sentences instead
+# of collapsing to one word per line (the action legs and the near-miss note).
 _ACTION_CELL_SLOT = (
-    '<q-td :props="props" style="white-space: normal; max-width: 26rem;">{{ props.row.action }}</q-td>'
-)
-
-# Watchlist cell slots (PR C): a neutral grey Type chip (never green/actionable), plus wrapping Structure
-# and Note cells so the descriptive legs + note stay readable without dominating the row height.
-_TYPE_CELL_SLOT = (
-    '<q-td :props="props"><q-badge color="grey-7" outline>{{ props.row.type }}</q-badge></q-td>'
-)
-_STRUCTURE_CELL_SLOT = (
-    '<q-td :props="props" style="white-space: normal; max-width: 26rem;">{{ props.row.structure }}</q-td>'
+    '<q-td :props="props" class="text-left" '
+    'style="white-space: normal; min-width: 14rem; max-width: 26rem;">{{ props.row.action }}</q-td>'
 )
 _NOTE_CELL_SLOT = (
-    '<q-td :props="props" style="white-space: normal; max-width: 22rem;">{{ props.row.note }}</q-td>'
+    '<q-td :props="props" class="text-left" '
+    'style="white-space: normal; min-width: 18rem; max-width: 32rem;">{{ props.row.note }}</q-td>'
 )
 
 
@@ -115,28 +123,40 @@ def _notify(message: str, *, type: str = "info", position: str = "top-right") ->
     ui.notify(message, type=type, position=position)
 
 
-def wire_column_chooser(select: Any, table: Any, columns: list[dict[str, Any]], *,
-                        default_hidden: tuple[str, ...] = ()) -> None:
-    """Per-table column show/hide (PR D). Drives Quasar's `visible-columns` from a multi-select: every
-    non-`required` column can be hidden/shown; `required` columns (the leading 'new' marker) are always on
-    and never offered. `default_hidden` names columns hidden on first render (still selectable). The select
-    is created empty in the Settings dialog; this populates its options/value and wires the handler once the
-    table exists. Uses `_props['visible-columns']` — the array prop has no string-only `.props()` form, so
-    this is NiceGUI's supported path for a list prop (then `table.update()` pushes it)."""
+def build_column_menu(table: Any, columns: list[dict[str, Any]], *,
+                      default_hidden: tuple[str, ...] = ()) -> dict[str, Any]:
+    """Per-table column show/hide (redesigned): a compact "Columns" button that opens a tidy menu of labeled
+    checkboxes (ticked = shown), one per non-`required` column. The leading `new` marker is `required` so it
+    is never offered and always shown. Toggling a box drives Quasar's `visible-columns` (`_props` is the
+    supported path for a list prop) + `table.update()`. Must be called within a UI container so the button
+    lands where you want it. Returns a controller with `set(name, show)` so the net-of-fees switch can drive
+    the net columns externally and keep the checkboxes in sync."""
     required = [c["name"] for c in columns if c.get("required")]
-    order = [c["name"] for c in columns if not c.get("required")]      # column order, minus required
-    select.options = {c["name"]: (c["label"] or c["name"]) for c in columns if not c.get("required")}
-    visible = [n for n in order if n not in default_hidden]
-    select.value = list(visible)
-    select.update()
+    hideable = [c for c in columns if not c.get("required")]
+    order = [c["name"] for c in hideable]
+    visible = {c["name"] for c in hideable if c["name"] not in default_hidden}
+    checkboxes: dict[str, Any] = {}
 
-    def _apply(selected: list[str] | None) -> None:
-        chosen = set(selected or [])
-        table._props["visible-columns"] = required + [n for n in order if n in chosen]
+    def _apply() -> None:
+        table._props["visible-columns"] = required + [n for n in order if n in visible]
         table.update()
 
-    select.on_value_change(lambda e: _apply(e.value))
-    _apply(visible)                                                    # set the initial visible-columns
+    def _set(name: str, show: bool) -> None:
+        visible.add(name) if show else visible.discard(name)
+        if name in checkboxes and checkboxes[name].value != show:
+            checkboxes[name].value = show
+        _apply()
+
+    btn = ui.button(icon="view_column").props("flat dense round size=sm color=grey").tooltip("Show / hide columns")
+    btn.on("click.stop", lambda: None)   # when placed in an expansion header, don't toggle the expansion
+    with btn, ui.menu(), ui.column().classes("q-pa-sm gap-1"):
+        ui.label("Show columns").classes("text-xs text-weight-bold q-mb-xs")
+        for c in hideable:
+            cb = ui.checkbox(c["label"] or c["name"], value=(c["name"] in visible)).props("dense")
+            cb.on_value_change(lambda e, n=c["name"]: _set(n, bool(e.value)))
+            checkboxes[c["name"]] = cb
+    _apply()                                                           # set the initial visible-columns
+    return {"set": _set, "button": btn}
 
 
 def _aggrid_options(rows: list[dict[str, Any]], fields: list[tuple[str, str]]) -> dict[str, Any]:
@@ -151,65 +171,70 @@ def _aggrid_options(rows: list[dict[str, Any]], fields: list[tuple[str, str]]) -
         "paginationPageSize": 20,
     }
 
+# Column alignment convention (professional pass): short numeric / status / marker columns are CENTRED
+# (header + cell); long free-text columns (name, detail, action, caveat, note) are LEFT-aligned so prose
+# reads naturally. Centred headers read as centred titles on the short columns.
 _OPP_COLUMNS = [
-    {"name": "new", "label": "", "field": "new", "align": "center", "required": True},  # PR D: never hideable
-    {"name": "sport", "label": "Sport", "field": "sport", "sortable": True},
-    {"name": "name", "label": "Participant / match", "field": "name", "sortable": True},
-    {"name": "detail", "label": "Detail", "field": "detail"},
-    {"name": "action", "label": "Action plan", "field": "action"},   # PR 3: self-contained buy plan
-    {"name": "edge", "label": "Gross edge ¢", "field": "edge", "sortable": True},
-    {"name": "roi", "label": "ROI %", "field": "roi", "sortable": True},
-    {"name": "units", "label": "Max units", "field": "units", "sortable": True},
-    {"name": "profit", "label": "Max gross profit", "field": "profit", "sortable": True},
-    # Net-of-fees ESTIMATE (PR E) — DEFAULT-HIDDEN; the "Show net of fees" switch (and the column chooser)
-    # reveal them. Labelled "Est." (a general taker-fee estimate, display only — never affects ranking).
-    {"name": "net_edge", "label": "Est. net edge ¢", "field": "net_edge", "sortable": True},
-    {"name": "net_profit", "label": "Est. net max profit", "field": "net_profit", "sortable": True},
-    {"name": "fees", "label": "Est. fees ¢", "field": "fees", "sortable": True},
-    {"name": "tradable", "label": "Tradable", "field": "tradable"},
-    {"name": "caveat", "label": "Caveat", "field": "caveat"},
+    {"name": "new", "label": "", "field": "new", "align": "center", "required": True},  # never hideable
+    {"name": "sport", "label": "Sport", "field": "sport", "align": "center", "sortable": True},
+    {"name": "name", "label": "Participant / match", "field": "name", "align": "left", "sortable": True},
+    {"name": "detail", "label": "Detail", "field": "detail", "align": "left"},
+    {"name": "action", "label": "Action plan", "field": "action", "align": "left"},   # legs only (PR compact)
+    {"name": "edge", "label": "Gross edge ¢", "field": "edge", "align": "center", "sortable": True},
+    {"name": "roi", "label": "ROI %", "field": "roi", "align": "center", "sortable": True},
+    {"name": "units", "label": "Max units", "field": "units", "align": "center", "sortable": True},
+    {"name": "profit", "label": "Max gross profit", "field": "profit", "align": "center", "sortable": True},
+    # Net-of-fees ESTIMATE (PR E) — DEFAULT-HIDDEN; the "Show net of fees" switch + the column menu reveal
+    # them. "Est." labels (a general taker-fee estimate, display only — never affects ranking).
+    {"name": "net_edge", "label": "Est. net edge ¢", "field": "net_edge", "align": "center", "sortable": True},
+    {"name": "net_profit", "label": "Est. net max profit", "field": "net_profit", "align": "center", "sortable": True},
+    {"name": "fees", "label": "Est. fees ¢", "field": "fees", "align": "center", "sortable": True},
+    {"name": "tradable", "label": "Tradable", "field": "tradable", "align": "center"},
+    {"name": "caveat", "label": "Caveat", "field": "caveat", "align": "left"},
 ]
 # Net-of-fees columns (PR E) — default-hidden in the opp tables; toggled by the "Show net of fees" switch.
 _NET_COLUMNS = ("net_edge", "net_profit", "fees")
-# Merged Watchlist (PR C) — ONE table over both opt-in buckets (bounded-loss bets + overpriced books). A
-# Type column distinguishes them; each row blanks the other type's numeric fields. The probability-context
-# columns (worst-case ROC + the display-outright group) are DEFAULT-HIDDEN via `visible-columns` so the
-# table reads compactly — PR D adds the per-table chooser to reveal them. The leading `new` column is
-# `required` so it can never be hidden.
-_WATCHLIST_COLUMNS = [
+# Bounded-Loss Bets table (split from the old merged watchlist): convex economics up front; spread÷parent
+# and spread÷child are VISIBLE BY DEFAULT (owner); the outright/display-spread context starts hidden.
+_RISK_COLUMNS = [
     {"name": "new", "label": "", "field": "new", "align": "center", "required": True},
-    {"name": "type", "label": "Type", "field": "type", "sortable": True},
-    {"name": "sport", "label": "Sport", "field": "sport", "sortable": True},
-    {"name": "name", "label": "Participant / chain", "field": "name", "sortable": True},
-    {"name": "detail", "label": "Detail", "field": "detail"},
-    {"name": "structure", "label": "Structure", "field": "structure"},
-    {"name": "cost", "label": "Cost ¢", "field": "cost", "sortable": True},
-    {"name": "max_loss", "label": "Max loss ¢", "field": "max_loss", "sortable": True},
-    {"name": "max_profit", "label": "Max profit ¢", "field": "max_profit", "sortable": True},
-    {"name": "ratio", "label": "Upside:risk", "field": "ratio", "sortable": True},
-    {"name": "overpay", "label": "Overpay ¢", "field": "overpay", "sortable": True},
-    {"name": "note", "label": "Note", "field": "note"},
-    # Probability context (DISPLAY OUTRIGHT, not executable) — default-hidden; PR D's chooser reveals them.
-    {"name": "roc", "label": "Worst-case ROC %", "field": "roc", "sortable": True},
-    {"name": "parent_outright", "label": "Parent outright ¢", "field": "parent_outright", "sortable": True},
-    {"name": "child_outright", "label": "Child outright ¢", "field": "child_outright", "sortable": True},
-    {"name": "display_spread", "label": "Display spread ¢", "field": "display_spread", "sortable": True},
-    {"name": "spread_over_parent", "label": "Spread÷parent", "field": "spread_over_parent", "sortable": True},
-    {"name": "spread_over_child", "label": "Spread÷child", "field": "spread_over_child", "sortable": True},
+    {"name": "sport", "label": "Sport", "field": "sport", "align": "center", "sortable": True},
+    {"name": "name", "label": "Participant / chain", "field": "name", "align": "left", "sortable": True},
+    {"name": "detail", "label": "Detail", "field": "detail", "align": "left"},
+    {"name": "cost", "label": "Cost ¢", "field": "cost", "align": "center", "sortable": True},
+    {"name": "max_loss", "label": "Max loss ¢", "field": "max_loss", "align": "center", "sortable": True},
+    {"name": "max_profit", "label": "Max profit ¢", "field": "max_profit", "align": "center", "sortable": True},
+    {"name": "ratio", "label": "Upside:risk", "field": "ratio", "align": "center", "sortable": True},
+    {"name": "roc", "label": "Worst-case ROC %", "field": "roc", "align": "center", "sortable": True},
+    {"name": "spread_over_parent", "label": "Spread÷parent", "field": "spread_over_parent", "align": "center", "sortable": True},
+    {"name": "spread_over_child", "label": "Spread÷child", "field": "spread_over_child", "align": "center", "sortable": True},
+    {"name": "parent_outright", "label": "Parent outright ¢", "field": "parent_outright", "align": "center", "sortable": True},
+    {"name": "child_outright", "label": "Child outright ¢", "field": "child_outright", "align": "center", "sortable": True},
+    {"name": "display_spread", "label": "Display spread ¢", "field": "display_spread", "align": "center", "sortable": True},
+    {"name": "caveat", "label": "Caveat", "field": "caveat", "align": "left"},
 ]
-# The compact default-visible set (the prob-context columns above are hidden until PR D's chooser adds them).
-_WATCHLIST_DEFAULT_VISIBLE = ["new", "type", "sport", "name", "detail", "structure", "cost",
-                              "max_loss", "max_profit", "ratio", "overpay", "note"]
+# Outright/display-spread context starts hidden (spread÷parent/child stay visible per owner).
+_RISK_HIDDEN = ("parent_outright", "child_outright", "display_spread")
+# Overpriced Books (near-miss) table — cost, overpay (= the flat guaranteed loss), and the watchlist note.
+_NEARMISS_COLUMNS = [
+    {"name": "new", "label": "", "field": "new", "align": "center", "required": True},
+    {"name": "sport", "label": "Sport", "field": "sport", "align": "center", "sortable": True},
+    {"name": "name", "label": "Match", "field": "name", "align": "left", "sortable": True},
+    {"name": "detail", "label": "Direction", "field": "detail", "align": "left"},
+    {"name": "cost", "label": "Cost ¢", "field": "cost", "align": "center", "sortable": True},
+    {"name": "overpay", "label": "Overpay ¢", "field": "overpay", "align": "center", "sortable": True},
+    {"name": "note", "label": "Note", "field": "note", "align": "left"},
+]
 _BACKLOG_COLUMNS = [
-    {"name": "sport", "label": "Sport", "field": "sport", "sortable": True},
-    {"name": "name", "label": "Participant / match", "field": "name", "sortable": True},
-    {"name": "became", "label": "Became actionable", "field": "became"},
-    {"name": "left", "label": "Left", "field": "left"},
-    {"name": "mins", "label": "Lasted (min)", "field": "mins", "sortable": True},
-    {"name": "reason", "label": "Why it left", "field": "reason"},
-    {"name": "last_edge", "label": "Last edge ¢", "field": "last_edge"},
-    {"name": "caveat", "label": "Settlement caveat", "field": "caveat"},
-    {"name": "current", "label": "Now", "field": "current"},
+    {"name": "sport", "label": "Sport", "field": "sport", "align": "center", "sortable": True},
+    {"name": "name", "label": "Participant / match", "field": "name", "align": "left", "sortable": True},
+    {"name": "became", "label": "Became actionable", "field": "became", "align": "center"},
+    {"name": "left", "label": "Left", "field": "left", "align": "center"},
+    {"name": "mins", "label": "Lasted (min)", "field": "mins", "align": "center", "sortable": True},
+    {"name": "reason", "label": "Why it left", "field": "reason", "align": "left"},
+    {"name": "last_edge", "label": "Last edge ¢", "field": "last_edge", "align": "center"},
+    {"name": "caveat", "label": "Settlement caveat", "field": "caveat", "align": "left"},
+    {"name": "current", "label": "Now", "field": "current", "align": "center"},
 ]
 # Participant-detail tables (PR 24) — built by the pure viewmodel detail builders.
 _CHAIN_COLUMNS = [
@@ -288,7 +313,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
     # settings dialog: a QDialog mounts its children lazily, so a value=True nested there wouldn't apply
     # until the dialog is first opened. The toggle switch (in the dialog) drives this element by reference.
     _darkmode = ui.dark_mode(value=True)
-    ui.label("🎯 Kalshi opportunity engine — cross-sport").classes("text-2xl font-bold")
+    ui.label("Kalshi Opportunity Engine — Cross-Sport").classes("text-2xl font-bold")
     ui.label("Opportunities across all sports, ranked best→worst. Core series, gross of fees — "
              "NOT all of Kalshi.").classes("text-sm text-gray-500")
 
@@ -302,7 +327,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         participant_sel = ui.select({}, multiple=True, with_input=True, label="Players / matches"
                                     ).classes("min-w-[14rem]").props("dense use-chips")
         min_size_in = ui.number("Min size", min=0, format="%.0f").classes("w-28")
-        scan_btn = ui.button("⟳ Refresh snapshot")
+        scan_btn = ui.button("Refresh snapshot")
         clear_btn = ui.button("Clear filters", on_click=lambda: _clear_filters())
         settings_btn = ui.button(icon="settings").props("flat round").tooltip(
             "Settings — display, sections, thresholds, time & refresh")
@@ -386,20 +411,10 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                 "How often the background auto-scan runs.")
             auto_sw.on_value_change(lambda e: scan_scheduler.scheduler.set_enabled(bool(e.value)))
             interval_sel.on_value_change(lambda e: scan_scheduler.scheduler.set_interval(int(e.value)))
-        # Per-table column show/hide (PR D). Empty selects here; options/value/handler are wired below once
-        # the tables exist (the dialog is built before them). The leading 'new' marker is required → not listed.
-        ui.label("Columns").classes("text-sm font-bold mt-2")
-        with ui.row().classes("items-end gap-4 flex-wrap"):
-            cols_actionable = ui.select({}, multiple=True, label="Actionable").props(
-                "dense options-dense").classes("min-w-[12rem]")
-            cols_review = ui.select({}, multiple=True, label="Review").props(
-                "dense options-dense").classes("min-w-[12rem]")
-            cols_blocked = ui.select({}, multiple=True, label="Blocked").props(
-                "dense options-dense").classes("min-w-[12rem]")
-            cols_watchlist = ui.select({}, multiple=True, label="Watchlist").props(
-                "dense options-dense").classes("min-w-[12rem]")
+        # Column show/hide now lives on a per-table "Columns" button next to each table (see below) — clearer
+        # and more discoverable than a buried multi-select, so no "Columns" group in this dialog.
         with ui.row().classes("gap-2 mt-2"):
-            export_btn = ui.button("⬇ Export (ZIP)")
+            export_btn = ui.button("Export (ZIP)")
             ui.button("Close", on_click=settings_dialog.close)
     settings_btn.on_click(settings_dialog.open)
     chips = ui.row().classes("gap-2 flex-wrap")
@@ -470,7 +485,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                 ui.table(columns=_LEG_COLUMNS, rows=legrows, row_key="leg").classes("w-full")
             if rules_sw.value:        # global "Resolution criteria" toggle — per-leg settlement rules
                 ui.separator()
-                ui.label("📜 Resolution criteria").classes("text-sm font-bold")
+                ui.label("Resolution criteria").classes("text-sm font-bold")
                 legrules = _leg_rules(opp)
                 if any(text for _, text in legrules):
                     for label, text in legrules:
@@ -540,7 +555,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             rules = [(r.get("contract") or r.get("market_ticker") or "—", str(r.get("rules_primary")))
                      for r in prows if r.get("rules_primary")]
             if rules:
-                rules_exp = ui.expansion("📜 Resolution criteria (settlement rules)").classes("w-full mt-2")
+                rules_exp = ui.expansion("Resolution criteria (settlement rules)").classes("w-full mt-2")
                 with rules_exp:
                     for contract, text in rules:
                         ui.label(contract).classes("text-sm font-medium")
@@ -549,7 +564,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                     rules_exp.open()
             # Raw fields / link audit / duplicate sources — debug detail, only when "Show IDs & codes" is on.
             if show_ids.value and prows:
-                with ui.expansion("🔧 Raw fields · link audit · duplicates").classes("w-full mt-2"):
+                with ui.expansion("Raw fields · link audit · duplicates").classes("w-full mt-2"):
                     raw = vm.raw_fields_rows(prows)
                     if raw:
                         ui.label("Raw contract fields (incl. tournament source + mapping confidence)"
@@ -603,105 +618,146 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         return handler
 
     ui.separator()
-    # Compact honesty line (PR A declutter) — the gross / top-of-book disclosure stays visible above the
-    # tables, but as ONE short line instead of the verbose strip + 4 badges (the per-aspect detail still
-    # lives in the glossary / help). The "Tip: click any row…" guidance is dropped (rows are selectable and
-    # the detail panel speaks for itself). Single-sourced from glossary.
-    ui.label(glossary.KNOWN_LIMIT_LINE).classes("text-xs text-gray-500")
-    ui.label("✅ Actionable now").classes("text-lg font-bold")
-    # `overflow-x-auto` (PR 26a responsive pass): the wide opportunity tables scroll horizontally on a
-    # narrow screen instead of overflowing the viewport. The control rows already wrap (flex-wrap).
-    actionable = ui.table(columns=_OPP_COLUMNS, rows=[], row_key="opportunity_id",
-                          selection="single", pagination=15).classes("w-full overflow-x-auto opp-sel")
+
+    def _section_header(title: str, subtitle: str | None = None) -> Any:
+        """A section title row (the per-table 'Columns' button is added into it after the table exists) plus
+        an optional one-line plain-English description so a trader instantly understands the section."""
+        hdr = ui.row().classes("items-center gap-2 mt-2")
+        with hdr:
+            ui.label(title).classes("text-lg font-bold")
+        if subtitle:
+            ui.label(subtitle).classes("text-xs text-gray-500")
+        return hdr
+
+    # `dense` tables + `overflow-x-auto` so many rows fit and wide tables scroll instead of overflowing.
+    act_hdr = _section_header("Actionable — executable gross edges",
+                              "Firm, sized, currently-tradable gross pricing discrepancies. Gross of fees.")
+    actionable = ui.table(columns=_OPP_COLUMNS, rows=[], row_key="opportunity_id", selection="single",
+                          pagination=15).props("dense").classes("w-full overflow-x-auto opp-sel")
     actionable.on_select(_on_select(actionable))
 
-    review_label = ui.label("🔎 Review signal (settlement-caveated — review the rules, never auto-tradable)"
-                            ).classes("text-lg font-bold")
-    review = ui.table(columns=_OPP_COLUMNS, rows=[], row_key="opportunity_id",
-                      selection="single", pagination=10).classes("w-full overflow-x-auto opp-sel")
+    review_hdr = _section_header(
+        "Review Required — settlement-dependent",
+        "Real, executable-looking edges whose legs may not settle together (e.g. an exact-score bundle vs the "
+        "match winner) — verify the settlement rules first; never auto-tradable.")
+    review = ui.table(columns=_OPP_COLUMNS, rows=[], row_key="opportunity_id", selection="single",
+                      pagination=10).props("dense").classes("w-full overflow-x-auto opp-sel")
     review.on_select(_on_select(review))
 
-    blocked_label = ui.label("⛔ Blocked").classes("text-lg font-bold")
-    blocked = ui.table(columns=_OPP_COLUMNS, rows=[], row_key="opportunity_id",
-                       selection="single", pagination=10).classes("w-full overflow-x-auto opp-sel")
+    blocked_hdr = _section_header("Blocked — not currently executable",
+                                  "Discrepancies that exist but aren't tradable now (no firm size / an inactive leg).")
+    blocked = ui.table(columns=_OPP_COLUMNS, rows=[], row_key="opportunity_id", selection="single",
+                       pagination=10).props("dense").classes("w-full overflow-x-auto opp-sel")
     blocked.on_select(_on_select(blocked))
 
-    # Merged Watchlist (PR C) — bounded-loss bets + overpriced books in ONE collapsed section, so the ~300
-    # not-actionable rows never bury the actionable set. The title carries a live count (set in rerender);
-    # the whole expansion hides when both watchlist switches are off. Default ON but collapsed (PR A2 + C).
-    watchlist_expansion = ui.expansion("🔭 Watchlist — not actionable now", value=False).classes("w-full")
-    with watchlist_expansion:
-        ui.label("Not edges, not actionable: bounded-loss bets (capped downside, convex upside) and "
-                 "overpriced books (flat loss as a bundle). GROSS of fees.").classes("text-xs text-gray-500")
-        watchlist_table = ui.table(columns=_WATCHLIST_COLUMNS, rows=[], row_key="opportunity_id",
-                                   selection="single", pagination=10).classes("w-full overflow-x-auto opp-sel")
-    watchlist_table.on_select(_on_select(watchlist_table))
+    # TWO distinct, collapsed watchlist sections — opposite shapes, kept separate. Each uses a custom header
+    # slot so the "Columns" button sits beside the title (added after the table exists); the title label is
+    # kept in a ref so rerender can update its live count. A bet with capped loss vs a flat guaranteed loss.
+    def _expansion_header(title: str) -> tuple[Any, Any, Any]:
+        exp = ui.expansion(value=False).classes("w-full mt-2")
+        with exp.add_slot("header"), ui.row().classes("items-center w-full gap-2"):
+            ui.icon("unfold_more").classes("text-grey")
+            title_label = ui.label(title).classes("text-lg font-bold")
+            ui.space()
+            cols_holder = ui.row().classes("items-center")     # Columns button dropped in here later
+        return exp, title_label, cols_holder
 
-    _sel_tables.extend([actionable, review, blocked, watchlist_table])
-    for _t in _sel_tables:        # colour the change-signal indicator column on every opportunity table (#3)
+    rb_expansion, rb_title, rb_cols_row = _expansion_header("Bounded-Loss Bets — capped downside, convex upside")
+    with rb_expansion:
+        ui.label("Buy the broader YES + the deeper NO for just over 100¢: your loss is capped at the small "
+                 "overpay, with convex upside (the broader-but-not-deeper outcome pays about +$1). A bet, NOT "
+                 "an edge — gross of fees.").classes("text-xs text-gray-500")
+        rb_table = ui.table(columns=_RISK_COLUMNS, rows=[], row_key="opportunity_id", selection="single",
+                            pagination=10).props("dense").classes("w-full overflow-x-auto opp-sel")
+    rb_table.on_select(_on_select(rb_table))
+
+    nm_expansion, nm_title, nm_cols_row = _expansion_header("Overpriced Books — flat guaranteed loss (watch-only)")
+    with nm_expansion:
+        ui.label("A complete (MECE) book priced just OVER its payout floor: it pays the floor in every "
+                 "outcome, so buying the whole bundle is a flat, guaranteed gross loss. Watch-only, in case a "
+                 "leg gets mispriced.").classes("text-xs text-gray-500")
+        nm_table = ui.table(columns=_NEARMISS_COLUMNS, rows=[], row_key="opportunity_id", selection="single",
+                            pagination=10).props("dense").classes("w-full overflow-x-auto opp-sel")
+    nm_table.on_select(_on_select(nm_table))
+
+    _sel_tables.extend([actionable, review, blocked, rb_table, nm_table])
+    for _t in _sel_tables:                 # the change-signal / NEW-badge indicator column on every table
         _t.add_slot("body-cell-new", _CHANGE_CELL_SLOT)
-    for _t in (actionable, review, blocked):   # wrap row-specific caveats (PR 2 — visible, not tooltip)
-        _t.add_slot("body-cell-caveat", _CAVEAT_CELL_SLOT)
-    for _t in (actionable, review, blocked):             # wrap the self-contained action plan (PR 3)
-        _t.add_slot("body-cell-action", _ACTION_CELL_SLOT)
-    watchlist_table.add_slot("body-cell-type", _TYPE_CELL_SLOT)          # neutral grey Type chip (PR C)
-    watchlist_table.add_slot("body-cell-structure", _STRUCTURE_CELL_SLOT)  # wrapping descriptive legs
-    watchlist_table.add_slot("body-cell-note", _NOTE_CELL_SLOT)          # wrapping note
-    # Compact empty states (PR 2): a shown-but-empty section renders a small message row, not a bare grid.
+    for _t in (actionable, review, blocked):
+        _t.add_slot("body-cell-edge", _EDGE_CELL_SLOT)      # colour the edge value on change
+        _t.add_slot("body-cell-action", _ACTION_CELL_SLOT)  # left-aligned legs
+        _t.add_slot("body-cell-caveat", _CAVEAT_CELL_SLOT)  # compact severity chip
+    rb_table.add_slot("body-cell-caveat", _CAVEAT_CELL_SLOT)
+    nm_table.add_slot("body-cell-note", _NOTE_CELL_SLOT)    # readable wrapping note
+    # Thousands-separated numeric cells (display only; numeric sort preserved). 'edge' is handled above.
+    for _t in (actionable, review, blocked):
+        for _f in ("roi", "units", "profit", "net_edge", "net_profit", "fees"):
+            _t.add_slot(f"body-cell-{_f}", _num_cell_slot(_f))
+    for _f in ("cost", "max_loss", "max_profit", "ratio", "roc", "spread_over_parent",
+               "spread_over_child", "parent_outright", "child_outright", "display_spread"):
+        rb_table.add_slot(f"body-cell-{_f}", _num_cell_slot(_f))
+    for _f in ("cost", "overpay"):
+        nm_table.add_slot(f"body-cell-{_f}", _num_cell_slot(_f))
+    # Compact empty states: a shown-but-empty section renders a small message row, not a bare grid.
     for _t, _msg in ((actionable, "No actionable opportunities in the current filters."),
-                     (review, "No review-signal opportunities in the current filters."),
+                     (review, "No review-required opportunities in the current filters."),
                      (blocked, "No blocked opportunities in the current filters."),
-                     (watchlist_table, "No watchlist candidates in the current filters.")):
+                     (rb_table, "No bounded-loss bets in the current filters."),
+                     (nm_table, "No overpriced books in the current filters.")):
         _t.props(f'no-data-label="{_msg}"')
 
-    # Per-table column show/hide (PR D) — wire the Settings "Columns" selects now that the tables exist. The
-    # opp tables hide the net-of-fees columns by default (PR E); the watchlist hides the prob-context columns.
-    _wl_hidden = tuple(c["name"] for c in _WATCHLIST_COLUMNS if c["name"] not in _WATCHLIST_DEFAULT_VISIBLE)
-    _opp_choosers = ((cols_actionable, actionable), (cols_review, review), (cols_blocked, blocked))
-    for _sel, _tbl in _opp_choosers:
-        wire_column_chooser(_sel, _tbl, _OPP_COLUMNS, default_hidden=_NET_COLUMNS)
-    wire_column_chooser(cols_watchlist, watchlist_table, _WATCHLIST_COLUMNS, default_hidden=_wl_hidden)
+    # Per-table column menus (redesigned) — a "Columns" button by each table opening labeled checkboxes.
+    # Opp tables hide the net-of-fees columns by default; Bounded-Loss hides the outright/display-spread
+    # context (spread÷parent/child stay visible). Buttons are placed into each section's header / row.
+    opp_menus = []
+    for _hdr, _tbl in ((act_hdr, actionable), (review_hdr, review), (blocked_hdr, blocked)):
+        with _hdr:
+            opp_menus.append(build_column_menu(_tbl, _OPP_COLUMNS, default_hidden=_NET_COLUMNS))
+    with rb_cols_row:
+        build_column_menu(rb_table, _RISK_COLUMNS, default_hidden=_RISK_HIDDEN)
+    with nm_cols_row:
+        build_column_menu(nm_table, _NEARMISS_COLUMNS)
 
-    # "Show net of fees" (PR E) — a convenience toggle that reveals/hides the net columns across all three
-    # opp tables at once, keeping each table's column chooser in sync (setting select.value re-runs its
-    # apply). Net-of-fees is an ESTIMATE and DISPLAY ONLY — it never changes ranking/bucketing/actionability.
+    # "Show net of fees" — reveal/hide the net columns across the opp tables at once (drives their menus).
     def _toggle_net(show: bool) -> None:
-        for _sel, _tbl in _opp_choosers:
-            cur = [n for n in (_sel.value or []) if n not in _NET_COLUMNS]
-            _sel.value = cur + list(_NET_COLUMNS) if show else cur     # triggers the chooser's on_value_change
+        for m in opp_menus:
+            for n in _NET_COLUMNS:
+                m["set"](n, show)
     show_net_sw.on_value_change(lambda e: _toggle_net(bool(e.value)))
 
-    with ui.expansion("📉 Recently actionable (left the actionable set)").classes("w-full"):
+    with ui.expansion("Recently Actionable — recently left the set").classes("w-full"):
         backlog = ui.table(columns=_BACKLOG_COLUMNS, rows=[], row_key="name",
-                           pagination=10).classes("w-full overflow-x-auto")
+                           pagination=10).props("dense").classes("w-full overflow-x-auto")
+    for _f in ("mins", "last_edge"):
+        backlog.add_slot(f"body-cell-{_f}", _num_cell_slot(_f))
 
-    # "Most liquid now" panel (PR F) — a VISIBLE (not collapsed) two-column card of the deepest tradable
-    # sports + contracts this snapshot. Still SNAPSHOT TELEMETRY, not an opportunity signal: neutral grey,
-    # explicitly labelled, never green/actionable. Populated in rerender; hidden when nothing has a real book.
-    liquidity_card = ui.column().classes("w-full gap-1 mt-2")
-    with liquidity_card:
-        ui.label("Most liquid now — telemetry, not an opportunity signal").classes(
-            "text-sm font-bold text-gray-500")
-        with ui.row().classes("gap-12 flex-wrap"):
+    # Market telemetry — snapshot CONTEXT (depth, tightness, activity, volatility), NOT opportunity signals.
+    # Collapsed, neutral grey; liquidity lives here now. Populated in rerender (snapshot-scoped).
+    with ui.expansion("Market Telemetry — Liquidity & Volatility (context, not signals)").classes("w-full"):
+        ui.label("Snapshot context — depth, tightness, activity. NOT opportunity signals.").classes(
+            "text-xs text-gray-500")
+        with ui.row().classes("gap-12 flex-wrap mt-1"):
             with ui.column().classes("gap-0"):
-                ui.label("Top sports (tradable depth)").classes("text-xs text-gray-500")
+                ui.label("Most liquid — top sports (depth)").classes("text-xs text-weight-bold")
                 liq_sports = ui.column().classes("gap-0")
             with ui.column().classes("gap-0"):
-                ui.label("Top contracts (depth · spread)").classes("text-xs text-gray-500")
+                ui.label("Most liquid — top contracts (depth · spread)").classes("text-xs text-weight-bold")
                 liq_contracts = ui.column().classes("gap-0")
-
-    # Market telemetry (PR 6) — the largest-move leader is SNAPSHOT TELEMETRY, not an opportunity signal.
-    # Kept OUT of the opportunity flow in a collapsed section with neutral styling. Populated in rerender.
-    with ui.expansion("Market telemetry — not an opportunity signal").classes("w-full"):
-        volatility = ui.label().classes("text-sm text-gray-600")
+            with ui.column().classes("gap-0"):
+                ui.label("Tightest markets (spread)").classes("text-xs text-weight-bold")
+                liq_tightest = ui.column().classes("gap-0")
+            with ui.column().classes("gap-0"):
+                ui.label("Most traded (volume)").classes("text-xs text-weight-bold")
+                liq_traded = ui.column().classes("gap-0")
+        volatility = ui.label().classes("text-sm text-gray-600 mt-2")
 
     # Participant/team detail (PR 24) — populated on opp row-click from the STORED frames (no fetch).
-    detail_expansion = ui.expansion("🔬 Selected participant detail (click an opportunity)").classes("w-full")
+    detail_expansion = ui.expansion("Selected Detail — click a row").classes("w-full")
     with detail_expansion:
         detail_box = ui.column().classes("w-full")
 
     # Diagnostics & debug (PR 25b) — observability over the STORED snapshot (no fetch); collapsed by default.
-    diagnostics_expansion = ui.expansion("🔧 Diagnostics & debug").classes("w-full")
+    diagnostics_expansion = ui.expansion("Diagnostics & Debug").classes("w-full")
     with diagnostics_expansion:
         diagnostics_box = ui.column().classes("w-full")
 
@@ -851,7 +907,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         new_ids = {r.get("opportunity_id") for r in al["new_actionable"]}
         fresh = new_ids - state["seen_new"]
         if fresh and not state["first"]:
-            _notify(f"🆕 {len(fresh)} newly actionable", type="positive")
+            _notify(f"{len(fresh)} newly actionable", type="positive")
         state["seen_new"] = new_ids
         state["new_ids"] = new_ids
         # New-watchlist toast (PR C) — rate-limited: seeded on the first snapshot (no toast for the ~300 rows
@@ -860,12 +916,12 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         wl_ids = {o.get("opportunity_id") for o in opps if o.get("bucket") in ("risk_budget", "near_miss")}
         fresh_wl = wl_ids - state["seen_watchlist"]
         if fresh_wl and not was_first and (rb_switch.value or nm_switch.value):
-            _notify(f"🔭 {len(fresh_wl)} new watchlist candidate(s)", type="info")
+            _notify(f"{len(fresh_wl)} new watchlist candidate(s)", type="info")
         state["seen_watchlist"] = wl_ids
         state["first"] = False
-        banner.set_text(f"🆕 {len(new_ids)} newly actionable" if new_ids else "")
+        banner.set_text(f"{len(new_ids)} newly actionable" if new_ids else "")
         n_ch = len(al["blocked_changes"])
-        changed.set_text(f"🔁 {n_ch} changed while blocked" if n_ch else "")
+        changed.set_text(f"{n_ch} changed while blocked" if n_ch else "")
         state["rendered_snapshot_id"] = cov.get("snapshot_id")
         # PR B green flash: highlight rows that are NEW this snapshot (change=='new') or newly-actionable.
         # Only when the snapshot advanced (never first paint or a same-snapshot poll). One-shot: set, render,
@@ -902,24 +958,26 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         actionable.rows = [vm.opp_row(o, new_ids, chg, flash) for o in view if o.get("bucket") == "actionable"]
         review.rows = [vm.opp_row(o, new_ids, chg, flash) for o in view if o.get("bucket") == "review_signal"]
         blocked.rows = [vm.opp_row(o, new_ids, chg, flash) for o in view if o.get("bucket") == "blocked"]
-        for lbl, tbl, sw in ((review_label, review, show_review_sw), (blocked_label, blocked, show_blocked_sw)):
-            lbl.set_visibility(sw.value)
+        for hdr, tbl, sw in ((review_hdr, review, show_review_sw), (blocked_hdr, blocked, show_blocked_sw)):
+            hdr.set_visibility(sw.value)
             tbl.set_visibility(sw.value)
 
-        # Merged Watchlist (PR C): filter the (already membership/threshold-filtered) view by the live band
-        # controls; no rescan. Bounded-loss bets first, then overpriced books. The whole collapsed section
-        # hides when both switches are off; its title carries the live count; the band inputs disable too.
+        # Two watchlist sections (split): each filtered from the membership/threshold-filtered view by its
+        # band controls; no rescan. Each collapsed section shows only when its switch is on; its title carries
+        # the live count; its band inputs disable when off.
         include_rb, include_nm = rb_switch.value, nm_switch.value
-        wl = vm.watchlist_view(
-            view, include_rb=include_rb, include_nm=include_nm,
-            max_loss_c=int(rb_max_loss.value or 0),
+        rbv = vm.risk_budget_view(
+            view, max_loss_c=int(rb_max_loss.value or 0),
             min_ratio_tenths=round(float(rb_min_ratio.value or 0) * 10),
             min_outright_c=int(rb_min_outright.value or 0),
-            max_spread_ratio_hundredths=round(float(rb_max_ratio.value or 0) * 100),
-            max_over_c=int(nm_max_over.value or 0)) if (include_rb or include_nm) else []
-        watchlist_table.rows = [vm.watchlist_row(o, new_ids, chg, flash) for o in wl]
-        watchlist_expansion.set_text(f"🔭 Watchlist — not actionable now ({len(wl)})")
-        watchlist_expansion.set_visibility(include_rb or include_nm)
+            max_spread_ratio_hundredths=round(float(rb_max_ratio.value or 0) * 100)) if include_rb else []
+        nmv = vm.near_miss_view(view, max_over_c=int(nm_max_over.value or 0)) if include_nm else []
+        rb_table.rows = [vm.risk_budget_row(o, new_ids, chg, flash) for o in rbv]
+        nm_table.rows = [vm.near_miss_row(o, new_ids, chg, flash) for o in nmv]
+        rb_title.set_text(f"Bounded-Loss Bets — capped downside, convex upside ({len(rbv):,})")
+        nm_title.set_text(f"Overpriced Books — flat guaranteed loss, watch-only ({len(nmv):,})")
+        rb_expansion.set_visibility(include_rb)
+        nm_expansion.set_visibility(include_nm)
         rb_max_loss.set_enabled(include_rb)
         rb_min_ratio.set_enabled(include_rb)
         rb_min_outright.set_enabled(include_rb)
@@ -937,17 +995,23 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             vm.bucket_counts(opps, filters),
             {"review_signal": show_review_sw.value, "blocked": show_blocked_sw.value,
              "risk_budget": rb_switch.value, "near_miss": nm_switch.value}))
-        # "Most liquid now" panel (PR F) — fill the two visible columns; hide the card when nothing qualifies.
-        panel = state.get("liquidity_panel") or {"top_sports": [], "top_contracts": []}
-        liq_sports.clear()
-        liq_contracts.clear()
+        # Market telemetry — fill the four liquidity columns (depth / contracts / tightest / most-traded).
+        panel = state.get("liquidity_panel") or {}
+        for _col in (liq_sports, liq_contracts, liq_tightest, liq_traded):
+            _col.clear()
         with liq_sports:
-            for _lbl, _depth in panel["top_sports"]:
-                ui.label(f"{_lbl}: {_depth} contracts").classes("text-sm text-gray-600")
+            for _lbl, _depth, _buy, _sell, _dm in panel.get("top_sports", []):
+                ui.label(f"{_lbl} — {_depth:,} contracts · buy ${_buy:,} · sell ${_sell:,} · "
+                         f"depth×mid ${_dm:,}").classes("text-sm text-gray-600")
         with liq_contracts:
-            for _lbl, _size, _spread in panel["top_contracts"]:
-                ui.label(f"{_lbl} — {_size} @ touch · {_spread}¢").classes("text-sm text-gray-600")
-        liquidity_card.set_visibility(bool(panel["top_sports"] or panel["top_contracts"]))
+            for _lbl, _size, _spread in panel.get("top_contracts", []):
+                ui.label(f"{_lbl} — {_size:,} @ touch · {_spread:,}¢").classes("text-sm text-gray-600")
+        with liq_tightest:
+            for _lbl, _spread, _depth in panel.get("tightest", []):
+                ui.label(f"{_lbl} — {_spread:,}¢ spread · {_depth:,} deep").classes("text-sm text-gray-600")
+        with liq_traded:
+            for _lbl, _vol in panel.get("most_traded", []):
+                ui.label(f"{_lbl} — {_vol:,} vol").classes("text-sm text-gray-600")
         vol = state.get("volatility_msg")         # "most volatile now" (#12b) — snapshot-scoped, display only
         volatility.set_text(vol or "")
         volatility.set_visibility(bool(vol))
@@ -985,7 +1049,12 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         scan_btn.disable()        # stale-while-scanning: only the Scan button is disabled; filters keep working
         n = ui.notification("Scanning (core series)…", spinner=True, timeout=None, position="top-right")
         try:
-            st = await run.io_bound(engine.run_scan_now)    # NON-force (PR S3); network I/O off the event loop
+            # Normally NON-force (respects the TTL/budget-cooldown anti-hammer guards). BUT if the snapshot is
+            # already STALE, a non-force click would be skipped during cooldown and leave it stale — so a
+            # stale refresh FORCES a fresh fetch (owner-requested; scoped exception to the non-force default).
+            force = bool((engine.coverage() or {}).get("stale"))
+            st = await run.io_bound(engine.run_scan_now, force=force)   # network I/O off the event loop
+            await reload_data()                              # surface the new snapshot immediately for this client
             await reload_data()                              # surface the new snapshot immediately for this client
             status = st.get("status")
             if status == "done":
@@ -1049,15 +1118,14 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         (rb_min_ratio, "Speculative minimum upside-to-risk ratio"),
         (rb_min_outright, "Speculative minimum child display outright in cents"),
         (rb_max_ratio, "Speculative maximum child display spread-to-outright ratio"),
-        (nm_switch, "Show near-miss books"), (nm_max_over, "Near-miss max overpay in cents"),
-        (cols_actionable, "Actionable table columns"), (cols_review, "Review table columns"),
-        (cols_blocked, "Blocked table columns"), (cols_watchlist, "Watchlist table columns"),
+        (nm_switch, "Show overpriced books (near-miss)"), (nm_max_over, "Near-miss max overpay in cents"),
         (show_net_sw, "Show estimated net-of-fees columns"),
-        (actionable, "Actionable opportunities"), (review, "Review-signal opportunities"),
-        (blocked, "Blocked opportunities"), (watchlist_table, "Watchlist — bounded-loss bets and overpriced books"),
-        (watchlist_expansion, "Watchlist — not actionable now"), (backlog, "Recently-actionable backlog"),
-        (liquidity_card, "Most liquid now — telemetry, not an opportunity signal"),
-        (detail_expansion, "Selected participant detail"), (diagnostics_expansion, "Diagnostics and debug"),
+        (actionable, "Actionable opportunities"), (review, "Review-required opportunities"),
+        (blocked, "Blocked opportunities"),
+        (rb_table, "Bounded-loss bets"), (rb_expansion, "Bounded-loss bets section"),
+        (nm_table, "Overpriced books"), (nm_expansion, "Overpriced books section"),
+        (backlog, "Recently-actionable backlog"),
+        (detail_expansion, "Selected detail"), (diagnostics_expansion, "Diagnostics and debug"),
     ):
         _el.props(f'aria-label="{_aria}"')
 
