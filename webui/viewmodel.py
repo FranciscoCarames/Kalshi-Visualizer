@@ -371,6 +371,35 @@ def near_miss_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str] 
     }
 
 
+# World Cup Qualifier Setups (PR6) — human labels for the diagnostic setup types.
+_SETUP_TYPE_LABEL = {
+    "exact_order_top2_proxy": "Exact-order top-two (proxy)",
+    "game_support_signal": "Game support (heuristic)",
+}
+
+
+def qualifier_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str] | None = None,
+                  flash_ids: set[str] | None = None) -> dict[str, Any]:
+    """Display row for the Qualifier-setups DIAGNOSTIC table. Diagnostic numbers only — the premium-proxy
+    (exact-order) and the ask-support score (game-support) each populate only their own column; there is
+    deliberately NO gross-edge / ROI / size / profit (a non-executable signal). The note carries the
+    'proxy / not expected points / not arbitrage' caveat."""
+    return _stamp_severity({
+        "opportunity_id": o.get("opportunity_id"),
+        "new": o.get("opportunity_id") in new_ids,   # bool → a coloured "NEW" badge in the cell slot
+        "_change": (changes or {}).get(o.get("opportunity_id"), ""),
+        "_flash": o.get("opportunity_id") in (flash_ids or set()),
+        "sport": o.get("sport_label") or o.get("sport") or "",
+        "name": o.get("name") or "",
+        "setup": _SETUP_TYPE_LABEL.get(o.get("setup_type") or "", o.get("setup_type") or "Diagnostic"),
+        "qualifier": _num_or_none(o.get("qualifier_yes_ask_c")),
+        "premium": _num_or_none(o.get("qualifier_vs_top2_premium_c")),
+        "support": _num_or_none(o.get("ask_support_score_total_c")),
+        "legs": _num_or_none(o.get("n_legs")),
+        "note": o.get("settlement_caveat") or "",
+    }, o)
+
+
 def backlog_row(b: dict[str, Any], tz: str) -> dict[str, Any]:
     dur = b.get("duration_s")
     return {
