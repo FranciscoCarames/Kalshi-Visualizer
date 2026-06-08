@@ -479,9 +479,12 @@ def _wcround(event_ticker, ticker, bid, ask, team="Brazil", uuid="u-bra"):
 
 def test_soccer_registered_and_exact_only_ownership():
     assert {"tennis", "nba", "wnba", "golf", "soccer"} <= {c.sport_id for c in sports.all_sports()}
-    assert sports.sport_for_series("KXWCGAME").sport_id == "soccer"
-    assert sports.sport_for_series("KXWCROUND").sport_id == "soccer"
-    # Field-shaped + not-live series must NOT be owned by soccer (resolve to unknown).
+    # Exactly the four owned tickers resolve to soccer: 3-way game, reach-stage, group-qualifier (Reach
+    # RO32), and the dormant tournament-outright KXWC (a bare prefix never shadows KXWCGAME/KXWCROUND/etc.).
+    for tk in ("KXWCGAME", "KXWCROUND", "KXWCGROUPQUAL", "KXWC"):
+        assert sports.sport_for_series(tk).sport_id == "soccer", tk
+    # Field-shaped + not-live series must NOT be owned by soccer (resolve to unknown). KXWCGROUPWINNER
+    # (group winner) stays unknown — distinct from the owned KXWCGROUPQUAL (group qualifier = Reach RO32).
     for tk in ("KXWCSTAGE", "KXWCGROUPWINNER", "KXFIFAGAME", "KXFIFAADVANCE", "KXWCGOALLEADER"):
         assert sports.sport_for_series(tk).sport_id == "unknown", tk
 
@@ -489,12 +492,45 @@ def test_soccer_registered_and_exact_only_ownership():
 def test_soccer_game_not_laddered_and_reach_stage_nodes():
     g = sports.SOCCER.classify("KXWCGAME", {"ticker": "KXWCGAME-26JUN11MEXRSA-MEX", "title": "x"})
     assert g.family == "game" and g.eligible_for_ladder_checks is False     # 3-way game: dutch-only
-    for tk, node in [("KXWCROUND-26RO16-PAR", "Reach Round of 16"),
-                     ("KXWCROUND-26QUAR-BRA", "Reach Quarterfinals"),
-                     ("KXWCROUND-26SEMI-ARG", "Reach Semifinals"),
-                     ("KXWCROUND-26FINAL-FRA", "Reach Finals")]:
-        a = sports.SOCCER.classify("KXWCROUND", {"ticker": tk, "title": "x"})
+    # Full knockout ladder, broad → deep. Round of 32 is the KXWCGROUPQUAL "qualify from group" market.
+    for series, tk, node in [
+        ("KXWCGROUPQUAL", "KXWCGROUPQUAL-26L-PAN", "Reach Round of 32"),
+        ("KXWCROUND", "KXWCROUND-26RO16-PAR", "Reach Round of 16"),
+        ("KXWCROUND", "KXWCROUND-26QUAR-BRA", "Reach Quarterfinals"),
+        ("KXWCROUND", "KXWCROUND-26SEMI-ARG", "Reach Semifinals"),
+        ("KXWCROUND", "KXWCROUND-26FINAL-FRA", "Reach Finals"),
+    ]:
+        a = sports.SOCCER.classify(series, {"ticker": tk, "title": "x"})
         assert a.family == "advance" and a.ladder_node == node, tk
+
+
+def test_soccer_winner_rung_dormant_outright():
+    # The tournament outright (KXWC) is wired but not yet live: it classifies as the deepest ladder rung
+    # "Win the World Cup" (node == display label), ready to populate the moment the series lists.
+    win = sports.SOCCER.classify("KXWC", {"ticker": "KXWC-26-BRA", "title": "x"})
+    assert win.family == "winner" and win.ladder_node == "Win the World Cup"
+    assert sports.SOCCER.winner_label == "Win the World Cup"
+    # The ladder spans all six rungs, deepest edge anchored on the winner node.
+    assert sports.SOCCER.ladder.node_order[0] == "Reach Round of 32"
+    assert sports.SOCCER.ladder.node_order[-1] == "Win the World Cup"
+    assert ("Win the World Cup", "Reach Finals") in sports.SOCCER.ladder.adjacent_pairs
+
+
+def test_soccer_round_of_32_joins_full_ladder():
+    # A team present at Reach RO32 (group qualifier) + Reach RO16 forms the bottom adjacent containment
+    # pair in ONE (player_key, tournament) group — proving the new rung joins, not just classifies.
+    rows = (data.build_contracts(
+                "KXWCGROUPQUAL",
+                [_wcround("KXWCGROUPQUAL-26L", "KXWCGROUPQUAL-26L-BRA", "0.88", "0.90")])
+            + data.build_contracts(
+                "KXWCROUND",
+                [_wcround("KXWCROUND-26RO16", "KXWCROUND-26RO16-BRA", "0.50", "0.52")]))
+    assert len({r["player_key"] for r in rows}) == 1                       # same team UUID
+    assert len({r["tournament"] for r in rows}) == 1                       # same WC tournament group
+    checks = consistency.build_checks(pd.DataFrame(rows))
+    row = next(c for _, c in checks.iterrows()
+               if c["chain"] == "Reach Round of 16 ≤ Reach Round of 32")
+    assert row["status"] == "CLEAN"                                        # deeper (RO16 .51) ≤ broader (RO32 .89)
 
 
 def test_soccer_tie_is_non_participant_with_per_event_key():
@@ -518,6 +554,17 @@ def test_soccer_reach_stage_ladder_violation():
     row = next(c for _, c in checks.iterrows() if c["chain"] == "Reach Quarterfinals ≤ Reach Round of 16")
     assert row["status"] == "EXECUTABLE_VIOLATION"
     assert row["child_category"] == "Stage advancement"
+
+
+def test_soccer_groupqual_fixture_is_round_of_32():
+    # Real captured KXWCGROUPQUAL event parses to the Reach Round of 32 rung. Live competition metadata is
+    # "FIFA World Cup" (not the "2026 FIFA World Cup" of older fixtures) → tournament key "FIFA World Cup · 26".
+    rows = data.build_contracts("KXWCGROUPQUAL", [_load_soccer("KXWCGROUPQUAL-26L.json")])
+    assert {r["player"] for r in rows} == {"Panama", "Ghana"}
+    assert all(r["kind"] == "advance" for r in rows)
+    assert all(r["contract"] == "Reach Round of 32" for r in rows)         # ladder node = contract label
+    assert {r["tournament"] for r in rows} == {"FIFA World Cup · 26"}
+    assert all(r["is_participant"] is True for r in rows)                  # real teams, not a Tie leg
 
 
 def test_soccer_game_fixture_shape():

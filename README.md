@@ -72,7 +72,7 @@ inconsistencies** — a firm bid/ask cross with order size behind it. It is deli
 | NBA | Reach Playoffs ⊇ Win Conference ⊇ Win Championship |
 | WNBA | Reach Playoffs ⊇ Reach Semifinals ⊇ Reach Finals ⊇ Win Championship |
 | Golf | Top 20 ⊇ Top 10 ⊇ Top 5 ⊇ Win Tournament |
-| Soccer (World Cup) | Reach Round of 16 ⊇ Reach Quarterfinals ⊇ Reach Semifinals ⊇ Reach Finals |
+| Soccer (World Cup) | Reach Round of 32 ⊇ Reach Round of 16 ⊇ Reach Quarterfinals ⊇ Reach Semifinals ⊇ Reach Finals ⊇ Win the World Cup |
 | MLB | Reach Playoffs ⊇ Win League ⊇ Win World Series |
 | NHL | Reach Playoffs ⊇ Win Conference ⊇ Win Stanley Cup |
 | Motorsport | per-race finishing position, e.g. Top 10 ⊇ Top 5 ⊇ Podium ⊇ Win Race |
@@ -125,7 +125,7 @@ to tennis.
 | NBA 🏀 | `KXNBA*` | `basketball_team` UUID | playoff series + games |
 | WNBA 🏀 | `KXWNBA*` | `basketball_team` UUID | playoff series + games |
 | Golf ⛳ | `exact_series` (`KXPGATOP5/10/20`, `KXPGATOUR`) | `golf_competitor` UUID | winner field only |
-| Soccer ⚽ | `exact_series` (`KXWC*` World Cup) | `soccer_team` UUID | 3-way games + winner field |
+| Soccer ⚽ | `exact_series` (`KXWCGAME`, `KXWCROUND`, `KXWCGROUPQUAL`, dormant `KXWC` outright) | `soccer_team` UUID | 3-way games + winner field |
 | MLB ⚾ | `KXMLB*` (allow-list) | `baseball_team` UUID | `KXMLBGAME` games + winner field |
 | NHL 🏒 | `KXNHL*` (allow-list) | `hockey_team` UUID | `KXNHLSERIES` + `KXNHLGAME` + field |
 | Motorsport 🏁 | `KXF1`/`KXNASCAR`/`KXINDY`/`KXMOTOGP` | driver/team UUID or constructor name | one-winner field overround |
