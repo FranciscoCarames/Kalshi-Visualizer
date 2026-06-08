@@ -304,7 +304,11 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                              # immediately after, so ordinary filter rerenders never replay the animation.
                              "flash_now": set(),
                              "liquidity_panel": None,  # "most liquid now" panel (PR F), recomputed per snapshot
-                             "volatility_msg": None}   # "most volatile now" (#12b), recomputed per snapshot
+                             "volatility_msg": None,   # "most volatile now" (#12b), recomputed per snapshot
+                             # Cascading filters: a re-entrancy guard so the programmatic option/value prune
+                             # in _refresh_cascade (which fires the selects' on_value_change) never re-renders
+                             # mid-cascade or recurses. Handlers no-op while it's True.
+                             "_suppress_cascade": False}
 
     ui.add_css(_SELECTED_ROW_CSS)        # selected-row highlight (#14) — see module note
     ui.add_css(_A11Y_CSS)                 # accessibility (#10): focus-visible ring + opt-in larger text
@@ -353,6 +357,12 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             show_ids = ui.switch("Show IDs & codes", value=False)
             rules_sw = ui.switch("Resolution criteria", value=False).tooltip(
                 "Show each contract's settlement rules in the click panel and auto-open them in the detail view.")
+            # Position framing (display only) — re-word the buy plan as Long YES / Short YES instead of the
+            # canonical Buy YES / Buy NO (buying NO is economically a short on YES). Default OFF keeps the
+            # buy-only wording; never changes detection, pricing, ranking, or the stored fields.
+            pos_framing_sw = ui.switch("Long / short wording", value=False).tooltip(
+                "Show the plan as Long YES / Short YES instead of Buy YES / Buy NO (buying NO is economically "
+                "short YES). Display only — never changes detection, pricing, or ranking.")
             # Net-of-fees ESTIMATE (PR E) — reveal the default-hidden net columns on the opp tables. Wired
             # below (after the column choosers exist). Display only; an estimate; never affects ranking.
             show_net_sw = ui.switch("Show net of fees", value=False).tooltip(
@@ -459,7 +469,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
 
     def open_panel(opp: dict[str, Any]) -> None:
         dialog.clear()
-        lines = vm.explanation_lines(opp, show_ids=show_ids.value)
+        lines = vm.explanation_lines(opp, show_ids=show_ids.value, long_short=pos_framing_sw.value)
         with dialog, ui.card().classes("w-[36rem]"):
             ui.label(lines[0]).classes("text-lg font-bold")
             ui.label(lines[1]).classes("text-sm text-gray-500")
@@ -479,7 +489,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                 ui.label(line)
             # Structured buy plan (PR 3): the exact legs with per-leg status / quote from the stored
             # contracts (blank = unavailable in snapshot, never inferred).
-            legrows = vm.leg_rows(opp, _contract_lookup_for(opp))
+            legrows = vm.leg_rows(opp, _contract_lookup_for(opp), long_short=pos_framing_sw.value)
             if legrows:
                 ui.label("Buy plan (legs)").classes("text-sm font-bold mt-2")
                 ui.table(columns=_LEG_COLUMNS, rows=legrows, row_key="leg").classes("w-full")
@@ -519,7 +529,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         with detail_box:
             ui.label(f"{opp.get('sport_label') or sport} · {opp.get('name')}").classes("text-lg font-bold")
             ui.label(vm.relationship_explanation(opp)).classes("text-sm text-gray-600")
-            for line in vm.explanation_lines(opp, show_ids=show_ids.value)[2:]:
+            for line in vm.explanation_lines(opp, show_ids=show_ids.value, long_short=pos_framing_sw.value)[2:]:
                 ui.label(line).classes("text-sm")
             avail = engine.frame_availability()
             if avail != "present" or not pkey:
@@ -779,9 +789,43 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             s["active_only"] = True
         return s
 
+    def _refresh_cascade() -> None:
+        """Cascade the filter option lists: Tournament options narrow to the selected SPORTS; Participant
+        options narrow to the selected sports AND tournaments. Any now-invalid selected tournament /
+        participant value is pruned. Pure in-memory over the cached snapshot — no store read. Self-guarded
+        with `_suppress_cascade` so the programmatic value assignments (which fire on_value_change) don't
+        re-render or recurse; callers run their own single rerender() afterward."""
+        opps = state.get("opps_list") or []
+        sports = list(sport_sel.value or [])
+        opts = vm.cascaded_options(opps, sports=sports, tournaments=list(tour_sel.value or []))
+        state["_suppress_cascade"] = True
+        try:
+            tour_sel.options = opts["tournaments"]
+            valid_t = set(opts["tournaments"])
+            kept_t = [t for t in (tour_sel.value or []) if t in valid_t]
+            if kept_t != list(tour_sel.value or []):
+                tour_sel.value = kept_t                       # drop tournaments no longer in scope
+            # Participants narrowed by sport + the PRUNED tournaments (so a dropped tournament can't keep
+            # its players in scope).
+            popts = vm.cascaded_options(opps, sports=sports, tournaments=kept_t)["participants"]
+            participant_sel.options = {p["value"]: p["label"] for p in popts}
+            valid_p = {p["value"] for p in popts}
+            kept_p = [k for k in (participant_sel.value or []) if k in valid_p]
+            if kept_p != list(participant_sel.value or []):
+                participant_sel.value = kept_p
+            tour_sel.update()
+            participant_sel.update()
+        finally:
+            state["_suppress_cascade"] = False
+
     def _clear_filters() -> None:
-        sport_sel.value, tour_sel.value, participant_sel.value = [], [], []
-        min_size_in.value, active_sw.value = None, False
+        state["_suppress_cascade"] = True       # batch the resets; one rerender below (no mid-reset renders)
+        try:
+            sport_sel.value, tour_sel.value, participant_sel.value = [], [], []
+            min_size_in.value, active_sw.value = None, False
+        finally:
+            state["_suppress_cascade"] = False
+        _refresh_cascade()                       # widen the option lists back to the full set
         rerender()        # membership filters are in-memory — no store read needed
 
     def _sync_url(filters: dict[str, Any]) -> None:
@@ -897,12 +941,12 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         state["backlog"] = bundle["backlog"]
         state["liquidity_panel"] = vm.liquidity_panel(bundle["contracts"])  # PR F (snapshot-scoped panel)
         state["volatility_msg"] = vm.volatility_leader(bundle["vol_frames"])   # #12b (snapshot-scoped)
+        # Sport is the top of the cascade (never narrowed); Tournament/Participant options + any now-stale
+        # selections are derived by _refresh_cascade from the current sport/tournament picks. This preserves
+        # the viewer's selections across a poll/snapshot change while re-narrowing the downstream lists.
         sport_sel.options = state["options"]["sports"]
-        tour_sel.options = state["options"]["tournaments"]
-        participant_sel.options = {p["value"]: p["label"] for p in state["options"]["participants"]}
         sport_sel.update()
-        tour_sel.update()
-        participant_sel.update()
+        _refresh_cascade()
         # New-actionable toast + banner + blocked-change label (alerts are snapshot/persistence scoped).
         new_ids = {r.get("opportunity_id") for r in al["new_actionable"]}
         fresh = new_ids - state["seen_new"]
@@ -955,9 +999,10 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         empty.set_text(msg or "")
         empty.set_visibility(msg is not None)
 
-        actionable.rows = [vm.opp_row(o, new_ids, chg, flash) for o in view if o.get("bucket") == "actionable"]
-        review.rows = [vm.opp_row(o, new_ids, chg, flash) for o in view if o.get("bucket") == "review_signal"]
-        blocked.rows = [vm.opp_row(o, new_ids, chg, flash) for o in view if o.get("bucket") == "blocked"]
+        ls = pos_framing_sw.value      # Long/Short YES display wording (default off → Buy YES/Buy NO)
+        actionable.rows = [vm.opp_row(o, new_ids, chg, flash, long_short=ls) for o in view if o.get("bucket") == "actionable"]
+        review.rows = [vm.opp_row(o, new_ids, chg, flash, long_short=ls) for o in view if o.get("bucket") == "review_signal"]
+        blocked.rows = [vm.opp_row(o, new_ids, chg, flash, long_short=ls) for o in view if o.get("bucket") == "blocked"]
         for hdr, tbl, sw in ((review_hdr, review, show_review_sw), (blocked_hdr, blocked, show_blocked_sw)):
             hdr.set_visibility(sw.value)
             tbl.set_visibility(sw.value)
@@ -1105,6 +1150,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         (tz_select, "Time zone"), (persist_select, "New-actionable banner persistence"),
         (window_select, "Backlog window"), (show_ids, "Show IDs and codes"),
         (rules_sw, "Show resolution criteria"), (dark_sw, "Dark mode"), (larger_sw, "Larger text"),
+        (pos_framing_sw, "Long / short position wording"),
         (scan_btn, "Refresh snapshot"), (export_btn, "Export snapshot ZIP"),
         (settings_btn, "Open settings"),
         (auto_sw, "Auto-refresh in the background"), (interval_sel, "Auto-scan interval (seconds)"),
@@ -1134,10 +1180,23 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
     _seed()        # set control values from the URL BEFORE binding handlers (so seeding fires no render)
 
     # Filter / display controls re-render PURELY in-memory from the cached snapshot (no store, no fetch).
-    for ctrl in (tz_select, rank_sel, show_ids, sport_sel, tour_sel, participant_sel, min_size_in, active_sw,
+    # The lambda no-ops while `_suppress_cascade` is set, so the programmatic option/value prune inside
+    # _refresh_cascade (which fires participant_sel.on_value_change) never re-renders mid-cascade.
+    for ctrl in (tz_select, rank_sel, show_ids, participant_sel, min_size_in, active_sw,
                  show_review_sw, show_blocked_sw, rb_switch, rb_max_loss, rb_min_ratio,
                  rb_min_outright, rb_max_ratio, nm_switch, nm_max_over):
-        ctrl.on_value_change(lambda _=None: rerender())
+        ctrl.on_value_change(lambda _=None: None if state.get("_suppress_cascade") else rerender())
+
+    # Sport / Tournament are the cascade drivers: changing one re-narrows the downstream option lists
+    # (and prunes now-invalid picks) BEFORE a single rerender. participant_sel (the leaf) drives no
+    # further cascade, so it stays in the generic loop above.
+    def _on_membership_change() -> None:
+        if state.get("_suppress_cascade"):
+            return
+        _refresh_cascade()
+        rerender()
+    sport_sel.on_value_change(lambda _=None: _on_membership_change())
+    tour_sel.on_value_change(lambda _=None: _on_membership_change())
     diagnostics_expansion.on_value_change(lambda _=None: rerender())   # render diagnostics when opened
     # Alert-persistence + backlog-window parameterize STORE reads, so they go through reload_data.
     for ctrl in (persist_select, window_select):
@@ -1154,6 +1213,18 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         if detail_expansion.value:
             render_detail(sel)
     rules_sw.on_value_change(lambda _=None: _on_rules_toggle())
+
+    def _on_position_framing_toggle() -> None:
+        # Single handler (NOT also in the generic rerender loop, which would double-render): re-render the
+        # tables AND refresh any open click-panel / detail for the selected opp, so an already-open dialog
+        # flips wording without a re-click. Display only — no store read.
+        rerender()
+        sel = state.get("selected")
+        if sel and dialog.value:
+            open_panel(sel)
+        if sel and detail_expansion.value:
+            render_detail(sel)
+    pos_framing_sw.on_value_change(lambda _=None: _on_position_framing_toggle())
 
     def tick_age() -> None:
         # Re-render only the freshness/scope line each second (scope_banner recomputes the age live).

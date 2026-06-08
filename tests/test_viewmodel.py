@@ -154,6 +154,39 @@ def test_derive_options_participants_keyed_and_disambiguated():
     assert labels["k2"] == "Smith [k2]" and labels["k3"] == "Smith [k3]"   # same name, diff key -> suffixed
 
 
+# --- cascaded_options (cascading filter lists) ----------------------------------------
+def _copp(oid, *, sport, tournament, pk, label):
+    return {"opportunity_id": oid, "sport": sport, "sport_label": sport.title(),
+            "tournament": tournament, "participant_keys": [pk], "participant_labels": [label]}
+
+
+def test_cascaded_options_sport_is_full_tournaments_narrow_by_sport():
+    opps = [_copp("a", sport="tennis", tournament="French Open", pk="k1", label="Alcaraz"),
+            _copp("b", sport="golf", tournament="The Masters", pk="k2", label="Scheffler"),
+            _copp("c", sport="nba", tournament="NBA Finals", pk="k3", label="Celtics")]
+    out = vm.cascaded_options(opps, sports=["tennis", "golf"])
+    assert set(out["sports"]) == {"tennis", "golf", "nba"}        # sport list is never narrowed
+    assert out["tournaments"] == ["French Open", "The Masters"]   # only the selected sports' tournaments
+    assert {p["value"] for p in out["participants"]} == {"k1", "k2"}   # and their participants
+
+
+def test_cascaded_options_participants_narrow_by_sport_and_tournament():
+    opps = [_copp("a", sport="tennis", tournament="French Open", pk="k1", label="Alcaraz"),
+            _copp("b", sport="tennis", tournament="Wimbledon", pk="k2", label="Sinner")]
+    out = vm.cascaded_options(opps, sports=["tennis"], tournaments=["French Open"])
+    assert out["tournaments"] == ["French Open", "Wimbledon"]     # both in-scope for tennis
+    assert {p["value"] for p in out["participants"]} == {"k1"}    # only the French Open player
+
+
+def test_cascaded_options_empty_selection_is_full():
+    opps = [_copp("a", sport="tennis", tournament="French Open", pk="k1", label="Alcaraz"),
+            _copp("b", sport="golf", tournament="The Masters", pk="k2", label="Scheffler")]
+    out = vm.cascaded_options(opps)
+    assert set(out["sports"]) == {"tennis", "golf"}
+    assert out["tournaments"] == ["French Open", "The Masters"]
+    assert {p["value"] for p in out["participants"]} == {"k1", "k2"}
+
+
 def test_filter_opps_participant_or_match_by_key():
     opps = [{"participant_keys": ["ka", "kb"], "name": "A vs B"},
             {"participant_keys": ["kc"], "name": "C ladder"}]
