@@ -654,6 +654,12 @@ def build_contracts(
             if cfg.tie_fn is not None and cfg.tie_fn(cfg, market):
                 player_key = f"tie::{event.get('event_ticker', '')}"
                 participant_type, is_participant = "tie", False
+            elif kind in cfg.non_participant_families:
+                # Not a single competitor (e.g. an exact-order ORDERING — a full standings permutation). Give
+                # it a per-MARKET synthetic key so the 24 orderings never merge, and mark it non-selectable;
+                # the owning detector reads the placement teams from custom_strike, not player_key.
+                player_key = f"{kind}::{market.get('ticker', '')}"
+                participant_type, is_participant = kind, False
             else:
                 participant_type, is_participant = "participant", True
                 # Role-namespace the key from the CLASSIFIED family so two roles that share an id path

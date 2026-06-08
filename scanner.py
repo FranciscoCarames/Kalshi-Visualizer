@@ -23,6 +23,7 @@ import pandas as pd
 import config
 import consistency
 import dutchbook
+import exact_order
 import sports
 import synthetic_bundle
 
@@ -282,6 +283,44 @@ def _to_unified_group_basket(r: dict[str, Any], cfg) -> dict[str, Any]:
     return d
 
 
+def _to_unified_exact_order(r: dict[str, Any], cfg) -> dict[str, Any]:
+    """Map an exact-order premium-proxy finding (#4) onto the unified schema. Diagnostic-only: it
+    self-assigns ``bucket="qualifier_setup"`` + ``exec_gap_c=None`` (never enters _rank_key / actionable),
+    and carries the premium-proxy fields. Participant identity comes from the JOINED QUALIFIER UUID (not the
+    order-market pseudo-keys), so the participant filter keys on the real team."""
+    uuid = r.get("participant_uuid") or ""
+    keys, labels = _participants([(uuid, r.get("name"))])
+    d = {
+        "sport": cfg.sport_id, "sport_label": cfg.label, "source": "exact_order",
+        "name": r.get("name") or "", "detail": r.get("detail") or "",
+        "tournament": r.get("tournament") or "", "tour": r.get("tour") or "",
+        "action_1_text": r.get("action_1_text") or "", "action_2_text": r.get("action_2_text") or "",
+        "action_1_price_c": _num(r.get("action_1_price_c")), "action_2_price_c": _num(r.get("action_2_price_c")),
+        "cost_c": None,
+        # Diagnostic — NEVER an executable edge. exec_gap_c=None floors it within its opt-in section.
+        "exec_gap_c": None, "exec_min_size": None, "exec_max_profit_dollars": None,
+        "bucket": "qualifier_setup", "status": r.get("status") or exact_order.EXACT_ORDER_DIAGNOSTIC,
+        "tradable_now": r.get("tradable_now") or "Diagnostic only", "blocked_reason": "",
+        "market_status": "active", "rule_flag": "",
+        "settlement_caveat": r.get("settlement_caveat") or "",
+        "participant_key": uuid,
+        "relationship_type": r.get("relationship_type") or "exact_order_top2_proxy",
+        "opportunity_id": r.get("opportunity_id") or "",
+        "ticker_1": r.get("ticker_1") or "", "ticker_2": r.get("ticker_2") or "",
+        "url": r.get("url") or "", "url_2": "",
+        "legs": r.get("legs"), "n_legs": _num(r.get("n_legs")),
+        "edge_class": "", "worst_case_profit_c": None, "best_case_profit_c": None,
+        "setup_family": _WC_QUALIFIER_FAMILY, "setup_type": "exact_order_top2_proxy",
+        # The diagnostic numbers (PR3 schema).
+        "qualifier_vs_top2_premium_c": _num(r.get("qualifier_vs_top2_premium_c")),
+        "synthetic_top_two_cost_c": _num(r.get("synthetic_top_two_cost_c")),
+        "qualifier_yes_ask_c": _num(r.get("qualifier_yes_ask_c")),
+    }
+    d["participant_keys"], d["participant_labels"] = keys, labels
+    # Diagnostic — no guaranteed floor; payout_floor_c stays None.
+    return _finalize_unified(d, payout_floor_c=None)
+
+
 def _to_unified_synthetic(r: dict[str, Any], cfg) -> dict[str, Any]:
     """Map a synthetic-bundle finding (N legs) onto the unified schema. The full plan lives in `legs`;
     `action_1/2_*` are backfilled (by the detector) from the first two legs so 2-leg consumers still work."""
@@ -366,6 +405,7 @@ def unified_opportunities(
             books = dutchbook.find_dutch_books(records, near_miss_max_over_c=config.NEAR_MISS_MAX_OVER_C)
             baskets = dutchbook.find_group_baskets(records)
             bundles = synthetic_bundle.find_synthetic_bundles(records)
+            exact_orders = exact_order.find_exact_order_premiums(records)
         except Exception as exc:
             errors.append({"sport": cfg.sport_id, "error": str(exc)})
             continue
@@ -373,6 +413,7 @@ def unified_opportunities(
         rows.extend(_to_unified_dutchbook(r, cfg) for r in books)
         rows.extend(_to_unified_group_basket(r, cfg) for r in baskets)
         rows.extend(_to_unified_synthetic(r, cfg) for r in bundles)
+        rows.extend(_to_unified_exact_order(r, cfg) for r in exact_orders)
         if frames_out is not None:
             for frame_type, frame_rows in (("contracts", records), ("checks", checks_records),
                                            ("dutchbook", books), ("group_basket", baskets)):

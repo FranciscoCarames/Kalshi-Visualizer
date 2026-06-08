@@ -39,6 +39,15 @@ FIXED_SUM_BASIS = ("dutch-booked only because the settlement rules prove a fixed
 GROUP_BASKET_BASIS = ("hard-floor group basket: gross, top-of-book, fees not modeled; the guaranteed "
                       "settle-count floor is fixed by the tournament format")
 
+# Exact-order top-two PROXY (#4) — single-sourced conservative wording. NOT an edge, NOT arbitrage: it is a
+# diagnostic spread between the qualifier YES ask and a 12-leg exact-order top-two bundle, sensitive to
+# stale/illiquid exact-order quotes and NOT settlement-proven.
+EXACT_ORDER_BASIS = ("diagnostic PROXY only: the qualifier YES ask minus the cost of a 12-leg exact-order "
+                     "top-two bundle. Summing one side of a 24-way book carries an OVERROUND bias (the legs "
+                     "sum above fair), so the proxy is typically negative and is NOT a clean best-third "
+                     "value. Gross, top-of-book, fees not modeled; 12-leg execution with thin / stale "
+                     "exact-order quotes; settlement not verified — not arbitrage, never executable")
+
 # --- Glossary terms (term -> {short, long}) ------------------------------------------
 GLOSSARY: dict[str, dict[str, str]] = {
     "Tradable now": {
