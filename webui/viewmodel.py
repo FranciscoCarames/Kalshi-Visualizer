@@ -452,8 +452,10 @@ def _isna(x: Any) -> bool:
 
 
 def _spared(o: dict[str, Any]) -> bool:
-    """Thresholds spare the Actionable bucket and dutch-book rows (mirrors the Streamlit split)."""
-    return o.get("bucket") == "actionable" or o.get("source") == "dutch_book"
+    """Thresholds spare the Actionable bucket, dutch-book rows, and the qualifier-setup diagnostics (which
+    carry no firm size/quote to threshold on — membership filters still apply). Mirrors the Streamlit split."""
+    return (o.get("bucket") in ("actionable", "qualifier_setup")
+            or o.get("source") == "dutch_book")
 
 
 def filter_opps(opps: Iterable[dict[str, Any]], *, sports: Iterable[str] | None = None,
@@ -494,8 +496,8 @@ def filter_opps(opps: Iterable[dict[str, Any]], *, sports: Iterable[str] | None 
 # dashboard). Thresholds spare Actionable / dutch-book, so for those shown == in_scope by construction.
 _MEMBERSHIP_KEYS = ("sports", "tournaments", "participant")
 _BUCKET_LABEL = {"actionable": "Actionable", "review_signal": "Review", "blocked": "Blocked",
-                 "risk_budget": "Speculative", "near_miss": "Near-miss"}
-_BUCKET_ORDER = ["actionable", "review_signal", "blocked", "risk_budget", "near_miss"]
+                 "risk_budget": "Speculative", "near_miss": "Near-miss", "qualifier_setup": "Qualifier setups"}
+_BUCKET_ORDER = ["actionable", "review_signal", "blocked", "risk_budget", "near_miss", "qualifier_setup"]
 
 
 def _count_by_bucket(rows: Iterable[dict[str, Any]]) -> dict[str, int]:

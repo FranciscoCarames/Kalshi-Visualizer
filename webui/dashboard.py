@@ -386,6 +386,9 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                 "Show the Review-signal section — settlement-caveated, never auto-tradable.")
             show_blocked_sw = ui.switch("Blocked", value=False).tooltip(   # hidden by default (PR S5)
                 "Show the Blocked section — opportunities that exist but aren't currently tradable.")
+            qs_switch = ui.switch("Qualifier setups", value=True).tooltip(  # diagnostic-only (default-on, opt-in)
+                "Show the World Cup Qualifier setups section — diagnostic, gross, top-of-book, "
+                "settlement-unverified heuristics. Not arbitrage; never executable.")
         with ui.row().classes("items-end gap-4 flex-wrap"):
             rb_switch = ui.switch("Speculative bounded-loss structures", value=True)  # PR A2: on (collapsed in PR C)
             rb_max_loss = ui.number("Max loss ¢", value=config.RISK_BUDGET_DEFAULT_MAX_LOSS_C,
@@ -672,6 +675,16 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                        pagination=10).props("dense").classes("w-full overflow-x-auto opp-sel")
     blocked.on_select(_on_select(blocked))
 
+    # World Cup Qualifier Setups (PR3): a separate, default-on, opt-in DIAGNOSTIC section — kept out of the
+    # strict Actionable/Review/Blocked sections. Empty until the exact-order (#4) and game-support (#5)
+    # detectors land; the existing flagged baskets/spreads still live in their own sections (PR1 badge).
+    qs_hdr = _section_header(
+        "Qualifier setups — World Cup group-stage diagnostics",
+        "Heuristic, gross, top-of-book, settlement-unverified signals — NOT arbitrage and never executable.")
+    qs_table = ui.table(columns=_OPP_COLUMNS, rows=[], row_key="opportunity_id", selection="single",
+                        pagination=10).props("dense").classes("w-full overflow-x-auto opp-sel")
+    qs_table.on_select(_on_select(qs_table))
+
     # TWO distinct, collapsed watchlist sections — opposite shapes, kept separate. Each uses a custom header
     # slot so the "Columns" button sits beside the title (added after the table exists); the title label is
     # kept in a ref so rerender can update its live count. A bet with capped loss vs a flat guaranteed loss.
@@ -702,7 +715,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                             pagination=10).props("dense").classes("w-full overflow-x-auto opp-sel")
     nm_table.on_select(_on_select(nm_table))
 
-    _sel_tables.extend([actionable, review, blocked, rb_table, nm_table])
+    _sel_tables.extend([actionable, review, blocked, qs_table, rb_table, nm_table])
     for _t in _sel_tables:                 # the change-signal / NEW-badge indicator column on every table
         _t.add_slot("body-cell-new", _CHANGE_CELL_SLOT)
     for _t in (actionable, review, blocked):
@@ -1066,7 +1079,9 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         actionable.rows = [vm.opp_row(o, new_ids, chg, flash, long_short=ls) for o in view if o.get("bucket") == "actionable"]
         review.rows = [vm.opp_row(o, new_ids, chg, flash, long_short=ls) for o in view if o.get("bucket") == "review_signal"]
         blocked.rows = [vm.opp_row(o, new_ids, chg, flash, long_short=ls) for o in view if o.get("bucket") == "blocked"]
-        for hdr, tbl, sw in ((review_hdr, review, show_review_sw), (blocked_hdr, blocked, show_blocked_sw)):
+        qs_table.rows = [vm.opp_row(o, new_ids, chg, flash, long_short=ls) for o in view if o.get("bucket") == "qualifier_setup"]
+        for hdr, tbl, sw in ((review_hdr, review, show_review_sw), (blocked_hdr, blocked, show_blocked_sw),
+                             (qs_hdr, qs_table, qs_switch)):
             hdr.set_visibility(sw.value)
             tbl.set_visibility(sw.value)
 
@@ -1103,7 +1118,8 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         counts_line.set_text(vm.bucket_counts_line(
             vm.bucket_counts(opps, filters),
             {"review_signal": show_review_sw.value, "blocked": show_blocked_sw.value,
-             "risk_budget": rb_switch.value, "near_miss": nm_switch.value}))
+             "risk_budget": rb_switch.value, "near_miss": nm_switch.value,
+             "qualifier_setup": qs_switch.value}))
         # Market telemetry — fill the four liquidity columns (depth / contracts / tightest / most-traded).
         panel = state.get("liquidity_panel") or {}
         for _col in (liq_sports, liq_contracts, liq_tightest, liq_traded):
@@ -1222,7 +1238,8 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         (rank_sel, "Rank opportunities by"),
         (participant_sel, "Filter by players or matches"), (min_size_in, "Minimum tradable size"),
         (active_sw, "Active markets only"), (show_review_sw, "Show the Review-signal section"),
-        (show_blocked_sw, "Show the Blocked section"), (clear_btn, "Clear all filters"),
+        (show_blocked_sw, "Show the Blocked section"),
+        (qs_switch, "Show the Qualifier setups section"), (clear_btn, "Clear all filters"),
         (rb_switch, "Show speculative bounded-loss structures"),
         (rb_max_loss, "Speculative max loss in cents"),
         (rb_min_ratio, "Speculative minimum upside-to-risk ratio"),
@@ -1231,7 +1248,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         (nm_switch, "Show overpriced books (near-miss)"), (nm_max_over, "Near-miss max overpay in cents"),
         (show_net_sw, "Show estimated net-of-fees columns"),
         (actionable, "Actionable opportunities"), (review, "Review-required opportunities"),
-        (blocked, "Blocked opportunities"),
+        (blocked, "Blocked opportunities"), (qs_table, "Qualifier setup diagnostics"),
         (rb_table, "Bounded-loss bets"), (rb_expansion, "Bounded-loss bets section"),
         (nm_table, "Overpriced books"), (nm_expansion, "Overpriced books section"),
         (backlog, "Recently-actionable backlog"),
@@ -1248,7 +1265,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
     # The lambda no-ops while `_suppress_cascade` is set, so the programmatic option/value prune inside
     # _refresh_cascade (which fires participant_sel.on_value_change) never re-renders mid-cascade.
     for ctrl in (tz_select, rank_sel, show_ids, participant_sel, min_size_in, active_sw,
-                 show_review_sw, show_blocked_sw, rb_switch, rb_max_loss, rb_min_ratio,
+                 show_review_sw, show_blocked_sw, qs_switch, rb_switch, rb_max_loss, rb_min_ratio,
                  rb_min_outright, rb_max_ratio, nm_switch, nm_max_over):
         ctrl.on_value_change(lambda _=None: None if state.get("_suppress_cascade") else rerender())
 

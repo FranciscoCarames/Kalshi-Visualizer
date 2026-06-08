@@ -36,11 +36,12 @@ BUCKET_PRIORITY = {
     "blocked": 2,
     "risk_budget": 3,     # containment near-miss: bounded loss, convex upside (opt-in)
     "near_miss": 4,       # dutch-book near-miss: flat-payout watchlist (opt-in)
-    "near_edge": 5,
-    "display_signal": 6,
-    "wide_signal": 7,
-    "data_quality": 8,
-    "clean": 9,
+    "qualifier_setup": 5,  # World Cup qualifier diagnostics (opt-in, diagnostic-only — never executable)
+    "near_edge": 6,
+    "display_signal": 7,
+    "wide_signal": 8,
+    "data_quality": 9,
+    "clean": 10,
 }
 
 # The shared minimal schema both row shapes (containment checks + dutch-book findings) map onto. Stable
@@ -75,6 +76,11 @@ UNIFIED_COLUMNS = [
     # ("wc_qualifier"); `setup_type` = the specific setup (qualifier_not_winner / qualifier_yes_basket /
     # qualifier_no_basket / exact_order_top2_proxy / game_support_signal). Default "" for every other row.
     "setup_family", "setup_type",
+    # Diagnostic-only numeric fields for the qualifier_setup section (PR3 declares the schema; PR4/PR5 fill
+    # them). exact-order #4: qualifier_vs_top2_premium_c (a best-third-path PROXY) + its two inputs; game-
+    # support #5: ask_support_score_* (3·win+draw asks — NOT expected points). join_confidence is advisory.
+    "qualifier_vs_top2_premium_c", "synthetic_top_two_cost_c", "qualifier_yes_ask_c",
+    "ask_support_score_total_c", "ask_support_score_per_game_c", "join_confidence",
 ]
 
 # World Cup Qualifier Setups — the soccer containment leaf that IS setup #1 (qualifier-not-winner). Tagged
