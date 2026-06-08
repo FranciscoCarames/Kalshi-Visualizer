@@ -113,6 +113,9 @@ def _cents_str(v: Any) -> str:
     return "—" if n is None else f"{int(round(n))}¢"
 
 
+_SIDE_ENUM_LABEL = {"buy_yes": "Buy YES", "buy_no": "Buy NO"}
+
+
 def _side_from_text(text: Any) -> str:
     t = str(text or "")
     if t.startswith("Buy YES"):
@@ -122,12 +125,30 @@ def _side_from_text(text: Any) -> str:
     return ""
 
 
-def action_plan_summary(opp: dict[str, Any]) -> dict[str, Any]:
+def _side_label(leg: dict[str, Any]) -> str:
+    """A human side label for a leg: the explicit ``side`` (mapping the ``buy_yes``/``buy_no`` enum the
+    detectors emit to 'Buy YES'/'Buy NO'), else parsed from the leg's action text. '' when neither."""
+    side = leg.get("side") or ""
+    return _SIDE_ENUM_LABEL.get(side, side) or _side_from_text(leg.get("text"))
+
+
+def frame_sides(text: Any, long_short: bool = False) -> Any:
+    """DISPLAY-ONLY wording transform: re-word 'Buy YES' -> 'Long YES' and 'Buy NO' -> 'Short YES' when
+    `long_short` is on (buying NO is economically a short on YES). No-op (returns the value unchanged)
+    when off or empty — so the canonical buy-only wording is the default. Never touches the stored
+    detection fields; the detection layers keep emitting 'Buy YES'/'Buy NO'."""
+    if not long_short or not text:
+        return text
+    return str(text).replace("Buy YES", "Long YES").replace("Buy NO", "Short YES")
+
+
+def action_plan_summary(opp: dict[str, Any], *, long_short: bool = False) -> dict[str, Any]:
     """Self-contained action summary for a row (pure) so the buy plan is readable WITHOUT opening detail.
     Uses the opportunity's OWN cost/floor fields — it never assumes a 100¢ floor (2-way books floor at
     100¢, but N-leg / field overrounds and synthetic bundles differ). Conservative when fields are missing:
     they're listed in `missing_fields` and never invented. N-leg findings are described as N-leg, never as
-    a 2-leg plan. Returns the structured parts + a one-cell `line`."""
+    a 2-leg plan. Returns the structured parts + a one-cell `line`. `long_short` re-words the buy legs to
+    Long/Short YES at display time (see frame_sides)."""
     n = _num_or_none(opp.get("n_legs"))
     legs = opp.get("legs")
     if n is not None and n > 2:                       # genuine N-leg (synthetic bundle / n-way) — never faked as 2-leg
@@ -136,7 +157,7 @@ def action_plan_summary(opp: dict[str, Any]) -> dict[str, Any]:
         texts = [opp.get("action_1_text"), opp.get("action_2_text")]
         if not any(texts) and isinstance(legs, list) and legs:
             texts = [leg.get("text") for leg in legs]
-        parts = [str(t) for t in texts if t]
+        parts = [frame_sides(t, long_short) for t in texts if t]
         summary = " + ".join(parts) if parts else "—"
     cost, floor, units = opp.get("cost_c"), opp.get("payout_floor_c"), opp.get("exec_min_size")
     missing = [] if summary != "—" else ["legs"]
@@ -157,7 +178,8 @@ def action_plan_summary(opp: dict[str, Any]) -> dict[str, Any]:
 
 
 def leg_rows(opp: dict[str, Any],
-             contract_lookup: dict[str, dict[str, Any]] | None = None) -> list[dict[str, Any]]:
+             contract_lookup: dict[str, dict[str, Any]] | None = None,
+             *, long_short: bool = False) -> list[dict[str, Any]]:
     """Structured per-leg evidence for one opportunity (pure). Reads the opportunity's uniform `legs` list
     (the scanner synthesizes one even for 2-leg shapes). Per-leg `status`/`quote_quality` come from
     `contract_lookup` (ticker -> stored contract row) ONLY when present; otherwise the field is BLANK and
@@ -174,7 +196,7 @@ def leg_rows(opp: dict[str, Any],
         price, size = leg.get("price_c"), leg.get("size")
         out.append({
             "leg": f"Leg {i}",
-            "side": leg.get("side") or _side_from_text(leg.get("text")),
+            "side": frame_sides(_side_label(leg), long_short),
             "market": leg.get("contract") or leg.get("text") or tkr or "—",
             "price": "" if _num_or_none(price) is None else f"{int(round(price))}¢",
             "size": "" if _num_or_none(size) is None else str(int(size)),
@@ -189,7 +211,7 @@ def leg_rows(opp: dict[str, Any],
 
 
 def opp_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str] | None = None,
-            flash_ids: set[str] | None = None) -> dict[str, Any]:
+            flash_ids: set[str] | None = None, *, long_short: bool = False) -> dict[str, Any]:
     nf = net_of_fees(o)            # PR E: DISPLAY-ONLY net-of-fees estimate (default-hidden columns)
     return _stamp_severity({
         "opportunity_id": o.get("opportunity_id"),
@@ -199,7 +221,7 @@ def opp_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str] | None
         "sport": o.get("sport_label") or o.get("sport") or "",
         "name": o.get("name") or "", "detail": o.get("detail") or "",
         # Compact: just the legs (cost/floor live in the click→detail panel; "Max units" is its own column).
-        "action": action_plan_summary(o)["summary"],
+        "action": action_plan_summary(o, long_short=long_short)["summary"],
         "edge": o.get("exec_gap_c"), "roi": o.get("roi_pct"), "units": o.get("exec_min_size"),
         "profit": o.get("exec_max_profit_dollars"),
         # Net-of-fees ESTIMATE (PR E) — display only; blank when a leg price/units is missing. Never ranks.
@@ -345,17 +367,21 @@ def backlog_row(b: dict[str, Any], tz: str) -> dict[str, Any]:
     }
 
 
-def explanation_lines(opp: dict[str, Any], *, show_ids: bool = False) -> list[str]:
-    """The text content of the explanation panel for one opportunity (pure → unit-testable)."""
+def explanation_lines(opp: dict[str, Any], *, show_ids: bool = False,
+                      long_short: bool = False) -> list[str]:
+    """The text content of the explanation panel for one opportunity (pure → unit-testable). `long_short`
+    re-words the buy legs to Long/Short YES at display time (see frame_sides)."""
     lines = [
         f"{opp.get('sport_label') or opp.get('sport')} · {opp.get('name')}",
         f"{opp.get('source')} · {opp.get('detail')} · {opp.get('tournament')}",
     ]
     legs = opp.get("legs")
     if isinstance(legs, list) and legs:                      # N-leg (synthetic bundle): list every leg
-        lines += [f"Leg {i + 1}: {leg.get('text') or '—'}" for i, leg in enumerate(legs)]
+        lines += [f"Leg {i + 1}: {frame_sides(leg.get('text'), long_short) or '—'}"
+                  for i, leg in enumerate(legs)]
     else:                                                     # 2-leg shapes use the positional fields
-        lines += [f"Leg 1: {opp.get('action_1_text') or '—'}", f"Leg 2: {opp.get('action_2_text') or '—'}"]
+        lines += [f"Leg 1: {frame_sides(opp.get('action_1_text'), long_short) or '—'}",
+                  f"Leg 2: {frame_sides(opp.get('action_2_text'), long_short) or '—'}"]
     _roi = opp.get("roi_pct")
     _floor = opp.get("payout_floor_c")
     lines += [
@@ -780,6 +806,22 @@ def derive_options(opps: Iterable[dict[str, Any]]) -> dict[str, Any]:
                     for k, lab in sorted(pmap.items(), key=lambda kv: (kv[1].lower(), kv[0]))]
     return {"sports": dict(sorted(sports.items())), "tournaments": sorted(tournaments),
             "participants": participants}
+
+
+def cascaded_options(opps: Iterable[dict[str, Any]], *, sports: Iterable[str] | None = None,
+                     tournaments: Iterable[str] | None = None) -> dict[str, Any]:
+    """Cascaded select options that narrow as upstream filters are chosen. Sport options are ALL sports
+    present (the top of the cascade — never narrowed). Tournament options are the tournaments present
+    once the selected SPORTS are applied; participant options are those present once the selected sports
+    AND tournaments are applied. Empty/None selection = no narrowing at that level. Reuses filter_opps +
+    derive_options so the narrowing can never drift from the table filtering; NaN-safe."""
+    rows = list(opps or [])
+    all_opts = derive_options(rows)
+    tour_scope = filter_opps(rows, sports=sports) if sports else rows
+    tours = derive_options(tour_scope)["tournaments"]
+    part_scope = filter_opps(rows, sports=sports, tournaments=tournaments)
+    parts = derive_options(part_scope)["participants"]
+    return {"sports": all_opts["sports"], "tournaments": tours, "participants": parts}
 
 
 # --- scope banner (honest; surfaces the PR 21a counters) ------------------------------

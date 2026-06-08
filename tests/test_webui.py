@@ -376,6 +376,34 @@ def test_opp_row_carries_action_plan_line():
     assert "Buy YES" in vm.opp_row(o, set())["action"]
 
 
+# --- Long/Short position framing (display-only) ---------------------------------------
+def test_frame_sides_rewords_only_when_on():
+    assert vm.frame_sides("Buy YES — A @ 45¢", True) == "Long YES — A @ 45¢"
+    assert vm.frame_sides("Buy NO — B @ 52¢", True) == "Short YES — B @ 52¢"
+    assert vm.frame_sides("Buy YES — A @ 45¢", False) == "Buy YES — A @ 45¢"   # default off = unchanged
+    assert vm.frame_sides(None, True) is None and vm.frame_sides("", True) == ""
+
+
+def test_long_short_threads_through_opp_row_and_explanation():
+    o = op("z", bucket="actionable")
+    o["action_2_text"] = "Buy NO — B @ 52¢"      # one Buy YES leg + one Buy NO leg
+    o["payout_floor_c"] = 100
+    assert "Buy YES" in vm.opp_row(o, set())["action"]                 # default: buy wording
+    framed = vm.opp_row(o, set(), long_short=True)["action"]
+    assert "Long YES" in framed and "Short YES" in framed and "Buy" not in framed
+    lines = " ".join(vm.explanation_lines(o, long_short=True))
+    assert "Long YES" in lines and "Short YES" in lines
+    assert o["action_1_text"].startswith("Buy YES")                   # detection fields untouched
+
+
+def test_long_short_threads_through_leg_rows_side():
+    o = op("x")
+    o["legs"] = [{"text": "Buy YES — A @ 45¢", "side": "buy_yes", "ticker": "T-a", "contract": "A"},
+                 {"text": "Buy NO — B @ 52¢", "side": "buy_no", "ticker": "T-b", "contract": "B"}]
+    assert [r["side"] for r in vm.leg_rows(o)] == ["Buy YES", "Buy NO"]            # enum -> label, default
+    assert [r["side"] for r in vm.leg_rows(o, long_short=True)] == ["Long YES", "Short YES"]
+
+
 def test_ts_disp_and_backlog_row():
     assert vm.ts_disp(None, "UTC") == "—"
     assert vm.ts_disp(1000.0, "UTC") != "—"             # formats an epoch
