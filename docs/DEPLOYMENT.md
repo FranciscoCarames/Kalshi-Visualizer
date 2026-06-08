@@ -99,6 +99,7 @@ sudo install -d -o kalshi-dashboard -g kalshi-dashboard /var/lib/kalshi-dashboar
 | `NICEGUI_STORAGE_SECRET` | a long random string | **REQUIRED for LAN exposure** — `serve.py` refuses to bind a non-loopback host without it. **Generate once and persist** (env/secret store). Signs the session cookie |
 | `ALLOW_DEV_STORAGE_SECRET_ON_LAN` *(optional)* | `1` | Trusted-LAN escape hatch — start with the dev fallback secret + a warning instead of refusing. Don't use for anything left running |
 | `SNAPSHOT_DB_PATH` *(optional)* | absolute path | Point at a writable, backed-up location instead of the CWD default |
+| `AUTO_SCAN_PAUSE_WHEN_IDLE` *(optional)* | `0` | **Headless 24/7** — set `0` so the in-process auto-scan keeps running with **no browser connected** (default/`1` pauses scanning while no viewer is watching). Required for an unattended server; see §1 |
 | `SCAN_TOKEN` *(optional)* | a long random string | **Scan-token gate** — when set, HTTP `POST /scan` requires a matching `X-Scan-Token: <value>` header (401 otherwise). **Off by default** (today's open behaviour). Loopback dev needs nothing; on a LAN, set it so only your scheduler can trigger scans. The dashboard's own "Scan now" button runs in-process and is **unaffected** |
 
 Generate a secret (any of): `python -c "import secrets; print(secrets.token_hex(32))"`.
@@ -120,7 +121,9 @@ loop is two things, both already tuned for the free tier:
   live with `GET /coverage` → `kalshi_requests`), but the throttle just makes a scan take a few **seconds**;
   it never exceeds the rate.
 - **Scan cadence** — the background auto-scan runs every `config.AUTO_SCAN_DEFAULT_SECONDS` (10s) while a
-  viewer is connected, and the dashboard surfaces a new snapshot within ~1s of it finishing.
+  viewer is connected, and the dashboard surfaces a new snapshot within ~1s of it finishing. **For an
+  unattended 24/7 server** (no browser connected) set `AUTO_SCAN_PAUSE_WHEN_IDLE=0` so the loop scans
+  regardless of viewers — otherwise the presence gate pauses it and the store goes stale while idle.
 
 To go faster you would lift the throttle (`MAX_RPS`) and/or shorten the cadence in `config.py` — but
 pushing `MAX_RPS` toward/over ~20 invites sustained `429`s (the backoff absorbs them; throughput won't

@@ -217,5 +217,7 @@ AUTO_SCAN_DEFAULT_ENABLED = True                      # auto-refresh on by defau
 # Presence gate (P4): pause the background auto-scan while NO viewer is connected, resuming on the next
 # tick after someone opens the dashboard — so the app stops hitting Kalshi when nobody's watching. The
 # manual "Scan now" button is NOT gated. Trade-off: a headless REST-only consumer (no browser → 0 viewers)
-# gets stale data while idle; set this False to keep scanning regardless of viewers.
+# gets stale data while idle; set this False to keep scanning regardless of viewers. The env override
+# AUTO_SCAN_PAUSE_WHEN_IDLE=0 (read in serve.resolve_pause_when_idle) selects the headless 24/7 mode at
+# deploy time without editing code.
 AUTO_SCAN_PAUSE_WHEN_IDLE = True
