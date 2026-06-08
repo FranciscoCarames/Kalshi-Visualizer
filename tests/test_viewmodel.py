@@ -536,3 +536,86 @@ def test_considered_inventory_keeps_unknown_sport_and_empty_is_empty():
                   kind="other", category="Other", market_ticker="T-1")]
     inv = vm.considered_inventory(rows)
     assert len(inv["sports"]) == 1 and inv["sports"][0]["contracts"] == 1   # unknown sport kept (honest)
+
+
+# --- exact-order top-two bundle (#4 redux): two-tier UI, comparator-not-leg, ordering ----------------
+def _eo_opp(oid="eo1", *, status="EXACT_ORDER_DIAGNOSTIC", setup_type="exact_order_top2_bundle",
+            premium=-70, synth=120, q=50, name="Alpha", tradable="Diagnostic only", legs=None):
+    return {"opportunity_id": oid, "bucket": "qualifier_setup", "source": "exact_order",
+            "sport": "soccer", "sport_label": "Soccer (World Cup)", "name": name, "tournament": "2026 WC",
+            "detail": "Group A", "status": status, "setup_type": setup_type, "tradable_now": tradable,
+            "relationship_type": setup_type, "qualifier_yes_ask_c": q, "synthetic_top_two_cost_c": synth,
+            "qualifier_vs_top2_premium_c": premium, "top2_net_if_top2_c": 100 - synth,
+            "top2_loss_if_not_top2_c": synth, "top2_max_units": 100, "worst_bundle_quote_quality": "OK",
+            "wide_bundle_leg_count": 0, "comparator_quote_quality": "OK", "settlement_caveat": "best-third...",
+            "legs": legs if legs is not None else
+            [{"side": "buy_yes", "text": f"Buy YES — ord{i} @ 10¢", "ticker": f"T-{i}", "url": "u"}
+             for i in range(12)]}
+
+
+def test_explanation_lines_exact_order_has_no_leg13_or_none_cost():
+    lines = vm.explanation_lines(_eo_opp(premium=-70))
+    blob = "\n".join(lines)
+    assert "Leg 13" not in blob
+    assert "Cost: None" not in blob and "Gross edge: None" not in blob
+    assert any(ln.startswith("Trade:") for ln in lines)
+    assert any(ln.startswith("Comparator:") for ln in lines)
+    assert "If top two:" in blob and "If not top two:" in blob
+    assert "more expensive" in blob                      # premium negative → sign-aware wording
+    assert any("best-third" in ln.lower() for ln in lines)
+
+
+def test_explanation_lines_speculative_says_cheaper():
+    lines = vm.explanation_lines(_eo_opp(status="SPECULATIVE_TOP2_RELATIVE_VALUE",
+                                         setup_type="exact_order_top2_relative_value",
+                                         premium=10, synth=84, q=94, tradable="Review execution"))
+    blob = "\n".join(lines)
+    assert "cheaper" in blob and "Review execution" in blob
+
+
+def test_explanation_lines_filters_legacy_comparator_leg():
+    legacy = [{"side": "buy_yes", "text": f"Buy YES — ord{i} @ 10¢", "ticker": f"T-{i}"} for i in range(12)]
+    legacy.append({"side": "buy_yes", "contract": "Alpha qualify", "text": "Buy YES — Alpha qualify @ 50¢"})
+    lines = vm.explanation_lines(_eo_opp(legs=legacy))
+    assert "Leg 13" not in "\n".join(lines)               # the stale comparator leg is dropped
+    assert "qualify" not in " ".join(ln for ln in lines if ln.startswith("Leg "))
+
+
+def test_game_support_row_not_treated_as_exact_order():
+    gs = {"opportunity_id": "gs1", "bucket": "qualifier_setup", "source": "game_support",
+          "sport_label": "Soccer", "name": "Japan", "detail": "Group X", "status": "GAME_SUPPORT_SIGNAL",
+          "setup_type": "game_support_signal", "tradable_now": "Diagnostic only",
+          "relationship_type": "game_support_signal", "ask_support_score_total_c": 470,
+          "settlement_caveat": "not expected points", "cost_c": None}
+    blob = "\n".join(vm.explanation_lines(gs))
+    assert "finishes top two" not in blob and "12 exact-order" not in blob
+
+
+def test_leg_rows_drops_legacy_comparator_leg():
+    legacy = [{"side": "buy_yes", "text": f"Buy YES — ord{i} @ 10¢", "ticker": f"T-{i}",
+               "price_c": 10, "size": 100} for i in range(12)]
+    legacy.append({"side": "buy_yes", "contract": "Alpha qualify", "text": "Buy YES — Alpha qualify @ 50¢",
+                   "price_c": 50, "size": 100, "ticker": "Q-1"})
+    rows = vm.leg_rows(_eo_opp(legs=legacy))
+    assert len(rows) == 12 and all("qualify" not in r["market"].lower() for r in rows)
+
+
+def test_severity_badge_for_review_execution():
+    badges = vm.severity_badges(_eo_opp(status="SPECULATIVE_TOP2_RELATIVE_VALUE", tradable="Review execution"))
+    assert any(b["severity"] == "review_required" for b in badges)
+
+
+def test_relationship_explanation_resolves_both_tiers_and_legacy():
+    for rel in ("exact_order_top2_bundle", "exact_order_top2_relative_value", "exact_order_top2_proxy"):
+        txt = vm.relationship_explanation({"relationship_type": rel}).lower()
+        assert "not arbitrage" in txt and "comparator" in txt
+
+
+def test_order_qualifier_rows_speculative_first():
+    diag = _eo_opp("d", premium=-70)
+    spec = _eo_opp("s", status="SPECULATIVE_TOP2_RELATIVE_VALUE",
+                   setup_type="exact_order_top2_relative_value", premium=10, synth=84, q=94)
+    gs = {"opportunity_id": "g", "bucket": "qualifier_setup", "source": "game_support",
+          "status": "GAME_SUPPORT_SIGNAL", "name": "Z"}
+    ordered = [o["opportunity_id"] for o in vm.order_qualifier_rows([gs, diag, spec])]
+    assert ordered[0] == "s" and ordered.index("d") < ordered.index("g")

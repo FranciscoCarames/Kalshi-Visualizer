@@ -33,6 +33,17 @@ def test_dutch_book_copy_is_conservative_and_single_sourced():
     assert glossary.help_for("Gross edge (¢)") == db["short"]
 
 
+def test_speculative_top2_basis_is_conservative_and_names_the_best_third_hole():
+    """The top-two bundle caveat must explain the best-third payoff hole and ban POSITIVE claims, while
+    allowing the negations 'not arbitrage' / 'not a hedge'."""
+    blob = glossary.SPECULATIVE_TOP2_BASIS.lower()
+    assert "best-third" in blob, "must explain why top-two ≠ qualify"
+    for banned in ("riskless", "locked", "guaranteed", "true arbitrage"):
+        assert banned not in blob, f"top-two caveat still makes a positive claim: {banned!r}"
+    assert "not arbitrage" in blob and "not a" in blob  # the conservative negations are present
+    assert "comparator" in blob                          # the qualifier is a comparator, not a leg
+
+
 def test_known_limit_badges_structured_and_universal():
     """The limitation strip is a structured (label, tooltip) constant authored as the UI source of truth —
     short labels, real tooltips, and the four universal gross/top-of-book limits present."""

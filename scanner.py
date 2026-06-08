@@ -38,7 +38,7 @@ BUCKET_PRIORITY = {
     "blocked": 2,
     "risk_budget": 3,     # containment near-miss: bounded loss, convex upside (opt-in)
     "near_miss": 4,       # dutch-book near-miss: flat-payout watchlist (opt-in)
-    "qualifier_setup": 5,  # World Cup qualifier diagnostics (opt-in, diagnostic-only — never executable)
+    "qualifier_setup": 5,  # World Cup qualifier setups (opt-in; review-only / diagnostic — never Actionable)
     "near_edge": 6,
     "display_signal": 7,
     "wide_signal": 8,
@@ -76,13 +76,21 @@ UNIFIED_COLUMNS = [
     # World Cup Qualifier Setups (PR1): a cross-cutting product tag, SEPARATE from bucket/routing. Read only
     # by a UI badge — never by bucket_of / _rank_key / filters. `setup_family` = product area
     # ("wc_qualifier"); `setup_type` = the specific setup (qualifier_not_winner / qualifier_yes_basket /
-    # qualifier_no_basket / exact_order_top2_proxy / game_support_signal). Default "" for every other row.
+    # qualifier_no_basket / exact_order_top2_bundle / exact_order_top2_relative_value / game_support_signal).
+    # Default "" for every other row.
     "setup_family", "setup_type",
     # Diagnostic-only numeric fields for the qualifier_setup section (PR3 declares the schema; PR4/PR5 fill
     # them). exact-order #4: qualifier_vs_top2_premium_c (a best-third-path PROXY) + its two inputs; game-
     # support #5: ask_support_score_* (3·win+draw asks — NOT expected points). join_confidence is advisory.
     "qualifier_vs_top2_premium_c", "synthetic_top_two_cost_c", "qualifier_yes_ask_c",
     "ask_support_score_total_c", "ask_support_score_per_game_c", "join_confidence",
+    # Exact-order top-two bundle two-tier economics (#4 redux). opportunity_class tags the tier
+    # (diagnostic_top2_bundle | speculative_top2_bundle). top2_net_if_top2_c = 100 − bundle cost (may be
+    # negative); top2_loss_if_not_top2_c = bundle cost; top2_max_units = min ask size across the 12 legs.
+    # worst_bundle_quote_quality / wide_bundle_leg_count cover the 12 BUNDLE legs only; comparator_quote_
+    # quality is the direct qualifier (a comparator, not a leg). All None on every non-bundle row.
+    "opportunity_class", "top2_net_if_top2_c", "top2_loss_if_not_top2_c", "top2_max_units",
+    "worst_bundle_quote_quality", "wide_bundle_leg_count", "comparator_quote_quality",
 ]
 
 # World Cup Qualifier Setups — the soccer containment leaf that IS setup #1 (qualifier-not-winner). Tagged
@@ -180,6 +188,11 @@ def _finalize_unified(d: dict[str, Any], *, payout_floor_c: Any) -> dict[str, An
     # WC Qualifier Setups (PR1): every row carries the tag fields so old snapshots + untagged rows are safe.
     d.setdefault("setup_family", "")
     d.setdefault("setup_type", "")
+    # Exact-order top-two bundle two-tier economics — default on every row so old snapshots stay safe.
+    for _k in ("opportunity_class", "worst_bundle_quote_quality", "comparator_quote_quality"):
+        d.setdefault(_k, "")
+    for _k in ("top2_net_if_top2_c", "top2_loss_if_not_top2_c", "top2_max_units", "wide_bundle_leg_count"):
+        d.setdefault(_k, None)
     return d
 
 
@@ -285,10 +298,11 @@ def _to_unified_group_basket(r: dict[str, Any], cfg) -> dict[str, Any]:
 
 
 def _to_unified_exact_order(r: dict[str, Any], cfg) -> dict[str, Any]:
-    """Map an exact-order premium-proxy finding (#4) onto the unified schema. Diagnostic-only: it
-    self-assigns ``bucket="qualifier_setup"`` + ``exec_gap_c=None`` (never enters _rank_key / actionable),
-    and carries the premium-proxy fields. Participant identity comes from the JOINED QUALIFIER UUID (not the
-    order-market pseudo-keys), so the participant filter keys on the real team."""
+    """Map an exact-order top-two bundle finding (#4) onto the unified schema. Two tiers (Diagnostic /
+    Speculative — the finding self-assigns its status/relationship/setup_type/opportunity_class), both
+    self-assigning ``bucket="qualifier_setup"`` + ``exec_gap_c=None`` so they NEVER enter _rank_key /
+    actionable. The qualifier is a COMPARATOR (not a leg); ``legs`` carries the 12 bundle legs verbatim.
+    Participant identity comes from the JOINED QUALIFIER UUID (not the order-market pseudo-keys)."""
     uuid = r.get("participant_uuid") or ""
     keys, labels = _participants([(uuid, r.get("name"))])
     d = {
@@ -298,27 +312,35 @@ def _to_unified_exact_order(r: dict[str, Any], cfg) -> dict[str, Any]:
         "action_1_text": r.get("action_1_text") or "", "action_2_text": r.get("action_2_text") or "",
         "action_1_price_c": _num(r.get("action_1_price_c")), "action_2_price_c": _num(r.get("action_2_price_c")),
         "cost_c": None,
-        # Diagnostic — NEVER an executable edge. exec_gap_c=None floors it within its opt-in section.
+        # NEVER an executable edge. exec_gap_c=None floors it within its opt-in section.
         "exec_gap_c": None, "exec_min_size": None, "exec_max_profit_dollars": None,
         "bucket": "qualifier_setup", "status": r.get("status") or exact_order.EXACT_ORDER_DIAGNOSTIC,
         "tradable_now": r.get("tradable_now") or "Diagnostic only", "blocked_reason": "",
         "market_status": "active", "rule_flag": "",
         "settlement_caveat": r.get("settlement_caveat") or "",
         "participant_key": uuid,
-        "relationship_type": r.get("relationship_type") or "exact_order_top2_proxy",
+        "relationship_type": r.get("relationship_type") or "exact_order_top2_bundle",
         "opportunity_id": r.get("opportunity_id") or "",
         "ticker_1": r.get("ticker_1") or "", "ticker_2": r.get("ticker_2") or "",
         "url": r.get("url") or "", "url_2": "",
         "legs": r.get("legs"), "n_legs": _num(r.get("n_legs")),
         "edge_class": "", "worst_case_profit_c": None, "best_case_profit_c": None,
-        "setup_family": _WC_QUALIFIER_FAMILY, "setup_type": "exact_order_top2_proxy",
-        # The diagnostic numbers (PR3 schema).
+        "setup_family": _WC_QUALIFIER_FAMILY, "setup_type": r.get("setup_type") or "exact_order_top2_bundle",
+        # Comparator + bundle inputs (PR3 schema).
         "qualifier_vs_top2_premium_c": _num(r.get("qualifier_vs_top2_premium_c")),
         "synthetic_top_two_cost_c": _num(r.get("synthetic_top_two_cost_c")),
         "qualifier_yes_ask_c": _num(r.get("qualifier_yes_ask_c")),
+        # Two-tier economics + quote split.
+        "opportunity_class": r.get("opportunity_class") or "",
+        "top2_net_if_top2_c": _num(r.get("top2_net_if_top2_c")),
+        "top2_loss_if_not_top2_c": _num(r.get("top2_loss_if_not_top2_c")),
+        "top2_max_units": _num(r.get("top2_max_units")),
+        "worst_bundle_quote_quality": r.get("worst_bundle_quote_quality") or "",
+        "wide_bundle_leg_count": _num(r.get("wide_bundle_leg_count")),
+        "comparator_quote_quality": r.get("comparator_quote_quality") or "",
     }
     d["participant_keys"], d["participant_labels"] = keys, labels
-    # Diagnostic — no guaranteed floor; payout_floor_c stays None.
+    # No guaranteed floor; payout_floor_c stays None.
     return _finalize_unified(d, payout_floor_c=None)
 
 

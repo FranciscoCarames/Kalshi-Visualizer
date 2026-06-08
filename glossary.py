@@ -53,6 +53,17 @@ EXACT_ORDER_BASIS = ("diagnostic PROXY only: the qualifier YES ask minus the cos
                      "value. Gross, top-of-book, fees not modeled; 12-leg execution with thin / stale "
                      "exact-order quotes; settlement not verified — not arbitrage, never executable")
 
+# Speculative top-two relative-value idea — single-sourced caveat. A 12-leg Buy-YES "finish top two"
+# bundle, compared against the direct qualifier YES (a COMPARATOR, not a leg). Conservative wording: this
+# is NOT arbitrage and NOT a qualifier replication/hedge — the best-third path breaks the equivalence.
+SPECULATIVE_TOP2_BASIS = ("top-two bundle: Buy YES on the 12 exact-order outcomes where the team finishes "
+                          "top two. The direct qualifier market is a comparator only, not a trade leg. This "
+                          "is not arbitrage and not a qualifier replication or a hedge — best-third-place "
+                          "qualification can make the direct qualifier pay while this top-two bundle pays "
+                          "zero. Gross and top-of-book; fees, full depth, collateral and position limits "
+                          "not modeled; 12-leg execution with thin / stale exact-order quotes; settlement "
+                          "review required")
+
 # --- Glossary terms (term -> {short, long}) ------------------------------------------
 GLOSSARY: dict[str, dict[str, str]] = {
     "Tradable now": {

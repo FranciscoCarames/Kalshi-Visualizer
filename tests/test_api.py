@@ -228,6 +228,20 @@ def test_opportunity_model_preserves_pr13_fields():
     assert o.n_legs == 2 and isinstance(o.legs, list) and len(o.legs) == 2
 
 
+def test_opportunity_model_carries_top2_bundle_fields():
+    # The exact-order two-tier economics must survive extra="ignore" for the API/export consumers.
+    row = op("x")
+    row.update(opportunity_class="speculative_top2_bundle", top2_net_if_top2_c=16,
+               top2_loss_if_not_top2_c=84, top2_max_units=100, worst_bundle_quote_quality="Tight",
+               wide_bundle_leg_count=0, comparator_quote_quality="OK",
+               legs=[{"text": f"l{i}"} for i in range(12)], n_legs=12)
+    o = api.Opportunity(**row)
+    assert o.opportunity_class == "speculative_top2_bundle" and o.top2_net_if_top2_c == 16
+    assert o.top2_loss_if_not_top2_c == 84 and o.top2_max_units == 100
+    assert o.worst_bundle_quote_quality == "Tight" and o.wide_bundle_leg_count == 0
+    assert o.comparator_quote_quality == "OK" and o.n_legs == 12 and len(o.legs) == 12
+
+
 def test_opportunity_model_carries_participant_lists():
     # PR6 (#13): the participant multi-select needs every leg's key/label to survive extra="ignore".
     row = op("x")

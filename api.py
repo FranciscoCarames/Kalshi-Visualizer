@@ -119,6 +119,16 @@ class Opportunity(BaseModel):
     ask_support_score_total_c: float | None = None
     ask_support_score_per_game_c: float | None = None
     join_confidence: str | None = None
+    # Exact-order top-two bundle two-tier economics (#4 redux). opportunity_class tags the tier; the top2_*
+    # fields are the explicit gross economics; the *_quote_quality / wide_bundle_leg_count fields split
+    # bundle-leg execution risk from the comparator. Must be DECLARED — extra="ignore" would drop them.
+    opportunity_class: str | None = None
+    top2_net_if_top2_c: float | None = None
+    top2_loss_if_not_top2_c: float | None = None
+    top2_max_units: float | None = None
+    worst_bundle_quote_quality: str | None = None
+    wide_bundle_leg_count: float | None = None
+    comparator_quote_quality: str | None = None
 
 
 class Coverage(BaseModel):

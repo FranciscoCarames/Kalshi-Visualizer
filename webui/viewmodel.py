@@ -77,6 +77,10 @@ def severity_badges(o: dict[str, Any]) -> list[dict[str, str]]:
         add("Review rules", "review_required",
             "Settlement basis differs across the legs — review the rules before treating this as an edge.",
             "tradable_now")
+    if str(o.get("tradable_now") or "") == "Review execution":
+        add("Execution review required", "review_required",
+            "A speculative top-two bundle — 12-leg, gross, top-of-book. Verify size and settlement before "
+            "treating it as tradable. Not arbitrage.", "tradable_now")
     sc = o.get("settlement_caveat")
     if isinstance(sc, str) and sc:
         add("Settlement caveat", "advisory", sc, "settlement_caveat")
@@ -177,17 +181,46 @@ def action_plan_summary(opp: dict[str, Any], *, long_short: bool = False) -> dic
     }
 
 
+# Exact-order top-two bundle (#4): the row-level predicate — keyed on the ROW, NEVER on the bucket (the
+# `qualifier_setup` bucket ALSO holds game-support signals, which must not get top-two wording).
+_EXACT_ORDER_SETUP_TYPES = {"exact_order_top2_bundle", "exact_order_top2_relative_value",
+                            "exact_order_top2_proxy"}  # last entry = legacy stale snapshots
+
+
+def _is_exact_order_bundle(o: dict[str, Any]) -> bool:
+    return (str(o.get("source") or "") == "exact_order"
+            or str(o.get("setup_type") or "") in _EXACT_ORDER_SETUP_TYPES)
+
+
+def _is_comparator_leg(leg: dict[str, Any]) -> bool:
+    """A legacy qualifier COMPARATOR leg (pre two-tier split it was shipped as 'Leg 13'). Identified by
+    'qualify' in its contract/text — defensively dropped so even stale 13-leg snapshots render 12 legs."""
+    blob = f"{leg.get('contract') or ''} {leg.get('text') or ''}".lower()
+    return "qualify" in blob
+
+
+def _bundle_legs(opp: dict[str, Any]) -> list[dict[str, Any]]:
+    """The opportunity's leg list, with any legacy comparator leg filtered out for exact-order rows."""
+    legs = opp.get("legs")
+    if not (isinstance(legs, list) and legs):
+        return []
+    if _is_exact_order_bundle(opp):
+        return [lg for lg in legs if isinstance(lg, dict) and not _is_comparator_leg(lg)]
+    return list(legs)
+
+
 def leg_rows(opp: dict[str, Any],
              contract_lookup: dict[str, dict[str, Any]] | None = None,
              *, long_short: bool = False) -> list[dict[str, Any]]:
     """Structured per-leg evidence for one opportunity (pure). Reads the opportunity's uniform `legs` list
-    (the scanner synthesizes one even for 2-leg shapes). Per-leg `status`/`quote_quality` come from
-    `contract_lookup` (ticker -> stored contract row) ONLY when present; otherwise the field is BLANK and
-    `evidence_source` is 'unresolved' — we never infer per-leg status from the opportunity, nor quote
-    quality from a worst-leg, nor fabricate price/size. Display only — no scanner/store schema change."""
+    (the scanner synthesizes one even for 2-leg shapes; exact-order rows drop a legacy comparator leg).
+    Per-leg `status`/`quote_quality` come from `contract_lookup` (ticker -> stored contract row) ONLY when
+    present; otherwise the field is BLANK and `evidence_source` is 'unresolved' — we never infer per-leg
+    status from the opportunity, nor quote quality from a worst-leg, nor fabricate price/size. Display
+    only — no scanner/store schema change."""
     lookup = contract_lookup or {}
-    legs = opp.get("legs")
-    if not (isinstance(legs, list) and legs):
+    legs = _bundle_legs(opp)
+    if not legs:
         return []
     out: list[dict[str, Any]] = []
     for i, leg in enumerate(legs, start=1):
@@ -371,19 +404,55 @@ def near_miss_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str] 
     }
 
 
-# World Cup Qualifier Setups (PR6) — human labels for the diagnostic setup types.
+# World Cup Qualifier Setups — human labels for the setup types (two exact-order tiers + game support).
 _SETUP_TYPE_LABEL = {
-    "exact_order_top2_proxy": "Exact-order top-two (proxy)",
+    "exact_order_top2_bundle": "Diagnostic top-two bundle",
+    "exact_order_top2_relative_value": "Speculative top-two bundle",
+    "exact_order_top2_proxy": "Top-two bundle (legacy)",   # stale snapshots
     "game_support_signal": "Game support (heuristic)",
 }
 
 
+def _premium_display(prem: Any) -> str:
+    """Sign-aware text for the 'qualifier minus top-two cost' column. Positive ⇒ the bundle is cheaper
+    than the direct qualifier; negative ⇒ more expensive. Blank when absent. (The numeric value drives
+    sorting; this string is display-only.)"""
+    if _num_or_none(prem) is None:
+        return ""
+    p = int(prem)
+    if p > 0:
+        return f"+{p}¢ cheaper"
+    if p < 0:
+        return f"{p}¢ more expensive"
+    return "0¢ level"
+
+
+def order_qualifier_rows(opps: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
+    """In-section ordering for the Qualifier-setups table (the rows carry no exec_gap to rank globally):
+    Speculative top-two ideas first, then Diagnostic bundles by relative gap (cheaper first), then
+    game-support signals, then anything else; ties broken by name. Pure; input order preserved within a
+    bucket via the stable sort + name tiebreak."""
+    def key(o: dict[str, Any]) -> tuple:
+        if str(o.get("status") or "") == "SPECULATIVE_TOP2_RELATIVE_VALUE":
+            tier = 0
+        elif _is_exact_order_bundle(o):
+            tier = 1
+        elif str(o.get("source") or "") == "game_support":
+            tier = 2
+        else:
+            tier = 3
+        prem = o.get("qualifier_vs_top2_premium_c")
+        prem_key = -float(prem) if _num_or_none(prem) is not None else float("inf")
+        return (tier, prem_key, str(o.get("name") or ""))
+    return sorted(list(opps or []), key=key)
+
+
 def qualifier_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str] | None = None,
                   flash_ids: set[str] | None = None) -> dict[str, Any]:
-    """Display row for the Qualifier-setups DIAGNOSTIC table. Diagnostic numbers only — the premium-proxy
-    (exact-order) and the ask-support score (game-support) each populate only their own column; there is
-    deliberately NO gross-edge / ROI / size / profit (a non-executable signal). The note carries the
-    'proxy / not expected points / not arbitrage' caveat."""
+    """Display row for the Qualifier-setups table. No gross-edge / ROI / size / profit (a non-executable
+    signal). For exact-order rows the `premium` column is the (numeric, sortable) qualifier-minus-bundle
+    gap; `premium_display` is the sign-aware text shown in the cell. The note carries the
+    'not expected points / not arbitrage / best-third' caveat."""
     return _stamp_severity({
         "opportunity_id": o.get("opportunity_id"),
         "new": o.get("opportunity_id") in new_ids,   # bool → a coloured "NEW" badge in the cell slot
@@ -393,7 +462,8 @@ def qualifier_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str] 
         "name": o.get("name") or "",
         "setup": _SETUP_TYPE_LABEL.get(o.get("setup_type") or "", o.get("setup_type") or "Diagnostic"),
         "qualifier": _num_or_none(o.get("qualifier_yes_ask_c")),
-        "premium": _num_or_none(o.get("qualifier_vs_top2_premium_c")),
+        "premium": _num_or_none(o.get("qualifier_vs_top2_premium_c")),   # numeric → sorts numerically
+        "premium_display": _premium_display(o.get("qualifier_vs_top2_premium_c")),
         "support": _num_or_none(o.get("ask_support_score_total_c")),
         "legs": _num_or_none(o.get("n_legs")),
         "note": o.get("settlement_caveat") or "",
@@ -426,6 +496,40 @@ def backlog_event_row(b: dict[str, Any], tz: str) -> dict[str, Any]:
     }
 
 
+def _exact_order_explanation(opp: dict[str, Any], *, long_short: bool, show_ids: bool) -> list[str]:
+    """The exact-order top-two bundle explanation body (the 12 filtered legs + trade/comparator economics
+    + shared caveat tail). Sign-aware; the qualifier is a comparator, never a trade leg. Pure."""
+    legs = _bundle_legs(opp)
+    out = [f"Leg {i + 1}: {frame_sides(leg.get('text'), long_short) or '—'}"
+           for i, leg in enumerate(legs)]
+    name = opp.get("name") or "this team"
+    synth = opp.get("synthetic_top_two_cost_c")
+    q = opp.get("qualifier_yes_ask_c")
+    prem = opp.get("qualifier_vs_top2_premium_c")
+    net = opp.get("top2_net_if_top2_c")
+    loss = opp.get("top2_loss_if_not_top2_c")
+    sign = "cheaper" if (prem or 0) > 0 else ("more expensive" if (prem or 0) < 0 else "level")
+    out.append(f"Trade: Buy YES on the 12 exact-order outcomes where {name} finishes top two — "
+               f"cost {'—' if _isna(synth) else f'{int(synth)}¢'}")
+    if not _isna(q):
+        prem_s = "—" if _isna(prem) else f"{abs(int(prem))}¢ {sign}"
+        out.append(f"Comparator: {name} qualify YES @ {int(q)}¢   ·   vs bundle: {prem_s}")
+    out.append(f"If top two: {'—' if _isna(net) else f'{int(net):+d}¢'}   ·   "
+               f"If not top two: {'—' if _isna(loss) else f'-{int(loss)}¢'}")
+    out.append(f"Max units: {opp.get('top2_max_units')}   ·   "
+               f"Worst leg: {opp.get('worst_bundle_quote_quality') or '—'} "
+               f"({opp.get('wide_bundle_leg_count')} wide)   ·   "
+               f"Comparator quote: {opp.get('comparator_quote_quality') or '—'}")
+    out.append(f"Tradable now: {opp.get('tradable_now')}   ·   Relationship: {opp.get('relationship_type')}")
+    if opp.get("settlement_caveat"):
+        out.append(f"Settlement caveat: {opp.get('settlement_caveat')}")
+    if opp.get("blocked_reason"):
+        out.append(f"Caveat: {opp.get('blocked_reason')}")
+    if show_ids:
+        out.append(f"id {opp.get('opportunity_id')} · {opp.get('ticker_1')} / {opp.get('ticker_2')}")
+    return out
+
+
 def explanation_lines(opp: dict[str, Any], *, show_ids: bool = False,
                       long_short: bool = False) -> list[str]:
     """The text content of the explanation panel for one opportunity (pure → unit-testable). `long_short`
@@ -434,6 +538,11 @@ def explanation_lines(opp: dict[str, Any], *, show_ids: bool = False,
         f"{opp.get('sport_label') or opp.get('sport')} · {opp.get('name')}",
         f"{opp.get('source')} · {opp.get('detail')} · {opp.get('tournament')}",
     ]
+    if _is_exact_order_bundle(opp):
+        # Dedicated path, taken BEFORE the generic leg enumeration + economics line, so a top-two bundle
+        # never shows a stale "Leg 13" or a `Cost: None / Gross edge: None` line. The qualifier is a
+        # COMPARATOR, not a leg (legacy comparator legs are filtered by `_bundle_legs`).
+        return lines + _exact_order_explanation(opp, long_short=long_short, show_ids=show_ids)
     legs = opp.get("legs")
     if isinstance(legs, list) and legs:                      # N-leg (synthetic bundle): list every leg
         lines += [f"Leg {i + 1}: {frame_sides(leg.get('text'), long_short) or '—'}"
@@ -1040,6 +1149,17 @@ _REL_EXPLAIN = {
                   "the priceable subset). A per-game book carries a postponement caveat.",
     "synthetic_bundle": "Synthetic bundle: a player's exact-set-score contracts together replicate 'they "
                         "win', priced against their match-winner — settlement-caveated, shown review-only.",
+    "exact_order_top2_bundle": "Top-two bundle (reference): the cost of buying YES on the 12 exact-order "
+                               "outcomes where the team finishes top two, shown against the direct qualifier "
+                               "YES (a comparator, not a leg). Not arbitrage and not a qualifier "
+                               "replication — best-third qualification can make the qualifier pay while the "
+                               "bundle pays zero.",
+    "exact_order_top2_relative_value": "Speculative top-two idea (review-only): the 12-leg top-two bundle "
+                                       "is materially cheaper than the direct qualifier YES. A "
+                                       "relative-value signal, not arbitrage; the qualifier is a comparator, "
+                                       "not a leg. Best-third qualification breaks the equivalence.",
+    "exact_order_top2_proxy": "Top-two bundle (legacy reference): qualifier YES vs a 12-leg top-two bundle. "
+                              "Not arbitrage; the qualifier is a comparator.",
 }
 
 

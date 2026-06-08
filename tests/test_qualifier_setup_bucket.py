@@ -18,7 +18,7 @@ def _qs(oid="qs1", *, sport="soccer", tournament="2026 World Cup", min_size=None
     return {"opportunity_id": oid, "bucket": "qualifier_setup", "status": "EXACT_ORDER_DIAGNOSTIC",
             "sport": sport, "tournament": tournament, "tradable_now": "Diagnostic only",
             "exec_gap_c": None, "exec_min_size": min_size, "market_status": market_status,
-            "setup_family": "wc_qualifier", "setup_type": "exact_order_top2_proxy"}
+            "setup_family": "wc_qualifier", "setup_type": "exact_order_top2_bundle"}
 
 
 # --- registration / guards --------------------------------------------------------------------------
@@ -32,7 +32,8 @@ def test_bucket_registered_everywhere_and_priority_chain_intact():
 
 
 def test_status_group_and_bucket_of_route_the_diagnostic_statuses():
-    for s in ("EXACT_ORDER_DIAGNOSTIC", "GAME_SUPPORT_SIGNAL"):
+    # EXACT_ORDER_DIAGNOSTIC (also legacy snapshots) + the promoted Speculative tier + game support.
+    for s in ("EXACT_ORDER_DIAGNOSTIC", "SPECULATIVE_TOP2_RELATIVE_VALUE", "GAME_SUPPORT_SIGNAL"):
         assert consistency.STATUS_GROUP[s] == "Qualifier setup"
         assert consistency.bucket_of({"status": s}) == "qualifier_setup"
 
