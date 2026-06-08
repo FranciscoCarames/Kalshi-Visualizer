@@ -32,6 +32,13 @@ FIXED_SUM_BASIS = ("dutch-booked only because the settlement rules prove a fixed
                    "pays $0.50 to each side, so the 100¢ floor holds in every outcome — or no tie is "
                    "possible); gross, top-of-book, fees not modeled")
 
+# Single-sourced basis for a HARD-FLOOR GROUP BASKET (cardinality-floor set, e.g. World Cup group
+# qualifiers): buying every leg of a per-group set pays a guaranteed floor (≥ k legs settle the bought
+# side) derived from the tournament FORMAT, not a probability model. A structural hard floor — gross,
+# top-of-book; conservative wording, never "riskless"/"locked"/"arbitrage" / "setup" / "model signal".
+GROUP_BASKET_BASIS = ("hard-floor group basket: gross, top-of-book, fees not modeled; the guaranteed "
+                      "settle-count floor is fixed by the tournament format")
+
 # --- Glossary terms (term -> {short, long}) ------------------------------------------
 GLOSSARY: dict[str, dict[str, str]] = {
     "Tradable now": {
@@ -159,8 +166,25 @@ GLOSSARY: dict[str, dict[str, str]] = {
                 "priceable subset of entrants, which is safe because a winner outside that subset only pays "
                 "more. Many field legs are illiquid, so these are usually only partly fillable.",
     },
+    "Hard-floor group basket": {
+        "short": "Buy every leg of one group's qualifier set (4 teams). The tournament format guarantees a "
+                 "fixed settle-count floor, so the bundle pays at least that floor in every outcome: at "
+                 "least 2 YES settle (top-2 always advance) → 200¢ floor; at least 1 NO settles (the "
+                 "4th-placed team never advances) → 100¢ floor. Gross, top-of-book.",
+        "long": "A group-qualifier set is NOT mutually exclusive — several teams qualify — so it is not a "
+                "dutch book. It is a CARDINALITY-FLOOR basket: the World Cup format fixes how many of the "
+                "four group teams can advance (top-2 automatically, plus a possible best-third; the "
+                "4th-placed team never advances). So buying YES on all four legs pays at least 2×100¢ in "
+                "every outcome (a 200¢ floor), and buying NO on all four pays at least 1×100¢ (a 100¢ "
+                "floor). If the four firm asks for a side sum to under that side's floor, the difference is "
+                "a gross gap in every outcome. This is a " + GROUP_BASKET_BASIS + ": a structural hard "
+                "floor proven from the format (never inferred from prices), not a probability model and "
+                "not a 'setup' or 'model signal'. All four legs must be firm to price-prove the floor; a "
+                "missing-quote leg means there is simply no finding, not a blocked one. Conservative — "
+                "never 'riskless' / 'locked' / 'arbitrage'.",
+    },
     "Synthetic bundle": {
-        "short": "A gross pricing discrepancy where a player's exact-set-score contracts (the MECE set "
+        "short": "A gross pricing discrepancy where a player's exact-set-score contracts (the MECE set"
                  "for them winning) are mispriced against their match-winner. NOT riskless — review the "
                  "settlement rules.",
         "long": "Unlike a dutch book (two outcomes of ONE market), a synthetic bundle spans two market "
@@ -285,6 +309,10 @@ BLOCKERS: dict[str, str] = {
                       "floor, and a MECE book pays the floor in every outcome, so buying the whole "
                       "bundle now is a guaranteed gross loss. Watch it in case a leg is mispriced or it "
                       "crosses into a real discrepancy on the next tick.",
+    "group_basket_settlement": "Group-stage settlement risk: if the group is restructured or abandoned, "
+                               "or a team withdraws / is replaced, the qualifier set may not settle as "
+                               "scheduled and the guaranteed settle-count floor need not hold — review "
+                               "the settlement rules before trading.",
 }
 
 WATCHLIST_NOTE = (

@@ -112,6 +112,23 @@ class LadderSpec:
 
 
 @dataclass(frozen=True)
+class GroupBasketRule:
+    """A cardinality-floor 'group basket' rule for a per-group EVENT (e.g. World Cup group qualifiers).
+
+    Unlike a MECE field, a qualifier set is NOT mutually exclusive — it is a CARDINALITY-FLOOR set: of
+    ``team_count`` independent binary markets, the tournament FORMAT guarantees that at least ``yes_floor``
+    settle YES and at least ``no_floor`` settle NO (for 2026 World Cup groups of 4: top-2 always advance →
+    ``yes_floor=2``; the 4th-placed team never advances → ``no_floor=1``; the best-third rule is exactly WHY
+    these are *floors*, not equalities). Buying YES on all legs then pays ≥ ``yes_floor×100¢`` in every
+    outcome (and buying NO on all legs ≥ ``no_floor×100¢``) — a hard gross floor, proven from the format,
+    NEVER inferred from discovered prices. Consumed by ``dutchbook.find_group_baskets``."""
+    team_count: int
+    yes_floor: int
+    no_floor: int
+    label: str
+
+
+@dataclass(frozen=True)
 class SportConfig:
     """Everything the engine needs to handle one sport. Pure data + a few small logic callables."""
     sport_id: str
@@ -174,10 +191,19 @@ class SportConfig:
     # settlement-rule proof (dutchbook._proves_fixed_sum) that the tie settles fixed-sum ($0.50 each) or
     # cannot occur — otherwise the book is skipped (never a false dutch book on a tie-capable game).
     game_mece_by_shape: bool = True
+    # Optional cardinality-floor "group basket" rules, keyed by EXACT series ticker (e.g. World Cup group
+    # qualifiers). Maps a series to its per-group ``GroupBasketRule`` (team count + guaranteed YES/NO settle
+    # floors, derived from the tournament format). Empty (default) = no basket for this sport, so adding it
+    # stays one register() call and every other sport is a byte-for-byte no-op.
+    group_basket_rules: dict[str, "GroupBasketRule"] = field(default_factory=dict)
 
     # ---- convenience API (engine calls these) --------------------------------------------
     def family_of(self, series_ticker: str) -> str:
         return self.family_fn(self, series_ticker)
+
+    def group_basket_rule_of(self, series_ticker: str) -> "GroupBasketRule | None":
+        """The cardinality-floor basket rule for a series ticker, or None when the sport has none."""
+        return self.group_basket_rules.get(str(series_ticker or "").upper())
 
     def ladder_for(self, rows: list) -> "LadderSpec":
         """The containment ladder for a specific group's rows — per-group when ``ladder_fn`` is set
@@ -821,6 +847,11 @@ SOCCER = register(SportConfig(
     exact_series=_SOCCER_EXACT,
     tie_fn=_soccer_tie,
     winner_label="Win the World Cup",
+    # Each KXWCGROUPQUAL-26<G> event is a group of 4 teams; the 2026 format guarantees >=2 qualify (top-2
+    # auto-advance) and >=1 fails (the 4th-placed team never advances) → a hard YES floor of 200¢ and NO
+    # floor of 100¢ for the all-four basket. See dutchbook.find_group_baskets.
+    group_basket_rules={"KXWCGROUPQUAL": GroupBasketRule(team_count=4, yes_floor=2, no_floor=1,
+                                                         label="World Cup group")},
 ))
 
 
