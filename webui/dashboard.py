@@ -806,6 +806,8 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                      "necessarily capture every maximum at once). Gross, before fees.").classes(
                 "text-xs text-gray-500")
 
+            contracts = engine.all_contracts()        # ONE snapshot read; reused by inventory + non-laddered
+
             cb = engine.category_breakdown()
             ui.label("Category honesty").classes("text-sm font-medium mt-3")
             ui.table(columns=[{"name": "k", "label": "Axis", "field": "k"},
@@ -814,6 +816,40 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                                                           "low_confidence", "unsupported")]).classes("w-full")
             ui.label("Non-laddered counts are transparency, not failures; low-confidence = name-fallback "
                      "identity; unsupported = no SportConfig owns the series.").classes("text-xs text-gray-500")
+
+            # "Currently considered — snapshot inventory": every tournament / participant / kind of contract
+            # the app LOADED this snapshot (the full fetched universe, NOT tradable coverage). Filterable
+            # AG-grids over the same stored contracts; one row never silently wins (joined distinct values).
+            inv = vm.considered_inventory(contracts)
+            ui.label("Currently considered — snapshot inventory").classes("text-sm font-medium mt-3")
+            ui.label("Everything LOADED in the latest snapshot — the fetched contracts the app is "
+                     "considering. NOT tradable/actionable coverage; many of these never become "
+                     "opportunities.").classes("text-xs text-gray-500")
+            if contracts:
+                ui.table(columns=[{"name": c, "label": lbl, "field": c} for c, lbl in (
+                    ("sport", "Sport"), ("tournaments", "Tournaments"), ("participants", "Participants"),
+                    ("contracts", "Contracts"), ("kinds", "Kinds"))],
+                    rows=inv["sports"]).classes("w-full")
+                ui.label(f"Tournaments considered ({len(inv['tournaments'])})").classes(
+                    "text-sm font-medium mt-2")
+                ui.aggrid(_aggrid_options(inv["tournaments"], [
+                    ("sport", "Sport"), ("tournament", "Tournament"), ("sources", "Source(s)"),
+                    ("participants", "Participants"), ("contracts", "Contracts"), ("kinds", "Kinds"),
+                ])).classes("w-full h-72")
+                ui.label(f"Participants considered ({len(inv['participants'])})").classes(
+                    "text-sm font-medium mt-2")
+                ui.aggrid(_aggrid_options(inv["participants"], [
+                    ("sport", "Sport"), ("tournament", "Tournament"), ("participant", "Participant"),
+                    ("confidence", "ID confidence"), ("contracts", "Contracts"),
+                ])).classes("w-full h-96")
+                ui.label(f"Kinds of contracts considered ({len(inv['kinds'])})").classes(
+                    "text-sm font-medium mt-2")
+                ui.aggrid(_aggrid_options(inv["kinds"], [
+                    ("sport", "Sport"), ("kind", "Kind"), ("category", "Category"),
+                    ("contracts", "Contracts"), ("laddered", "Ladder-eligible"),
+                ])).classes("w-full h-72")
+            else:
+                ui.label("No contracts loaded in the latest snapshot.").classes("text-sm text-gray-500")
 
             failures = engine.diagnostics()
             ui.label("Scan failures").classes("text-sm font-medium mt-3")
@@ -839,7 +875,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             else:
                 ui.label("No comparisons in the latest snapshot.").classes("text-sm text-gray-500")
 
-            unmapped = vm.non_laddered_rows(engine.all_contracts())
+            unmapped = vm.non_laddered_rows(contracts)        # reuse the hoisted read (no second all_contracts())
             ui.label(f"Non-laddered / unmapped contracts ({len(unmapped)})").classes("text-sm font-medium mt-3")
             if unmapped:
                 ui.aggrid(_aggrid_options(unmapped, [

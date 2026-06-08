@@ -1014,6 +1014,103 @@ def non_laddered_rows(contract_rows: list[dict[str, Any]] | None) -> list[dict[s
     return out
 
 
+def considered_inventory(contract_rows: list[dict[str, Any]] | None) -> dict[str, list[dict[str, Any]]]:
+    """Distinct coverage over the latest snapshot's CONTRACT rows — *everything the app is currently
+    considering* (the full fetched universe), independent of whether a row becomes an opportunity. One
+    pass; sport is derived from each row's `series` via sports.sport_for_series (rows carry no sport tag),
+    UNKNOWN included so the view is honest about everything fetched. NaN/None-safe.
+
+    Returns four display-row lists for the debug grids:
+      - ``sports``       : {sport, tournaments, participants, contracts, kinds} — per-sport at-a-glance.
+      - ``tournaments``  : {sport, tournament, sources, participants, contracts, kinds} — sources/kinds are
+                           the JOINED DISTINCT values present (no first-row-wins).
+      - ``participants`` : {sport, tournament, participant, confidence, contracts} — one row per distinct
+                           (sport, tournament, participant identity).
+      - ``kinds``        : {sport, kind, category, contracts, laddered} — grouped by (sport, kind, category)
+                           so a kind spanning categories never silently collapses; ``laddered`` counts
+                           ladder-eligible rows.
+
+    A participant's identity is ``player_key`` with a per-row FALLBACK when blank (``market_ticker``, else
+    ``event_ticker·player``), so rows missing a key never all collapse into one phantom participant."""
+    rows = list(contract_rows or [])
+    sport_label: dict[str, str] = {}                         # sport_id -> display label
+    sport_tours: dict[str, set] = {}
+    sport_parts: dict[str, set] = {}
+    sport_kinds: dict[str, set] = {}
+    sport_contracts: dict[str, int] = {}
+    tour_sources: dict[tuple, set] = {}
+    tour_parts: dict[tuple, set] = {}
+    tour_kinds: dict[tuple, set] = {}
+    tour_contracts: dict[tuple, int] = {}
+    part_label: dict[tuple, str] = {}
+    part_conf: dict[tuple, str] = {}
+    part_contracts: dict[tuple, int] = {}
+    kind_contracts: dict[tuple, int] = {}
+    kind_laddered: dict[tuple, int] = {}
+
+    for r in rows:
+        cfg = sports.sport_for_series(r.get("series"))
+        sid = cfg.sport_id
+        sport_label[sid] = cfg.label
+        tour = r.get("tournament") or "—"
+        kind = r.get("kind") or r.get("market_family") or "—"
+        category = r.get("category") or "—"
+        source = r.get("tournament_source") or "—"
+        pkey = (r.get("player_key") or r.get("market_ticker")
+                or f"{r.get('event_ticker') or ''}·{r.get('player') or ''}")
+        plabel = r.get("player") or pkey
+        conf = r.get("mapping_confidence") or ""
+
+        sport_contracts[sid] = sport_contracts.get(sid, 0) + 1
+        sport_tours.setdefault(sid, set()).add(tour)
+        sport_parts.setdefault(sid, set()).add((tour, pkey))
+        sport_kinds.setdefault(sid, set()).add(kind)
+
+        tk = (sid, tour)
+        tour_contracts[tk] = tour_contracts.get(tk, 0) + 1
+        tour_sources.setdefault(tk, set()).add(source)
+        tour_parts.setdefault(tk, set()).add(pkey)
+        tour_kinds.setdefault(tk, set()).add(kind)
+
+        pk = (sid, tour, pkey)
+        part_contracts[pk] = part_contracts.get(pk, 0) + 1
+        part_label.setdefault(pk, plabel)
+        if not part_conf.get(pk):
+            part_conf[pk] = conf
+
+        kk = (sid, kind, category)
+        kind_contracts[kk] = kind_contracts.get(kk, 0) + 1
+        if r.get("ladder_eligible"):
+            kind_laddered[kk] = kind_laddered.get(kk, 0) + 1
+
+    def lab(sid: str) -> str:
+        return sport_label.get(sid, sid)
+
+    sports_out = [{
+        "sport": lab(sid), "tournaments": len(sport_tours.get(sid, set())),
+        "participants": len(sport_parts.get(sid, set())), "contracts": sport_contracts.get(sid, 0),
+        "kinds": len(sport_kinds.get(sid, set())),
+    } for sid in sorted(sport_label, key=lab)]
+    tournaments_out = [{
+        "sport": lab(sid), "tournament": tour,
+        "sources": ", ".join(sorted(tour_sources[(sid, tour)])),
+        "participants": len(tour_parts[(sid, tour)]), "contracts": tour_contracts[(sid, tour)],
+        "kinds": ", ".join(sorted(tour_kinds[(sid, tour)])),
+    } for (sid, tour) in sorted(tour_contracts, key=lambda k: (lab(k[0]), k[1]))]
+    participants_out = [{
+        "sport": lab(sid), "tournament": tour, "participant": part_label[(sid, tour, pkey)],
+        "confidence": part_conf.get((sid, tour, pkey), ""), "contracts": part_contracts[(sid, tour, pkey)],
+    } for (sid, tour, pkey) in sorted(part_contracts,
+                                      key=lambda k: (lab(k[0]), k[1], part_label[k].lower()))]
+    kinds_out = [{
+        "sport": lab(sid), "kind": kind, "category": category,
+        "contracts": kind_contracts[(sid, kind, category)],
+        "laddered": kind_laddered.get((sid, kind, category), 0),
+    } for (sid, kind, category) in sorted(kind_contracts, key=lambda k: (lab(k[0]), k[1], k[2]))]
+    return {"sports": sports_out, "tournaments": tournaments_out,
+            "participants": participants_out, "kinds": kinds_out}
+
+
 def raw_fields_rows(contract_rows: list[dict[str, Any]] | None) -> list[dict[str, Any]]:
     """Per-participant raw contract fields (incl. the tournament grouping source + mapping confidence) for
     the debug sub-panel — the NiceGUI twin of the Streamlit raw-fields table."""

@@ -444,3 +444,62 @@ def test_empty_state_filter_hid_all_and_has_content():
         "All 7 opportunities are hidden by the current filters — clear filters to see them."
     # Content present → no message at all.
     assert vm.empty_state(cov=cov, total_opps=7, shown_opps=3) is None
+
+
+# --- considered_inventory (debug "what the app is considering" coverage) ---------------
+def _crow(*, series, tournament, player, player_key, kind, category, market_ticker,
+          ladder_eligible=False, tournament_source="competition", mapping_confidence="high"):
+    return {"series": series, "tournament": tournament, "player": player, "player_key": player_key,
+            "kind": kind, "category": category, "market_ticker": market_ticker,
+            "ladder_eligible": ladder_eligible, "tournament_source": tournament_source,
+            "mapping_confidence": mapping_confidence}
+
+
+def test_considered_inventory_distinct_counts_and_dedup_across_sports():
+    rows = [
+        _crow(series="KXATPMATCH", tournament="French Open", player="Alcaraz", player_key="k1",
+              kind="match", category="Match result", market_ticker="T-1"),
+        _crow(series="KXATPMATCH", tournament="French Open", player="Alcaraz", player_key="k1",
+              kind="match", category="Match result", market_ticker="T-2"),    # same player, 2nd contract
+        _crow(series="KXATPADVANCE", tournament="French Open", player="Sinner", player_key="k2",
+              kind="advance", category="Stage advancement", market_ticker="T-3", ladder_eligible=True),
+        _crow(series="KXMLBGAME", tournament="MLB", player="Cubs", player_key="m1",
+              kind="game", category="Game", market_ticker="T-4"),
+    ]
+    inv = vm.considered_inventory(rows)
+    # sport derived from series (rows carry no sport tag); per-sport at-a-glance
+    tennis = next(s for s in inv["sports"] if s["sport"] == "Tennis")
+    assert (tennis["tournaments"], tennis["participants"], tennis["contracts"], tennis["kinds"]) == (1, 2, 3, 2)
+    mlb = next(s for s in inv["sports"] if s["sport"] == "MLB")
+    assert mlb["contracts"] == 1 and mlb["participants"] == 1
+    # participant deduped across its two markets -> ONE row, 2 contracts
+    alc = next(p for p in inv["participants"] if p["participant"] == "Alcaraz")
+    assert alc["contracts"] == 2 and alc["sport"] == "Tennis" and alc["tournament"] == "French Open"
+    assert {p["participant"] for p in inv["participants"]} == {"Alcaraz", "Sinner", "Cubs"}
+    # tournament row joins DISTINCT kinds present (no first-row-wins)
+    fo = next(t for t in inv["tournaments"] if t["tournament"] == "French Open")
+    assert fo["participants"] == 2 and fo["contracts"] == 3
+    assert "advance" in fo["kinds"] and "match" in fo["kinds"]
+    # kind grouped by (sport, kind, category); advance is ladder-eligible
+    adv = next(k for k in inv["kinds"] if k["kind"] == "advance")
+    assert adv["contracts"] == 1 and adv["laddered"] == 1 and adv["category"] == "Stage advancement"
+
+
+def test_considered_inventory_blank_player_key_does_not_collapse():
+    rows = [
+        _crow(series="KXATPMATCH", tournament="T", player="A", player_key="", market_ticker="T-1",
+              kind="match", category="Match result"),
+        _crow(series="KXATPMATCH", tournament="T", player="B", player_key="", market_ticker="T-2",
+              kind="match", category="Match result"),
+    ]
+    inv = vm.considered_inventory(rows)
+    # blank player_key falls back to the distinct market_ticker -> two participants, not one phantom
+    assert len(inv["participants"]) == 2
+
+
+def test_considered_inventory_keeps_unknown_sport_and_empty_is_empty():
+    assert vm.considered_inventory([]) == {"sports": [], "tournaments": [], "participants": [], "kinds": []}
+    rows = [_crow(series="ZZZ_NOT_A_SPORT", tournament="T", player="X", player_key="x1",
+                  kind="other", category="Other", market_ticker="T-1")]
+    inv = vm.considered_inventory(rows)
+    assert len(inv["sports"]) == 1 and inv["sports"][0]["contracts"] == 1   # unknown sport kept (honest)
