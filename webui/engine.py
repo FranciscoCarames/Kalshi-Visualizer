@@ -79,6 +79,13 @@ def backlog(window_s: float, db_path: str | None = None) -> list[dict[str, Any]]
     return lifecycle.recently_actionable(store.snapshots_since(window_s, db_path=db_path))
 
 
+def backlog_events(days: float = 7.0, category: str | None = None,
+                   db_path: str | None = None) -> list[dict[str, Any]]:
+    """The DURABLE interval backlog (v4) over the last `days` of activity, optionally narrowed to one
+    category. Reads the dedicated `backlog_intervals` table (independent of snapshot retention)."""
+    return store.backlog_intervals(category=category, days=days, db_path=db_path)
+
+
 def alerts(persistence_s: float | None = None, db_path: str | None = None) -> dict[str, list]:
     """New-actionable (§8) + blocked-change (§9), diffed over the two latest snapshots."""
     pair = _cached_latest_two(db_path)

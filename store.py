@@ -26,7 +26,9 @@ import config
 # Bump when the on-disk schema changes; `_migrate` brings an older file forward. Held in the SQLite
 # `user_version` pragma so no bookkeeping table is needed. v3 adds `snapshot_frames` (per-sport/per-frame
 # evidence) + WAL; the v2->v3 upgrade backs up the file first and falls back to a fresh DB on failure.
-SCHEMA_VERSION = 3
+# v4 adds `backlog_intervals` (durable 7-day opportunity lifecycle per category, independent of the
+# 30h snapshot retention) — a pure additive table, so the v3->v4 step just creates it.
+SCHEMA_VERSION = 4
 
 # Columns promoted out of each opportunity row into indexed SQL columns for cheap lifecycle/backlog
 # filtering; the FULL row always round-trips in the `data` JSON blob, so no field is ever lost. Stable
@@ -49,8 +51,40 @@ CREATE TABLE IF NOT EXISTS snapshot_frames (
 CREATE INDEX IF NOT EXISTS ix_frame_snapshot ON snapshot_frames(snapshot_id);
 """
 
-# Current (v3) schema — used to create a FRESH DB complete. `meta` (v2) holds per-scan coverage JSON;
-# `snapshot_frames` (v3) holds the per-sport/per-frame evidence.
+# v4 addition: the DURABLE interval backlog. One row per opportunity-lifecycle-in-a-category — an open
+# interval (`left_ts IS NULL`) while the opportunity is in a tracked category, closed (`left_ts` set) when
+# it drops out. An opportunity that appears, leaves, then reappears yields TWO intervals (a surrogate `id`
+# PK, not a unique (opportunity_id, category) — so re-entry never merges/erases the first lifecycle). The
+# PARTIAL unique index enforces at-most-one OPEN interval per (opportunity_id, category). Maintained
+# incrementally in `write_snapshot`; retained `BACKLOG_RETENTION_SECONDS` after close.
+_BACKLOG_SCHEMA = """
+CREATE TABLE IF NOT EXISTS backlog_intervals (
+    id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+    opportunity_id        TEXT NOT NULL,
+    category              TEXT NOT NULL,        -- 'actionable' | 'bounded_loss' | 'statistical_arbitrage'
+    sport                 TEXT,
+    name                  TEXT,
+    url                   TEXT,
+    first_seen_ts         REAL,                 -- epoch of the first snapshot of THIS interval
+    last_seen_ts          REAL,                 -- advances while the interval is open
+    left_ts               REAL,                 -- NULL while OPEN; set to the snapshot ts it dropped out
+    last_bucket           TEXT,                 -- the bucket it last sat in (category interpretation)
+    last_status           TEXT,
+    peak_roi_pct          REAL,                 -- best ROI% over the interval
+    best_case_profit_c    REAL,                 -- best best-case profit (¢) over the interval
+    worst_case_profit_c   REAL,                 -- best (least-negative) worst-case (¢) over the interval
+    last_settlement_caveat TEXT,
+    last_legs             TEXT,                 -- full N-leg plan JSON, as last in-category
+    data                  TEXT                  -- last full unified row JSON (NaN-safe)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_backlog_open
+    ON backlog_intervals(opportunity_id, category) WHERE left_ts IS NULL;
+CREATE INDEX IF NOT EXISTS ix_backlog_left ON backlog_intervals(left_ts);
+"""
+
+# Current (v4) schema — used to create a FRESH DB complete. `meta` (v2) holds per-scan coverage JSON;
+# `snapshot_frames` (v3) holds the per-sport/per-frame evidence; `backlog_intervals` (v4) the durable
+# 7-day lifecycle backlog.
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS snapshots (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -69,7 +103,7 @@ CREATE TABLE IF NOT EXISTS opportunities (
 );
 CREATE INDEX IF NOT EXISTS ix_opp_snapshot ON opportunities(snapshot_id);
 CREATE INDEX IF NOT EXISTS ix_opp_id       ON opportunities(opportunity_id);
-""" + _FRAMES_SCHEMA
+""" + _FRAMES_SCHEMA + _BACKLOG_SCHEMA
 
 
 # --- time normalization (exact UTC; deterministic) -----------------------------------
@@ -197,7 +231,7 @@ def _backup_before_migration(conn: sqlite3.Connection, db_path: str) -> None:
 
 def _reset_to_fresh(conn: sqlite3.Connection) -> None:
     """Drop everything and recreate the current schema at SCHEMA_VERSION (the fresh-DB fallback)."""
-    for table in ("snapshot_frames", "opportunities", "snapshots"):
+    for table in ("backlog_intervals", "snapshot_frames", "opportunities", "snapshots"):
         conn.execute(f"DROP TABLE IF EXISTS {table}")
     conn.executescript(_SCHEMA)
     conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
@@ -229,6 +263,8 @@ def _migrate(conn: sqlite3.Connection, db_path: str = "") -> None:
             conn.execute("ALTER TABLE snapshots ADD COLUMN meta TEXT")   # v1 -> v2: per-scan coverage JSON
         if version < 3:
             conn.executescript(_FRAMES_SCHEMA)                            # v2 -> v3: per-frame evidence
+        if version < 4:
+            conn.executescript(_BACKLOG_SCHEMA)                           # v3 -> v4: durable interval backlog
         conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
         conn.commit()
     except sqlite3.DatabaseError as exc:
@@ -370,6 +406,152 @@ def _frame_rows(frame: dict[str, Any]) -> tuple[Any, Any, Any, str, int]:
             json.dumps(rows), len(rows))
 
 
+# --- durable interval backlog (v4) ---------------------------------------------------
+def _num_opt(v: Any) -> float | None:
+    """A finite float or None (None / NaN / non-numeric -> None), for metric comparisons."""
+    if v is None or isinstance(v, bool):
+        return None
+    try:
+        f = float(v)
+    except (TypeError, ValueError):
+        return None
+    return None if f != f else f
+
+
+def _max_opt(a: Any, b: Any) -> float | None:
+    """max of two optional numbers, ignoring None — None when both are None. Used to grow per-interval
+    extremes (best ROI / best best-case / least-negative worst-case) as a lifecycle accumulates."""
+    na, nb = _num_opt(a), _num_opt(b)
+    if na is None:
+        return nb
+    if nb is None:
+        return na
+    return na if na >= nb else nb
+
+
+def _tracked_category(row: dict[str, Any]) -> str | None:
+    """The durable backlog category for a row, derived STORE-SIDE from its `bucket` (nothing is added to
+    the public unified schema). None -> not tracked. Single-sourced in `config.BACKLOG_CATEGORY_BY_BUCKET`."""
+    bucket = _promoted(row, "bucket")
+    return config.BACKLOG_CATEGORY_BY_BUCKET.get(bucket) if bucket else None
+
+
+def _maintain_backlog_intervals(conn: sqlite3.Connection, records: list[dict[str, Any]], ts: float) -> None:
+    """Advance the durable interval backlog for one snapshot (called inside the write transaction):
+    open/advance an interval for each tracked (opportunity_id, category) present now, close intervals that
+    dropped out, then drop intervals closed longer than `BACKLOG_RETENTION_SECONDS` ago. Reappearance opens
+    a NEW interval (no open interval exists once the previous one closed), so distinct lifecycles never
+    merge."""
+    # The tracked set for THIS snapshot: last write wins on a duplicate (opportunity_id, category).
+    tracked: dict[tuple[str, str], dict[str, Any]] = {}
+    for r in records:
+        category = _tracked_category(r)
+        if not category:
+            continue
+        oid = _promoted(r, "opportunity_id")
+        if not oid:
+            continue
+        tracked[(oid, category)] = r
+
+    touched: list[int] = []
+    for (oid, category), r in tracked.items():
+        roi = _num_opt(r.get("roi_pct"))
+        best = _num_opt(r.get("best_case_profit_c"))
+        worst = _num_opt(r.get("worst_case_profit_c"))
+        legs = r.get("legs")
+        legs_json = json.dumps(_clean(legs)) if legs is not None else None
+        data_json = json.dumps(_jsonable(r))
+        common = (
+            _promoted(r, "bucket"), _promoted(r, "status"),
+            _clean(r.get("sport")), _clean(r.get("name")), _clean(r.get("url")),
+            _clean(r.get("settlement_caveat")), legs_json, data_json,
+        )
+        open_row = conn.execute(
+            "SELECT id, peak_roi_pct, best_case_profit_c, worst_case_profit_c FROM backlog_intervals "
+            "WHERE opportunity_id = ? AND category = ? AND left_ts IS NULL", (oid, category)).fetchone()
+        if open_row is not None:
+            conn.execute(
+                "UPDATE backlog_intervals SET last_seen_ts = ?, peak_roi_pct = ?, best_case_profit_c = ?, "
+                "worst_case_profit_c = ?, last_bucket = ?, last_status = ?, sport = ?, name = ?, url = ?, "
+                "last_settlement_caveat = ?, last_legs = ?, data = ? WHERE id = ?",
+                (ts, _max_opt(open_row["peak_roi_pct"], roi),
+                 _max_opt(open_row["best_case_profit_c"], best),
+                 _max_opt(open_row["worst_case_profit_c"], worst), *common, open_row["id"]))
+            touched.append(open_row["id"])
+        else:
+            cur = conn.execute(
+                "INSERT INTO backlog_intervals "
+                "(opportunity_id, category, first_seen_ts, last_seen_ts, left_ts, peak_roi_pct, "
+                "best_case_profit_c, worst_case_profit_c, last_bucket, last_status, sport, name, url, "
+                "last_settlement_caveat, last_legs, data) "
+                "VALUES (?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (oid, category, ts, ts, roi, best, worst, *common))
+            touched.append(cur.lastrowid)
+
+    # Close-out: any interval still open but NOT advanced this snapshot dropped out -> stamp left_ts.
+    if touched:
+        marks = ",".join("?" * len(touched))
+        conn.execute(
+            f"UPDATE backlog_intervals SET left_ts = ? WHERE left_ts IS NULL AND id NOT IN ({marks})",
+            (ts, *touched))
+    else:
+        conn.execute("UPDATE backlog_intervals SET left_ts = ? WHERE left_ts IS NULL", (ts,))
+
+    # Retention: drop intervals closed longer than the window ago (measured from this newest write).
+    conn.execute("DELETE FROM backlog_intervals WHERE left_ts IS NOT NULL AND left_ts < ?",
+                 (ts - config.BACKLOG_RETENTION_SECONDS,))
+
+
+_BACKLOG_FIELDS = (
+    "id", "opportunity_id", "category", "sport", "name", "url", "first_seen_ts", "last_seen_ts",
+    "left_ts", "last_bucket", "last_status", "peak_roi_pct", "best_case_profit_c", "worst_case_profit_c",
+    "last_settlement_caveat",
+)
+
+
+def backlog_intervals(*, category: str | None = None, include_open: bool = True, days: float | None = None,
+                      db_path: str | None = None) -> list[dict[str, Any]]:
+    """Read the durable interval backlog (v4), most-recent-activity first. `category` narrows to one
+    tracked category; `include_open=False` returns only CLOSED intervals; `days` windows to that many days
+    of activity (capped at `BACKLOG_RETENTION_SECONDS`), measured from the newest activity. Each row is the
+    promoted columns plus `duration_s`, `last_legs`, and the full `data` (JSON-expanded)."""
+    where: list[str] = []
+    params: list[Any] = []
+    if category is not None:
+        where.append("category = ?")
+        params.append(category)
+    if not include_open:
+        where.append("left_ts IS NOT NULL")
+    clause = (" WHERE " + " AND ".join(where)) if where else ""
+    conn = _connect(db_path)
+    try:
+        if days is not None:
+            cap = config.BACKLOG_RETENTION_SECONDS
+            window = min(float(days) * 86400.0, cap)
+            newest = conn.execute(
+                "SELECT MAX(COALESCE(left_ts, last_seen_ts)) AS m FROM backlog_intervals").fetchone()["m"]
+            if newest is not None:
+                cutoff = newest - window
+                where.append("COALESCE(left_ts, last_seen_ts) >= ?")
+                params.append(cutoff)
+                clause = " WHERE " + " AND ".join(where)
+        rows = conn.execute(
+            f"SELECT {', '.join(_BACKLOG_FIELDS)}, last_legs, data FROM backlog_intervals{clause} "
+            "ORDER BY COALESCE(left_ts, last_seen_ts) DESC, id DESC", tuple(params)).fetchall()
+    finally:
+        conn.close()
+    out: list[dict[str, Any]] = []
+    for r in rows:
+        d = {k: r[k] for k in _BACKLOG_FIELDS}
+        first, last = r["first_seen_ts"], r["last_seen_ts"]
+        d["duration_s"] = (last - first) if (first is not None and last is not None) else None
+        d["is_open"] = r["left_ts"] is None
+        d["last_legs"] = json.loads(r["last_legs"]) if r["last_legs"] else None
+        d["data"] = json.loads(r["data"]) if r["data"] else None
+        out.append(d)
+    return out
+
+
 # --- public API ----------------------------------------------------------------------
 def write_snapshot(fetched_at: Any, opps: Any, *, meta: Any = None, frames: Any = None,
                    db_path: str | None = None) -> int:
@@ -416,6 +598,7 @@ def write_snapshot(fetched_at: Any, opps: Any, *, meta: Any = None, frames: Any 
                 "VALUES (?, ?, ?, ?, ?, ?)",
                 [(sid, *_frame_rows(f)) for f in frames],
             )
+        _maintain_backlog_intervals(conn, records, ts)          # durable tier: 7-day lifecycle intervals
         _apply_retention(conn)                                   # lean tier: time-based whole-snapshot drop
         _apply_frame_retention(conn, db_path or config.SNAPSHOT_DB_PATH)   # heavy tier: latest-N + size budget
         conn.commit()

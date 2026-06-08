@@ -249,16 +249,18 @@ def _has_table(db, name):
         con.close()
 
 
-def test_fresh_db_is_v3_with_meta_and_frames(tmp_path):
+def test_fresh_db_is_current_with_meta_frames_and_backlog(tmp_path):
     db = _db(tmp_path)
     store.write_snapshot(1000, [_opp("a")], db_path=db)      # creates a fresh DB
-    assert _user_version(db) == 3 == store.SCHEMA_VERSION
+    assert _user_version(db) == 4 == store.SCHEMA_VERSION
     assert "meta" in _table_columns(db, "snapshots")
     assert _has_table(db, "snapshot_frames")
+    assert _has_table(db, "backlog_intervals")
 
 
 def _build_legacy_db(db, version):
-    """Hand-build a pre-v3 DB at `version` (1 = no meta, 2 = with meta) + one snapshot + opp."""
+    """Hand-build a pre-current DB at `version` (1 = no meta, 2 = with meta, 3 = + snapshot_frames) +
+    one snapshot + opp."""
     con = sqlite3.connect(db)
     try:
         meta_col = ", meta TEXT" if version >= 2 else ""
@@ -267,6 +269,8 @@ def _build_legacy_db(db, version):
             f"fetched_ts REAL NOT NULL{meta_col});"
             "CREATE TABLE opportunities (snapshot_id INTEGER, opportunity_id TEXT, relationship_type TEXT, "
             "bucket TEXT, status TEXT, blocked_reason TEXT, data TEXT NOT NULL);")
+        if version >= 3:
+            con.executescript(store._FRAMES_SCHEMA)
         con.execute("INSERT INTO snapshots (fetched_at, fetched_ts) VALUES (?, ?)", ("old", 500.0))
         con.execute("INSERT INTO opportunities (snapshot_id, opportunity_id, data) VALUES (1, 'old1', ?)",
                     ('{"opportunity_id": "old1", "bucket": "actionable"}',))
@@ -276,25 +280,26 @@ def _build_legacy_db(db, version):
         con.close()
 
 
-def test_v1_db_upgrades_to_v3(tmp_path):
+def test_v1_db_upgrades_to_current(tmp_path):
     db = _db(tmp_path)
     _build_legacy_db(db, version=1)
-    snap = store.latest(db_path=db)                              # any store call triggers _migrate: v1->v3
-    assert _user_version(db) == 3
+    snap = store.latest(db_path=db)                              # any store call triggers _migrate: v1->v4
+    assert _user_version(db) == 4
     assert "meta" in _table_columns(db, "snapshots") and _has_table(db, "snapshot_frames")
+    assert _has_table(db, "backlog_intervals")
     assert snap["opportunities"][0]["opportunity_id"] == "old1"   # old row still readable
     assert snap["meta"] is None                                   # old snapshot has no meta
 
 
-def test_v2_db_upgrades_to_v3_and_backs_up(tmp_path):
+def test_v2_db_upgrades_to_current_and_backs_up(tmp_path):
     import os
     db = _db(tmp_path)
     _build_legacy_db(db, version=2)
-    snap = store.latest(db_path=db)                              # v2 -> v3
-    assert _user_version(db) == 3 and _has_table(db, "snapshot_frames")
+    snap = store.latest(db_path=db)                              # v2 -> v4
+    assert _user_version(db) == 4 and _has_table(db, "snapshot_frames")
     assert snap["opportunities"][0]["opportunity_id"] == "old1"   # old data intact
     # The pre-upgrade DB was backed up; the backup is itself a readable v2 SQLite file with the old row.
-    backup = f"{db}.pre-v3-backup"
+    backup = f"{db}.pre-v{store.SCHEMA_VERSION}-backup"
     assert os.path.exists(backup)
     con = sqlite3.connect(backup)
     try:
@@ -306,16 +311,25 @@ def test_v2_db_upgrades_to_v3_and_backs_up(tmp_path):
         con.close()
 
 
-def test_migration_failure_resets_to_fresh_v3_preserving_backup(tmp_path, monkeypatch, capsys):
+def test_v3_db_upgrades_to_v4_preserving_data(tmp_path):
+    db = _db(tmp_path)
+    _build_legacy_db(db, version=3)
+    assert not _has_table(db, "backlog_intervals")                # the v3 file has no backlog table
+    snap = store.latest(db_path=db)                              # v3 -> v4 (pure additive table)
+    assert _user_version(db) == 4 and _has_table(db, "backlog_intervals")
+    assert snap["opportunities"][0]["opportunity_id"] == "old1"   # v3 data intact
+
+
+def test_migration_failure_resets_to_fresh_preserving_backup(tmp_path, monkeypatch, capsys):
     import os
     db = _db(tmp_path)
     _build_legacy_db(db, version=2)
-    # Force the v2->v3 forward step to fail; the store must back up, warn, and start a fresh v3 DB.
+    # Force a forward step to fail; the store must back up, warn, and start a fresh current DB.
     monkeypatch.setattr(store, "_FRAMES_SCHEMA", "CREATE TABLE bad (")  # malformed -> DatabaseError
     store.write_snapshot(1000, [_opp("new")], db_path=db)
-    assert _user_version(db) == 3 and _has_table(db, "snapshot_frames")
-    assert os.path.exists(f"{db}.pre-v3-backup")                  # original preserved
-    assert "migration v2->v3 failed" in capsys.readouterr().out
+    assert _user_version(db) == store.SCHEMA_VERSION and _has_table(db, "snapshot_frames")
+    assert os.path.exists(f"{db}.pre-v{store.SCHEMA_VERSION}-backup")     # original preserved
+    assert f"migration v2->v{store.SCHEMA_VERSION} failed" in capsys.readouterr().out
     snap = store.latest(db_path=db)
     assert [o["opportunity_id"] for o in snap["opportunities"]] == ["new"]   # fresh DB has only new data
 
@@ -493,3 +507,115 @@ def test_contract_frames_since_orders_groups_and_windows(tmp_path):
     near = store.contract_frames_since(500, db_path=db)                       # newest 2000, cutoff 1500
     assert [f["fetched_ts"] for f in near] == [2000.0]                        # the old snapshot is outside it
     assert store.contract_frames_since(10 ** 9, db_path=_db(tmp_path) + "x") == []   # empty store -> []
+
+
+# --- Stage: v4 durable interval backlog ----------------------------------------------
+def _bopp(oid, *, bucket="actionable", **extra):
+    """A unified-shaped opportunity row with the metric fields the interval table tracks."""
+    return _opp(oid, bucket=bucket, sport="tennis", name=oid, url="http://x",
+                roi_pct=extra.get("roi"), best_case_profit_c=extra.get("best"),
+                worst_case_profit_c=extra.get("worst"), settlement_caveat="",
+                legs=extra.get("legs"))
+
+
+def test_backlog_interval_opens_advances_and_peaks(tmp_path):
+    db = _db(tmp_path)
+    store.write_snapshot(1000, [_bopp("a", roi=5, worst=-3)], db_path=db)
+    store.write_snapshot(1010, [_bopp("a", roi=9, worst=-1)], db_path=db)   # advances; peaks grow
+    rows = store.backlog_intervals(db_path=db)
+    assert len(rows) == 1
+    r = rows[0]
+    assert r["is_open"] is True and r["left_ts"] is None
+    assert r["first_seen_ts"] == 1000.0 and r["last_seen_ts"] == 1010.0
+    assert r["peak_roi_pct"] == 9.0              # max(5, 9)
+    assert r["worst_case_profit_c"] == -1.0      # least-negative (max) over the interval
+
+
+def test_backlog_interval_closes_on_dropout(tmp_path):
+    db = _db(tmp_path)
+    store.write_snapshot(1000, [_bopp("a")], db_path=db)
+    store.write_snapshot(1010, [_bopp("b")], db_path=db)   # a drops out -> closes at 1010
+    a = [r for r in store.backlog_intervals(db_path=db) if r["opportunity_id"] == "a"][0]
+    assert a["is_open"] is False and a["left_ts"] == 1010.0
+    assert a["duration_s"] == 0.0                          # first==last (seen in one snapshot)
+
+
+def test_backlog_reappearance_opens_new_interval(tmp_path):
+    # The audit-point-3 invariant: appear -> leave -> reappear must yield TWO intervals, not one merged row.
+    db = _db(tmp_path)
+    store.write_snapshot(1000, [_bopp("a", roi=2)], db_path=db)
+    store.write_snapshot(1010, [_bopp("b")], db_path=db)            # a closes (left_ts=1010)
+    store.write_snapshot(1020, [_bopp("a", roi=7)], db_path=db)     # a returns -> NEW open interval
+    a_rows = [r for r in store.backlog_intervals(db_path=db) if r["opportunity_id"] == "a"]
+    assert len(a_rows) == 2
+    closed = [r for r in a_rows if not r["is_open"]][0]
+    opened = [r for r in a_rows if r["is_open"]][0]
+    assert closed["first_seen_ts"] == 1000.0 and closed["left_ts"] == 1010.0 and closed["peak_roi_pct"] == 2.0
+    assert opened["first_seen_ts"] == 1020.0 and opened["left_ts"] is None and opened["peak_roi_pct"] == 7.0
+
+
+def test_backlog_at_most_one_open_interval_per_key(tmp_path):
+    db = _db(tmp_path)
+    store.write_snapshot(1000, [_bopp("a")], db_path=db)
+    store.write_snapshot(1010, [_bopp("a")], db_path=db)
+    con = sqlite3.connect(db)
+    try:
+        n_open = con.execute(
+            "SELECT COUNT(*) FROM backlog_intervals WHERE opportunity_id='a' AND category='actionable' "
+            "AND left_ts IS NULL").fetchone()[0]
+    finally:
+        con.close()
+    assert n_open == 1                                    # the partial unique index holds
+
+
+def test_backlog_category_derived_from_bucket(tmp_path):
+    db = _db(tmp_path)
+    store.write_snapshot(1000, [
+        _bopp("act", bucket="actionable"),
+        _bopp("rb", bucket="risk_budget"),
+        _bopp("nm", bucket="near_miss"),
+        _bopp("clean", bucket="clean"),          # untracked
+        _bopp("blocked", bucket="blocked"),      # untracked
+    ], db_path=db)
+    cats = {r["opportunity_id"]: r["category"] for r in store.backlog_intervals(db_path=db)}
+    assert cats == {"act": "actionable", "rb": "bounded_loss", "nm": "bounded_loss"}
+
+
+def test_backlog_filters_category_and_open(tmp_path):
+    db = _db(tmp_path)
+    store.write_snapshot(1000, [_bopp("a", bucket="actionable"), _bopp("b", bucket="risk_budget")], db_path=db)
+    store.write_snapshot(1010, [_bopp("b", bucket="risk_budget")], db_path=db)   # a closes
+    assert {r["opportunity_id"] for r in store.backlog_intervals(category="bounded_loss", db_path=db)} == {"b"}
+    assert {r["opportunity_id"] for r in store.backlog_intervals(include_open=False, db_path=db)} == {"a"}
+
+
+def test_backlog_retention_drops_old_closed_only(tmp_path, monkeypatch):
+    monkeypatch.setattr(config, "BACKLOG_RETENTION_SECONDS", 100)
+    db = _db(tmp_path)
+    store.write_snapshot(1000, [_bopp("old")], db_path=db)
+    store.write_snapshot(1010, [_bopp("keep_open")], db_path=db)   # old closes at 1010
+    # Jump far ahead: old's left_ts (1010) is now > 100s behind the newest write -> dropped.
+    store.write_snapshot(2000, [_bopp("keep_open")], db_path=db)
+    ids = {r["opportunity_id"] for r in store.backlog_intervals(db_path=db)}
+    assert "old" not in ids and "keep_open" in ids
+
+
+def test_backlog_days_window(tmp_path):
+    # The window filters by ACTIVITY time (left_ts / last_seen). a leaves early; a later query window
+    # narrower than the gap drops it while still-recent intervals remain.
+    db = _db(tmp_path)
+    store.write_snapshot(0, [_bopp("a")], db_path=db)
+    store.write_snapshot(100, [_bopp("b")], db_path=db)          # a closes at ts=100
+    store.write_snapshot(2 * 86400, [_bopp("c")], db_path=db)    # 2 days later; b closes, a left long ago
+    recent = store.backlog_intervals(days=1, db_path=db)         # 1-day activity window
+    assert {r["opportunity_id"] for r in recent} == {"b", "c"}   # a (left at ts=100) is outside it
+    assert {r["opportunity_id"] for r in store.backlog_intervals(db_path=db)} == {"a", "b", "c"}  # no window
+
+
+def test_backlog_legs_round_trip(tmp_path):
+    db = _db(tmp_path)
+    legs = [{"side": "YES", "price_c": 45}, {"side": "NO", "price_c": 52}]
+    store.write_snapshot(1000, [_bopp("a", legs=legs)], db_path=db)
+    r = store.backlog_intervals(db_path=db)[0]
+    assert r["last_legs"] == legs
+    assert r["data"]["opportunity_id"] == "a"                    # full row JSON retained
