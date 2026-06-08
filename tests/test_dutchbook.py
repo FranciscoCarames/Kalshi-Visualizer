@@ -736,6 +736,10 @@ def test_group_basket_yes_floor_200_fires_actionable():
     assert all(leg["side"] == "buy_yes" for leg in f["legs"])
     assert f["bucket"] == "actionable" and f["tradable_now"] == "Yes"
     assert f["relationship_type"] == "group_cardinality_floor"
+    # Worst-case stays the GUARANTEED floor gap (== exec_gap_c, what ranking uses); best-case is the
+    # CONDITIONAL upside if 3 qualify via a best-third (ceiling 300¢ − 180¢ cost = 120¢).
+    assert f["worst_case_profit_c"] == 20 == f["exec_gap_c"]
+    assert f["conditional_ceiling_c"] == 300 and f["best_case_profit_c"] == 120
 
 
 def test_group_basket_no_floor_100_fires():
@@ -746,6 +750,9 @@ def test_group_basket_no_floor_100_fires():
     assert f["direction"] == "no_basket" and f["payout_floor_c"] == 100
     assert f["cost_c"] == 96 and f["exec_gap_c"] == 4
     assert all(leg["side"] == "buy_no" for leg in f["legs"])
+    # Worst-case = guaranteed floor gap; best-case = conditional upside if 2 fail (ceiling 200¢ − 96¢ = 104¢).
+    assert f["worst_case_profit_c"] == 4 == f["exec_gap_c"]
+    assert f["conditional_ceiling_c"] == 200 and f["best_case_profit_c"] == 104
 
 
 def test_group_basket_requires_four_unique_teams():
@@ -757,6 +764,23 @@ def test_group_basket_requires_four_unique_teams():
     rows = _group(yes_asks=[45, 45, 45, 45])
     rows[3]["player_key"] = rows[2]["player_key"]
     assert dutchbook.find_group_baskets(rows) == []
+
+
+def test_group_basket_best_case_is_conditional_above_floor():
+    # The conditional upside must be STRICTLY above the guaranteed floor (so the UI can show both), and the
+    # worst-case must equal exec_gap_c so ranking (_rank_key) leads with the floor, not the upside.
+    f = dutchbook.find_group_baskets(_group(yes_asks=[45, 45, 45, 45]))[0]
+    assert f["best_case_profit_c"] > f["worst_case_profit_c"]
+    assert f["worst_case_profit_c"] == f["exec_gap_c"]
+
+
+def test_group_basket_rule_ceilings_default_to_none_flat():
+    # A rule without ceilings stays flat (best == worst); the WC rule carries 3/2.
+    import sports
+    plain = sports.GroupBasketRule(team_count=4, yes_floor=2, no_floor=1, label="x")
+    assert plain.yes_ceiling_count is None and plain.no_ceiling_count is None
+    wc = sports.SOCCER.group_basket_rule_of("KXWCGROUPQUAL")
+    assert wc.yes_ceiling_count == 3 and wc.no_ceiling_count == 2
 
 
 def test_group_basket_wide_quote_still_fires():

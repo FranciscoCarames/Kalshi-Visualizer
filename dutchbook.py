@@ -787,6 +787,11 @@ def _detect_group_basket(event_ticker: str, rows: list[dict[str, Any]], cfg: Any
     settle_floor = rule.yes_floor if side == "buy_yes" else rule.no_floor
     settle_word = "YES" if side == "buy_yes" else "NO"
     gap_c, min_size, floor, cost = best["gap_c"], best["min_size"], best["payout_floor_c"], best["cost_c"]
+    # CONDITIONAL best-case: the format's MAX settle count (e.g. 3 qualify via a best-third / 2 fail). It is
+    # NOT guaranteed — the floor is. None ceiling ⇒ flat (best == worst). Worst-case stays the floor gap.
+    ceiling_count = rule.yes_ceiling_count if side == "buy_yes" else rule.no_ceiling_count
+    conditional_ceiling_c = (ceiling_count * 100) if ceiling_count is not None else floor
+    best_case_c = conditional_ceiling_c - cost
 
     legs: list[dict[str, Any]] = []
     for r, p in zip(rows, best["prices"]):
@@ -845,8 +850,11 @@ def _detect_group_basket(event_ticker: str, rows: list[dict[str, Any]], cfg: Any
         "settlement_caveat": BLOCKERS["group_basket_settlement"],
         "basket_basis": GROUP_BASKET_BASIS,
         "legs": legs, "n_legs": n, "payout_floor_c": floor,
-        # Flat hard floor across every settled state → worst == best == gap_c (the floor is guaranteed).
-        "worst_case_profit_c": gap_c, "best_case_profit_c": gap_c,
+        # Worst-case is the GUARANTEED floor gap (worst_case_profit_c == gap_c == exec_gap_c, so ranking
+        # leads with the floor). best_case_profit_c is the CONDITIONAL upside (more legs settle the winning
+        # way than the floor requires); == gap_c when the rule carries no ceiling.
+        "worst_case_profit_c": gap_c, "best_case_profit_c": best_case_c,
+        "conditional_ceiling_c": conditional_ceiling_c,
         "action_1_side": legs[0]["side"], "action_1_contract": legs[0]["contract"],
         "action_1_price_c": legs[0]["price_c"], "action_1_text": legs[0]["text"],
         "action_2_side": legs[1]["side"], "action_2_contract": legs[1]["contract"],
