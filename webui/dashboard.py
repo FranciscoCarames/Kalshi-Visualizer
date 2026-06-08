@@ -14,7 +14,6 @@ from typing import Any
 from nicegui import app, run, ui
 
 import config
-import glossary
 import presence
 import scan_scheduler
 from webui import engine, export
@@ -78,14 +77,22 @@ _CHANGE_CELL_SLOT = (
     '</q-td>'
 )
 
-# Edge-cell slot — colour the gross-edge value green/red when it moved up/down since the last scan, so a
-# changed edge pops (colour + the value itself; bold for emphasis). Centred like the other numeric columns.
-_EDGE_CELL_SLOT = (
-    '<q-td :props="props" class="text-center">'
-    '<span :class="props.row._change===\'up\' ? \'text-positive text-weight-bold\' : '
-    'props.row._change===\'down\' ? \'text-negative text-weight-bold\' : \'\'">{{ props.row.edge }}</span>'
-    '</q-td>'
-)
+# Numeric-cell slot — DISPLAY-ONLY thousands separators (the slot changes display only; Quasar still sorts
+# on the raw numeric `field`, so sorting is preserved). Finite numbers render with `toLocaleString` (commas,
+# ≤2 decimals); a null/blank/non-finite value (e.g. ratio "∞") passes through untouched. `colored=True`
+# additionally tints the value green/red when the row's edge moved up/down (used for the gross-edge cell).
+def _num_cell_slot(field: str, *, colored: bool = False) -> str:
+    inner = ('<span v-if="props.row.%s != null && isFinite(props.row.%s)">'
+             "{{ Number(props.row.%s).toLocaleString('en-US', {maximumFractionDigits: 2}) }}</span>"
+             '<span v-else>{{ props.row.%s }}</span>') % (field, field, field, field)
+    if colored:
+        cls = ('props.row._change==="up" ? "text-positive text-weight-bold" : '
+               'props.row._change==="down" ? "text-negative text-weight-bold" : ""')
+        return '<q-td :props="props" class="text-center"><span :class=\'%s\'>%s</span></q-td>' % (cls, inner)
+    return '<q-td :props="props" class="text-center">%s</q-td>' % inner
+
+
+_EDGE_CELL_SLOT = _num_cell_slot("edge", colored=True)   # gross edge: commas + green/red on change
 
 # Caveat-cell slot (PR A compaction): a COMPACT, content-descriptive severity chip (COLOUR + TEXT —
 # blocker=red, review=amber, advisory=grey) instead of full prose. Full text is on the chip tooltip and in
@@ -141,6 +148,7 @@ def build_column_menu(table: Any, columns: list[dict[str, Any]], *,
         _apply()
 
     btn = ui.button(icon="view_column").props("flat dense round size=sm color=grey").tooltip("Show / hide columns")
+    btn.on("click.stop", lambda: None)   # when placed in an expansion header, don't toggle the expansion
     with btn, ui.menu(), ui.column().classes("q-pa-sm gap-1"):
         ui.label("Show columns").classes("text-xs text-weight-bold q-mb-xs")
         for c in hideable:
@@ -610,8 +618,6 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         return handler
 
     ui.separator()
-    # Compact honesty line — the gross / top-of-book disclosure as ONE short line. Single-sourced.
-    ui.label(glossary.KNOWN_LIMIT_LINE).classes("text-xs text-gray-500")
 
     def _section_header(title: str, subtitle: str | None = None) -> Any:
         """A section title row (the per-table 'Columns' button is added into it after the table exists) plus
@@ -644,24 +650,32 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                        pagination=10).props("dense").classes("w-full overflow-x-auto opp-sel")
     blocked.on_select(_on_select(blocked))
 
-    # TWO distinct, collapsed watchlist sections — opposite shapes, kept separate (title carries a live
-    # count; each shows only when its switch is on). A bet with capped loss vs a flat guaranteed loss.
-    rb_expansion = ui.expansion("Bounded-Loss Bets — capped downside, convex upside", value=False).classes("w-full mt-2")
+    # TWO distinct, collapsed watchlist sections — opposite shapes, kept separate. Each uses a custom header
+    # slot so the "Columns" button sits beside the title (added after the table exists); the title label is
+    # kept in a ref so rerender can update its live count. A bet with capped loss vs a flat guaranteed loss.
+    def _expansion_header(title: str) -> tuple[Any, Any, Any]:
+        exp = ui.expansion(value=False).classes("w-full mt-2")
+        with exp.add_slot("header"), ui.row().classes("items-center w-full gap-2"):
+            ui.icon("unfold_more").classes("text-grey")
+            title_label = ui.label(title).classes("text-lg font-bold")
+            ui.space()
+            cols_holder = ui.row().classes("items-center")     # Columns button dropped in here later
+        return exp, title_label, cols_holder
+
+    rb_expansion, rb_title, rb_cols_row = _expansion_header("Bounded-Loss Bets — capped downside, convex upside")
     with rb_expansion:
         ui.label("Buy the broader YES + the deeper NO for just over 100¢: your loss is capped at the small "
                  "overpay, with convex upside (the broader-but-not-deeper outcome pays about +$1). A bet, NOT "
                  "an edge — gross of fees.").classes("text-xs text-gray-500")
-        rb_cols_row = ui.row().classes("justify-end w-full")
         rb_table = ui.table(columns=_RISK_COLUMNS, rows=[], row_key="opportunity_id", selection="single",
                             pagination=10).props("dense").classes("w-full overflow-x-auto opp-sel")
     rb_table.on_select(_on_select(rb_table))
 
-    nm_expansion = ui.expansion("Overpriced Books — flat guaranteed loss (watch-only)", value=False).classes("w-full")
+    nm_expansion, nm_title, nm_cols_row = _expansion_header("Overpriced Books — flat guaranteed loss (watch-only)")
     with nm_expansion:
         ui.label("A complete (MECE) book priced just OVER its payout floor: it pays the floor in every "
                  "outcome, so buying the whole bundle is a flat, guaranteed gross loss. Watch-only, in case a "
                  "leg gets mispriced.").classes("text-xs text-gray-500")
-        nm_cols_row = ui.row().classes("justify-end w-full")
         nm_table = ui.table(columns=_NEARMISS_COLUMNS, rows=[], row_key="opportunity_id", selection="single",
                             pagination=10).props("dense").classes("w-full overflow-x-auto opp-sel")
     nm_table.on_select(_on_select(nm_table))
@@ -675,6 +689,15 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         _t.add_slot("body-cell-caveat", _CAVEAT_CELL_SLOT)  # compact severity chip
     rb_table.add_slot("body-cell-caveat", _CAVEAT_CELL_SLOT)
     nm_table.add_slot("body-cell-note", _NOTE_CELL_SLOT)    # readable wrapping note
+    # Thousands-separated numeric cells (display only; numeric sort preserved). 'edge' is handled above.
+    for _t in (actionable, review, blocked):
+        for _f in ("roi", "units", "profit", "net_edge", "net_profit", "fees"):
+            _t.add_slot(f"body-cell-{_f}", _num_cell_slot(_f))
+    for _f in ("cost", "max_loss", "max_profit", "ratio", "roc", "spread_over_parent",
+               "spread_over_child", "parent_outright", "child_outright", "display_spread"):
+        rb_table.add_slot(f"body-cell-{_f}", _num_cell_slot(_f))
+    for _f in ("cost", "overpay"):
+        nm_table.add_slot(f"body-cell-{_f}", _num_cell_slot(_f))
     # Compact empty states: a shown-but-empty section renders a small message row, not a bare grid.
     for _t, _msg in ((actionable, "No actionable opportunities in the current filters."),
                      (review, "No review-required opportunities in the current filters."),
@@ -705,6 +728,8 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
     with ui.expansion("Recently Actionable — recently left the set").classes("w-full"):
         backlog = ui.table(columns=_BACKLOG_COLUMNS, rows=[], row_key="name",
                            pagination=10).props("dense").classes("w-full overflow-x-auto")
+    for _f in ("mins", "last_edge"):
+        backlog.add_slot(f"body-cell-{_f}", _num_cell_slot(_f))
 
     # Market telemetry — snapshot CONTEXT (depth, tightness, activity, volatility), NOT opportunity signals.
     # Collapsed, neutral grey; liquidity lives here now. Populated in rerender (snapshot-scoped).
@@ -949,8 +974,8 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         nmv = vm.near_miss_view(view, max_over_c=int(nm_max_over.value or 0)) if include_nm else []
         rb_table.rows = [vm.risk_budget_row(o, new_ids, chg, flash) for o in rbv]
         nm_table.rows = [vm.near_miss_row(o, new_ids, chg, flash) for o in nmv]
-        rb_expansion.set_text(f"Bounded-Loss Bets — capped downside, convex upside ({len(rbv)})")
-        nm_expansion.set_text(f"Overpriced Books — flat guaranteed loss, watch-only ({len(nmv)})")
+        rb_title.set_text(f"Bounded-Loss Bets — capped downside, convex upside ({len(rbv):,})")
+        nm_title.set_text(f"Overpriced Books — flat guaranteed loss, watch-only ({len(nmv):,})")
         rb_expansion.set_visibility(include_rb)
         nm_expansion.set_visibility(include_nm)
         rb_max_loss.set_enabled(include_rb)
@@ -975,14 +1000,15 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         for _col in (liq_sports, liq_contracts, liq_tightest, liq_traded):
             _col.clear()
         with liq_sports:
-            for _lbl, _depth in panel.get("top_sports", []):
-                ui.label(f"{_lbl}: {_depth} contracts").classes("text-sm text-gray-600")
+            for _lbl, _depth, _buy, _sell, _dm in panel.get("top_sports", []):
+                ui.label(f"{_lbl} — {_depth:,} contracts · buy ${_buy:,} · sell ${_sell:,} · "
+                         f"depth×mid ${_dm:,}").classes("text-sm text-gray-600")
         with liq_contracts:
             for _lbl, _size, _spread in panel.get("top_contracts", []):
-                ui.label(f"{_lbl} — {_size} @ touch · {_spread}¢").classes("text-sm text-gray-600")
+                ui.label(f"{_lbl} — {_size:,} @ touch · {_spread:,}¢").classes("text-sm text-gray-600")
         with liq_tightest:
             for _lbl, _spread, _depth in panel.get("tightest", []):
-                ui.label(f"{_lbl} — {_spread}¢ spread · {_depth} deep").classes("text-sm text-gray-600")
+                ui.label(f"{_lbl} — {_spread:,}¢ spread · {_depth:,} deep").classes("text-sm text-gray-600")
         with liq_traded:
             for _lbl, _vol in panel.get("most_traded", []):
                 ui.label(f"{_lbl} — {_vol:,} vol").classes("text-sm text-gray-600")
@@ -1023,7 +1049,12 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         scan_btn.disable()        # stale-while-scanning: only the Scan button is disabled; filters keep working
         n = ui.notification("Scanning (core series)…", spinner=True, timeout=None, position="top-right")
         try:
-            st = await run.io_bound(engine.run_scan_now)    # NON-force (PR S3); network I/O off the event loop
+            # Normally NON-force (respects the TTL/budget-cooldown anti-hammer guards). BUT if the snapshot is
+            # already STALE, a non-force click would be skipped during cooldown and leave it stale — so a
+            # stale refresh FORCES a fresh fetch (owner-requested; scoped exception to the non-force default).
+            force = bool((engine.coverage() or {}).get("stale"))
+            st = await run.io_bound(engine.run_scan_now, force=force)   # network I/O off the event loop
+            await reload_data()                              # surface the new snapshot immediately for this client
             await reload_data()                              # surface the new snapshot immediately for this client
             status = st.get("status")
             if status == "done":

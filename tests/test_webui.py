@@ -277,9 +277,12 @@ def test_liquidity_panel_aggregates_ranks_tightest_and_most_traded():
         _liq_contract("KXATPMATCH", "Empty", 99, 99, 0, bid_c=0, ask_c=100),    # excluded: empty 0/100 book
     ]
     panel = vm.liquidity_panel(cs, n=5)
-    # Per-sport depth summed: Tennis 80+50=130 (top), Soccer 30. Top contracts by thinner-side depth desc.
-    assert panel["top_sports"][0] == ("Tennis", 130)
-    assert ("Soccer (World Cup)", 30) in panel["top_sports"]
+    # Per-sport: (label, depth, buyable$, sellable$, depth×mid$). Tennis = Alcaraz(80/100 @42/40)+Sinner
+    # (50/50 @41/40): depth 130; buy Σ ask_sz×ask = 80*42+50*41 = 5410¢ → $54; sell Σ bid_sz×bid =
+    # 100*40+50*40 = 6000¢ → $60; depth×mid = 80*41+50*40.5 = 5305¢ → $53. Soccer (Spain 200/30 @45/40):
+    # depth 30; buy 30*45=1350→$14; sell 200*40=8000→$80; depth×mid 30*42.5=1275→$13.
+    assert panel["top_sports"][0] == ("Tennis", 130, 54, 60, 53)
+    assert ("Soccer (World Cup)", 30, 14, 80, 13) in panel["top_sports"]
     assert [c[1] for c in panel["top_contracts"]] == [80, 50, 30]
     assert panel["top_contracts"][0][0].startswith("Alcaraz") and panel["top_contracts"][0][2] == 2
     # Tightest = smallest spread first (Sinner, 1¢); most traded = highest volume first (Sinner, 500).

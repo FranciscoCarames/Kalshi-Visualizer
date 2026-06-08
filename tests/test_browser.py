@@ -114,14 +114,14 @@ async def test_detail_and_diagnostics_sections_render(user: User, seeded_db) -> 
 # --- UX defaults (PR S5) --------------------------------------------------------------
 @pytest.mark.nicegui_main_file(MAIN)
 async def test_ux_defaults_render(user: User, seeded_db) -> None:
-    """The Dark mode toggle, the compact honesty line, and the Blocked toggle (hidden by default) render. The
-    selected-row highlight + the resolution-criteria expansion need a real row-click selection, which the
-    headless User can't drive — manual checks (docs/DEPLOYMENT.md "Before hosting")."""
+    """The Dark mode toggle and the Blocked toggle (hidden by default) render. The selected-row highlight +
+    the resolution-criteria expansion need a real row-click selection, which the headless User can't drive —
+    manual checks (docs/DEPLOYMENT.md "Before hosting")."""
     _seed(seeded_db, [_actionable_opp()],
           frames=[{"sport": "tennis", "frame_type": "contracts", "schema_version": 1, "rows": _contracts()}])
     await user.open("/")
     await user.should_see("Dark mode")                       # PR S5 theme toggle (now in the settings dialog)
-    await user.should_see("fees / depth / collateral not fully modeled")  # PR A compact honesty line
+    await user.should_not_see("fees / depth / collateral not fully modeled")  # disclosure sentence removed
     await user.should_see("Blocked")                         # toggle still present (default off)
 
 

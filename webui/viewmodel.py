@@ -669,10 +669,14 @@ def liquidity_panel(contracts: Iterable[dict[str, Any]] | None, n: int = 5) -> d
     signal). Only `active`, genuinely two-sided books (bid>0, ask<100, both sizes>0) count, and a market's
     tradable liquidity = `min(bid_size, ask_size)` (the depth on the thinner side), tiebroken by a tighter
     spread then volume. Per-sport depth is the SUM of that across the sport's qualifying markets (UNKNOWN
-    sport excluded). Returns ``{top_sports: [(label, depth)…], top_contracts: [(label, depth, spread¢)…],
-    tightest: [(label, spread¢, depth)…], most_traded: [(label, volume)…]}`` (volume is the documented proxy
-    for transaction activity — Kalshi exposes no transaction count). All lists empty/None-safe."""
-    per_sport: dict[str, float] = {}
+    sport excluded). Returns ``{top_sports: [(label, depth, buyable$, sellable$, depth×mid$)…],
+    top_contracts: [(label, depth, spread¢)…], tightest: [(label, spread¢, depth)…],
+    most_traded: [(label, volume)…]}`` (volume is the documented proxy for transaction activity — Kalshi
+    exposes no transaction count). All lists empty/None-safe."""
+    # Per sport: summed thinner-side depth (contracts) + three executable notional totals at the touch (in
+    # cents → dollars): buyable = Σ ask_size×ask (cost to lift the offers), sellable = Σ bid_size×bid
+    # (proceeds to hit the bids), depth×mid = Σ min-side×midpoint.
+    per_sport: dict[str, dict[str, float]] = {}
     rows: list[tuple[float, float, float, str]] = []
     for c in contracts or []:
         if str(c.get("status") or "") != "active":
@@ -687,14 +691,20 @@ def liquidity_panel(contracts: Iterable[dict[str, Any]] | None, n: int = 5) -> d
         depth = min(bid_sz, ask_sz)
         cfg = sports.sport_for_series(c.get("series"))
         if cfg.sport_id != "unknown":
-            per_sport[cfg.label] = per_sport.get(cfg.label, 0.0) + depth
+            agg = per_sport.setdefault(cfg.label, {"depth": 0.0, "buy_c": 0.0, "sell_c": 0.0, "dm_c": 0.0})
+            agg["depth"] += depth
+            agg["buy_c"] += ask_sz * ask_c                       # buyable notional (lift the offers)
+            agg["sell_c"] += bid_sz * bid_c                      # sellable notional (hit the bids)
+            agg["dm_c"] += depth * (bid_c + ask_c) / 2           # depth × midpoint
         rows.append((depth, spread, _num_or_none(c.get("volume")) or 0, _contract_label(c)))
-    top_sports = sorted(per_sport.items(), key=lambda kv: (-kv[1], kv[0]))[:n]
+    top_sports = sorted(per_sport.items(), key=lambda kv: (-kv[1]["depth"], kv[0]))[:n]
     by_depth = sorted(rows, key=lambda r: (-r[0], r[1], -r[2], r[3]))       # depth desc, spread asc, vol desc
     by_spread = sorted(rows, key=lambda r: (r[1], -r[0], r[3]))             # spread asc (tightest), depth desc
     by_volume = sorted(rows, key=lambda r: (-r[2], -r[0], r[3]))            # volume desc (most traded)
     return {
-        "top_sports": [(label, int(depth)) for label, depth in top_sports],
+        # (label, depth contracts, buyable $, sellable $, depth×mid $)
+        "top_sports": [(label, int(a["depth"]), round(a["buy_c"] / 100), round(a["sell_c"] / 100),
+                        round(a["dm_c"] / 100)) for label, a in top_sports],
         "top_contracts": [(label, int(depth), int(spread)) for depth, spread, _v, label in by_depth[:n]],
         "tightest": [(label, int(spread), int(depth)) for depth, spread, _v, label in by_spread[:n]],
         "most_traded": [(label, int(vol)) for _d, _s, vol, label in by_volume[:n]],
@@ -784,13 +794,13 @@ def scope_banner(cov: dict[str, Any] | None, tz: str = "UTC", *, stale_after: fl
     threshold = config.STALE_AFTER_SECONDS if stale_after is None else stale_after
     stale = "  ⚠ STALE" if data.is_stale(age, threshold) else ""
     parts = [f"Data {when} · age {int(age) if isinstance(age, (int, float)) else '—'}s{stale}",
-             f"{cov.get('opportunities', 0)} opportunities"]
+             f"{int(cov.get('opportunities', 0)):,} opportunities"]
     if cov.get("meta_present"):
-        parts.append(f"{cov.get('scanned', 0)} series · {cov.get('failed', 0)} failed")
+        parts.append(f"{int(cov.get('scanned', 0)):,} series · {int(cov.get('failed', 0)):,} failed")
         cs, ct = cov.get("contracts_scanned"), cov.get("checks_tested")
-        parts.append(f"{cs or 0} contracts scanned · {ct or 0} checks tested")
+        parts.append(f"{int(cs or 0):,} contracts scanned · {int(ct or 0):,} checks tested")
         if cov.get("kalshi_requests") is not None:
-            parts.append(f"{cov['kalshi_requests']} Kalshi requests")
+            parts.append(f"{int(cov['kalshi_requests']):,} Kalshi requests")
     else:
         parts.append("no coverage meta")
     return " · ".join(parts)
