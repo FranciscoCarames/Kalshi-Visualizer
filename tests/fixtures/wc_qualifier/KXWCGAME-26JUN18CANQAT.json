@@ -1,0 +1,77 @@
+{
+  "_fixture_meta": {
+    "captured": "2026-06-08",
+    "ticker": "KXWCGAME-26JUN18CANQAT",
+    "source": "probe_wc_qualifier_setups.py live probe",
+    "note": "Group B 3-way game (Home/Away/Tie); soccer_team UUID per side"
+  },
+  "event_ticker": "KXWCGAME-26JUN18CANQAT",
+  "title": "Canada vs Qatar",
+  "mutually_exclusive": true,
+  "product_metadata": {
+    "competition": "FIFA World Cup",
+    "competition_scope": "Game"
+  },
+  "markets": [
+    {
+      "ticker": "KXWCGAME-26JUN18CANQAT-CAN",
+      "yes_sub_title": "Canada",
+      "strike_type": "structured",
+      "custom_strike": {
+        "soccer_team": "49eceb63-2069-4270-9c74-09c65a854c1b"
+      },
+      "status": "active",
+      "title": "Canada vs Qatar Winner?",
+      "yes_bid_dollars": "0.7400",
+      "yes_ask_dollars": "0.7500",
+      "no_bid_dollars": "0.2500",
+      "no_ask_dollars": "0.2600",
+      "last_price_dollars": "0.7500",
+      "yes_bid_size_fp": "236.84",
+      "yes_ask_size_fp": "3500.01",
+      "volume_fp": "5404.42",
+      "open_interest_fp": "4089.12",
+      "rules_primary": "If Canada wins the Canada vs Qatar professional FIFA World Cup soccer game originally scheduled for Jun 18, 2026 after 90 minutes plus stoppage time (does not include extra time or penalties), then the market resolves to Yes."
+    },
+    {
+      "ticker": "KXWCGAME-26JUN18CANQAT-QAT",
+      "yes_sub_title": "Qatar",
+      "strike_type": "structured",
+      "custom_strike": {
+        "soccer_team": "9f9b25f7-30ad-4a3b-9433-470640d98c6d"
+      },
+      "status": "active",
+      "title": "Canada vs Qatar Winner?",
+      "yes_bid_dollars": "0.0800",
+      "yes_ask_dollars": "0.0900",
+      "no_bid_dollars": "0.9100",
+      "no_ask_dollars": "0.9200",
+      "last_price_dollars": "0.0900",
+      "yes_bid_size_fp": "3706.76",
+      "yes_ask_size_fp": "16499.76",
+      "volume_fp": "6131.56",
+      "open_interest_fp": "5855.89",
+      "rules_primary": "If Qatar wins the Canada vs Qatar professional FIFA World Cup soccer game originally scheduled for Jun 18, 2026 after 90 minutes plus stoppage time (does not include extra time or penalties), then the market resolves to Yes."
+    },
+    {
+      "ticker": "KXWCGAME-26JUN18CANQAT-TIE",
+      "yes_sub_title": "Tie",
+      "strike_type": "structured",
+      "custom_strike": {
+        "soccer_team": "111193d4-9b1f-4bd8-ab7c-9de252737f05"
+      },
+      "status": "active",
+      "title": "Canada vs Qatar Winner?",
+      "yes_bid_dollars": "0.1600",
+      "yes_ask_dollars": "0.1800",
+      "no_bid_dollars": "0.8200",
+      "no_ask_dollars": "0.8400",
+      "last_price_dollars": "0.1800",
+      "yes_bid_size_fp": "6410.00",
+      "yes_ask_size_fp": "22505.50",
+      "volume_fp": "1185.37",
+      "open_interest_fp": "1101.16",
+      "rules_primary": "If Tie wins the Canada vs Qatar professional FIFA World Cup soccer game originally scheduled for Jun 18, 2026 after 90 minutes plus stoppage time (does not include extra time or penalties), then the market resolves to Yes."
+    }
+  ]
+}

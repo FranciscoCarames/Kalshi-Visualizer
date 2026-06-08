@@ -1,0 +1,77 @@
+{
+  "_fixture_meta": {
+    "captured": "2026-06-08",
+    "ticker": "KXWCGAME-26JUN12CANBIH",
+    "source": "probe_wc_qualifier_setups.py live probe",
+    "note": "Group B 3-way game (Home/Away/Tie); soccer_team UUID per side"
+  },
+  "event_ticker": "KXWCGAME-26JUN12CANBIH",
+  "title": "Canada vs Bosnia and Herzegovina",
+  "mutually_exclusive": true,
+  "product_metadata": {
+    "competition": "FIFA World Cup",
+    "competition_scope": "Game"
+  },
+  "markets": [
+    {
+      "ticker": "KXWCGAME-26JUN12CANBIH-CAN",
+      "yes_sub_title": "Canada",
+      "strike_type": "structured",
+      "custom_strike": {
+        "soccer_team": "49eceb63-2069-4270-9c74-09c65a854c1b"
+      },
+      "status": "active",
+      "title": "Canada vs Bosnia and Herzegovina Winner?",
+      "yes_bid_dollars": "0.5400",
+      "yes_ask_dollars": "0.5500",
+      "no_bid_dollars": "0.4500",
+      "no_ask_dollars": "0.4600",
+      "last_price_dollars": "0.5500",
+      "yes_bid_size_fp": "1773.12",
+      "yes_ask_size_fp": "76864.96",
+      "volume_fp": "51382.74",
+      "open_interest_fp": "48613.61",
+      "rules_primary": "If Canada wins the Canada vs Bosnia and Herzegovina professional FIFA World Cup soccer game originally scheduled for Jun 12, 2026 after 90 minutes plus stoppage time (does not include extra time or penalties), then the market resolves to Yes."
+    },
+    {
+      "ticker": "KXWCGAME-26JUN12CANBIH-BIH",
+      "yes_sub_title": "Bosnia and Herzegovina",
+      "strike_type": "structured",
+      "custom_strike": {
+        "soccer_team": "4e8b1db6-34f6-4575-87ff-b64aaf80672f"
+      },
+      "status": "active",
+      "title": "Canada vs Bosnia and Herzegovina Winner?",
+      "yes_bid_dollars": "0.2000",
+      "yes_ask_dollars": "0.2100",
+      "no_bid_dollars": "0.7900",
+      "no_ask_dollars": "0.8000",
+      "last_price_dollars": "0.2100",
+      "yes_bid_size_fp": "6283.48",
+      "yes_ask_size_fp": "66544.29",
+      "volume_fp": "52855.73",
+      "open_interest_fp": "46892.10",
+      "rules_primary": "If Bosnia and Herzegovina wins the Canada vs Bosnia and Herzegovina professional FIFA World Cup soccer game originally scheduled for Jun 12, 2026 after 90 minutes plus stoppage time (does not include extra time or penalties), then the market resolves to Yes."
+    },
+    {
+      "ticker": "KXWCGAME-26JUN12CANBIH-TIE",
+      "yes_sub_title": "Tie",
+      "strike_type": "structured",
+      "custom_strike": {
+        "soccer_team": "111193d4-9b1f-4bd8-ab7c-9de252737f05"
+      },
+      "status": "active",
+      "title": "Canada vs Bosnia and Herzegovina Winner?",
+      "yes_bid_dollars": "0.2500",
+      "yes_ask_dollars": "0.2600",
+      "no_bid_dollars": "0.7400",
+      "no_ask_dollars": "0.7500",
+      "last_price_dollars": "0.2600",
+      "yes_bid_size_fp": "49082.57",
+      "yes_ask_size_fp": "21208.33",
+      "volume_fp": "8563.53",
+      "open_interest_fp": "8098.50",
+      "rules_primary": "If Tie wins the Canada vs Bosnia and Herzegovina professional FIFA World Cup soccer game originally scheduled for Jun 12, 2026 after 90 minutes plus stoppage time (does not include extra time or penalties), then the market resolves to Yes."
+    }
+  ]
+}
