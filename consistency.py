@@ -714,6 +714,11 @@ def build_checks(df: pd.DataFrame, *, risk_budget_max_loss_c: int = 0) -> pd.Dat
             rel = "containment_adjacent"
             oid = opportunity_id(rel, player_key, _tournament, child_node, parent_node)
             if child is None or parent is None:
+                # An optional side-branch leaf (e.g. soccer "Win group") is opportunistic, not a required
+                # rung — when it or its anchor is absent we skip the pair silently rather than emit
+                # MISSING_LAYER noise (the leaf may simply not be fetched). Required rungs still report.
+                if child_node in ladder.optional_children:
+                    continue
                 missing = child_node if child is None else parent_node
                 comp = {
                     "status": "MISSING_LAYER",

@@ -479,13 +479,16 @@ def _wcround(event_ticker, ticker, bid, ask, team="Brazil", uuid="u-bra"):
 
 def test_soccer_registered_and_exact_only_ownership():
     assert {"tennis", "nba", "wnba", "golf", "soccer"} <= {c.sport_id for c in sports.all_sports()}
-    # Exactly the four owned tickers resolve to soccer: 3-way game, reach-stage, group-qualifier (Reach
-    # RO32), and the dormant tournament-outright KXWC (a bare prefix never shadows KXWCGAME/KXWCROUND/etc.).
-    for tk in ("KXWCGAME", "KXWCROUND", "KXWCGROUPQUAL", "KXWC"):
+    # The owned tickers resolve to soccer: 3-way game, reach-stage, group-qualifier (Reach RO32), group-
+    # winner (the "Win group" leaf), and the LIVE tournament outright KXMENWORLDCUP (a bare prefix never
+    # shadows KXWCGAME/KXWCROUND/etc.).
+    for tk in ("KXWCGAME", "KXWCROUND", "KXWCGROUPQUAL", "KXWCGROUPWIN", "KXMENWORLDCUP"):
         assert sports.sport_for_series(tk).sport_id == "soccer", tk
     # Field-shaped + not-live series must NOT be owned by soccer (resolve to unknown). KXWCGROUPWINNER
-    # (group winner) stays unknown — distinct from the owned KXWCGROUPQUAL (group qualifier = Reach RO32).
-    for tk in ("KXWCSTAGE", "KXWCGROUPWINNER", "KXFIFAGAME", "KXFIFAADVANCE", "KXWCGOALLEADER"):
+    # ("Group to Win") is a distinct contract; KXWC is the retired dormant guess; KXMWORLDCUP is a dead
+    # lookalike with no open event (the live outright is KXMENWORLDCUP).
+    for tk in ("KXWCSTAGE", "KXWCGROUPWINNER", "KXFIFAGAME", "KXFIFAADVANCE", "KXWCGOALLEADER",
+               "KXWC", "KXMWORLDCUP"):
         assert sports.sport_for_series(tk).sport_id == "unknown", tk
 
 
@@ -504,16 +507,30 @@ def test_soccer_game_not_laddered_and_reach_stage_nodes():
         assert a.family == "advance" and a.ladder_node == node, tk
 
 
-def test_soccer_winner_rung_dormant_outright():
-    # The tournament outright (KXWC) is wired but not yet live: it classifies as the deepest ladder rung
-    # "Win the World Cup" (node == display label), ready to populate the moment the series lists.
-    win = sports.SOCCER.classify("KXWC", {"ticker": "KXWC-26-BRA", "title": "x"})
+def test_soccer_winner_rung_live_outright():
+    # The LIVE tournament outright (KXMENWORLDCUP-26) classifies as the deepest ladder rung "Win the World
+    # Cup" (node == display label). The dead lookalike KXMWORLDCUP and the retired dormant guess KXWC are
+    # NOT selected — a regression guard against re-introducing a ticker with no open event.
+    win = sports.SOCCER.classify("KXMENWORLDCUP", {"ticker": "KXMENWORLDCUP-26-BRA", "title": "x"})
     assert win.family == "winner" and win.ladder_node == "Win the World Cup"
     assert sports.SOCCER.winner_label == "Win the World Cup"
+    assert sports.sport_for_series("KXMWORLDCUP").sport_id == "unknown"
+    assert sports.sport_for_series("KXWC").sport_id == "unknown"
     # The ladder spans all six rungs, deepest edge anchored on the winner node.
     assert sports.SOCCER.ladder.node_order[0] == "Reach Round of 32"
     assert sports.SOCCER.ladder.node_order[-1] == "Win the World Cup"
     assert ("Win the World Cup", "Reach Finals") in sports.SOCCER.ladder.adjacent_pairs
+
+
+def test_soccer_group_winner_is_transitivity_excluded_leaf():
+    # "Win group" (KXWCGROUPWIN) is a side-branch leaf: ⊆ "Reach Round of 32" only, and deliberately NOT in
+    # node_order so the transitive bridge never linearises it against the incomparable deeper rungs.
+    win = sports.SOCCER.classify("KXWCGROUPWIN", {"ticker": "KXWCGROUPWIN-26L-PAN", "title": "Group L Winner"})
+    assert win.family == "group_winner" and win.ladder_node == "Win group"
+    assert win.eligible_for_ladder_checks is True
+    assert "Win group" not in sports.SOCCER.ladder.node_order
+    assert ("Win group", "Reach Round of 32") in sports.SOCCER.ladder.adjacent_pairs
+    assert "Win group" in sports.SOCCER.ladder.optional_children
 
 
 def test_soccer_round_of_32_joins_full_ladder():
@@ -531,6 +548,71 @@ def test_soccer_round_of_32_joins_full_ladder():
     row = next(c for _, c in checks.iterrows()
                if c["chain"] == "Reach Round of 16 ≤ Reach Round of 32")
     assert row["status"] == "CLEAN"                                        # deeper (RO16 .51) ≤ broader (RO32 .89)
+
+
+def _wc_group_rows(win_bid, win_ask, qual_bid, qual_ask, *, team="Brazil", uuid="u-bra"):
+    """One team's Win-group (KXWCGROUPWIN) + group-qualifier (KXWCGROUPQUAL = Reach RO32) contracts."""
+    return (data.build_contracts("KXWCGROUPWIN",
+                [_wcround("KXWCGROUPWIN-26L", "KXWCGROUPWIN-26L-BRA", win_bid, win_ask, team, uuid)])
+            + data.build_contracts("KXWCGROUPQUAL",
+                [_wcround("KXWCGROUPQUAL-26L", "KXWCGROUPQUAL-26L-BRA", qual_bid, qual_ask, team, uuid)]))
+
+
+def test_soccer_win_group_leaf_contains_qualify():
+    # "Win group" ⊆ "Reach Round of 32" (qualify). Ordered prices (deeper Win group ≤ broader qualify) → CLEAN.
+    rows = _wc_group_rows("0.30", "0.32", "0.88", "0.90")
+    checks = consistency.build_checks(pd.DataFrame(rows))
+    row = next(c for _, c in checks.iterrows() if c["chain"] == "Win group ≤ Reach Round of 32")
+    assert row["status"] == "CLEAN"
+    # Win group priced ABOVE qualify (firm child bid > parent ask) → EXECUTABLE_VIOLATION.
+    rows = _wc_group_rows("0.60", "0.62", "0.50", "0.52")
+    checks = consistency.build_checks(pd.DataFrame(rows))
+    row = next(c for _, c in checks.iterrows() if c["chain"] == "Win group ≤ Reach Round of 32")
+    assert row["status"] == "EXECUTABLE_VIOLATION"
+
+
+def test_soccer_win_group_never_transitively_linearised():
+    # A team with Win group + Reach RO16 but NO qualifier rung between them: the transitive bridge must NOT
+    # compare "Win group" to "Reach Round of 16" (they are incomparable — a group winner can lose in the R32).
+    rows = (data.build_contracts("KXWCGROUPWIN",
+                [_wcround("KXWCGROUPWIN-26L", "KXWCGROUPWIN-26L-BRA", "0.60", "0.62")])
+            + data.build_contracts("KXWCROUND",
+                [_wcround("KXWCROUND-26RO16", "KXWCROUND-26RO16-BRA", "0.40", "0.42")]))
+    checks = consistency.build_checks(pd.DataFrame(rows))
+    chains = {c["chain"] for _, c in checks.iterrows()}
+    assert not any("Win group" in ch and "Round of 16" in ch for ch in chains)
+
+
+def test_soccer_win_group_optional_leaf_no_missing_layer():
+    # A team with only the qualifier rung (Win group NOT fetched) must NOT emit a MISSING_LAYER for the
+    # optional "Win group" leaf — it is opportunistic, not a required rung.
+    rows = data.build_contracts("KXWCGROUPQUAL",
+                [_wcround("KXWCGROUPQUAL-26L", "KXWCGROUPQUAL-26L-BRA", "0.88", "0.90")])
+    checks = consistency.build_checks(pd.DataFrame(rows))
+    missing = [c for _, c in checks.iterrows()
+               if c["status"] == "MISSING_LAYER" and "Win group" in (c["chain"] or "")]
+    assert missing == []
+
+
+def test_soccer_winner_outright_is_subpenny_display_only():
+    # KXMENWORLDCUP prices in deci-cent (e.g. 0.1620 = 16.2¢) → flagged `subpenny`, so consistency drops it
+    # from integer-cent ladder checks: the "Win the World Cup" rung is display-only until it is whole-cent.
+    rows = data.build_contracts("KXMENWORLDCUP", [{
+        "event_ticker": "KXMENWORLDCUP-26", "title": "2026 Men's World Cup Winner",
+        "product_metadata": {"competition": "2026 FIFA World Cup"},
+        "markets": [{"ticker": "KXMENWORLDCUP-26-FR", "yes_sub_title": "France",
+                     "custom_strike": {"soccer_team": "u-fra"}, "price_level_structure": "deci_cent",
+                     "yes_bid_dollars": "0.1610", "yes_ask_dollars": "0.1620", "last_price_dollars": "0.1620",
+                     "yes_bid_size_fp": "100", "yes_ask_size_fp": "100", "status": "active", "title": "x"}]}])
+    assert rows[0]["subpenny"] is True and rows[0]["ladder_node"] == "Win the World Cup"
+
+
+def test_soccer_group_winner_only_expected_nodes_empty():
+    # A player with ONLY a group-winner row has no linear reach ladder → expected_nodes returns [] (the
+    # gate stays kind in advance/winner; group_winner never produces an all-missing linear ladder).
+    rows = data.build_contracts("KXWCGROUPWIN",
+                [_wcround("KXWCGROUPWIN-26L", "KXWCGROUPWIN-26L-BRA", "0.30", "0.32")])
+    assert consistency.expected_nodes(rows) == []
 
 
 def test_soccer_tie_is_non_participant_with_per_event_key():
