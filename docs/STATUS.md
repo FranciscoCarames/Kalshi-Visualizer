@@ -21,12 +21,20 @@ a small trader group.
   ladder + match-alignment classifier (`consistency.py`); the dutch-book / MECE detector
   (`dutchbook.py` — 2-way, soccer 3-way, tournament-winner field); and the synthetic exact-score bundle
   detector (`synthetic_bundle.py`, review-only).
-- **9 sports:** tennis, NBA, WNBA, golf, soccer, MLB, NHL, motorsport (F1/NASCAR/IndyCar/MotoGP), and
-  NFL. Adding another is one `register(SportConfig(...))` call. NFL ships the core futures ladder (Reach
-  Playoffs ⊇ Win Conference ⊇ Win Super Bowl), the `KXSB` winner-field overround, and the `KXNFLGAME`
-  full-game dutch book gated on a fixed-sum tie proof (`game_mece_by_shape=False` +
+- **10 sports:** tennis, NBA, WNBA, golf, soccer, MLB, NHL, motorsport (F1/NASCAR/IndyCar/MotoGP), NFL,
+  and esports. Adding another is one `register(SportConfig(...))` call. NFL ships the core futures ladder
+  (Reach Playoffs ⊇ Win Conference ⊇ Win Super Bowl), the `KXSB` winner-field overround, and the
+  `KXNFLGAME` full-game dutch book gated on a fixed-sum tie proof (`game_mece_by_shape=False` +
   `dutchbook._proves_fixed_sum`); NFL win totals / exact wins / division winners / quarter-half /
   spreads / totals / props / awards / draft are deliberately out of scope (classified `other`).
+- **Esports (v1, curated):** CS2/LoL/Valorant/Dota2/CoD/R6/Overwatch/… via a curated exact-ownership
+  allow-list (`series_prefixes=()`), identity `custom_strike.esports_competitor`. Ships the per-game
+  (`KX*GAME`) + per-map (`KX*MAP`) two-way dutch books — both draw-free, so `game_mece_by_shape=True`
+  leaves them ungated — and the per-title tournament-winner field overround (`KXCS2`, …). No containment
+  ladder in v1. Total-maps, qualifiers, props/MVP/rank/roster, legacy CSGO, dupes, the test series, and
+  event-specific majors are excluded (`other`/unowned). The allow-list is **maintained** (esports series
+  churn fast). Deferred to v2: qualifier ladders, opponent action labels, tag-aware (`tags=Esports`)
+  discovery, and `/milestones` match grouping.
 - **Engine behind a typed API.** A SQLite **snapshot store** (`store.py`) persists each scan; a
   cross-sport `scanner.py` produces a unified ranked table; `lifecycle.py` diffs new / changed /
   recently-actionable; a **FastAPI** REST API (`api.py`: `/healthz`, `/readyz`, `/opportunities`,

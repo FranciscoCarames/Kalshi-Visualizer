@@ -6,7 +6,7 @@ Guidance for **Claude Code** working in this repository. Self-contained — read
 
 A small, **read-only NiceGUI trader dashboard** (on FastAPI, via `serve.py`) over live
 [Kalshi](https://kalshi.com) prediction-market data for **tennis (ATP/WTA), NBA, WNBA, golf, soccer,
-MLB, NHL, motorsport (F1/NASCAR/IndyCar/MotoGP), and NFL** — 9 sports. It surfaces **executable
+MLB, NHL, motorsport (F1/NASCAR/IndyCar/MotoGP), NFL, and esports** — 10 sports. It surfaces **executable
 inconsistencies** across a participant's related contracts (a deeper outcome must not price above a
 prerequisite that contains it) and **dutch-book arbitrage** on MECE events, as buy-only opportunities
 (**Buy YES / Buy NO**), ranked Actionable / Review / Blocked with collapsed diagnostics and
@@ -43,6 +43,7 @@ Stanley Cup" / default "Win the tournament").
 | NHL | `hockey_team` UUID | `match` | Reach Playoffs ⊇ Win Conference ⊇ Win Stanley Cup; `KXNHLSERIES` (clean bo7) + `KXNHLGAME` dutch books. Live series wording "1st/2nd Round" → no rung → `UNKNOWN_RELATIONSHIP` |
 | Motorsport | multi-path (driver UUID / team UUID / constructor NAME), role-namespaced `player_key` | `""` | **field sport like golf**; one-winner FIELDS → overround; Top-N/Podium → finishing-position ladder |
 | NFL | `football_team` UUID | `""` | Reach Playoffs (`KXNFLPLAYOFF`) ⊇ Win Conference (`KXNFLAFCCHAMP`/`KXNFLNFCCHAMP`) ⊇ Win Super Bowl (`KXSB` winner field → overround); `KXNFLGAME` games are tie-capable → `game_mece_by_shape=False` gates the dutch book on `dutchbook._proves_fixed_sum` ($0.50-tie / no-tie proof). Props/totals/spreads/division/awards/draft → `other` |
+| Esports | `esports_competitor` UUID | `""` | **field sport, NO ladder (v1)**; `exact_series` curated allow-list across CS2/LoL/Valorant/Dota2/CoD/R6/… `KX*GAME`+`KX*MAP` are 2-way DRAW-FREE → `"game"` family → ungated dutch books (`game_mece_by_shape=True`); per-title winner series (`KXCS2`, …) → overround. `divisions` per title. Totalmaps/qualifiers/props/legacy/dupes/event-majors → `other` (unowned → UNKNOWN, never fetched). Qualifier ladders / opponent labels / tag discovery = v2 |
 
 Identity is `custom_strike.<key>`. Classification is an **allow-list** (`family_fn`), not a bare prefix —
 MLB/NHL/motorsport lookalikes & props → `other`. Motorsport: `field_families`

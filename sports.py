@@ -1250,3 +1250,113 @@ MOTORSPORT = register(SportConfig(
     ladder_fn=_motor_ladder_fn,
     tournament_key_fn=_motor_tournament_key,
 ))
+
+
+# --- Esports (10th sport): per-game / per-map two-way dutch books + tournament-winner field -----------
+# Grounded in a read-only live probe (2026-06-08) of /series (cursor-paginated) + nested-market events;
+# see .kss/topics/sport-generalization/note-20260608-esports-probe.md.
+#   * Identity: custom_strike.esports_competitor (stable UUID) on every game/map/winner market;
+#     yes_sub_title is the team name.
+#   * KX*GAME (match winner) and KX*MAP (map winner) are 2-market mutually_exclusive events and DRAW-FREE
+#     (rules_secondary empty; no tie/$0.50 clause — overtime breaks ties), so the pair is MECE by shape →
+#     game_mece_by_shape stays True (default) and dutchbook._detect_pair books the "game" family ungated
+#     (unlike NFL). Both ride the "game" family. No head-to-head series → match_family="".
+#   * Generic per-title winner series (KXCS2, KXDOTA2, …) carry the live tournament event (e.g.
+#     KXCS2-IEMCOL26 = 32 ME markets) → "winner" family → inherits field_families={"winner"} →
+#     dutchbook._detect_field overround when priced.
+#   * family_fn is a STRICT exact-equality allow-list: total-maps, qualifiers, props/MVP/rank/roster,
+#     legacy CSGO, dupes, the test series, and event-specific majors all resolve to "other" (and, being
+#     unowned, never reach the engine — they resolve to the UNKNOWN sport and are never fetched).
+#     Event-specific futures, qualifier ladders, opponent labels, tag discovery and /milestones grouping
+#     are deliberately v2 (curated coverage, maintained allow-list).
+_ESPORTS_GAME = frozenset({                                     # per-game + per-map two-way "game" family
+    "KXCS2GAME", "KXCS2MAP", "KXLOLGAME", "KXLOLMAP", "KXVALORANTGAME", "KXVALORANTMAP",
+    "KXDOTA2GAME", "KXDOTA2MAP", "KXCODGAME", "KXCODMAP", "KXR6GAME", "KXR6MAP",
+    "KXOWGAME", "KXRLGAME", "KXRLMAP",
+})
+_ESPORTS_WINNER = frozenset({                                   # per-title tournament-winner FIELDS
+    "KXCS2", "KXDOTA2", "KXCOD", "KXVALORANT", "KXR6", "KXOVERWATCH",
+    "KXPUBG", "KXBRAWLSTARS", "KXCROSSFIRE", "KXROCKETLEAGUE", "KXLEAGUEWORLDS",
+})
+_ESPORTS_EXACT = _ESPORTS_GAME | _ESPORTS_WINNER
+_ESPORTS_DEFAULT = (                                            # bounded hosted-scan subset (big titles)
+    "KXCS2GAME", "KXCS2MAP", "KXLOLGAME", "KXLOLMAP", "KXVALORANTGAME", "KXVALORANTMAP",
+    "KXDOTA2GAME", "KXDOTA2MAP", "KXCODGAME", "KXCODMAP", "KXR6GAME", "KXR6MAP",
+    "KXCS2", "KXVALORANT", "KXDOTA2", "KXR6", "KXCOD", "KXLEAGUEWORLDS",
+)
+_ESPORTS_CATEGORY = {
+    "game": "Game / map (not laddered)", "winner": "Tournament winner", "other": "Other",
+}
+
+
+def _esports_family(cfg: SportConfig, series_ticker: str) -> str:
+    t = (series_ticker or "").upper()
+    if t in _ESPORTS_GAME:
+        return "game"                                          # 2-outcome game/map → dutch book
+    if t in _ESPORTS_WINNER:
+        return "winner"                                        # win-the-tournament field → overround
+    return "other"                                             # totalmaps/qualifiers/props/dupes/test/…
+
+
+def _esports_stage(cfg: SportConfig, family: str, market: dict[str, Any]) -> str:
+    return "Champion" if family == "winner" else ""
+
+
+def _esports_node(cfg: SportConfig, family: str, stage: str) -> str | None:
+    return None                                                # no containment ladder in v1
+
+
+def _esports_division(cfg: SportConfig, series_ticker: str) -> str:
+    """UI title split from the series ticker (only owned tickers reach this)."""
+    t = (series_ticker or "").upper()
+    if t.startswith(("KXCS2", "KXCSGO")):
+        return "CS2"
+    if t.startswith(("KXLOL", "KXLEAGUE")):
+        return "LoL"
+    if t.startswith("KXVAL"):
+        return "Valorant"
+    if t.startswith("KXDOTA"):
+        return "Dota 2"
+    if t.startswith("KXCOD"):
+        return "Call of Duty"
+    if t.startswith("KXR6"):
+        return "R6"
+    if t.startswith(("KXOW", "KXOVERWATCH")):
+        return "Overwatch"
+    if t.startswith("KXPUBG"):
+        return "PUBG"
+    if t.startswith(("KXRL", "KXROCKETLEAGUE")):
+        return "Rocket League"
+    if t.startswith("KXBRAWL"):
+        return "Brawl Stars"
+    if t.startswith("KXCROSSFIRE"):
+        return "Crossfire"
+    return ""
+
+
+_ESPORTS_TITLES = ["CS2", "LoL", "Valorant", "Dota 2", "Call of Duty", "R6", "Overwatch",
+                   "PUBG", "Rocket League", "Brawl Stars", "Crossfire"]
+
+ESPORTS = register(SportConfig(
+    sport_id="esports", label="Esports", emoji="\U0001f3ae",
+    series_prefixes=(),                                         # exact-only ownership (curated allow-list)
+    default_series=_ESPORTS_DEFAULT,
+    winner_tickers=frozenset(),
+    identity=IdentityResolver(candidate_paths=("custom_strike.esports_competitor",),
+                              id_label="esports_competitor"),
+    ladder=_EMPTY_LADDER,                                       # no containment ladder in v1
+    category_labels=_ESPORTS_CATEGORY,
+    round_patterns=(),
+    stage_rank={"Champion": 1},
+    ladder_families=frozenset(),                                # nothing laddered
+    match_family="",                                            # field sport — games ride the "game" family
+    divisions={t: [t] for t in _ESPORTS_TITLES} | {"All": list(_ESPORTS_TITLES)},
+    division_label="Title",
+    family_fn=_esports_family,
+    stage_fn=_esports_stage,
+    node_fn=_esports_node,
+    division_fn=_esports_division,
+    exact_series=_ESPORTS_EXACT,
+    # game_mece_by_shape stays True (default): esports game/map markets are draw-free → ungated dutch book.
+    # field_families stays {"winner"} (default): one-winner tournament fields get the overround.
+))
