@@ -225,6 +225,21 @@ _NEARMISS_COLUMNS = [
     {"name": "overpay", "label": "Overpay ¢", "field": "overpay", "align": "center", "sortable": True},
     {"name": "note", "label": "Note", "field": "note", "align": "left"},
 ]
+
+# Qualifier-setup DIAGNOSTIC table (#4/#5). Diagnostic numbers only — NO gross-edge / ROI / size / profit
+# columns (those are blank for a non-executable signal and would imply tradability). The premium-proxy
+# (exact-order) and the ask-support score (game-support) each populate only their own column.
+_QS_COLUMNS = [
+    {"name": "new", "label": "", "field": "new", "align": "center", "required": True},
+    {"name": "sport", "label": "Sport", "field": "sport", "align": "center", "sortable": True},
+    {"name": "name", "label": "Team", "field": "name", "align": "left", "sortable": True},
+    {"name": "setup", "label": "Setup", "field": "setup", "align": "left", "sortable": True},
+    {"name": "qualifier", "label": "Qualify YES ¢", "field": "qualifier", "align": "center", "sortable": True},
+    {"name": "premium", "label": "Top-two premium ¢ (proxy)", "field": "premium", "align": "center", "sortable": True},
+    {"name": "support", "label": "Support score ¢", "field": "support", "align": "center", "sortable": True},
+    {"name": "legs", "label": "Legs", "field": "legs", "align": "center", "sortable": True},
+    {"name": "note", "label": "Note", "field": "note", "align": "left"},
+]
 _BACKLOG_COLUMNS = [
     {"name": "sport", "label": "Sport", "field": "sport", "align": "center", "sortable": True},
     {"name": "name", "label": "Participant / match", "field": "name", "align": "left", "sortable": True},
@@ -676,12 +691,12 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
     blocked.on_select(_on_select(blocked))
 
     # World Cup Qualifier Setups (PR3): a separate, default-on, opt-in DIAGNOSTIC section — kept out of the
-    # strict Actionable/Review/Blocked sections. Empty until the exact-order (#4) and game-support (#5)
-    # detectors land; the existing flagged baskets/spreads still live in their own sections (PR1 badge).
+    # strict Actionable/Review/Blocked sections. Populated by the exact-order (#4) premium-proxy + game-
+    # support (#5) signals; the flagged baskets/spreads still live in their own sections (PR1 badge).
     qs_hdr = _section_header(
         "Qualifier setups — World Cup group-stage diagnostics",
         "Heuristic, gross, top-of-book, settlement-unverified signals — NOT arbitrage and never executable.")
-    qs_table = ui.table(columns=_OPP_COLUMNS, rows=[], row_key="opportunity_id", selection="single",
+    qs_table = ui.table(columns=_QS_COLUMNS, rows=[], row_key="opportunity_id", selection="single",
                         pagination=10).props("dense").classes("w-full overflow-x-auto opp-sel")
     qs_table.on_select(_on_select(qs_table))
 
@@ -724,6 +739,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         _t.add_slot("body-cell-caveat", _CAVEAT_CELL_SLOT)  # compact severity chip
     rb_table.add_slot("body-cell-caveat", _CAVEAT_CELL_SLOT)
     nm_table.add_slot("body-cell-note", _NOTE_CELL_SLOT)    # readable wrapping note
+    qs_table.add_slot("body-cell-note", _NOTE_CELL_SLOT)    # the proxy / not-expected-points caveat
     # Thousands-separated numeric cells (display only; numeric sort preserved). 'edge' is handled above.
     for _t in (actionable, review, blocked):
         for _f in ("roi", "units", "profit", "net_edge", "net_profit", "fees"):
@@ -733,10 +749,13 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         rb_table.add_slot(f"body-cell-{_f}", _num_cell_slot(_f))
     for _f in ("cost", "overpay"):
         nm_table.add_slot(f"body-cell-{_f}", _num_cell_slot(_f))
+    for _f in ("qualifier", "premium", "support", "legs"):
+        qs_table.add_slot(f"body-cell-{_f}", _num_cell_slot(_f))
     # Compact empty states: a shown-but-empty section renders a small message row, not a bare grid.
     for _t, _msg in ((actionable, "No actionable opportunities in the current filters."),
                      (review, "No review-required opportunities in the current filters."),
                      (blocked, "No blocked opportunities in the current filters."),
+                     (qs_table, "No qualifier-setup diagnostics in the current filters."),
                      (rb_table, "No bounded-loss bets in the current filters."),
                      (nm_table, "No overpriced books in the current filters.")):
         _t.props(f'no-data-label="{_msg}"')
@@ -748,6 +767,8 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
     for _hdr, _tbl in ((act_hdr, actionable), (review_hdr, review), (blocked_hdr, blocked)):
         with _hdr:
             opp_menus.append(build_column_menu(_tbl, _OPP_COLUMNS, default_hidden=_NET_COLUMNS))
+    with qs_hdr:
+        build_column_menu(qs_table, _QS_COLUMNS)
     with rb_cols_row:
         build_column_menu(rb_table, _RISK_COLUMNS, default_hidden=_RISK_HIDDEN)
     with nm_cols_row:
@@ -1079,7 +1100,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         actionable.rows = [vm.opp_row(o, new_ids, chg, flash, long_short=ls) for o in view if o.get("bucket") == "actionable"]
         review.rows = [vm.opp_row(o, new_ids, chg, flash, long_short=ls) for o in view if o.get("bucket") == "review_signal"]
         blocked.rows = [vm.opp_row(o, new_ids, chg, flash, long_short=ls) for o in view if o.get("bucket") == "blocked"]
-        qs_table.rows = [vm.opp_row(o, new_ids, chg, flash, long_short=ls) for o in view if o.get("bucket") == "qualifier_setup"]
+        qs_table.rows = [vm.qualifier_row(o, new_ids, chg, flash) for o in view if o.get("bucket") == "qualifier_setup"]
         for hdr, tbl, sw in ((review_hdr, review, show_review_sw), (blocked_hdr, blocked, show_blocked_sw),
                              (qs_hdr, qs_table, qs_switch)):
             hdr.set_visibility(sw.value)
