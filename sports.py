@@ -204,6 +204,11 @@ class SportConfig:
     # floors, derived from the tournament format). Empty (default) = no basket for this sport, so adding it
     # stays one register() call and every other sport is a byte-for-byte no-op.
     group_basket_rules: dict[str, "GroupBasketRule"] = field(default_factory=dict)
+    # Classified families whose markets are NOT a single selectable competitor (beyond the tie_fn outcome),
+    # e.g. soccer's exact-order ORDERING markets (each is a full standings permutation, not one team). These
+    # get a per-market synthetic key + is_participant=False so they never pollute the participant selector;
+    # the owning detector reads identity from custom_strike. Empty (default) = no-op for every sport.
+    non_participant_families: frozenset[str] = field(default_factory=frozenset)
 
     # ---- convenience API (engine calls these) --------------------------------------------
     def family_of(self, series_ticker: str) -> str:
@@ -756,9 +761,13 @@ GOLF = register(SportConfig(
 # contract — not owned. The Tie market reuses a CONSTANT soccer_team UUID across all games (non-participant
 # draw leg, per-event synthetic key via tie_fn). No head-to-head series (match_family="").
 SOCCER_TIE_UUID = "111193d4-9b1f-4bd8-ab7c-9de252737f05"
-_SOCCER_EXACT = frozenset({"KXWCGAME", "KXWCROUND", "KXWCGROUPQUAL", "KXWCGROUPWIN", "KXMENWORLDCUP"})
+_SOCCER_EXACT = frozenset({"KXWCGAME", "KXWCROUND", "KXWCGROUPQUAL", "KXWCGROUPWIN", "KXMENWORLDCUP",
+                           "KXWCGROUPORDER"})
+# `exact_order` MUST have a non-"other" category label, else data.non_other_families would treat it as a
+# prop and the cross-sport fetch path would never load KXWCGROUPORDER.
 _SOCCER_CATEGORY = {"game": "Match (3-way)", "advance": "Stage advancement",
-                    "group_winner": "Group winner", "winner": "Tournament winner", "other": "Other"}
+                    "group_winner": "Group winner", "winner": "Tournament winner",
+                    "exact_order": "Exact group order", "other": "Other"}
 _SOCCER_STAGE_RANK = {"Round of 32": 1, "Round of 16": 2, "Quarterfinals": 3, "Semifinals": 4, "Finals": 5}
 _SOCCER_LADDER = LadderSpec(
     node_order=("Reach Round of 32", "Reach Round of 16", "Reach Quarterfinals",
@@ -788,6 +797,8 @@ def _soccer_family(cfg, series_ticker):
         return "advance"                                             # per-team reach-stage (GROUPQUAL = Reach RO32)
     if t == "KXWCGROUPWIN":
         return "group_winner"                                        # per-team "win the group" — containment leaf
+    if t == "KXWCGROUPORDER":
+        return "exact_order"                                         # 24-way exact standings — diagnostic only (#4)
     if t in cfg.winner_tickers:
         return "winner"                                              # tournament outright (KXMENWORLDCUP)
     return "other"
@@ -854,6 +865,9 @@ SOCCER = register(SportConfig(
     division_fn=_soccer_division,
     exact_series=_SOCCER_EXACT,
     tie_fn=_soccer_tie,
+    # Exact-order ORDERING markets are full standings permutations, not single teams (#4 diagnostic reads
+    # identity from custom_strike) → non-selectable, per-market key.
+    non_participant_families=frozenset({"exact_order"}),
     winner_label="Win the World Cup",
     # Each KXWCGROUPQUAL-26<G> event is a group of 4 teams; the 2026 format guarantees >=2 qualify (top-2
     # auto-advance) and >=1 fails (the 4th-placed team never advances) → a hard YES floor of 200¢ and NO

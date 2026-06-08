@@ -925,6 +925,11 @@ def find_dutch_books(rows: list[dict[str, Any]],
         if row.get("subpenny"):
             _record(_diag, "rejected", ev, "subpenny price (variable tick) — rounded cents not trusted")
             continue
+        if row.get("kind") == "exact_order":
+            # Exact-order ORDERING markets are a 24-way exact-standings set (mutually_exclusive), NOT a MECE
+            # two-way / winner-field book. They are diagnostic-only (exact_order.find_exact_order_premiums)
+            # and must NEVER be priced as a dutch book — an explicit guard even though no family selects them.
+            continue
         if _is_two_way_row(row):
             groups.setdefault(ev, []).append(row)
         elif _is_field_row(row):
