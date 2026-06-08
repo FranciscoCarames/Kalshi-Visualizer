@@ -42,6 +42,11 @@ GROUP_BASKET_BASIS = ("hard-floor group basket: gross, top-of-book, fees not mod
 # Exact-order top-two PROXY (#4) — single-sourced conservative wording. NOT an edge, NOT arbitrage: it is a
 # diagnostic spread between the qualifier YES ask and a 12-leg exact-order top-two bundle, sensitive to
 # stale/illiquid exact-order quotes and NOT settlement-proven.
+GAME_SUPPORT_BASIS = ("ask-implied SUPPORT SCORE, NOT expected points and NOT a probability: 3·win_ask + "
+                      "draw_ask summed over a team's 3 group games. Top-of-book asks are vig-biased UPWARD "
+                      "(win+draw+lose > 100¢), so the score overstates — it is a heuristic ranking signal "
+                      "only, gross, fees not modeled, never an edge and never executable")
+
 EXACT_ORDER_BASIS = ("diagnostic PROXY only: the qualifier YES ask minus the cost of a 12-leg exact-order "
                      "top-two bundle. Summing one side of a 24-way book carries an OVERROUND bias (the legs "
                      "sum above fair), so the proxy is typically negative and is NOT a clean best-third "
