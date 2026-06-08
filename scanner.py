@@ -70,7 +70,18 @@ UNIFIED_COLUMNS = [
     # Probability-context display outrights (risk-budget "spread / outright" view) — None for non-containment
     # shapes. display_c is the DISPLAY OUTRIGHT price (reasonable-quote midpoint, else last trade).
     "parent_display_c", "child_display_c", "display_spread_c", "spread_over_parent", "spread_over_child",
+    # World Cup Qualifier Setups (PR1): a cross-cutting product tag, SEPARATE from bucket/routing. Read only
+    # by a UI badge — never by bucket_of / _rank_key / filters. `setup_family` = product area
+    # ("wc_qualifier"); `setup_type` = the specific setup (qualifier_not_winner / qualifier_yes_basket /
+    # qualifier_no_basket / exact_order_top2_proxy / game_support_signal). Default "" for every other row.
+    "setup_family", "setup_type",
 ]
+
+# World Cup Qualifier Setups — the soccer containment leaf that IS setup #1 (qualifier-not-winner). Tagged
+# in place (it stays in its actionable/blocked bucket); the tag is the only change.
+_WC_QUALIFIER_FAMILY = "wc_qualifier"
+_WC_NOT_WINNER_CHILD = "Win group"
+_WC_NOT_WINNER_PARENT = "Reach Round of 32"
 
 
 def _participants(pairs: list[tuple[Any, Any]]) -> tuple[list[str], list[str]]:
@@ -158,6 +169,9 @@ def _finalize_unified(d: dict[str, Any], *, payout_floor_c: Any) -> dict[str, An
     legs = legs_of(d)
     d["legs"] = legs or None
     d["n_legs"] = _num(d.get("n_legs")) or (len(legs) if legs else None)
+    # WC Qualifier Setups (PR1): every row carries the tag fields so old snapshots + untagged rows are safe.
+    d.setdefault("setup_family", "")
+    d.setdefault("setup_type", "")
     return d
 
 
@@ -194,6 +208,11 @@ def _to_unified_consistency(r: dict[str, Any], cfg) -> dict[str, Any]:
         "spread_over_child": _num(r.get("spread_over_child")),
     }
     d["participant_keys"], d["participant_labels"] = _participants([(r.get("player_key"), r.get("player"))])
+    # WC Qualifier Setups (PR1): tag ONLY the soccer "Win group ⊆ Reach Round of 32" leaf — setup #1
+    # (qualifier-not-winner). Stays in its actionable/blocked bucket; the tag is read only by a UI badge.
+    if (cfg.sport_id == "soccer" and r.get("child_node") == _WC_NOT_WINNER_CHILD
+            and r.get("parent_node") == _WC_NOT_WINNER_PARENT):
+        d["setup_family"], d["setup_type"] = _WC_QUALIFIER_FAMILY, "qualifier_not_winner"
     # broader-YES + deeper-NO guarantees ≥100¢ in every settled state, so the floor is 100 when there's a
     # buy-plan (a firm cost), else None (CLEAN / display-only rows have no executable position).
     return _finalize_unified(d, payout_floor_c=(100 if d["cost_c"] is not None else None))
@@ -249,6 +268,11 @@ def _to_unified_group_basket(r: dict[str, Any], cfg) -> dict[str, Any]:
     d = _to_unified_dutchbook(r, cfg)
     d["source"] = "group_basket"
     d["relationship_type"] = r.get("relationship_type") or "group_cardinality_floor"
+    # WC Qualifier Setups (PR1): tag the hard-floor group baskets — setups #2 (YES) / #3 (NO). Stays in its
+    # actionable/blocked bucket; the tag is read only by a UI badge. Direction is "yes_basket"/"no_basket".
+    if cfg.sport_id == "soccer":
+        d["setup_family"] = _WC_QUALIFIER_FAMILY
+        d["setup_type"] = "qualifier_no_basket" if r.get("direction") == "no_basket" else "qualifier_yes_basket"
     return d
 
 
