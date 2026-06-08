@@ -20,6 +20,20 @@ throttle. NiceGUI is the **sole UI** — the legacy Streamlit `app.py` was retir
   conditional-probability/de-vig models, net-of-fees math. Adding a **new sport** is in scope via a
   `SportConfig` drop-in; non-sport-config work is not.
 
+## Workflow docs
+
+Specialized review/workflow guidance lives in separate files — link to them, don't inline their content here:
+
+- **`AGENTS.md`** — operating guide for Codex and other `AGENTS.md`-aware reviewers.
+- **`docs/REVIEW_PROTOCOL.md`** — shared review protocol: plan reviews, diff reviews, risk classes,
+  verdicts, blockers, missing tests, current-doc checks, conservative labeling.
+- **`docs/PR_CHECKLIST.md`** — required pre-merge checklist before opening or marking a PR ready.
+- **`docs/AGENT_WORKFLOW.md`** — day-to-day workflow for Claude Code, Codex, multiple
+  terminals/worktrees, WIP limits, stale plans, and documentation-size rules.
+
+Claude Code follows `docs/AGENT_WORKFLOW.md` before creating new plans and `docs/PR_CHECKLIST.md` before
+handing work back. Do not add long workflow procedures here — link to the specialized docs instead.
+
 ## Multi-sport (`sports.py`)
 
 `sports.py` defines a `SportConfig` abstraction (`IdentityResolver`, `LadderSpec`,
