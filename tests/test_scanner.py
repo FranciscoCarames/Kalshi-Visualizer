@@ -354,3 +354,36 @@ def test_run_scan_persists_frames_counters_and_snapshot_id(tmp_path):
 def test_run_scan_without_request_count_omits_kalshi_requests():
     _unified, cov, _frames = scanner.run_scan(_tuple_fetch, fetched_at="FA")   # no counter injected
     assert "kalshi_requests" not in cov                                       # present only when given
+
+
+def _group_basket_df(yes_ask=45):
+    """Four World Cup group-qualifier legs (one group). YES asks 4*45 = 180 < 200 floor -> a hard-floor
+    group basket (actionable). No containment rows (advance with no stage -> no ladder node)."""
+    def qual(team, key):
+        return {
+            "series": "KXWCGROUPQUAL", "event_ticker": "KXWCGROUPQUAL-26L", "kind": "advance",
+            "player": team, "player_key": key, "contract": f"{team} qualify",
+            "tournament": "2026 FIFA World Cup · 26", "tour": "",
+            "yes_bid_c": yes_ask - 1, "yes_ask_c": yes_ask, "no_ask_c": None,
+            "yes_bid_size": 100, "yes_ask_size": 100, "quote_quality": "Tight", "status": "active",
+            "market_ticker": f"Q-{key}", "kalshi_url": "x", "event_title": "Group L Qualifiers",
+            "time_value": None,
+        }
+    return pd.DataFrame([qual("A", "ka"), qual("B", "kb"), qual("C", "kc"), qual("D", "kd")])
+
+
+def test_scanner_includes_group_basket_with_legs():
+    unified, errors = scanner.unified_opportunities(
+        lambda sid: _group_basket_df() if sid == "soccer" else pd.DataFrame())
+    assert errors == []
+    assert list(unified.columns) == scanner.UNIFIED_COLUMNS
+    gb = unified[unified["source"] == "group_basket"]
+    assert len(gb) == 1
+    r = gb.iloc[0]
+    assert r["status"] == "EXECUTABLE_GROUP_BASKET"
+    assert r["relationship_type"] == "group_cardinality_floor"
+    assert r["bucket"] == "actionable" and r["tradable_now"] == "Yes"
+    assert r["payout_floor_c"] == 200 and r["exec_gap_c"] == 20
+    assert r["n_legs"] == 4 and isinstance(r["legs"], list) and len(r["legs"]) == 4
+    # A hard-floor basket is NOT a containment / dutch-book / synthetic row.
+    assert r["source"] == "group_basket"

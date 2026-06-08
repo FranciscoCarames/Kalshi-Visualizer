@@ -103,6 +103,29 @@ class LadderSpec:
     adjacent_pairs: tuple[tuple[str, str], ...]   # (child_deeper, parent_broader)
     match_stage_to_node: dict[str, str]           # head-to-head stage → node (win match ⇔ reach next)
     advance_stage_to_node: dict[str, str]         # reach-a-stage market stage → node
+    # Optional SIDE-BRANCH leaf nodes that hang off the linear ladder via an `adjacent_pairs` edge but are
+    # deliberately NOT in `node_order` (e.g. soccer "Win group" ⊆ "Reach Round of 32": winning your group
+    # implies qualifying, but is incomparable to reaching the Round of 16, so it must never be transitively
+    # linearised). When such a leaf (or its anchor) is absent, `build_checks` skips the pair silently rather
+    # than emitting MISSING_LAYER noise — the leaf is opportunistic, not a required rung. Default: none.
+    optional_children: frozenset[str] = frozenset()
+
+
+@dataclass(frozen=True)
+class GroupBasketRule:
+    """A cardinality-floor 'group basket' rule for a per-group EVENT (e.g. World Cup group qualifiers).
+
+    Unlike a MECE field, a qualifier set is NOT mutually exclusive — it is a CARDINALITY-FLOOR set: of
+    ``team_count`` independent binary markets, the tournament FORMAT guarantees that at least ``yes_floor``
+    settle YES and at least ``no_floor`` settle NO (for 2026 World Cup groups of 4: top-2 always advance →
+    ``yes_floor=2``; the 4th-placed team never advances → ``no_floor=1``; the best-third rule is exactly WHY
+    these are *floors*, not equalities). Buying YES on all legs then pays ≥ ``yes_floor×100¢`` in every
+    outcome (and buying NO on all legs ≥ ``no_floor×100¢``) — a hard gross floor, proven from the format,
+    NEVER inferred from discovered prices. Consumed by ``dutchbook.find_group_baskets``."""
+    team_count: int
+    yes_floor: int
+    no_floor: int
+    label: str
 
 
 @dataclass(frozen=True)
@@ -168,10 +191,19 @@ class SportConfig:
     # settlement-rule proof (dutchbook._proves_fixed_sum) that the tie settles fixed-sum ($0.50 each) or
     # cannot occur — otherwise the book is skipped (never a false dutch book on a tie-capable game).
     game_mece_by_shape: bool = True
+    # Optional cardinality-floor "group basket" rules, keyed by EXACT series ticker (e.g. World Cup group
+    # qualifiers). Maps a series to its per-group ``GroupBasketRule`` (team count + guaranteed YES/NO settle
+    # floors, derived from the tournament format). Empty (default) = no basket for this sport, so adding it
+    # stays one register() call and every other sport is a byte-for-byte no-op.
+    group_basket_rules: dict[str, "GroupBasketRule"] = field(default_factory=dict)
 
     # ---- convenience API (engine calls these) --------------------------------------------
     def family_of(self, series_ticker: str) -> str:
         return self.family_fn(self, series_ticker)
+
+    def group_basket_rule_of(self, series_ticker: str) -> "GroupBasketRule | None":
+        """The cardinality-floor basket rule for a series ticker, or None when the sport has none."""
+        return self.group_basket_rules.get(str(series_ticker or "").upper())
 
     def ladder_for(self, rows: list) -> "LadderSpec":
         """The containment ladder for a specific group's rows — per-group when ``ladder_fn`` is set
@@ -704,33 +736,39 @@ GOLF = register(SportConfig(
 
 # --- Soccer (6th sport): 2026 World Cup ---------------------------------------------------------------
 # Owns (via exact_series): KXWCGAME (3-way group game Home/Away/Tie — `game` family, the n-outcome dutch
-# book), KXWCROUND (per-team reach-stage RO16..Final — `advance` ladder), and KXWCGROUPQUAL (per-team
-# "qualify from group for the Round of 32" — the `advance` ladder's BOTTOM rung; modeled by Kalshi as 12
-# per-group events KXWCGROUPQUAL-26A..L, joined per-team by the soccer_team UUID). KXWC is the DORMANT
-# tournament-outright winner ticker — no such series is live yet (2026-06-08 probe: all KXWC* swept, none
-# is a per-team champion field), so it is a GUESS pending verification when the outright lists at kickoff
-# (~2026-06-11). The guess follows Kalshi's own precedent — KXCLUBWC is titled "Club World Cup
-# Championship", i.e. the bare competition prefix IS the winner market (runner-up guess: KXWCWINNER). Until
-# it lists, the "Win the World Cup" rung simply stays unpopulated (a truthful missing layer). The Tie
-# market reuses a CONSTANT soccer_team UUID across all games (non-participant draw leg, per-event synthetic
-# key via tie_fn). No head-to-head series (match_family=""). Reach-stage values confirmed live.
+# book), KXWCROUND (per-team reach-stage RO16..Final — `advance` ladder), KXWCGROUPQUAL (per-team "qualify
+# from group for the Round of 32" — the `advance` ladder's BOTTOM rung; 12 per-group events
+# KXWCGROUPQUAL-26A..L, joined per-team by the soccer_team UUID; also the cardinality-floor basket source,
+# see dutchbook.find_group_baskets), KXWCGROUPWIN (per-team "win the group" — the `group_winner` family →
+# a "Win group" containment LEAF that hangs off "Reach Round of 32" but is NOT a linear rung), and
+# KXMENWORLDCUP (the live per-team tournament-outright winner field → "Win the World Cup"). Values confirmed
+# live 2026-06-08: KXMENWORLDCUP-26 is the OPEN outright (KXMWORLDCUP exists but has no open event);
+# KXMENWORLDCUP is deci-cent (sub-cent → subpenny-filtered, so the "Win the World Cup" rung is DISPLAY-ONLY
+# for now); KXWCGROUPQUAL/KXWCGROUPWIN are whole-cent. KXWCGROUPWINNER ("Group to Win") is a DIFFERENT
+# contract — not owned. The Tie market reuses a CONSTANT soccer_team UUID across all games (non-participant
+# draw leg, per-event synthetic key via tie_fn). No head-to-head series (match_family="").
 SOCCER_TIE_UUID = "111193d4-9b1f-4bd8-ab7c-9de252737f05"
-_SOCCER_EXACT = frozenset({"KXWCGAME", "KXWCROUND", "KXWCGROUPQUAL", "KXWC"})
+_SOCCER_EXACT = frozenset({"KXWCGAME", "KXWCROUND", "KXWCGROUPQUAL", "KXWCGROUPWIN", "KXMENWORLDCUP"})
 _SOCCER_CATEGORY = {"game": "Match (3-way)", "advance": "Stage advancement",
-                    "winner": "Tournament winner", "other": "Other"}
+                    "group_winner": "Group winner", "winner": "Tournament winner", "other": "Other"}
 _SOCCER_STAGE_RANK = {"Round of 32": 1, "Round of 16": 2, "Quarterfinals": 3, "Semifinals": 4, "Finals": 5}
 _SOCCER_LADDER = LadderSpec(
     node_order=("Reach Round of 32", "Reach Round of 16", "Reach Quarterfinals",
                 "Reach Semifinals", "Reach Finals", "Win the World Cup"),
+    # "Win group" ⊆ "Reach Round of 32" is a SIDE-BRANCH leaf (winning the group implies qualifying), kept
+    # OUT of node_order so the transitive bridge never linearises it against deeper rungs ("Win group" and
+    # "Reach Round of 16" are incomparable — a group winner can lose in the R32; a runner-up reaches R16).
     adjacent_pairs=(("Win the World Cup", "Reach Finals"),
                     ("Reach Finals", "Reach Semifinals"),
                     ("Reach Semifinals", "Reach Quarterfinals"),
                     ("Reach Quarterfinals", "Reach Round of 16"),
-                    ("Reach Round of 16", "Reach Round of 32")),
+                    ("Reach Round of 16", "Reach Round of 32"),
+                    ("Win group", "Reach Round of 32")),
     match_stage_to_node={},                    # no head-to-head
     advance_stage_to_node={"Round of 32": "Reach Round of 32", "Round of 16": "Reach Round of 16",
                            "Quarterfinals": "Reach Quarterfinals", "Semifinals": "Reach Semifinals",
                            "Finals": "Reach Finals"},
+    optional_children=frozenset({"Win group"}),
 )
 
 
@@ -740,8 +778,10 @@ def _soccer_family(cfg, series_ticker):
         return "game"                                                # 3-way group game (n-outcome dutch book)
     if t in ("KXWCROUND", "KXWCGROUPQUAL"):
         return "advance"                                             # per-team reach-stage (GROUPQUAL = Reach RO32)
+    if t == "KXWCGROUPWIN":
+        return "group_winner"                                        # per-team "win the group" — containment leaf
     if t in cfg.winner_tickers:
-        return "winner"                                              # dormant outright (KXWC) — see header note
+        return "winner"                                              # tournament outright (KXMENWORLDCUP)
     return "other"
 
 
@@ -768,7 +808,9 @@ def _soccer_stage(cfg, family, market):
 
 def _soccer_node(cfg, family, stage):
     if family == "winner":
-        return "Win the World Cup"                                   # dormant until the KXWC outright lists
+        return "Win the World Cup"                                   # KXMENWORLDCUP outright (display-only: sub-cent)
+    if family == "group_winner":
+        return "Win group"                                           # leaf: ⊆ "Reach Round of 32" (qualify) only
     if family == "advance":
         return cfg.ladder.advance_stage_to_node.get(stage)
     return None                                                      # game is dutch-only, not laddered
@@ -788,13 +830,13 @@ def _soccer_tie(cfg, market):
 SOCCER = register(SportConfig(
     sport_id="soccer", label="Soccer (World Cup)", emoji="⚽",
     series_prefixes=(), default_series=tuple(sorted(_SOCCER_EXACT)),
-    winner_tickers=frozenset({"KXWC"}),        # dormant outright (guess; see header note) — auto-activates when it lists
+    winner_tickers=frozenset({"KXMENWORLDCUP"}),   # live per-team outright field (KXMENWORLDCUP-26)
     identity=IdentityResolver(candidate_paths=("custom_strike.soccer_team",), id_label="soccer_team"),
     ladder=_SOCCER_LADDER,
     category_labels=_SOCCER_CATEGORY,
     round_patterns=(),
     stage_rank=_SOCCER_STAGE_RANK,
-    ladder_families=frozenset({"advance", "winner"}),
+    ladder_families=frozenset({"advance", "winner", "group_winner"}),
     match_family="",                           # no 2-way head-to-head; the 3-way game rides the "game" family
     divisions={},
     division_label="",
@@ -805,6 +847,11 @@ SOCCER = register(SportConfig(
     exact_series=_SOCCER_EXACT,
     tie_fn=_soccer_tie,
     winner_label="Win the World Cup",
+    # Each KXWCGROUPQUAL-26<G> event is a group of 4 teams; the 2026 format guarantees >=2 qualify (top-2
+    # auto-advance) and >=1 fails (the 4th-placed team never advances) → a hard YES floor of 200¢ and NO
+    # floor of 100¢ for the all-four basket. See dutchbook.find_group_baskets.
+    group_basket_rules={"KXWCGROUPQUAL": GroupBasketRule(team_count=4, yes_floor=2, no_floor=1,
+                                                         label="World Cup group")},
 ))
 
 

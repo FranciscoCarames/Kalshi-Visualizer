@@ -66,6 +66,9 @@ STATUS_GROUP = {
     # Dutch-book findings come from the sibling `dutchbook` module (status string kept as a literal
     # here to avoid importing it — `dutchbook.EXECUTABLE_DUTCH_BOOK`). Grouped with executable edges.
     "EXECUTABLE_DUTCH_BOOK": "Broken",
+    # Hard-floor group basket (sibling `dutchbook` module; literal kept here to avoid an import —
+    # `dutchbook.EXECUTABLE_GROUP_BASKET`). A structural hard gross floor, grouped with executable edges.
+    "EXECUTABLE_GROUP_BASKET": "Broken",
     # Synthetic exact-score bundles (sibling `synthetic_bundle` module; literal kept here to avoid an
     # import). A real gross discrepancy but ALWAYS settlement-caveated / review-only (never Actionable),
     # so it groups as a Warning, not Broken.
@@ -714,6 +717,11 @@ def build_checks(df: pd.DataFrame, *, risk_budget_max_loss_c: int = 0) -> pd.Dat
             rel = "containment_adjacent"
             oid = opportunity_id(rel, player_key, _tournament, child_node, parent_node)
             if child is None or parent is None:
+                # An optional side-branch leaf (e.g. soccer "Win group") is opportunistic, not a required
+                # rung — when it or its anchor is absent we skip the pair silently rather than emit
+                # MISSING_LAYER noise (the leaf may simply not be fetched). Required rungs still report.
+                if child_node in ladder.optional_children:
+                    continue
                 missing = child_node if child is None else parent_node
                 comp = {
                     "status": "MISSING_LAYER",
@@ -930,9 +938,10 @@ def bucket_of(check_row: dict[str, Any]) -> str:
         # Its own bucket regardless of tradable_now — a near-miss is never strict-actionable, so this never
         # leaks into `actionable` even though its legs may be tradable ("Yes").
         return "risk_budget"
-    if status in ("EXECUTABLE_VIOLATION", "EXECUTABLE_DUTCH_BOOK"):
+    if status in ("EXECUTABLE_VIOLATION", "EXECUTABLE_DUTCH_BOOK", "EXECUTABLE_GROUP_BASKET"):
         # Firm executable edges: tradable now -> actionable, else blocked (no size / inactive leg). A
-        # dutch book carries no rule caveat (plain Yes/No); a per-game book's settlement caveat is advisory.
+        # dutch book / hard-floor basket carries no rule caveat (plain Yes/No); the basket's group-settlement
+        # caveat is advisory only. (Basket findings self-assign `bucket`; this keeps the router complete.)
         return "actionable" if str(check_row.get("tradable_now") or "").startswith("Yes") else "blocked"
     if status == "QUOTE_SIZE_MISSING":
         return "blocked"

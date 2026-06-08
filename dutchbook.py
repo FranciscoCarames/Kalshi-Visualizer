@@ -47,13 +47,21 @@ from typing import Any, NamedTuple
 
 import data
 import sports
-from glossary import BLOCKERS, FIXED_SUM_BASIS
+from glossary import BLOCKERS, FIXED_SUM_BASIS, GROUP_BASKET_BASIS
 
 # The one status this module emits. Distinct from consistency's EXECUTABLE_VIOLATION so the ladder's
 # "violation" semantics stay separate; the dashboard router (bucket_of) sends both to the same
 # high-priority Actionable/Blocked sections. A single status covers actionable AND blocked — the
 # `tradable_now` flag distinguishes them (mirrors how EXECUTABLE_VIOLATION is routed).
 EXECUTABLE_DUTCH_BOOK = "EXECUTABLE_DUTCH_BOOK"
+
+# A hard-floor GROUP BASKET (cardinality-floor set, e.g. World Cup group qualifiers — see
+# `find_group_baskets`). NOT a dutch book (the set is not mutually exclusive); a separate status so the
+# ladder's / dutch-book's semantics stay distinct, but routed by `bucket_of` into the same
+# Actionable/Blocked sections (a hard gross floor proven from the tournament format). One status covers
+# actionable AND blocked — `tradable_now` distinguishes them.
+EXECUTABLE_GROUP_BASKET = "EXECUTABLE_GROUP_BASKET"
+GROUP_BASKET_CHECK_TYPE = "group_basket"
 
 # A near-miss dutch book: a MECE book that costs SLIGHTLY OVER its payout floor — a FLAT-payout guaranteed
 # gross loss as a bundle, surfaced as an opt-in watchlist (never actionable). Distinct status + `near_miss`
@@ -711,6 +719,177 @@ def _detect_field(event_ticker: str, rows: list[dict[str, Any]], cfg: Any,
         "ticker_b": legs[1]["ticker"],
         "url": rows[0].get("kalshi_url", ""),
     }
+
+
+# ---- Cardinality-floor GROUP BASKET (e.g. World Cup group qualifiers) -------------------------------
+def _is_group_basket_row(row: dict[str, Any]) -> bool:
+    """A row from a cardinality-floor group-basket series of a RECOGNIZED sport (UNKNOWN excluded).
+
+    Eligibility is per-sport via ``SportConfig.group_basket_rules`` (empty for every sport but soccer's
+    World Cup qualifiers), so existing sports are a byte-for-byte no-op."""
+    cfg = sports.sport_for_series(row.get("series"))
+    if cfg.sport_id == "unknown":
+        return False
+    return cfg.group_basket_rule_of(row.get("series")) is not None
+
+
+def _basket_direction(side: str, rows: list[dict[str, Any]], floor_c: int) -> dict[str, Any] | None:
+    """Price one all-legs basket direction against its guaranteed floor. Returns None when the direction is
+    NOT price-proven — i.e. ANY leg lacks a firm ask (No quote / Crossed): there is then no floor edge to
+    assess (handled as a no-finding diagnostic, never a blocked opportunity)."""
+    if side == "buy_yes":
+        prices = [_firm_yes_ask_c(r) for r in rows]
+        sizes = [r.get("yes_ask_size") for r in rows]   # buying YES hits resting asks
+    else:
+        prices = [_firm_no_ask_c(r) for r in rows]
+        sizes = [r.get("yes_bid_size") for r in rows]   # buying NO hits resting YES bids
+    if any(p is None for p in prices):
+        return None
+    cost = sum(prices)
+    min_size = min(sizes) if all(_pos(s) for s in sizes) else None
+    return {"side": side, "cost_c": cost, "gap_c": floor_c - cost, "prices": prices,
+            "min_size": min_size, "payout_floor_c": floor_c}
+
+
+def _detect_group_basket(event_ticker: str, rows: list[dict[str, Any]], cfg: Any,
+                         diag: dict | None = None) -> dict[str, Any] | None:
+    """Detect a hard-floor cardinality basket on one per-group event (e.g. a World Cup group's qualifiers).
+
+    Structure/cardinality proof is INDEPENDENT of tradability: the event must carry exactly ``team_count``
+    unique-participant binary markets (the format then fixes the YES/NO settle-count floors). Routing is
+    three-way: a leg with no firm ask → NOT price-proven → no finding (diagnostic); price-proven with a
+    positive floor gap but an inactive / zero-size leg → blocked; price-proven + active + sized → actionable.
+    """
+    rule = cfg.group_basket_rule_of(rows[0].get("series"))
+    if rule is None:
+        return None
+    keys = {str(r.get("player_key") or "") for r in rows}
+    if len(rows) != rule.team_count or len(keys) != rule.team_count:
+        _record(diag, "rejected", event_ticker,
+                f"group basket: expected {rule.team_count} unique teams, got {len(rows)} rows / {len(keys)} keys")
+        return None
+
+    candidates = [_basket_direction("buy_yes", rows, rule.yes_floor * 100),
+                  _basket_direction("buy_no", rows, rule.no_floor * 100)]
+    proven = [c for c in candidates if c is not None]
+    if not proven:
+        # No direction is price-proven (a leg has no firm ask on either side). This is missing data, not an
+        # edge that cannot execute — emit nothing (a diagnostic counter), never a blocked opportunity.
+        _record(diag, "not_price_proven", event_ticker, "group basket: a leg has no firm ask")
+        return None
+    firing = [c for c in proven if c["gap_c"] > 0]
+    if not firing:
+        _record(diag, "eligible_non_firing", event_ticker, "group basket: priced, no positive floor gap")
+        return None
+    best = max(firing, key=lambda c: c["gap_c"])               # at most one direction can fire (cost sums)
+    side = best["side"]
+    direction = "yes_basket" if side == "buy_yes" else "no_basket"
+    settle_floor = rule.yes_floor if side == "buy_yes" else rule.no_floor
+    settle_word = "YES" if side == "buy_yes" else "NO"
+    gap_c, min_size, floor, cost = best["gap_c"], best["min_size"], best["payout_floor_c"], best["cost_c"]
+
+    legs: list[dict[str, Any]] = []
+    for r, p in zip(rows, best["prices"]):
+        size = r.get("yes_ask_size") if side == "buy_yes" else r.get("yes_bid_size")
+        label = _leg_label(r)
+        legs.append({"side": side, "contract": label, "price_c": p, "size": _num(size),
+                     "ticker": r.get("market_ticker", ""), "url": r.get("kalshi_url", ""),
+                     "player_key": r.get("player_key", ""),
+                     "text": _buy_text(side, label, p)})
+
+    all_active = all(_is_active(r) for r in rows)
+    tradable_now = "Yes" if (min_size is not None and all_active) else "No"
+    # Price-proven by construction (every leg has a firm ask), so the only blockers are size/inactivity.
+    blockers: list[str] = []
+    if min_size is None:
+        blockers.append(BLOCKERS["size_missing"])
+    for r in rows:
+        s = str(r.get("status") or "")
+        if s and s != "active":
+            blockers.append(BLOCKERS["inactive"].format(leg=_leg_label(r), status=s))
+
+    oid = data.opportunity_id(GROUP_BASKET_CHECK_TYPE, event_ticker, "basket")
+    bucket = "actionable" if tradable_now.startswith("Yes") else "blocked"
+    blockers_str = "; ".join(blockers)
+    blocked_reason = (blockers_str or "not executable now") if bucket == "blocked" else ""
+    n = len(rows)
+    tournament = rows[0].get("tournament", "")
+    match = (rows[0].get("event_title") or f"{tournament} {rule.label} basket").strip() or event_ticker
+    times = [t for t in (r.get("time_value") for r in rows) if t]
+    pa = rows[0]
+    pb = rows[1] if len(rows) > 1 else rows[0]
+    reason = (f"hard-floor {direction}: buy {settle_word} on all {n} {rule.label} qualifier legs costs "
+              f"{cost}c < {floor}c floor -> {gap_c}c gross per unit (>= {settle_floor} legs settle "
+              f"{settle_word} by tournament format)")
+
+    return {
+        "check_type": GROUP_BASKET_CHECK_TYPE,
+        "relationship_type": "group_cardinality_floor",
+        "opportunity_id": oid,
+        "bucket": bucket,
+        "blocked_reason": blocked_reason,
+        "status": EXECUTABLE_GROUP_BASKET,
+        "direction": direction,
+        "event_ticker": event_ticker,
+        "series": rows[0].get("series", ""),
+        "tournament": tournament,
+        "tour": rows[0].get("tour", ""),
+        "match": match,
+        "player_a": _leg_label(pa), "player_b": _leg_label(pb),
+        "player_key_a": pa.get("player_key", ""), "player_key_b": pb.get("player_key", ""),
+        "resolve_time": min(times) if times else None,
+        "tradable_now": tradable_now,
+        "market_status": "active" if all_active else "inactive",
+        "blockers": blockers_str,
+        # Non-blocking: a group restructure / withdrawal can break the format floor — advisory only.
+        "settlement_caveat": BLOCKERS["group_basket_settlement"],
+        "basket_basis": GROUP_BASKET_BASIS,
+        "legs": legs, "n_legs": n, "payout_floor_c": floor,
+        # Flat hard floor across every settled state → worst == best == gap_c (the floor is guaranteed).
+        "worst_case_profit_c": gap_c, "best_case_profit_c": gap_c,
+        "action_1_side": legs[0]["side"], "action_1_contract": legs[0]["contract"],
+        "action_1_price_c": legs[0]["price_c"], "action_1_text": legs[0]["text"],
+        "action_2_side": legs[1]["side"], "action_2_contract": legs[1]["contract"],
+        "action_2_price_c": legs[1]["price_c"], "action_2_text": legs[1]["text"],
+        "cost_c": cost,
+        "exec_gap_c": gap_c,
+        "exec_min_size": min_size,
+        "exec_max_profit_dollars": round(gap_c * min_size / 100, 2) if min_size is not None else None,
+        "reason": reason,
+        "event_title": rows[0].get("event_title", ""),
+        "ticker_a": legs[0]["ticker"],
+        "ticker_b": legs[1]["ticker"],
+        "url": rows[0].get("kalshi_url", ""),
+    }
+
+
+def find_group_baskets(rows: list[dict[str, Any]],
+                       _diag: dict | None = None) -> list[dict[str, Any]]:
+    """Scan per-player contract rows and return one hard-floor group-basket finding per qualifying event
+    (possibly empty). Group-basket rows (per ``SportConfig.group_basket_rules``) are grouped by
+    ``event_ticker`` and dispatched to ``_detect_group_basket``. Subpenny rows are excluded (rounded cents
+    can't be trusted). The optional ``_diag`` collects rejected / not-price-proven / eligible-non-firing
+    candidates (Debug / live smoke). Separate from ``find_dutch_books`` because a cardinality-floor basket
+    is NOT a dutch book (the qualifier set is not mutually exclusive)."""
+    groups: dict[str, list[dict[str, Any]]] = {}
+    for row in rows or []:
+        ev = row.get("event_ticker") or ""
+        if not ev:
+            continue
+        if row.get("subpenny"):
+            _record(_diag, "rejected", ev, "subpenny price (variable tick) — rounded cents not trusted")
+            continue
+        if _is_group_basket_row(row):
+            groups.setdefault(ev, []).append(row)
+
+    out: list[dict[str, Any]] = []
+    for event_ticker, markets in groups.items():
+        cfg = sports.sport_for_series(markets[0].get("series"))
+        finding = _detect_group_basket(event_ticker, markets, cfg, _diag)
+        if finding is not None:
+            out.append(finding)
+    out.sort(key=lambda f: (-f["exec_gap_c"], f["event_ticker"]))
+    return out
 
 
 def find_dutch_books(rows: list[dict[str, Any]],

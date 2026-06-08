@@ -691,3 +691,118 @@ def test_winner_field_scanner_round_trip():
     u = scanner._to_unified_dutchbook(f, sports.NBA)
     assert u["source"] == "dutch_book" and u["n_legs"] == 3 and len(u["legs"]) == 3
     assert u["bucket"] == "actionable" and u["settlement_caveat"] == glossary.BLOCKERS["field_overround"]
+
+
+# --- Hard-floor GROUP BASKET (World Cup group qualifiers) ----------------------------
+def qual(team, *, event="KXWCGROUPQUAL-26L", player_key=None, yes_bid_c=None, yes_ask_c=None,
+         no_ask_c=None, yes_bid_size=100, yes_ask_size=100, quality="Tight", status="active"):
+    """A per-team World Cup group-qualifier row (series KXWCGROUPQUAL — a cardinality-floor basket leg)."""
+    return {
+        "series": "KXWCGROUPQUAL", "event_ticker": event, "kind": "advance",
+        "player": team, "player_key": player_key or team.lower(),
+        "contract": f"{team} qualify", "tournament": "2026 FIFA World Cup · 26", "tour": "",
+        "yes_bid_c": yes_bid_c, "yes_ask_c": yes_ask_c, "no_ask_c": no_ask_c,
+        "yes_bid_size": yes_bid_size, "yes_ask_size": yes_ask_size,
+        "quote_quality": quality, "status": status,
+        "market_ticker": f"{event}-{team[:3].upper()}", "kalshi_url": "https://kalshi.com/x",
+        "event_title": "Group L Qualifiers",
+    }
+
+
+def _group(yes_asks=None, no_asks=None, **leg_kw):
+    """Four group-qualifier legs (A..D). `yes_asks` / `no_asks` are per-leg cent lists; `leg_kw` applies
+    to leg A only (so a single odd leg — wide / inactive / sizeless — can be injected)."""
+    teams = ["A", "B", "C", "D"]
+    rows = []
+    for i, t in enumerate(teams):
+        kw = dict(leg_kw) if i == 0 else {}
+        if yes_asks is not None:
+            kw["yes_ask_c"] = yes_asks[i]
+        if no_asks is not None:
+            kw["no_ask_c"] = no_asks[i]
+        rows.append(qual(t, player_key=t.lower(), **kw))
+    return rows
+
+
+def test_group_basket_yes_floor_200_fires_actionable():
+    # 4 YES asks of 45 each = 180 < 200 floor -> 20c gross per unit; >=2 always qualify.
+    out = dutchbook.find_group_baskets(_group(yes_asks=[45, 45, 45, 45]))
+    assert len(out) == 1
+    f = out[0]
+    assert f["status"] == dutchbook.EXECUTABLE_GROUP_BASKET
+    assert f["direction"] == "yes_basket" and f["payout_floor_c"] == 200
+    assert f["cost_c"] == 180 and f["exec_gap_c"] == 20
+    assert f["n_legs"] == 4 and len(f["legs"]) == 4
+    assert all(leg["side"] == "buy_yes" for leg in f["legs"])
+    assert f["bucket"] == "actionable" and f["tradable_now"] == "Yes"
+    assert f["relationship_type"] == "group_cardinality_floor"
+
+
+def test_group_basket_no_floor_100_fires():
+    # 4 NO asks of 24 each = 96 < 100 floor -> 4c; >=1 always fails. YES side priced high so it can't fire.
+    out = dutchbook.find_group_baskets(_group(yes_asks=[60, 60, 60, 60], no_asks=[24, 24, 24, 24]))
+    assert len(out) == 1
+    f = out[0]
+    assert f["direction"] == "no_basket" and f["payout_floor_c"] == 100
+    assert f["cost_c"] == 96 and f["exec_gap_c"] == 4
+    assert all(leg["side"] == "buy_no" for leg in f["legs"])
+
+
+def test_group_basket_requires_four_unique_teams():
+    # Three legs -> not the proven cardinality -> no finding (rejected diagnostic).
+    diag = {}
+    assert dutchbook.find_group_baskets(_group(yes_asks=[45, 45, 45, 45])[:3], diag) == []
+    assert any("expected 4" in r["reason"] for r in diag.get("rejected", []))
+    # Four rows but a duplicate participant key (3 distinct) -> rejected, no finding.
+    rows = _group(yes_asks=[45, 45, 45, 45])
+    rows[3]["player_key"] = rows[2]["player_key"]
+    assert dutchbook.find_group_baskets(rows) == []
+
+
+def test_group_basket_wide_quote_still_fires():
+    # A merely-wide quote still has a firm ask -> price-proven and fires (NOT blocked).
+    out = dutchbook.find_group_baskets(_group(yes_asks=[45, 45, 45, 45], quality="Wide"))
+    assert len(out) == 1 and out[0]["bucket"] == "actionable"
+
+
+def test_group_basket_no_quote_leg_is_no_finding_not_blocked():
+    # A 'No quote' leg has no firm ask on EITHER side -> not price-proven -> NO finding (a diagnostic
+    # counter), never a blocked opportunity. `blocked` is reserved for a proven edge that can't execute.
+    diag = {}
+    out = dutchbook.find_group_baskets(_group(yes_asks=[45, 45, 45, 45], quality="No quote"), diag)
+    assert out == []
+    assert any("firm ask" in r["reason"] for r in diag.get("not_price_proven", []))
+
+
+def test_group_basket_crossed_leg_is_no_finding():
+    out = dutchbook.find_group_baskets(_group(yes_asks=[45, 45, 45, 45], quality="Crossed"))
+    assert out == []
+
+
+def test_group_basket_priced_but_zero_size_is_blocked():
+    # All four legs firm-priced (Sum 180 < 200) but one leg has 0 size -> a real edge that can't fill -> blocked.
+    out = dutchbook.find_group_baskets(_group(yes_asks=[45, 45, 45, 45], yes_ask_size=0))
+    assert len(out) == 1
+    f = out[0]
+    assert f["status"] == dutchbook.EXECUTABLE_GROUP_BASKET and f["bucket"] == "blocked"
+    assert f["tradable_now"] == "No" and BLOCKERS_size in f["blocked_reason"]
+
+
+def test_group_basket_priced_but_inactive_leg_is_blocked():
+    out = dutchbook.find_group_baskets(_group(yes_asks=[45, 45, 45, 45], status="finalized"))
+    assert len(out) == 1 and out[0]["bucket"] == "blocked"
+    assert "finalized" in out[0]["blocked_reason"]
+
+
+def test_group_basket_carries_settlement_caveat_and_conservative_wording():
+    f = dutchbook.find_group_baskets(_group(yes_asks=[45, 45, 45, 45]))[0]
+    assert f["settlement_caveat"] == glossary.BLOCKERS["group_basket_settlement"]
+    blob = (f["reason"] + " " + f.get("basket_basis", "")).lower()
+    assert not any(w in blob for w in ("arbitrage", "riskless", "locked", "setup", "stat arb", "model signal"))
+
+
+def test_group_basket_no_edge_when_priced_at_floor():
+    # 4 YES asks of 50 each = 200 == floor -> no positive gap -> no finding (eligible_non_firing).
+    diag = {}
+    assert dutchbook.find_group_baskets(_group(yes_asks=[50, 50, 50, 50]), diag) == []
+    assert diag.get("eligible_non_firing")

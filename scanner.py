@@ -240,6 +240,18 @@ def _to_unified_dutchbook(r: dict[str, Any], cfg) -> dict[str, Any]:
     return _finalize_unified(d, payout_floor_c=(_num(r.get("payout_floor_c")) or 100))
 
 
+def _to_unified_group_basket(r: dict[str, Any], cfg) -> dict[str, Any]:
+    """Map a hard-floor group-basket finding (N legs) onto the unified schema. Shares the dutch-book finding
+    shape (legs / n_legs / payout_floor_c / action_1/2 / player_key_a/b), but tagged with its own minimal,
+    future-compatible provenance: ``source="group_basket"`` (peer of ``"dutch_book"``) and the finding's
+    ``relationship_type="group_cardinality_floor"``. NO broader proof_level / setup_type taxonomy here —
+    that belongs to the separate expansion plan."""
+    d = _to_unified_dutchbook(r, cfg)
+    d["source"] = "group_basket"
+    d["relationship_type"] = r.get("relationship_type") or "group_cardinality_floor"
+    return d
+
+
 def _to_unified_synthetic(r: dict[str, Any], cfg) -> dict[str, Any]:
     """Map a synthetic-bundle finding (N legs) onto the unified schema. The full plan lives in `legs`;
     `action_1/2_*` are backfilled (by the detector) from the first two legs so 2-leg consumers still work."""
@@ -322,16 +334,18 @@ def unified_opportunities(
             checks = consistency.build_checks(contracts, risk_budget_max_loss_c=config.RISK_BUDGET_MAX_LOSS_C)
             checks_records = checks.to_dict("records")
             books = dutchbook.find_dutch_books(records, near_miss_max_over_c=config.NEAR_MISS_MAX_OVER_C)
+            baskets = dutchbook.find_group_baskets(records)
             bundles = synthetic_bundle.find_synthetic_bundles(records)
         except Exception as exc:
             errors.append({"sport": cfg.sport_id, "error": str(exc)})
             continue
         rows.extend(_to_unified_consistency(r, cfg) for r in checks_records)
         rows.extend(_to_unified_dutchbook(r, cfg) for r in books)
+        rows.extend(_to_unified_group_basket(r, cfg) for r in baskets)
         rows.extend(_to_unified_synthetic(r, cfg) for r in bundles)
         if frames_out is not None:
             for frame_type, frame_rows in (("contracts", records), ("checks", checks_records),
-                                           ("dutchbook", books)):
+                                           ("dutchbook", books), ("group_basket", baskets)):
                 if frame_rows:
                     frames_out.append({"sport": cfg.sport_id, "frame_type": frame_type,
                                        "schema_version": 1, "rows": frame_rows})
