@@ -236,6 +236,18 @@ _BACKLOG_COLUMNS = [
     {"name": "caveat", "label": "Settlement caveat", "field": "caveat", "align": "left"},
     {"name": "current", "label": "Now", "field": "current", "align": "center"},
 ]
+# Durable 7-day interval backlog (v4) — one row per opportunity lifecycle in a tracked category. Distinct
+# from the live "recently actionable" table above (which is bounded by the 30h snapshot store).
+_BACKLOG_EVENTS_COLUMNS = [
+    {"name": "category", "label": "Category", "field": "category", "align": "center", "sortable": True},
+    {"name": "sport", "label": "Sport", "field": "sport", "align": "center", "sortable": True},
+    {"name": "name", "label": "Participant / match", "field": "name", "align": "left", "sortable": True},
+    {"name": "first_seen", "label": "First seen", "field": "first_seen", "align": "center"},
+    {"name": "left", "label": "Left", "field": "left", "align": "center"},
+    {"name": "mins", "label": "Lasted (min)", "field": "mins", "align": "center", "sortable": True},
+    {"name": "peak_roi", "label": "Peak ROI %", "field": "peak_roi", "align": "center", "sortable": True},
+    {"name": "last_status", "label": "Last status", "field": "last_status", "align": "left"},
+]
 # Participant-detail tables (PR 24) — built by the pure viewmodel detail builders.
 _CHAIN_COLUMNS = [
     {"name": "layer", "label": "Layer (broad → deep)", "field": "layer"},
@@ -295,7 +307,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                              # PR C: ids already seen in the watchlist buckets, so the toast only fires for
                              # genuinely NEW candidates (seeded on the first snapshot — no toast on load).
                              "seen_watchlist": set(),
-                             "first": True, "options": {}, "cov": {}, "backlog": [],
+                             "first": True, "options": {}, "cov": {}, "backlog": [], "backlog_events": [],
                              "rendered_snapshot_id": "__unseeded__", "selected": None,
                              # change-signal (#3): per-opp up/down/new/returned vs the PREVIOUS snapshot,
                              # recomputed once per new snapshot; `ever_seen` distinguishes new from returned.
@@ -741,6 +753,18 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
     for _f in ("mins", "last_edge"):
         backlog.add_slot(f"body-cell-{_f}", _num_cell_slot(_f))
 
+    # Durable 7-day backlog (v4): survives restarts, independent of the 30h snapshot store. Category filter
+    # is Actionable / Bounded-loss only — statistical arbitrage is reserved (no detector yet), so no tab.
+    with ui.expansion("Durable backlog (last 7 days) — survives restarts").classes("w-full"):
+        with ui.row().classes("items-center gap-3"):
+            backlog_events_cat = ui.select(
+                {"": "All categories", "actionable": "Actionable", "bounded_loss": "Bounded-loss"},
+                value="", label="Category").props("dense outlined").classes("min-w-[160px]")
+        backlog_events_table = ui.table(columns=_BACKLOG_EVENTS_COLUMNS, rows=[], row_key="name",
+                                        pagination=10).props("dense").classes("w-full overflow-x-auto")
+    for _f in ("mins", "peak_roi"):
+        backlog_events_table.add_slot(f"body-cell-{_f}", _num_cell_slot(_f))
+
     # Market telemetry — snapshot CONTEXT (depth, tightness, activity, volatility), NOT opportunity signals.
     # Collapsed, neutral grey; liquidity lives here now. Populated in rerender (snapshot-scoped).
     with ui.expansion("Market Telemetry — Liquidity & Volatility (context, not signals)").classes("w-full"):
@@ -936,19 +960,21 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
     # rerender(): pure in-memory re-filter + push to the VISIBLE tables — no store access. poll(): a cheap
     # 1s tick that reloads ONLY when a new snapshot id lands. This makes filter changes instant (in-memory)
     # and a completed scan surface within ~1s, with idle ticks doing almost nothing.
-    def _read_bundle(persist_s: float | None, win_s: float) -> dict[str, Any]:
-        """All store reads for one render (snapshot + persistence-scoped alerts + windowed backlog),
-        gathered off the event loop. Pure reads — NO UI here. (Engine reads share the P1 latest-snapshot
-        cache, so concurrent clients deserialize a given snapshot once.)"""
+    def _read_bundle(persist_s: float | None, win_s: float, events_cat: str) -> dict[str, Any]:
+        """All store reads for one render (snapshot + persistence-scoped alerts + windowed backlog +
+        durable 7-day interval backlog), gathered off the event loop. Pure reads — NO UI here. (Engine
+        reads share the P1 latest-snapshot cache, so concurrent clients deserialize a given snapshot once.)"""
         return {"cov": engine.coverage(), "opps": engine.latest_opportunities(),
                 "alerts": engine.alerts(persist_s), "backlog": engine.backlog(win_s),
+                "backlog_events": engine.backlog_events(days=7.0, category=events_cat or None),
                 "contracts": engine.all_contracts(),     # for the "most liquid now" line (#12a)
                 "vol_frames": engine.recent_contract_frames(config.VOLATILITY_WINDOW_SECONDS)}  # #12b
 
     def _read_args() -> tuple:
         win_s = config.BACKLOG_WINDOWS[window_select.value]
         return (config.ALERT_PERSISTENCE_OPTIONS[persist_select.value],
-                win_s if win_s is not None else config.SNAPSHOT_RETENTION_SECONDS)
+                win_s if win_s is not None else config.SNAPSHOT_RETENTION_SECONDS,
+                backlog_events_cat.value)
 
     def _apply_bundle(bundle: dict[str, Any]) -> None:
         """Push a freshly-read store bundle into `state` + the snapshot-scoped UI (select options, alert
@@ -975,6 +1001,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         state["ever_seen"].update(state["opps"].keys())     # after classify, so 'returned' detection works
         state["options"] = vm.derive_options(opps)
         state["backlog"] = bundle["backlog"]
+        state["backlog_events"] = bundle["backlog_events"]
         state["liquidity_panel"] = vm.liquidity_panel(bundle["contracts"])  # PR F (snapshot-scoped panel)
         state["volatility_msg"] = vm.volatility_leader(bundle["vol_frames"])   # #12b (snapshot-scoped)
         # Sport is the top of the cascade (never narrowed); Tournament/Participant options + any now-stale
@@ -1066,6 +1093,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         nm_max_over.set_enabled(include_nm)
 
         backlog.rows = [vm.backlog_row(b, tz) for b in (state.get("backlog") or [])]
+        backlog_events_table.rows = [vm.backlog_event_row(b, tz) for b in (state.get("backlog_events") or [])]
 
         # scope banner (with the PR 21a counters) + per-bucket counts + filter chips + URL state
         freshness.set_text(vm.scope_banner(cov, tz))
@@ -1207,6 +1235,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         (rb_table, "Bounded-loss bets"), (rb_expansion, "Bounded-loss bets section"),
         (nm_table, "Overpriced books"), (nm_expansion, "Overpriced books section"),
         (backlog, "Recently-actionable backlog"),
+        (backlog_events_table, "Durable 7-day backlog"), (backlog_events_cat, "Durable backlog category"),
         (detail_expansion, "Selected detail"), (diagnostics_expansion, "Diagnostics and debug"),
     ):
         _el.props(f'aria-label="{_aria}"')
@@ -1234,8 +1263,9 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
     sport_sel.on_value_change(lambda _=None: _on_membership_change())
     tour_sel.on_value_change(lambda _=None: _on_membership_change())
     diagnostics_expansion.on_value_change(lambda _=None: rerender())   # render diagnostics when opened
-    # Alert-persistence + backlog-window parameterize STORE reads, so they go through reload_data.
-    for ctrl in (persist_select, window_select):
+    # Alert-persistence + backlog-window + durable-backlog category parameterize STORE reads, so they go
+    # through reload_data.
+    for ctrl in (persist_select, window_select, backlog_events_cat):
         ctrl.on_value_change(lambda _=None: reload_data())
 
     def _on_rules_toggle() -> None:

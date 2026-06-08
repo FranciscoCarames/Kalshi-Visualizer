@@ -155,6 +155,31 @@ BACKLOG_WINDOWS = {
     "This session": None,
 }
 BACKLOG_DEFAULT = "1 hour"
+
+# --- Durable interval backlog (7-day opportunity history) -----------------------------
+# A SECOND, lean backlog tier independent of the snapshot store above: store.write_snapshot maintains a
+# `backlog_intervals` table recording each opportunity's open/closed lifecycle in a tracked CATEGORY, kept
+# for this many seconds after it closes. This is the durable 7-day backlog (survives restarts, served by
+# GET /backlog/events). The HEAVY snapshot store deliberately stays at SNAPSHOT_RETENTION_SECONDS (30h) —
+# extending that to 7 days would be ~60k full snapshots; the interval table is one tiny row per lifecycle.
+BACKLOG_RETENTION_SECONDS = 7 * 24 * 60 * 60   # 7 days
+# Which dashboard `bucket` maps to which durable backlog category (store-side routing, derived from the
+# already-promoted `bucket` so nothing is added to the public unified schema). Buckets not listed are NOT
+# tracked. "statistical_arbitrage" is a RESERVED slot: when a detector lands it routes its bucket here with
+# no schema migration (and no UI until then). risk_budget + near_miss are the bounded-loss opt-in candidates.
+BACKLOG_CATEGORY_BY_BUCKET = {
+    "actionable": "actionable",
+    "risk_budget": "bounded_loss",
+    "near_miss": "bounded_loss",
+    # future: "<stat-arb bucket>": "statistical_arbitrage",
+}
+# UI-facing category labels (Stage 5). Statistical arbitrage is intentionally absent until a detector
+# exists — the table accepts the string, but no tab is rendered for it.
+BACKLOG_CATEGORY_LABELS = {
+    "actionable": "Actionable",
+    "bounded_loss": "Bounded-loss",
+}
+
 # New-actionable banner persistence (§8). "Until next refresh" -> single-transition diff (window None);
 # the "N minutes" modes keep a still-actionable new row in the banner for that long. (No "until
 # acknowledged" yet — that needs a NiceGUI ack at Stage 5.)

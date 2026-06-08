@@ -65,6 +65,24 @@ def test_backlog_and_alerts(tmpdb):
     assert any(c["opportunity_id"] == "x" and c["transitioned"] for c in al["blocked_changes"])
 
 
+def test_backlog_events_engine_and_viewmodel(tmpdb):
+    # Durable interval backlog through the engine + the pure viewmodel row shaper.
+    store.write_snapshot(1000, [op("x", bucket="actionable"),
+                                op("y", bucket="risk_budget", status="RISK_BUDGET_CANDIDATE")])
+    store.write_snapshot(2000, [op("y", bucket="risk_budget", status="RISK_BUDGET_CANDIDATE")])  # x leaves
+    events = engine.backlog_events(days=7.0)
+    by_id = {e["opportunity_id"]: e for e in events}
+    assert by_id["x"]["category"] == "actionable" and by_id["x"]["is_open"] is False
+    assert by_id["y"]["category"] == "bounded_loss" and by_id["y"]["is_open"] is True
+    # category filter narrows the engine read
+    assert {e["opportunity_id"] for e in engine.backlog_events(category="bounded_loss")} == {"y"}
+    # viewmodel row: label mapped, open interval shows "still open"
+    open_row = vm.backlog_event_row(by_id["y"], "UTC")
+    assert open_row["category"] == "Bounded-loss" and open_row["left"] == "still open"
+    closed_row = vm.backlog_event_row(by_id["x"], "UTC")
+    assert closed_row["category"] == "Actionable" and closed_row["left"] != "still open"
+
+
 def test_latest_cache_reuses_object_and_reloads_on_new_snapshot(tmpdb):
     store.write_snapshot(1000, [op("a")])
     first = engine._cached_latest(None)

@@ -367,6 +367,20 @@ def backlog_row(b: dict[str, Any], tz: str) -> dict[str, Any]:
     }
 
 
+def backlog_event_row(b: dict[str, Any], tz: str) -> dict[str, Any]:
+    """One durable-interval-backlog row (v4) shaped for the table. `category` is the tracked category
+    label; an OPEN interval shows 'still open' for the left time."""
+    dur = b.get("duration_s")
+    label = config.BACKLOG_CATEGORY_LABELS.get(b.get("category"), b.get("category") or "")
+    return {
+        "category": label, "sport": b.get("sport") or "", "name": b.get("name") or "",
+        "first_seen": ts_disp(b.get("first_seen_ts"), tz),
+        "left": "still open" if b.get("is_open") else ts_disp(b.get("left_ts"), tz),
+        "mins": round(dur / 60, 1) if isinstance(dur, (int, float)) else None,
+        "peak_roi": b.get("peak_roi_pct"), "last_status": b.get("last_status") or "",
+    }
+
+
 def explanation_lines(opp: dict[str, Any], *, show_ids: bool = False,
                       long_short: bool = False) -> list[str]:
     """The text content of the explanation panel for one opportunity (pure → unit-testable). `long_short`

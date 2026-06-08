@@ -98,6 +98,45 @@ def test_backlog(client):
     assert items[0]["reason_left"] == "went blocked"
 
 
+def test_backlog_unchanged_with_durable_table(client):
+    # Back-compat: the live /backlog (recently_actionable) response is unaffected by the v4 durable table.
+    c, db = client
+    store.write_snapshot(1000, [op("x", bucket="actionable")], db_path=db)
+    store.write_snapshot(2000, [op("x", bucket="blocked", market_status="active")], db_path=db)
+    items = c.get("/backlog?window_s=1000000000").json()
+    assert [i["opportunity_id"] for i in items] == ["x"]
+    assert set(items[0]) >= {"became_ts", "left_ts", "reason_left", "current_bucket"}
+
+
+def test_backlog_events_durable(client):
+    c, db = client
+    # x: actionable then leaves; y: bounded_loss (risk_budget) stays open.
+    store.write_snapshot(1000, [op("x", bucket="actionable"),
+                                op("y", bucket="risk_budget")], db_path=db)
+    store.write_snapshot(2000, [op("y", bucket="risk_budget")], db_path=db)   # x dropped out, y advances
+    rows = c.get("/backlog/events?days=7").json()
+    by_id = {r["opportunity_id"]: r for r in rows}
+    assert by_id["x"]["category"] == "actionable" and by_id["x"]["is_open"] is False
+    assert by_id["y"]["category"] == "bounded_loss" and by_id["y"]["is_open"] is True
+    # category filter
+    bl = c.get("/backlog/events?category=bounded_loss").json()
+    assert {r["opportunity_id"] for r in bl} == {"y"}
+    # closed-only filter
+    closed = c.get("/backlog/events?include_open=false").json()
+    assert {r["opportunity_id"] for r in closed} == {"x"}
+
+
+def test_backlog_events_reappearance_two_intervals(client):
+    # The audit-point-3 regression at the API boundary: appear -> leave -> reappear = TWO intervals.
+    c, db = client
+    store.write_snapshot(1000, [op("z", bucket="actionable")], db_path=db)
+    store.write_snapshot(2000, [op("q", bucket="actionable")], db_path=db)   # z leaves
+    store.write_snapshot(3000, [op("z", bucket="actionable")], db_path=db)   # z returns
+    z_rows = [r for r in c.get("/backlog/events").json() if r["opportunity_id"] == "z"]
+    assert len(z_rows) == 2
+    assert sorted(r["is_open"] for r in z_rows) == [False, True]
+
+
 def test_coverage_meta_present(client):
     c, db = client
     meta = {"fetched_at": "2026-06-03 12:00:00 UTC", "scanned": 5, "loaded": 4, "failed": 1,

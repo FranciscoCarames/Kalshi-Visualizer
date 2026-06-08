@@ -172,6 +172,32 @@ class BacklogItem(BaseModel):
     url: str | None = None
 
 
+class BacklogInterval(BaseModel):
+    """One durable interval-backlog row (v4) — a single open/closed lifecycle of an opportunity in a
+    tracked category (`actionable` / `bounded_loss`; `statistical_arbitrage` reserved). Distinct from
+    `BacklogItem` (the short live `recently_actionable` view): this is the 7-day durable store, so an
+    opportunity that appeared, left, and returned shows as SEPARATE intervals."""
+    model_config = ConfigDict(extra="ignore")
+    id: int | None = None
+    opportunity_id: str | None = None
+    category: str | None = None
+    sport: str | None = None
+    name: str | None = None
+    url: str | None = None
+    first_seen_ts: float | None = None
+    last_seen_ts: float | None = None
+    left_ts: float | None = None
+    duration_s: float | None = None
+    is_open: bool | None = None
+    last_bucket: str | None = None
+    last_status: str | None = None
+    peak_roi_pct: float | None = None
+    best_case_profit_c: float | None = None
+    worst_case_profit_c: float | None = None
+    last_settlement_caveat: str | None = None
+    last_legs: list[dict[str, Any]] | None = None
+
+
 class BlockedChange(BaseModel):
     opportunity_id: str
     prev_bucket: str | None = None
@@ -281,6 +307,18 @@ def get_backlog(window_s: float = config.BACKLOG_WINDOWS["1 hour"],
                 db_path: str | None = Depends(db_path_dep)):
     snaps = store.snapshots_since(window_s, db_path=db_path)
     return [BacklogItem(**b) for b in lifecycle.recently_actionable(snaps)]
+
+
+@app.get("/backlog/events", response_model=list[BacklogInterval])
+def get_backlog_events(days: float = 7.0, category: str | None = None, include_open: bool = True,
+                       db_path: str | None = Depends(db_path_dep)):
+    """The DURABLE 7-day interval backlog (v4) — distinct from `/backlog` above (the short live
+    `recently_actionable` view, unchanged). Each row is one open/closed lifecycle of an opportunity in a
+    tracked category. `days` windows by activity (capped at the retention window); `category` narrows to
+    one of `actionable` / `bounded_loss` (`statistical_arbitrage` reserved — no detector yet);
+    `include_open=false` returns only closed intervals."""
+    rows = store.backlog_intervals(category=category, include_open=include_open, days=days, db_path=db_path)
+    return [BacklogInterval(**r) for r in rows]
 
 
 @app.get("/coverage", response_model=Coverage)
