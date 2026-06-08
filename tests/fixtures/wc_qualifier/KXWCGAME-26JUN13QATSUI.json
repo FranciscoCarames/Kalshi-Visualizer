@@ -1,0 +1,77 @@
+{
+  "_fixture_meta": {
+    "captured": "2026-06-08",
+    "ticker": "KXWCGAME-26JUN13QATSUI",
+    "source": "probe_wc_qualifier_setups.py live probe",
+    "note": "Group B 3-way game (Home/Away/Tie); soccer_team UUID per side"
+  },
+  "event_ticker": "KXWCGAME-26JUN13QATSUI",
+  "title": "Qatar vs Switzerland",
+  "mutually_exclusive": true,
+  "product_metadata": {
+    "competition": "FIFA World Cup",
+    "competition_scope": "Game"
+  },
+  "markets": [
+    {
+      "ticker": "KXWCGAME-26JUN13QATSUI-QAT",
+      "yes_sub_title": "Qatar",
+      "strike_type": "structured",
+      "custom_strike": {
+        "soccer_team": "9f9b25f7-30ad-4a3b-9433-470640d98c6d"
+      },
+      "status": "active",
+      "title": "Qatar vs Switzerland Winner?",
+      "yes_bid_dollars": "0.0700",
+      "yes_ask_dollars": "0.0800",
+      "no_bid_dollars": "0.9200",
+      "no_ask_dollars": "0.9300",
+      "last_price_dollars": "0.0800",
+      "yes_bid_size_fp": "559.40",
+      "yes_ask_size_fp": "47840.97",
+      "volume_fp": "95440.56",
+      "open_interest_fp": "85845.50",
+      "rules_primary": "If Qatar wins the Qatar vs Switzerland professional FIFA World Cup soccer game originally scheduled for Jun 13, 2026 after 90 minutes plus stoppage time (does not include extra time or penalties), then the market resolves to Yes."
+    },
+    {
+      "ticker": "KXWCGAME-26JUN13QATSUI-SUI",
+      "yes_sub_title": "Switzerland",
+      "strike_type": "structured",
+      "custom_strike": {
+        "soccer_team": "9719a5ca-d7a4-42bb-a73c-7081303ec383"
+      },
+      "status": "active",
+      "title": "Qatar vs Switzerland Winner?",
+      "yes_bid_dollars": "0.7900",
+      "yes_ask_dollars": "0.8000",
+      "no_bid_dollars": "0.2000",
+      "no_ask_dollars": "0.2100",
+      "last_price_dollars": "0.8000",
+      "yes_bid_size_fp": "30549.08",
+      "yes_ask_size_fp": "45533.04",
+      "volume_fp": "25400.22",
+      "open_interest_fp": "21320.27",
+      "rules_primary": "If Switzerland wins the Qatar vs Switzerland professional FIFA World Cup soccer game originally scheduled for Jun 13, 2026 after 90 minutes plus stoppage time (does not include extra time or penalties), then the market resolves to Yes."
+    },
+    {
+      "ticker": "KXWCGAME-26JUN13QATSUI-TIE",
+      "yes_sub_title": "Tie",
+      "strike_type": "structured",
+      "custom_strike": {
+        "soccer_team": "111193d4-9b1f-4bd8-ab7c-9de252737f05"
+      },
+      "status": "active",
+      "title": "Qatar vs Switzerland Winner?",
+      "yes_bid_dollars": "0.1300",
+      "yes_ask_dollars": "0.1400",
+      "no_bid_dollars": "0.8600",
+      "no_ask_dollars": "0.8700",
+      "last_price_dollars": "0.1400",
+      "yes_bid_size_fp": "5104.18",
+      "yes_ask_size_fp": "77416.14",
+      "volume_fp": "10277.39",
+      "open_interest_fp": "9732.77",
+      "rules_primary": "If Tie wins the Qatar vs Switzerland professional FIFA World Cup soccer game originally scheduled for Jun 13, 2026 after 90 minutes plus stoppage time (does not include extra time or penalties), then the market resolves to Yes."
+    }
+  ]
+}

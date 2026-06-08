@@ -1,0 +1,77 @@
+{
+  "_fixture_meta": {
+    "captured": "2026-06-08",
+    "ticker": "KXWCGAME-26JUN18SUIBIH",
+    "source": "probe_wc_qualifier_setups.py live probe",
+    "note": "Group B 3-way game (Home/Away/Tie); soccer_team UUID per side"
+  },
+  "event_ticker": "KXWCGAME-26JUN18SUIBIH",
+  "title": "Switzerland vs Bosnia and Herzegovina",
+  "mutually_exclusive": true,
+  "product_metadata": {
+    "competition": "FIFA World Cup",
+    "competition_scope": "Game"
+  },
+  "markets": [
+    {
+      "ticker": "KXWCGAME-26JUN18SUIBIH-SUI",
+      "yes_sub_title": "Switzerland",
+      "strike_type": "structured",
+      "custom_strike": {
+        "soccer_team": "9719a5ca-d7a4-42bb-a73c-7081303ec383"
+      },
+      "status": "active",
+      "title": "Switzerland vs Bosnia and Herzegovina Winner?",
+      "yes_bid_dollars": "0.5900",
+      "yes_ask_dollars": "0.6000",
+      "no_bid_dollars": "0.4000",
+      "no_ask_dollars": "0.4100",
+      "last_price_dollars": "0.5900",
+      "yes_bid_size_fp": "1.00",
+      "yes_ask_size_fp": "3967.00",
+      "volume_fp": "973.68",
+      "open_interest_fp": "908.13",
+      "rules_primary": "If Switzerland wins the Switzerland vs Bosnia and Herzegovina professional FIFA World Cup soccer game originally scheduled for Jun 18, 2026 after 90 minutes plus stoppage time (does not include extra time or penalties), then the market resolves to Yes."
+    },
+    {
+      "ticker": "KXWCGAME-26JUN18SUIBIH-BIH",
+      "yes_sub_title": "Bosnia and Herzegovina",
+      "strike_type": "structured",
+      "custom_strike": {
+        "soccer_team": "4e8b1db6-34f6-4575-87ff-b64aaf80672f"
+      },
+      "status": "active",
+      "title": "Switzerland vs Bosnia and Herzegovina Winner?",
+      "yes_bid_dollars": "0.1600",
+      "yes_ask_dollars": "0.1700",
+      "no_bid_dollars": "0.8300",
+      "no_ask_dollars": "0.8400",
+      "last_price_dollars": "0.1700",
+      "yes_bid_size_fp": "3505.19",
+      "yes_ask_size_fp": "510.79",
+      "volume_fp": "5160.46",
+      "open_interest_fp": "4952.60",
+      "rules_primary": "If Bosnia and Herzegovina wins the Switzerland vs Bosnia and Herzegovina professional FIFA World Cup soccer game originally scheduled for Jun 18, 2026 after 90 minutes plus stoppage time (does not include extra time or penalties), then the market resolves to Yes."
+    },
+    {
+      "ticker": "KXWCGAME-26JUN18SUIBIH-TIE",
+      "yes_sub_title": "Tie",
+      "strike_type": "structured",
+      "custom_strike": {
+        "soccer_team": "111193d4-9b1f-4bd8-ab7c-9de252737f05"
+      },
+      "status": "active",
+      "title": "Switzerland vs Bosnia and Herzegovina Winner?",
+      "yes_bid_dollars": "0.2300",
+      "yes_ask_dollars": "0.2400",
+      "no_bid_dollars": "0.7600",
+      "no_ask_dollars": "0.7700",
+      "last_price_dollars": "0.2400",
+      "yes_bid_size_fp": "4631.86",
+      "yes_ask_size_fp": "4000.56",
+      "volume_fp": "1854.18",
+      "open_interest_fp": "1854.18",
+      "rules_primary": "If Tie wins the Switzerland vs Bosnia and Herzegovina professional FIFA World Cup soccer game originally scheduled for Jun 18, 2026 after 90 minutes plus stoppage time (does not include extra time or penalties), then the market resolves to Yes."
+    }
+  ]
+}

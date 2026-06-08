@@ -1,0 +1,97 @@
+{
+  "_fixture_meta": {
+    "captured": "2026-06-08",
+    "ticker": "KXWCGROUPQUAL-26B",
+    "source": "probe_wc_qualifier_setups.py live probe",
+    "note": "Group B qualifiers (Reach RO32); soccer_team UUID; 4 teams"
+  },
+  "event_ticker": "KXWCGROUPQUAL-26B",
+  "title": "Group B Qualifiers",
+  "mutually_exclusive": false,
+  "product_metadata": {
+    "competition": "FIFA World Cup",
+    "competition_scope": "Group Qualifiers"
+  },
+  "markets": [
+    {
+      "ticker": "KXWCGROUPQUAL-26B-CAN",
+      "yes_sub_title": "Canada",
+      "strike_type": "structured",
+      "custom_strike": {
+        "soccer_team": "49eceb63-2069-4270-9c74-09c65a854c1b"
+      },
+      "status": "active",
+      "title": "Will Canada qualify from World Cup Group B?",
+      "yes_bid_dollars": "0.8600",
+      "yes_ask_dollars": "0.8700",
+      "no_bid_dollars": "0.1300",
+      "no_ask_dollars": "0.1400",
+      "last_price_dollars": "0.8700",
+      "yes_bid_size_fp": "13383.07",
+      "yes_ask_size_fp": "6757.16",
+      "volume_fp": "7335.15",
+      "open_interest_fp": "6002.31",
+      "rules_primary": "If Canada is one of the teams to qualify from Group B for the Round of 32 in the 2026 FIFA World Cup, then the market resolves to Yes."
+    },
+    {
+      "ticker": "KXWCGROUPQUAL-26B-QAT",
+      "yes_sub_title": "Qatar",
+      "strike_type": "structured",
+      "custom_strike": {
+        "soccer_team": "9f9b25f7-30ad-4a3b-9433-470640d98c6d"
+      },
+      "status": "active",
+      "title": "Will Qatar qualify from World Cup Group B?",
+      "yes_bid_dollars": "0.2200",
+      "yes_ask_dollars": "0.2300",
+      "no_bid_dollars": "0.7700",
+      "no_ask_dollars": "0.7800",
+      "last_price_dollars": "0.2300",
+      "yes_bid_size_fp": "15210.00",
+      "yes_ask_size_fp": "16954.23",
+      "volume_fp": "21701.11",
+      "open_interest_fp": "17521.08",
+      "rules_primary": "If Qatar is one of the teams to qualify from Group B for the Round of 32 in the 2026 FIFA World Cup, then the market resolves to Yes."
+    },
+    {
+      "ticker": "KXWCGROUPQUAL-26B-SUI",
+      "yes_sub_title": "Switzerland",
+      "strike_type": "structured",
+      "custom_strike": {
+        "soccer_team": "9719a5ca-d7a4-42bb-a73c-7081303ec383"
+      },
+      "status": "active",
+      "title": "Will Switzerland qualify from World Cup Group B?",
+      "yes_bid_dollars": "0.9300",
+      "yes_ask_dollars": "0.9400",
+      "no_bid_dollars": "0.0600",
+      "no_ask_dollars": "0.0700",
+      "last_price_dollars": "0.9300",
+      "yes_bid_size_fp": "1647.20",
+      "yes_ask_size_fp": "2714.14",
+      "volume_fp": "1649.87",
+      "open_interest_fp": "1567.93",
+      "rules_primary": "If Switzerland is one of the teams to qualify from Group B for the Round of 32 in the 2026 FIFA World Cup, then the market resolves to Yes."
+    },
+    {
+      "ticker": "KXWCGROUPQUAL-26B-BIH",
+      "yes_sub_title": "Bosnia and Herzegovina",
+      "strike_type": "structured",
+      "custom_strike": {
+        "soccer_team": "4e8b1db6-34f6-4575-87ff-b64aaf80672f"
+      },
+      "status": "active",
+      "title": "Will Bosnia and Herzegovina qualify from World Cup Group B?",
+      "yes_bid_dollars": "0.6500",
+      "yes_ask_dollars": "0.6600",
+      "no_bid_dollars": "0.3400",
+      "no_ask_dollars": "0.3500",
+      "last_price_dollars": "0.6500",
+      "yes_bid_size_fp": "1266.00",
+      "yes_ask_size_fp": "1611.00",
+      "volume_fp": "2818.95",
+      "open_interest_fp": "2107.02",
+      "rules_primary": "If Bosnia and Herzegovina is one of the teams to qualify from Group B for the Round of 32 in the 2026 FIFA World Cup, then the market resolves to Yes."
+    }
+  ]
+}

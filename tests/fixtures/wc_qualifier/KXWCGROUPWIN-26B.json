@@ -1,0 +1,97 @@
+{
+  "_fixture_meta": {
+    "captured": "2026-06-08",
+    "ticker": "KXWCGROUPWIN-26B",
+    "source": "probe_wc_qualifier_setups.py live probe",
+    "note": "Group B 'win the group' leaf; 4 teams"
+  },
+  "event_ticker": "KXWCGROUPWIN-26B",
+  "title": "Group B Winner",
+  "mutually_exclusive": true,
+  "product_metadata": {
+    "competition": "FIFA World Cup",
+    "competition_scope": "Group Winners"
+  },
+  "markets": [
+    {
+      "ticker": "KXWCGROUPWIN-26B-CAN",
+      "yes_sub_title": "Canada",
+      "strike_type": "structured",
+      "custom_strike": {
+        "soccer_team": "49eceb63-2069-4270-9c74-09c65a854c1b"
+      },
+      "status": "active",
+      "title": "Will Canada finish first in World Cup Group B?",
+      "yes_bid_dollars": "0.3100",
+      "yes_ask_dollars": "0.3200",
+      "no_bid_dollars": "0.6800",
+      "no_ask_dollars": "0.6900",
+      "last_price_dollars": "0.3200",
+      "yes_bid_size_fp": "6124.66",
+      "yes_ask_size_fp": "1840.11",
+      "volume_fp": "26669.15",
+      "open_interest_fp": "18372.31",
+      "rules_primary": "If Canada finish first in Group B in the 2026 FIFA World Cup, then the market resolves to Yes."
+    },
+    {
+      "ticker": "KXWCGROUPWIN-26B-QAT",
+      "yes_sub_title": "Qatar",
+      "strike_type": "structured",
+      "custom_strike": {
+        "soccer_team": "9f9b25f7-30ad-4a3b-9433-470640d98c6d"
+      },
+      "status": "active",
+      "title": "Will Qatar finish first in World Cup Group B?",
+      "yes_bid_dollars": "0.0200",
+      "yes_ask_dollars": "0.0300",
+      "no_bid_dollars": "0.9700",
+      "no_ask_dollars": "0.9800",
+      "last_price_dollars": "0.0300",
+      "yes_bid_size_fp": "35478.76",
+      "yes_ask_size_fp": "51432.09",
+      "volume_fp": "9494.39",
+      "open_interest_fp": "5857.16",
+      "rules_primary": "If Qatar finish first in Group B in the 2026 FIFA World Cup, then the market resolves to Yes."
+    },
+    {
+      "ticker": "KXWCGROUPWIN-26B-SUI",
+      "yes_sub_title": "Switzerland",
+      "strike_type": "structured",
+      "custom_strike": {
+        "soccer_team": "9719a5ca-d7a4-42bb-a73c-7081303ec383"
+      },
+      "status": "active",
+      "title": "Will Switzerland finish first in World Cup Group B?",
+      "yes_bid_dollars": "0.5400",
+      "yes_ask_dollars": "0.5500",
+      "no_bid_dollars": "0.4500",
+      "no_ask_dollars": "0.4600",
+      "last_price_dollars": "0.5500",
+      "yes_bid_size_fp": "4948.61",
+      "yes_ask_size_fp": "49069.92",
+      "volume_fp": "35437.67",
+      "open_interest_fp": "27903.19",
+      "rules_primary": "If Switzerland finish first in Group B in the 2026 FIFA World Cup, then the market resolves to Yes."
+    },
+    {
+      "ticker": "KXWCGROUPWIN-26B-BIH",
+      "yes_sub_title": "Bosnia and Herzegovina",
+      "strike_type": "structured",
+      "custom_strike": {
+        "soccer_team": "4e8b1db6-34f6-4575-87ff-b64aaf80672f"
+      },
+      "status": "active",
+      "title": "Will Bosnia and Herzegovina finish first in World Cup Group B?",
+      "yes_bid_dollars": "0.1200",
+      "yes_ask_dollars": "0.1300",
+      "no_bid_dollars": "0.8700",
+      "no_ask_dollars": "0.8800",
+      "last_price_dollars": "0.1200",
+      "yes_bid_size_fp": "48061.31",
+      "yes_ask_size_fp": "2348.08",
+      "volume_fp": "17496.44",
+      "open_interest_fp": "13859.23",
+      "rules_primary": "If Bosnia and Herzegovina finish first in Group B in the 2026 FIFA World Cup, then the market resolves to Yes."
+    }
+  ]
+}

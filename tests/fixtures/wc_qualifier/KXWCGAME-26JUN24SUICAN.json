@@ -1,0 +1,77 @@
+{
+  "_fixture_meta": {
+    "captured": "2026-06-08",
+    "ticker": "KXWCGAME-26JUN24SUICAN",
+    "source": "probe_wc_qualifier_setups.py live probe",
+    "note": "Group B 3-way game (Home/Away/Tie); soccer_team UUID per side"
+  },
+  "event_ticker": "KXWCGAME-26JUN24SUICAN",
+  "title": "Switzerland vs Canada",
+  "mutually_exclusive": true,
+  "product_metadata": {
+    "competition": "FIFA World Cup",
+    "competition_scope": "Game"
+  },
+  "markets": [
+    {
+      "ticker": "KXWCGAME-26JUN24SUICAN-SUI",
+      "yes_sub_title": "Switzerland",
+      "strike_type": "structured",
+      "custom_strike": {
+        "soccer_team": "9719a5ca-d7a4-42bb-a73c-7081303ec383"
+      },
+      "status": "active",
+      "title": "Switzerland vs Canada Winner?",
+      "yes_bid_dollars": "0.4500",
+      "yes_ask_dollars": "0.4600",
+      "no_bid_dollars": "0.5400",
+      "no_ask_dollars": "0.5500",
+      "last_price_dollars": "0.4600",
+      "yes_bid_size_fp": "3667.77",
+      "yes_ask_size_fp": "4601.35",
+      "volume_fp": "891.35",
+      "open_interest_fp": "618.35",
+      "rules_primary": "If Switzerland wins the Switzerland vs Canada professional FIFA World Cup soccer game originally scheduled for Jun 24, 2026 after 90 minutes plus stoppage time (does not include extra time or penalties), then the market resolves to Yes."
+    },
+    {
+      "ticker": "KXWCGAME-26JUN24SUICAN-CAN",
+      "yes_sub_title": "Canada",
+      "strike_type": "structured",
+      "custom_strike": {
+        "soccer_team": "49eceb63-2069-4270-9c74-09c65a854c1b"
+      },
+      "status": "active",
+      "title": "Switzerland vs Canada Winner?",
+      "yes_bid_dollars": "0.2600",
+      "yes_ask_dollars": "0.2700",
+      "no_bid_dollars": "0.7300",
+      "no_ask_dollars": "0.7400",
+      "last_price_dollars": "0.2700",
+      "yes_bid_size_fp": "3659.67",
+      "yes_ask_size_fp": "3500.61",
+      "volume_fp": "1172.76",
+      "open_interest_fp": "1088.72",
+      "rules_primary": "If Canada wins the Switzerland vs Canada professional FIFA World Cup soccer game originally scheduled for Jun 24, 2026 after 90 minutes plus stoppage time (does not include extra time or penalties), then the market resolves to Yes."
+    },
+    {
+      "ticker": "KXWCGAME-26JUN24SUICAN-TIE",
+      "yes_sub_title": "Tie",
+      "strike_type": "structured",
+      "custom_strike": {
+        "soccer_team": "111193d4-9b1f-4bd8-ab7c-9de252737f05"
+      },
+      "status": "active",
+      "title": "Switzerland vs Canada Winner?",
+      "yes_bid_dollars": "0.2800",
+      "yes_ask_dollars": "0.2900",
+      "no_bid_dollars": "0.7100",
+      "no_ask_dollars": "0.7200",
+      "last_price_dollars": "0.2900",
+      "yes_bid_size_fp": "365.09",
+      "yes_ask_size_fp": "3500.00",
+      "volume_fp": "368.02",
+      "open_interest_fp": "365.12",
+      "rules_primary": "If Tie wins the Switzerland vs Canada professional FIFA World Cup soccer game originally scheduled for Jun 24, 2026 after 90 minutes plus stoppage time (does not include extra time or penalties), then the market resolves to Yes."
+    }
+  ]
+}
