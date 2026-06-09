@@ -667,6 +667,13 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             if chain:
                 ui.label("Containment chain (broad → deep)").classes("font-medium mt-3")
                 ui.table(columns=_CHAIN_COLUMNS, rows=chain, row_key="layer").classes("w-full")
+            # Derived market-implied indicators (DISPLAY-ONLY bounds, e.g. golf "make the cut" ≥ Top-20 price).
+            # Not a traded market and never an edge — a labeled bound read off the ladder's display prices.
+            for ind in vm.derived_indicators(chain, sport):
+                v = ind.get("value_pct")
+                shown = "—" if v is None else f"{ind.get('comparator', '')} {v:.0f}%".strip()
+                ui.label(f"Implied: {ind.get('label')} {shown}").classes("text-sm mt-3")
+                ui.label(ind.get("note") or "").classes("text-xs text-gray-500")
             spreads = vm.detail_spreads(prows)
             if spreads:
                 ui.label("Raw stage-ladder spreads").classes("font-medium mt-3")

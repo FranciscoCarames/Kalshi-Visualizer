@@ -672,3 +672,13 @@ def test_order_qualifier_rows_speculative_first():
           "status": "GAME_SUPPORT_SIGNAL", "name": "Z"}
     ordered = [o["opportunity_id"] for o in vm.order_qualifier_rows([gs, diag, spec])]
     assert ordered[0] == "s" and ordered.index("d") < ordered.index("g")
+
+
+def test_derived_indicators_from_chain_golf_make_cut():
+    chain = [{"layer": "Top 20", "display_pct": 18.0}, {"layer": "Top 10", "display_pct": 9.0}]
+    out = vm.derived_indicators(chain, "golf")
+    assert out and out[0]["label"] == "Make the cut" and out[0]["value_pct"] == 18.0
+    # missing Top-20 price -> no floor; non-golf sport -> []
+    assert vm.derived_indicators([{"layer": "Top 10", "display_pct": 9.0}], "golf") == []
+    assert vm.derived_indicators([{"layer": "Reach Semifinal", "display_pct": 60.0}], "tennis") == []
+    assert vm.derived_indicators(None, "golf") == []

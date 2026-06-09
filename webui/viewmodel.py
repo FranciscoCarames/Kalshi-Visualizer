@@ -1322,6 +1322,16 @@ def detail_chain(prows: list[dict[str, Any]], sport: str) -> list[dict[str, Any]
     return out
 
 
+def derived_indicators(chain: list[dict[str, Any]] | None, sport: str) -> list[dict[str, Any]]:
+    """Derived market-implied indicators (DISPLAY-ONLY bounds) for the detail panel — quantities the market
+    doesn't trade directly but the ladder's display prices imply (e.g. golf "make the cut" ≥ Top-20 price).
+    Reuses the chain's per-node display % as the input map; [] for a sport with no hook. Pure pass-through
+    to SportConfig.derived_indicators — never an edge, never fed to detection."""
+    cfg = sports.get_sport(sport)
+    node_pct = {r.get("layer"): _num(r.get("display_pct")) for r in (chain or [])}
+    return cfg.derived_indicators(node_pct)
+
+
 def detail_spreads(prows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Raw adjacent-layer stage-ladder spreads (broader − deeper). Reuses consistency.layer_spreads."""
     return consistency.layer_spreads(list(prows or []))
