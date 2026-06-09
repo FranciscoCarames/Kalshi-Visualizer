@@ -87,8 +87,10 @@ Treat a blocker as anything that ships a falsehood or unsafe action. Examples:
 - **Plan freshness:** a plan can drift; verify the diff still matches reality, but **don't demand plan
   perfection before implementation** and don't re-litigate accepted scope unless a **new correctness,
   safety, UX, or maintenance risk** appears.
-- **Branch hygiene:** branch off `main`, one PR per change, no stacking on unmerged branches; never
-  commit/push to `main`.
+- **Branch hygiene (branch-only delivery — owner 2026-06-09, supersedes "one PR per change"):** never
+  commit/push/merge to `main`; implement the full scope in feature branch(es), verify, then the owner tests
+  manually and merges when satisfied (`main` frozen; no per-step PRs). Branch off the latest `main`, or off
+  the unmerged branch a feature depends on. (See CLAUDE.md "Git workflow" + docs/AGENT_WORKFLOW.md §0.)
 - **Risk classification:** open by labeling the change **low / medium / high** risk (blast radius ×
   reversibility × how much it touches money-like signals) and scale review depth to that.
 
