@@ -777,6 +777,31 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                        pagination=10).props("dense").classes("w-full overflow-x-auto opp-sel")
     blocked.on_select(_on_select(blocked))
 
+    # Watchlist-style section header helper — a custom expansion header slot so the "Columns" button sits
+    # beside the title (added after the table exists); the title label is kept in a ref so rerender can
+    # update its live count. `expanded` opens the section on load (Bounded-Loss is promoted + default-open).
+    def _expansion_header(title: str, *, expanded: bool = False) -> tuple[Any, Any, Any]:
+        exp = ui.expansion(value=expanded).classes("w-full mt-2")
+        with exp.add_slot("header"), ui.row().classes("items-center w-full gap-2"):
+            ui.icon("unfold_more").classes("text-grey")
+            title_label = ui.label(title).classes("text-lg font-bold")
+            ui.space()
+            cols_holder = ui.row().classes("items-center")     # Columns button dropped in here later
+        return exp, title_label, cols_holder
+
+    # Bounded-Loss Bets — promoted ABOVE the Qualifier setups section and OPEN by default: a real placeable
+    # bet (capped loss, convex upside) and the trader's primary cross-sport comparison surface. A bet, NOT
+    # an edge. Its opposite-shape sibling "Overpriced Books" stays below, after the qualifier section.
+    rb_expansion, rb_title, rb_cols_row = _expansion_header(
+        "Bounded-Loss Bets — capped downside, convex upside", expanded=True)
+    with rb_expansion:
+        ui.label("Buy the broader YES + the deeper NO for just over 100¢: your loss is capped at the small "
+                 "overpay, with convex upside (the broader-but-not-deeper outcome pays about +$1). A bet, NOT "
+                 "an edge — gross of fees.").classes("text-xs text-gray-500")
+        rb_table = ui.table(columns=_RISK_COLUMNS, rows=[], row_key="opportunity_id", selection="single",
+                            pagination=10).props("dense").classes("w-full overflow-x-auto opp-sel")
+    rb_table.on_select(_on_select(rb_table))
+
     # World Cup Qualifier Setups (PR3): a separate, default-on, opt-in DIAGNOSTIC section — kept out of the
     # strict Actionable/Review/Blocked sections. Populated by the exact-order (#4) top-two bundles + game-
     # support (#5) signals; the flagged baskets/spreads still live in their own sections (PR1 badge).
@@ -787,27 +812,6 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
     qs_table = ui.table(columns=_QS_COLUMNS, rows=[], row_key="opportunity_id", selection="single",
                         pagination=10).props("dense").classes("w-full overflow-x-auto opp-sel")
     qs_table.on_select(_on_select(qs_table))
-
-    # TWO distinct, collapsed watchlist sections — opposite shapes, kept separate. Each uses a custom header
-    # slot so the "Columns" button sits beside the title (added after the table exists); the title label is
-    # kept in a ref so rerender can update its live count. A bet with capped loss vs a flat guaranteed loss.
-    def _expansion_header(title: str) -> tuple[Any, Any, Any]:
-        exp = ui.expansion(value=False).classes("w-full mt-2")
-        with exp.add_slot("header"), ui.row().classes("items-center w-full gap-2"):
-            ui.icon("unfold_more").classes("text-grey")
-            title_label = ui.label(title).classes("text-lg font-bold")
-            ui.space()
-            cols_holder = ui.row().classes("items-center")     # Columns button dropped in here later
-        return exp, title_label, cols_holder
-
-    rb_expansion, rb_title, rb_cols_row = _expansion_header("Bounded-Loss Bets — capped downside, convex upside")
-    with rb_expansion:
-        ui.label("Buy the broader YES + the deeper NO for just over 100¢: your loss is capped at the small "
-                 "overpay, with convex upside (the broader-but-not-deeper outcome pays about +$1). A bet, NOT "
-                 "an edge — gross of fees.").classes("text-xs text-gray-500")
-        rb_table = ui.table(columns=_RISK_COLUMNS, rows=[], row_key="opportunity_id", selection="single",
-                            pagination=10).props("dense").classes("w-full overflow-x-auto opp-sel")
-    rb_table.on_select(_on_select(rb_table))
 
     nm_expansion, nm_title, nm_cols_row = _expansion_header("Overpriced Books — flat guaranteed loss (watch-only)")
     with nm_expansion:
