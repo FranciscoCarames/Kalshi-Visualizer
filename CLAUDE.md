@@ -305,11 +305,15 @@ collapsed Diagnostics & debug expander. `viewmodel.py` + `diagnostics.py` are th
 
 ## Git workflow (strict — owner confirmed)
 
-- **Never commit or push to `main`.** The owner merges manually; you push branches and open PRs.
-- Branch off `main`. **Do not stack on unmerged branches** — one PR per change. Verify (`pytest -q`,
-  `serve.py` boot) before pushing.
+- **Never commit, push, or merge to `main`.** The owner merges manually.
+- **Branch-only delivery (near-term policy, owner 2026-06-09 — supersedes "one PR per change"):** do NOT
+  open a PR per change. Implement the **full scope** of a work item across **one or more feature branches**;
+  verify (`pytest -q`, `ruff check .`, `serve.py` boot); then hand the branch back. The owner **tests
+  manually** and **merges to `main` only when satisfied**. `main` stays frozen until then.
+- Branch off the latest `main` — or, since `main` is frozen, off the unmerged branch a feature depends on
+  (state the base in the handoff). Keep verifying before handing back; commits on the branch are fine.
 - Commit messages end with: `Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>`.
-  PR bodies end with the Claude Code footer.
+  If a PR is opened for review, its body ends with the Claude Code footer.
 
 ## Status & history
 
