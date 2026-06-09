@@ -808,9 +808,30 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                  "overpay. Both are gross, top-of-book and assume the market-implied probability — ranking "
                  "aids to compare bets across sports, NOT a guarantee or a probability model.").classes(
                      "text-xs text-gray-500")
-        rb_table = ui.table(columns=_RISK_COLUMNS, rows=[], row_key="opportunity_id", selection="single",
+
+        # Split by resolution shape (PR B): Vertical = both legs settle at one event (golf Top-N, a
+        # match-alignment equivalence) so there's no carry between them; Calendar = the legs settle on
+        # different days, so you hold staged exposure across the gap. Same capped max loss either way.
+        def _rb_subsection(heading: str, tip: str):
+            with ui.row().classes("items-center w-full gap-2 mt-3"):
+                _title = ui.label(heading).classes("text-base font-bold")
+                ui.icon("info").classes("text-grey text-sm").tooltip(tip)
+                ui.space()
+                _cols = ui.row().classes("items-center")
+            _tbl = ui.table(columns=_RISK_COLUMNS, rows=[], row_key="opportunity_id", selection="single",
                             pagination=10).props("dense").classes("w-full overflow-x-auto opp-sel")
-    rb_table.on_select(_on_select(rb_table))
+            return _title, _cols, _tbl
+
+        rb_vert_title, rb_vert_cols, rb_vertical = _rb_subsection(
+            "Vertical — both legs resolve together",
+            "Both legs settle at one event's outcome (e.g. golf Top-10 vs Top-5, or a match-win ≡ "
+            "reach-next-stage equivalence). No window where one leg is settled and the other is still open.")
+        rb_cal_title, rb_cal_cols, rb_calendar = _rb_subsection(
+            "Calendar — legs resolve on different days",
+            "The legs settle in sequence across rounds (e.g. reach the final, then win it), so you hold "
+            "staged exposure across the gap. Same capped max loss as a vertical bet — just a longer hold.")
+    rb_vertical.on_select(_on_select(rb_vertical))
+    rb_calendar.on_select(_on_select(rb_calendar))
 
     # World Cup Qualifier Setups (PR3): a separate, default-on, opt-in DIAGNOSTIC section — kept out of the
     # strict Actionable/Review/Blocked sections. Populated by the exact-order (#4) top-two bundles + game-
@@ -832,14 +853,15 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                             pagination=10).props("dense").classes("w-full overflow-x-auto opp-sel")
     nm_table.on_select(_on_select(nm_table))
 
-    _sel_tables.extend([actionable, review, blocked, qs_table, rb_table, nm_table])
+    _sel_tables.extend([actionable, review, blocked, qs_table, rb_vertical, rb_calendar, nm_table])
     for _t in _sel_tables:                 # the change-signal / NEW-badge indicator column on every table
         _t.add_slot("body-cell-new", _CHANGE_CELL_SLOT)
     for _t in (actionable, review, blocked):
         _t.add_slot("body-cell-edge", _EDGE_CELL_SLOT)      # colour the edge value on change
         _t.add_slot("body-cell-action", _ACTION_CELL_SLOT)  # left-aligned legs
         _t.add_slot("body-cell-caveat", _CAVEAT_CELL_SLOT)  # compact severity chip
-    rb_table.add_slot("body-cell-caveat", _CAVEAT_CELL_SLOT)
+    for _rb in (rb_vertical, rb_calendar):
+        _rb.add_slot("body-cell-caveat", _CAVEAT_CELL_SLOT)
     nm_table.add_slot("body-cell-note", _NOTE_CELL_SLOT)    # readable wrapping note
     # Qualifier-setups: compact caveat chips + the full prose (hidden col); the two quote columns show the
     # label while sorting on their numeric rank.
@@ -853,7 +875,8 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             _t.add_slot(f"body-cell-{_f}", _num_cell_slot(_f))
     for _f in ("cost", "max_loss", "max_profit", "ratio", "ev", "roc", "spread_over_parent",
                "spread_over_child", "parent_outright", "child_outright", "display_spread"):
-        rb_table.add_slot(f"body-cell-{_f}", _num_cell_slot(_f))
+        for _rb in (rb_vertical, rb_calendar):
+            _rb.add_slot(f"body-cell-{_f}", _num_cell_slot(_f))
     for _f in ("cost", "overpay"):
         nm_table.add_slot(f"body-cell-{_f}", _num_cell_slot(_f))
     for _f in ("qualifier", "cost", "if_top2", "if_not_top2", "max_units", "support", "legs",
@@ -866,7 +889,8 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                      (review, "No review-required opportunities in the current filters."),
                      (blocked, "No blocked opportunities in the current filters."),
                      (qs_table, "No qualifier setups in the current filters."),
-                     (rb_table, "No bounded-loss bets in the current filters."),
+                     (rb_vertical, "No vertical (same-event) bounded-loss bets in the current filters."),
+                     (rb_calendar, "No calendar (multi-day) bounded-loss bets in the current filters."),
                      (nm_table, "No overpriced books in the current filters.")):
         _t.props(f'no-data-label="{_msg}"')
 
@@ -879,8 +903,10 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             opp_menus.append(build_column_menu(_tbl, _OPP_COLUMNS, default_hidden=_NET_COLUMNS))
     with qs_hdr:
         build_column_menu(qs_table, _QS_COLUMNS, default_hidden=_QS_HIDDEN)
-    with rb_cols_row:
-        build_column_menu(rb_table, _RISK_COLUMNS, default_hidden=_RISK_HIDDEN)
+    with rb_vert_cols:
+        build_column_menu(rb_vertical, _RISK_COLUMNS, default_hidden=_RISK_HIDDEN)
+    with rb_cal_cols:
+        build_column_menu(rb_calendar, _RISK_COLUMNS, default_hidden=_RISK_HIDDEN)
     with nm_cols_row:
         build_column_menu(nm_table, _NEARMISS_COLUMNS)
 
@@ -1230,9 +1256,15 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             min_outright_c=int(rb_min_outright.value or 0),
             max_spread_ratio_hundredths=round(float(rb_max_ratio.value or 0) * 100)) if include_rb else []
         nmv = vm.near_miss_view(view, max_over_c=int(nm_max_over.value or 0)) if include_nm else []
-        rb_table.rows = [vm.risk_budget_row(o, new_ids, chg, flash) for o in rbv]
+        # Split the (already ranked + filtered) bounded-loss set by resolution shape; each side keeps the
+        # selected rank order. A missing resolution_mode (older snapshot) defaults to calendar.
+        rb_vert, rb_cal = vm.split_by_resolution(rbv)
+        rb_vertical.rows = [vm.risk_budget_row(o, new_ids, chg, flash) for o in rb_vert]
+        rb_calendar.rows = [vm.risk_budget_row(o, new_ids, chg, flash) for o in rb_cal]
         nm_table.rows = [vm.near_miss_row(o, new_ids, chg, flash) for o in nmv]
         rb_title.set_text(f"Bounded-Loss Bets — capped downside, convex upside ({len(rbv):,})")
+        rb_vert_title.set_text(f"Vertical — both legs resolve together ({len(rb_vert):,})")
+        rb_cal_title.set_text(f"Calendar — legs resolve on different days ({len(rb_cal):,})")
         nm_title.set_text(f"Overpriced Books — flat guaranteed loss, watch-only ({len(nmv):,})")
         rb_expansion.set_visibility(include_rb)
         nm_expansion.set_visibility(include_nm)
@@ -1383,7 +1415,8 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         (show_net_sw, "Show estimated net-of-fees columns"),
         (actionable, "Actionable opportunities"), (review, "Review-required opportunities"),
         (blocked, "Blocked opportunities"), (qs_table, "Qualifier setups"),
-        (rb_table, "Bounded-loss bets"), (rb_expansion, "Bounded-loss bets section"),
+        (rb_vertical, "Bounded-loss bets (vertical)"), (rb_calendar, "Bounded-loss bets (calendar)"),
+        (rb_expansion, "Bounded-loss bets section"),
         (nm_table, "Overpriced books"), (nm_expansion, "Overpriced books section"),
         (backlog, "Recently-actionable backlog"),
         (backlog_events_table, "Durable 7-day backlog"), (backlog_events_cat, "Durable backlog category"),

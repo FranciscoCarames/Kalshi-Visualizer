@@ -94,6 +94,9 @@ class Opportunity(BaseModel):
     rule_flag: str | None = None
     settlement_caveat: str | None = None
     relationship_type: str | None = None
+    # Bounded-Loss vertical (simultaneous resolution) vs calendar (sequential). Optional → old stored rows
+    # without it read as None and the dashboard treats a missing value as "calendar" (the safe default).
+    resolution_mode: str | None = None
     # Per-leg tickers + the second leg's link (the panel surfaces both legs).
     ticker_1: str | None = None
     ticker_2: str | None = None

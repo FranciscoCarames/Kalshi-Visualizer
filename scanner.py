@@ -57,7 +57,8 @@ UNIFIED_COLUMNS = [
     "bucket", "status", "tradable_now", "blocked_reason",      # routing / state (Stage 1)
     "market_status", "rule_flag",              # lifecycle-diff inputs (Stage 3 §9/§10)
     "settlement_caveat",                       # non-blocking per-game settlement caveat (dutch-book PR 6)
-    "relationship_type", "opportunity_id",     # identity (Stage 1)
+    "relationship_type", "resolution_mode",     # identity (Stage 1) + Bounded-Loss vertical/calendar split
+    "opportunity_id",
     "ticker_1", "ticker_2", "url", "url_2",    # per-leg tickers + links (panel, Stage 5 §0)
     "legs", "n_legs",                          # N-leg plan (synthetic bundles); synthesized 2-leg otherwise
     "payout_floor_c", "roi_pct",               # guaranteed payout floor + gross ROI on cost (PR 13)
@@ -188,6 +189,9 @@ def _finalize_unified(d: dict[str, Any], *, payout_floor_c: Any) -> dict[str, An
     # WC Qualifier Setups (PR1): every row carries the tag fields so old snapshots + untagged rows are safe.
     d.setdefault("setup_family", "")
     d.setdefault("setup_type", "")
+    # Bounded-Loss vertical/calendar split: default to the conservative "calendar" so dutch-book / synthetic
+    # rows and pre-field snapshots stay safe (only risk-budget containment rows carry a real value).
+    d.setdefault("resolution_mode", "calendar")
     # Exact-order top-two bundle two-tier economics — default on every row so old snapshots stay safe.
     for _k in ("opportunity_class", "worst_bundle_quote_quality", "comparator_quote_quality"):
         d.setdefault(_k, "")
@@ -209,9 +213,11 @@ def _to_unified_consistency(r: dict[str, Any], cfg) -> dict[str, Any]:
         "bucket": r.get("bucket") or "", "status": r.get("status") or "",
         "tradable_now": r.get("tradable_now") or "", "blocked_reason": r.get("blocked_reason") or "",
         "market_status": _market_status_consistency(r), "rule_flag": r.get("rule_flag") or "",
-        "settlement_caveat": "",  # containment ladders aren't per-game books
+        "settlement_caveat": "",  # containment ladders aren't per-game books (soccer leaf overrides below)
         "participant_key": r.get("player_key") or "",   # for the detail panel (PR 24)
-        "relationship_type": r.get("relationship_type") or "", "opportunity_id": r.get("opportunity_id") or "",
+        "relationship_type": r.get("relationship_type") or "",
+        "resolution_mode": r.get("resolution_mode") or "calendar",   # vertical (simultaneous) / calendar
+        "opportunity_id": r.get("opportunity_id") or "",
         # Leg 1 = broader/parent (Buy YES), leg 2 = deeper/child (Buy NO). Links must follow the legs:
         # url -> parent (leg 1), url_2 -> child (leg 2). (Was reversed: url pointed at the child.)
         "ticker_1": r.get("parent_ticker") or "", "ticker_2": r.get("child_ticker") or "",
@@ -234,6 +240,12 @@ def _to_unified_consistency(r: dict[str, Any], cfg) -> dict[str, Any]:
     if (cfg.sport_id == "soccer" and r.get("child_node") == _WC_NOT_WINNER_CHILD
             and r.get("parent_node") == _WC_NOT_WINNER_PARENT):
         d["setup_family"], d["setup_type"] = _WC_QUALIFIER_FAMILY, "qualifier_not_winner"
+        # Best-third mechanic: a 3rd-placed team's "Reach Round of 32" is decided only AFTER all groups
+        # finish (later than "Win group"), so the two legs are NOT guaranteed to settle together → keep this
+        # leaf in Calendar and stamp a non-blocking caveat (advisory; never changes bucket/tradability).
+        d["resolution_mode"] = "calendar"
+        d["settlement_caveat"] = ("qualification can depend on best-third standings decided after this "
+                                  "group ends — the legs may not resolve together")
     # broader-YES + deeper-NO guarantees ≥100¢ in every settled state, so the floor is 100 when there's a
     # buy-plan (a firm cost), else None (CLEAN / display-only rows have no executable position).
     return _finalize_unified(d, payout_floor_c=(100 if d["cost_c"] is not None else None))
