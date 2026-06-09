@@ -56,6 +56,15 @@ RISK_BUDGET_DEFAULT_MAX_SPREAD_RATIO_HUNDREDTHS = 0  # max child display_spread/
 NEAR_MISS_MAX_OVER_C = 5                     # widest overpay persisted (¢ over the payout floor)
 NEAR_MISS_DEFAULT_OVER_C = 3                 # default UI max-overpay filter (¢)
 
+# Peer-relative cheapness flags (Phase 2 F) — a DISPLAY-ONLY badge, NOT a ranker and NEVER executable. Among
+# SAME-SPORT bounded-loss bets within PEER_BAND_TOLERANCE_C ¢ of the same implied-payoff band (parent−child
+# display gap), a bet is flagged "cheap" when its overpay (or its spread÷outright) sits at least
+# PEER_CHEAP_MAD_K robust z-scores (median/MAD) BELOW the peer median. Needs ≥ PEER_MIN_COUNT same-sport
+# peers, else it's left unflagged (insufficient peers). Gross, top-of-book, uncalibrated.
+PEER_BAND_TOLERANCE_C = 5                    # ± band window (¢) defining "similar implied chance" peers
+PEER_MIN_COUNT = 4                           # min same-sport in-band peers required to judge cheapness
+PEER_CHEAP_MAD_K = 1.5                       # robust z-score (below peer median) to flag cheap
+
 # World Cup game-support signal (#5): an ASK-IMPLIED support score (3·win_ask + draw_ask, summed over a
 # team's 3 group games) — NOT expected points / not a probability (vig-biased upward). A team is FLAGGED
 # (diagnostic-only) when its score is strong AND its qualify YES sits in a "moderately priced" band — i.e.

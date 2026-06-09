@@ -238,6 +238,8 @@ _RISK_COLUMNS = [
     {"name": "signal", "label": "Signal", "field": "signal", "align": "left", "sortable": True},
     # PR E — Kind (Vertical/Calendar) shown in the combined "All" table; redundant (constant) in the splits.
     {"name": "kind", "label": "Kind", "field": "resolution", "align": "center", "sortable": True},
+    # PR F — cheap vs same-sport peers at a similar implied chance ("cost" / "ratio" / both); blank otherwise.
+    {"name": "cheap", "label": "Cheap vs peers", "field": "cheap", "align": "center", "sortable": True},
     {"name": "sport", "label": "Sport", "field": "sport", "align": "center", "sortable": True},
     {"name": "name", "label": "Participant / chain", "field": "name", "align": "left", "sortable": True},
     {"name": "detail", "label": "Detail", "field": "detail", "align": "left"},
@@ -1291,6 +1293,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             min_ratio_tenths=round(float(rb_min_ratio.value or 0) * 10),
             min_outright_c=int(rb_min_outright.value or 0),
             max_spread_ratio_hundredths=round(float(rb_max_ratio.value or 0) * 100)) if include_rb else []
+        vm.flag_peer_cheapness(rbv)        # PR F: stamp cheap_cost/cheap_ratio (same-sport peers); display-only
         rb_vert, rb_cal = vm.split_by_resolution(rbv)
         # PR E: the combined "All" table shows the full ranked set; the splits show each kind.
         rb_all.rows = [vm.risk_budget_row(o, new_ids, chg, flash) for o in rbv]

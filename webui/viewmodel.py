@@ -394,6 +394,52 @@ def _sized_at_budget(o: dict[str, Any], budget_c: int = _BUDGET_C) -> tuple[int,
     return units, round(-wc * units), round(bc * units)
 
 
+def _overpay_c(o: dict[str, Any]) -> float | None:
+    wc = _num_or_none(o.get("worst_case_profit_c"))
+    return None if wc is None else max(0.0, -wc)
+
+
+def _peer_cheap(b_val: float | None, peer_vals: list, k: float) -> bool:
+    """True if `b_val` sits ≥ `k` robust z-scores (median/MAD) BELOW the peer median (lower = cheaper). MAD 0
+    (a constant peer level) → flag only a strict undercut. None inputs / no peers → not cheap."""
+    vals = [v for v in peer_vals if v is not None]
+    if b_val is None or not vals:
+        return False
+    med = statistics.median(vals)
+    mad = statistics.median([abs(v - med) for v in vals])
+    return b_val < med if mad == 0 else (med - b_val) / mad >= k
+
+
+def flag_peer_cheapness(opps: Iterable[dict[str, Any]] | None, *, band_tol_c: float | None = None,
+                        min_peers: int | None = None, k: float | None = None) -> list[dict[str, Any]]:
+    """Stamp DISPLAY-ONLY `cheap_cost` / `cheap_ratio` flags on each bounded-loss opp: cheap vs SAME-SPORT
+    peers within `band_tol_c` ¢ of the same implied-payoff band (`display_spread_c`). A bet is cheap on
+    `cost` when its overpay (max loss), or on `ratio` when its spread÷outright, is ≥ `k` robust z-scores
+    below the peer median. Needs ≥ `min_peers` same-sport in-band peers, else left unflagged (insufficient).
+    Mutates the opps in place (idempotent — every row is reset first); NEVER read by executable
+    classify/bucket/rank. Returns the same list. Defaults pulled from config."""
+    band_tol_c = config.PEER_BAND_TOLERANCE_C if band_tol_c is None else band_tol_c
+    min_peers = config.PEER_MIN_COUNT if min_peers is None else min_peers
+    k = config.PEER_CHEAP_MAD_K if k is None else k
+    rows = list(opps or [])
+    for r in rows:                                   # reset (no stale carryover from a prior, wider set)
+        r["cheap_cost"], r["cheap_ratio"] = False, False
+    for b in rows:
+        band = _num_or_none(b.get("display_spread_c"))
+        if band is None:
+            continue
+        sport = b.get("sport")
+        peers = [p for p in rows if p is not b and p.get("sport") == sport
+                 and _num_or_none(p.get("display_spread_c")) is not None
+                 and abs(_num_or_none(p.get("display_spread_c")) - band) <= band_tol_c]
+        if len(peers) < min_peers:
+            continue                                 # insufficient same-sport peers → not judged
+        b["cheap_cost"] = _peer_cheap(_overpay_c(b), [_overpay_c(p) for p in peers], k)
+        b["cheap_ratio"] = _peer_cheap(_num_or_none(b.get("spread_over_child")),
+                                       [_num_or_none(p.get("spread_over_child")) for p in peers], k)
+    return rows
+
+
 def risk_budget_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str] | None = None,
                     flash_ids: set[str] | None = None) -> dict[str, Any]:
     """Display row for the risk-budget table: leads with the convex economics (max loss / max profit /
@@ -426,6 +472,10 @@ def risk_budget_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str
         # upside $ (capped by the book). All blank when their inputs are missing.
         "resolution": "Vertical" if o.get("resolution_mode") == "vertical" else "Calendar",
         "wins_if": _wins_if(o),
+        # PR F — peer-cheapness badge (same-sport peers at a similar implied chance; display-only). Blank
+        # when not flagged / insufficient peers. Set by flag_peer_cheapness() over the bounded-loss set.
+        "cheap": ", ".join(lbl for lbl, on in (("cost", o.get("cheap_cost")), ("ratio", o.get("cheap_ratio")))
+                           if on),
         "max_units": _num_or_none(o.get("exec_min_size")),
         "quote_health": str(o.get("comp_quote_quality") or ""),
         "units_100": _sized[0] if _sized else None,

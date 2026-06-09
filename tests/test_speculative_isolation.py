@@ -21,7 +21,7 @@ SPECULATIVE_FIELDS = {
     "display_spread_c": 12, "parent_display_c": 30, "child_display_c": 18,
     "spread_over_parent": 0.4, "spread_over_child": 0.6,
     "resolution_mode": "vertical", "resolution": "Vertical",
-    "cheap_cost": True, "cheap_ratio": False,                                   # PR F (future)
+    "cheap_cost": True, "cheap_ratio": False, "cheap": "cost",                  # PR F
     # PR E trader columns + $100 sizing + the raw display fields they derive from.
     "wins_if": "Reach Final but not Win Tournament", "max_units": 12, "quote_health": "OK",
     "units_100": 50, "loss_100": 1.0, "upside_100": 49.0,

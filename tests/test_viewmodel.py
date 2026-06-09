@@ -747,3 +747,51 @@ def test_speculative_explainer_only_for_risk_budget_and_conservative():
     blob = " ".join(t for _, t in lines).lower()
     for banned in ("riskless", "locked", "true arbitrage", "guaranteed"):
         assert banned not in blob
+
+
+# --- PR F: peer-relative cheapness (same-sport, display-only badge) -----------------------------------
+def _rb(oid, sport, band, overpay, soc=None):
+    return {"opportunity_id": oid, "sport": sport, "bucket": "risk_budget",
+            "display_spread_c": band, "worst_case_profit_c": -overpay, "spread_over_child": soc}
+
+
+def test_flag_peer_cheapness_flags_same_sport_outlier():
+    bets = [_rb("cheap", "golf", 10, 1, 0.1), _rb("g1", "golf", 10, 5, 0.5),
+            _rb("g2", "golf", 11, 5, 0.5), _rb("g3", "golf", 9, 6, 0.6), _rb("g4", "golf", 10, 4, 0.4)]
+    vm.flag_peer_cheapness(bets)
+    cheap = next(b for b in bets if b["opportunity_id"] == "cheap")
+    g1 = next(b for b in bets if b["opportunity_id"] == "g1")
+    assert cheap["cheap_cost"] and cheap["cheap_ratio"]      # far below the peer median on both metrics
+    assert not g1["cheap_cost"]                              # mid-pack -> not flagged
+
+
+def test_flag_peer_cheapness_cross_sport_isolation():
+    # a cheap golf bet whose only peers are tennis -> not enough SAME-SPORT peers -> never flagged
+    bets = [_rb("g", "golf", 10, 1, 0.1)] + [_rb(f"t{i}", "tennis", 10, 5, 0.5) for i in range(4)]
+    vm.flag_peer_cheapness(bets)
+    assert not bets[0]["cheap_cost"] and not bets[0]["cheap_ratio"]
+
+
+def test_flag_peer_cheapness_insufficient_peers_not_flagged():
+    bets = [_rb("a", "golf", 10, 1, 0.1), _rb("b", "golf", 10, 5, 0.5)]   # 1 peer each (< min 4)
+    vm.flag_peer_cheapness(bets)
+    assert not any(b["cheap_cost"] for b in bets)
+
+
+def test_peer_cheap_mad_zero_requires_strict_undercut():
+    assert vm._peer_cheap(3, [5, 5, 5, 5], 1.5) is True      # strictly below a constant peer level
+    assert vm._peer_cheap(5, [5, 5, 5, 5], 1.5) is False     # equal -> not cheap
+    assert vm._peer_cheap(None, [5, 5, 5, 5], 1.5) is False  # None -> not cheap
+
+
+def test_flag_peer_cheapness_missing_band_not_flagged():
+    bets = [_rb("nb", "golf", None, 1, 0.1)] + [_rb(f"g{i}", "golf", 10, 5, 0.5) for i in range(4)]
+    vm.flag_peer_cheapness(bets)
+    assert not bets[0]["cheap_cost"]                         # no band -> skipped
+
+
+def test_risk_budget_row_cheap_badge():
+    assert vm.risk_budget_row({"opportunity_id": "x", "bucket": "risk_budget",
+                               "cheap_cost": True, "cheap_ratio": False}, set())["cheap"] == "cost"
+    assert vm.risk_budget_row({"opportunity_id": "y", "bucket": "risk_budget",
+                               "cheap_cost": True, "cheap_ratio": True}, set())["cheap"] == "cost, ratio"
