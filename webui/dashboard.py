@@ -418,7 +418,14 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                              # bounded-loss/near-miss control change re-slices it WITHOUT re-filtering or
                              # rebuilding the other tables. `scan_status` cached so the hot path never reads
                              # the store. `pending_refresh` = (kind, monotonic deadline) for the debounce.
-                             "view": [], "scan_status": None, "pending_refresh": None}
+                             "view": [], "scan_status": None, "pending_refresh": None,
+                             # Branch 2 render telemetry (shown in Diagnostics): the last rerender's phase
+                             # durations, so any further UI tuning (e.g. PR1b table-row diffing) is gated on
+                             # measurement, not guesswork. `freshness_text` caches the last banner string so
+                             # the 1s tick only pushes when it actually changed.
+                             "rerender_count": 0, "last_total_rerender_ms": None, "last_filter_ms": None,
+                             "last_cascade_ms": None, "last_row_build_ms": None,
+                             "last_table_update_ms": None, "freshness_text": None}
 
     ui.add_css(_SELECTED_ROW_CSS)        # selected-row highlight (#14) — see module note
     ui.add_css(_A11Y_CSS)                 # accessibility (#10): focus-visible ring + opt-in larger text
@@ -1053,6 +1060,14 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                 f"scan: {m['scan_status']} · age {m['snapshot_age_seconds'] if m['snapshot_age_seconds'] is None else int(m['snapshot_age_seconds'])}s"
                 f" · {m['kalshi_requests']} Kalshi req · {m['opportunities']} opps · viewers {m['viewer_count']}"
             ).classes("text-sm font-mono")
+            # Branch 2 render telemetry: last rerender's phase durations (ms). Gates any further UI tuning
+            # (e.g. PR1b row-diffing if `apply` dominates). `write_ms` is the last scan's snapshot write.
+            ui.label(
+                f"render #{state.get('rerender_count') or 0} · total {state.get('last_total_rerender_ms')}ms"
+                f" (filter {state.get('last_filter_ms')} · cascade {state.get('last_cascade_ms')}"
+                f" · build {state.get('last_row_build_ms')} · apply {state.get('last_table_update_ms')})"
+                f" · write {((state.get('scan_status') or {}).get('last_result') or {}).get('write_fn_ms')}ms"
+            ).classes("text-xs text-gray-500 font-mono")
             ui.label(f"Sum of independent row maxima (actionable): ${vm.sum_row_maxima(view):,.2f}"
                      ).classes("text-sm font-medium mt-1")
             ui.label("Independent per-opportunity maxima — NOT a guaranteed simultaneous total (you can't "
@@ -1266,6 +1281,13 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         nm_expansion.set_visibility(include_nm)
         nm_max_over.set_enabled(include_nm)
 
+    def _set_freshness(text: str) -> None:
+        """Set the freshness/scope banner only when its text actually changed — the 1s tick and every
+        rerender call this, so the guard avoids a needless text push (Branch 2)."""
+        if state.get("freshness_text") != text:
+            freshness.set_text(text)
+            state["freshness_text"] = text
+
     def rerender(force_diagnostics: bool = False) -> None:
         """Pure in-memory re-render from `state` — NO store access. Re-filter + push only the VISIBLE
         tables; refresh empty-state / chips / URL / freshness. Diagnostics (heavy store reads) rebuild
@@ -1277,9 +1299,12 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         chg = state.get("changes") or {}      # per-snapshot change-signal; re-displayed, never re-derived here
         flash = state.get("flash_now") or set()   # PR B: non-empty only on the snapshot-change rerender
         cov = state.get("cov") or {}
+        _t_start = time.monotonic()                       # Branch 2: phase timing for Diagnostics
         filters = _current_filters()
+        _t_filter = time.monotonic()
         view = vm.rank_opps(vm.filter_opps(opps, **filters), rank_sel.value)   # display-time re-sort, no rescan
         state["view"] = view      # PR R: cache so the scoped bounded-loss / near-miss refreshers can reuse it
+        state["last_filter_ms"] = round((time.monotonic() - _t_filter) * 1000, 1)
         # Truthful empty state by scope (PR 26a): no-scan / scanning / scan-failed / no-opportunities /
         # filter-hid-all — or hidden when there's content to show. scan_status is cached (no hot-path store read).
         msg = vm.empty_state(cov=cov, total_opps=len(opps), shown_opps=len(view),
@@ -1288,14 +1313,23 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         empty.set_visibility(msg is not None)
 
         ls = pos_framing_sw.value      # Long/Short YES display wording (default off → Buy YES/Buy NO)
-        actionable.rows = [vm.opp_row(o, new_ids, chg, flash, long_short=ls) for o in view if o.get("bucket") == "actionable"]
-        review.rows = [vm.opp_row(o, new_ids, chg, flash, long_short=ls) for o in view if o.get("bucket") == "review_signal"]
-        blocked.rows = [vm.opp_row(o, new_ids, chg, flash, long_short=ls) for o in view if o.get("bucket") == "blocked"]
+        _t_build = time.monotonic()    # build the row-models (Python), distinct from the widget-apply below
+        act_rows = [vm.opp_row(o, new_ids, chg, flash, long_short=ls) for o in view if o.get("bucket") == "actionable"]
+        rev_rows = [vm.opp_row(o, new_ids, chg, flash, long_short=ls) for o in view if o.get("bucket") == "review_signal"]
+        blk_rows = [vm.opp_row(o, new_ids, chg, flash, long_short=ls) for o in view if o.get("bucket") == "blocked"]
         qs_opps = [o for o in view if o.get("bucket") == "qualifier_setup"]
-        qs_table.rows = [vm.qualifier_row(o, new_ids, chg, flash,
-                                          leg_lookup=_contract_lookup_for(o),
-                                          comparator_contract=_comparator_contract_for(o))
-                         for o in vm.order_qualifier_rows(qs_opps)]
+        qs_rows = [vm.qualifier_row(o, new_ids, chg, flash,
+                                    leg_lookup=_contract_lookup_for(o),
+                                    comparator_contract=_comparator_contract_for(o))
+                   for o in vm.order_qualifier_rows(qs_opps)]
+        bl_rows = [vm.backlog_row(b, tz) for b in (state.get("backlog") or [])]
+        ble_rows = [vm.backlog_event_row(b, tz) for b in (state.get("backlog_events") or [])]
+        state["last_row_build_ms"] = round((time.monotonic() - _t_build) * 1000, 1)
+
+        # Assign the built models to the Quasar tables + toggle section visibility — the widget-apply cost,
+        # measured separately from row construction (the PR1b row-diffing gate).
+        _t_apply = time.monotonic()
+        actionable.rows, review.rows, blocked.rows, qs_table.rows = act_rows, rev_rows, blk_rows, qs_rows
         for hdr, tbl, sw in ((review_hdr, review, show_review_sw), (blocked_hdr, blocked, show_blocked_sw),
                              (qs_hdr, qs_table, qs_switch)):
             hdr.set_visibility(sw.value)
@@ -1306,11 +1340,12 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         refresh_bounded_loss()
         refresh_near_miss()
 
-        backlog.rows = [vm.backlog_row(b, tz) for b in (state.get("backlog") or [])]
-        backlog_events_table.rows = [vm.backlog_event_row(b, tz) for b in (state.get("backlog_events") or [])]
+        backlog.rows = bl_rows
+        backlog_events_table.rows = ble_rows
+        state["last_table_update_ms"] = round((time.monotonic() - _t_apply) * 1000, 1)
 
         # scope banner (with the PR 21a counters) + per-bucket counts + filter chips + URL state
-        freshness.set_text(vm.scope_banner(cov, tz))
+        _set_freshness(vm.scope_banner(cov, tz))
         # Per-bucket counts (PR 4): computed from the FULL snapshot + current filters (in-memory; no store
         # read), reusing filter_opps so the numbers match the rendered tables. Toggle state -> "hidden by
         # settings" wording. `opps` is the full snapshot list; `filters` are the membership+threshold values.
@@ -1346,6 +1381,8 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         _sync_url(filters)
         if force_diagnostics or diagnostics_expansion.value:   # heavy (store reads): snapshot change or open
             render_diagnostics(view)
+        state["rerender_count"] = (state.get("rerender_count") or 0) + 1
+        state["last_total_rerender_ms"] = round((time.monotonic() - _t_start) * 1000, 1)
 
     async def poll() -> None:
         """Cheap 1s tick: reload + rerender ONLY when a new snapshot id has landed. Otherwise this is a
@@ -1505,7 +1542,9 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
     def _on_membership_change() -> None:
         if state.get("_suppress_cascade"):
             return
+        _t = time.monotonic()
         _refresh_cascade()
+        state["last_cascade_ms"] = round((time.monotonic() - _t) * 1000, 1)
         rerender()
     sport_sel.on_value_change(lambda _=None: _on_membership_change())
     tour_sel.on_value_change(lambda _=None: _on_membership_change())
@@ -1541,7 +1580,8 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
 
     def tick_age() -> None:
         # Re-render only the freshness/scope line each second (scope_banner recomputes the age live).
-        freshness.set_text(vm.scope_banner(state.get("cov"), tz_select.value))
+        # Guarded so an unchanged string pushes nothing (Branch 2).
+        _set_freshness(vm.scope_banner(state.get("cov"), tz_select.value))
 
     ui.timer(config.UI_POLL_SECONDS, poll)        # snapshot-change watcher (cheap; reloads only on a new id)
     ui.timer(1.0, tick_age)
