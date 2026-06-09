@@ -2,8 +2,9 @@
 
 A small, read-only [NiceGUI](https://nicegui.io/)-on-[FastAPI](https://fastapi.tiangolo.com/) dashboard
 (run via `serve.py`) over live [Kalshi](https://kalshi.com/) prediction-market data for **tennis
-(ATP/WTA), NBA, WNBA, golf, soccer, MLB, NHL, motorsport (F1/NASCAR/IndyCar/MotoGP), and NFL**. It finds two
-classes of opportunity across a participant's related contracts and ranks them best-first.
+(ATP/WTA), NBA, WNBA, golf, soccer, MLB, NHL, motorsport (F1/NASCAR/IndyCar/MotoGP), NFL, and esports** —
+10 sports. It finds two classes of opportunity across a participant's related contracts and ranks them
+best-first.
 
 1. **Layer-consistency violations** — a deeper outcome must not price above a prerequisite that
    contains it (e.g. *Win Tournament ≤ Reach Final ≤ Reach Semifinal*). Framed as buy-only:
@@ -75,7 +76,10 @@ inconsistencies** — a firm bid/ask cross with order size behind it. It is deli
 | Soccer (World Cup) | Reach Round of 32 ⊇ Reach Round of 16 ⊇ Reach Quarterfinals ⊇ Reach Semifinals ⊇ Reach Finals ⊇ Win the World Cup |
 | MLB | Reach Playoffs ⊇ Win League ⊇ Win World Series |
 | NHL | Reach Playoffs ⊇ Win Conference ⊇ Win Stanley Cup |
+| NFL | Reach Playoffs ⊇ Win Conference ⊇ Win Super Bowl |
 | Motorsport | per-race finishing position, e.g. Top 10 ⊇ Top 5 ⊇ Podium ⊇ Win Race |
+
+Esports has no containment ladder in v1 (winner-field overround + per-game/per-map dutch books only).
 
 ---
 
@@ -97,12 +101,14 @@ Shapes handled: **2-outcome** head-to-head match/series or single game; **soccer
 (one champion) but not provably exhaustive, so it is **overround-only** on the priceable subset of
 entrants — safe because an untraded or unlisted winner only pays more.
 
-**Coverage:** tennis matches; NBA/WNBA/NHL playoff series; per-game (`KX*GAME`) for NBA/WNBA/MLB/NHL;
-soccer 3-way games; one-winner fields (all sports, including motorsport race winners). Per-game and
-`KX*GAME` books carry a non-blocking `settlement_caveat` (a postponed/suspended game can settle
-differently). Props and advancement markets are excluded; `KXMLBSERIES` is excluded as non-MECE (a
-regular-season series can tie 2-2), while NHL's `KXNHLSERIES` is a clean best-of-7 and stays in. Unknown
-series are always excluded.
+**Coverage:** tennis matches; NBA/WNBA/NHL playoff series; per-game (`KX*GAME`) for NBA/WNBA/MLB/NHL/NFL;
+esports per-game and per-map (`KX*GAME`/`KX*MAP`, draw-free); soccer 3-way games; one-winner fields (all
+sports, including motorsport race winners and per-title esports champions). Per-game and `KX*GAME`/`KX*MAP`
+books carry a non-blocking `settlement_caveat` (a postponed/suspended game can settle differently). NFL
+games **can tie**, so their two-way book is gated on a proof that a tie pays $0.50/side (`game_mece_by_shape`
++ `dutchbook._proves_fixed_sum`); the draw-free sports are ungated. Props and advancement markets are
+excluded; `KXMLBSERIES` is excluded as non-MECE (a regular-season series can tie 2-2), while NHL's
+`KXNHLSERIES` is a clean best-of-7 and stays in. Unknown series are always excluded.
 
 A third family, the **synthetic exact-score bundle** (`synthetic_bundle.py`), replicates "this player wins
 their match" from the MECE set of set-scores and prices it against two independent hedges. Because an exact
@@ -128,7 +134,9 @@ to tennis.
 | Soccer ⚽ | `exact_series` (`KXWCGAME`, `KXWCROUND`, `KXWCGROUPQUAL`, dormant `KXWC` outright) | `soccer_team` UUID | 3-way games + winner field |
 | MLB ⚾ | `KXMLB*` (allow-list) | `baseball_team` UUID | `KXMLBGAME` games + winner field |
 | NHL 🏒 | `KXNHL*` (allow-list) | `hockey_team` UUID | `KXNHLSERIES` + `KXNHLGAME` + field |
+| NFL 🏈 | `KXNFL*` (allow-list) + `KXSB` | `football_team` UUID | `KXNFLGAME` games (tie-gated) + `KXSB` field |
 | Motorsport 🏁 | `KXF1`/`KXNASCAR`/`KXINDY`/`KXMOTOGP` | driver/team UUID or constructor name | one-winner field overround |
+| Esports 🎮 | `exact_series` (CS2/LoL/Valorant/Dota2/CoD/R6/… `KX*GAME`+`KX*MAP`, per-title winner) | `esports_competitor` UUID | draw-free games + maps + winner field |
 
 Contracts are grouped by `(participant_key, tournament)`; the tournament key is season-scoped so
 co-loaded seasons never form a false cross-season ladder. Tournament is a **client-side filter**, not a
