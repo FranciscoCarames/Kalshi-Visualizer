@@ -64,6 +64,16 @@ SPECULATIVE_TOP2_BASIS = ("top-two bundle: Buy YES on the 12 exact-order outcome
                           "not modeled; 12-leg execution with thin / stale exact-order quotes; settlement "
                           "review required")
 
+# Three-zone disclosure (Phase 2 B) — single-sourced wording for the SPECULATIVE zone (bounded-loss
+# candidates + derived diagnostics). These are NOT executable findings: gross, top-of-book, market-implied
+# and UNCALIBRATED (no fee / full-depth / outcome-calibration model), and they CAN LOSE MONEY. Never
+# "riskless" / "locked" / "true arbitrage" / "guaranteed". Probability / EV / relative-value metrics here are
+# DISPLAY-ONLY and never feed the strict executable classification, bucket, or rank.
+SPECULATIVE_ZONE_BASIS = ("Speculative — NOT actionable and CAN LOSE MONEY. Bounded-loss candidates and "
+                          "derived signals are gross, top-of-book, market-implied and UNCALIBRATED (fees, "
+                          "full depth, and outcome calibration are not modeled). These metrics are "
+                          "display-only and never change the strict executable findings.")
+
 # --- Glossary terms (term -> {short, long}) ------------------------------------------
 GLOSSARY: dict[str, dict[str, str]] = {
     "Tradable now": {
