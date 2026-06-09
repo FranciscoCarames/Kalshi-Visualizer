@@ -700,13 +700,16 @@ def test_risk_budget_row_exposes_decomposition_fields():
     assert row["signal"] == "Candidate" and row["ev"] == 7      # ev == gap_vs_be for the canonical spread
 
 
-def test_derived_indicators_from_chain_golf_make_cut():
+def test_derived_indicators_from_chain_generalized():
     chain = [{"layer": "Top 20", "display_pct": 18.0}, {"layer": "Top 10", "display_pct": 9.0}]
     out = vm.derived_indicators(chain, "golf")
-    assert out and out[0]["label"] == "Make the cut" and out[0]["value_pct"] == 18.0
-    # missing Top-20 price -> no floor; non-golf sport -> []
-    assert vm.derived_indicators([{"layer": "Top 10", "display_pct": 9.0}], "golf") == []
-    assert vm.derived_indicators([{"layer": "Reach Semifinal", "display_pct": 60.0}], "tennis") == []
+    labels = [i["label"] for i in out]
+    assert "In contention (Top 20)" in labels                                  # broad-rung (PR G)
+    assert any(i["label"] == "Make the cut" and i["value_pct"] == 18.0 for i in out)   # golf floor still present
+    assert "P(Top 10 | Top 20)" in labels                                      # conditional ratio 9/18*100
+    # generalized beyond golf — tennis now gets an in-contention indicator too
+    assert any(i["label"] == "In contention (Reach Semifinal)"
+               for i in vm.derived_indicators([{"layer": "Reach Semifinal", "display_pct": 60.0}], "tennis"))
     assert vm.derived_indicators(None, "golf") == []
 
 

@@ -666,13 +666,28 @@ def test_participant_default_invariant_for_existing_sports():
     assert r["is_participant"] is True and r["participant_type"] == "participant"
 
 
-def test_golf_make_cut_floor_indicator_and_default_noop():
-    # P(make cut) >= P(Top 20): the derived indicator reads the Top-20 display % as a FLOOR (a bound).
-    out = sports.GOLF.derived_indicators({"Top 20": 18.0, "Top 10": 9.0, "Top 5": 4.0})
-    assert len(out) == 1
-    assert out[0]["label"] == "Make the cut" and out[0]["comparator"] == "≥" and out[0]["value_pct"] == 18.0
-    # absent when Top 20 isn't listed (no floor to read)
-    assert sports.GOLF.derived_indicators({"Top 10": 9.0}) == []
-    # every other sport has no hook -> defaulted no-op returns []
-    assert sports.TENNIS.derived_indicators({"Reach Semifinal": 60.0}) == []
-    assert sports.NBA.derived_indicators({"Reach Playoffs": 80.0}) == []
+def test_golf_derived_indicators_in_contention_ratios_and_make_cut():
+    out = sports.GOLF.derived_indicators({"Top 20": 18.0, "Top 10": 9.0, "Top 5": 4.0, "Win Tournament": 1.0})
+    labels = [i["label"] for i in out]
+    assert "In contention (Top 20)" in labels                       # broadest rung = in-contention
+    floor = next(i for i in out if i["label"] == "Make the cut")     # golf-specific FLOOR still appended
+    assert floor["comparator"] == "≥" and floor["value_pct"] == 18.0
+    pw = next(i for i in out if i["label"] == "P(Win Tournament | Top 5)")   # conditional ratio 1/4*100
+    assert pw["value_pct"] == 25.0
+    # make-cut floor absent when Top 20 isn't listed (other rungs still yield conditional ratios)
+    assert all(i["label"] != "Make the cut" for i in sports.GOLF.derived_indicators({"Top 10": 9.0, "Top 5": 4.0}))
+
+
+def test_derived_indicators_generalized_to_all_laddered_sports_and_guarded():
+    # PR G — every laddered sport gets the broad-rung "in contention" indicator (not just golf).
+    assert any(i["label"] == "In contention (Reach Semifinal)"
+               for i in sports.TENNIS.derived_indicators({"Reach Semifinal": 60.0}))
+    assert any(i["label"] == "In contention (Reach Playoffs)"
+               for i in sports.NBA.derived_indicators({"Reach Playoffs": 80.0}))
+    assert sports.TENNIS.derived_indicators({}) == []                # no rung price -> nothing
+    # conditional ratio SUPPRESSED on an inconsistent ladder (deeper priced above broader)...
+    out = sports.TENNIS.derived_indicators({"Reach Semifinal": 30.0, "Reach Final": 10.0, "Win Tournament": 15.0})
+    assert all(i["label"] != "P(Win Tournament | Reach Final)" for i in out)
+    # ...but a consistent neighbour still emits: P(Reach Final | Reach Semifinal) = 10/30*100
+    pf = next(i for i in out if i["label"] == "P(Reach Final | Reach Semifinal)")
+    assert round(pf["value_pct"], 1) == 33.3

@@ -227,8 +227,31 @@ class SportConfig:
         return self.family_fn(self, series_ticker)
 
     def derived_indicators(self, node_pct: dict[str, Any]) -> list[dict[str, Any]]:
-        """Derived market-implied indicators (bounds) from the ladder's display prices, or [] when none."""
-        return self.derived_indicators_fn(self, node_pct) if self.derived_indicators_fn else []
+        """Derived, DISPLAY-ONLY market-implied indicators from the ladder's display prices (detail panel
+        only; never executable). Generic for any static-laddered sport: (1) the broadest rung as an
+        "In contention" implied chance, (2) guarded conditional ratios P(deeper | broader) over adjacent
+        rungs. Then any sport-specific bounds via `derived_indicators_fn` (e.g. golf make-cut floor). All
+        labeled Uncalibrated; conditional ratios are SUPPRESSED when the ladder is inconsistent
+        (deeper priced ≥ broader → ratio > 1, never asserted as "more than certain")."""
+        out: list[dict[str, Any]] = []
+        nodes = self.ladder.node_order if self.ladder else ()
+        if nodes:
+            broad = nodes[0]
+            top = node_pct.get(broad)
+            if top is not None:
+                out.append({"label": f"In contention ({broad})", "comparator": "≈", "value_pct": top,
+                            "note": "market-implied chance of being in the running; gross, top-of-book, "
+                                    "Uncalibrated"})
+            for broader, deeper in zip(nodes, nodes[1:]):
+                b, d = node_pct.get(broader), node_pct.get(deeper)
+                if b is None or d is None or b <= 0 or d > b:   # missing / degenerate / inconsistent ladder
+                    continue
+                out.append({"label": f"P({deeper} | {broader})", "comparator": "≈", "value_pct": d / b * 100,
+                            "note": "derived conditional estimate; assumes a consistent ladder; gross, "
+                                    "top-of-book, Uncalibrated — NOT a fair value"})
+        if self.derived_indicators_fn:
+            out.extend(self.derived_indicators_fn(self, node_pct))
+        return out
 
     def group_basket_rule_of(self, series_ticker: str) -> "GroupBasketRule | None":
         """The cardinality-floor basket rule for a series ticker, or None when the sport has none."""
