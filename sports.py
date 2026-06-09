@@ -420,6 +420,11 @@ _TENNIS_LADDER = LadderSpec(
 )
 _WOMEN_WINNER_TICKERS = {"KXFOWOMEN", "KXFOWOMENSINGLES", "KXFOPENWMENSINGLE"}
 _MEN_WINNER_TICKERS = {"KXFOMEN", "KXFOMENSINGLES", "KXFOPENMENSINGLE"}
+# ITF lower-tier tour matches (W15/W25/M15/M25…) live OUTSIDE the KXATP*/KXWTA* prefixes, so tennis owns
+# them explicitly. Live-probed 2026-06-09: both carry custom_strike.tennis_competitor (high-confidence
+# identity) and head-to-head events with exactly 2 markets → the standard 2-way dutch-book path
+# (_detect_pair) with no detector change. Women = KXITFWMATCH, men = KXITFMATCH.
+_TENNIS_EXACT = frozenset({"KXITFWMATCH", "KXITFMATCH"})
 
 
 def _tennis_family(cfg: SportConfig, series_ticker: str) -> str:
@@ -462,6 +467,8 @@ def _tennis_division(cfg: SportConfig, series_ticker: str) -> str:
         return "WTA"
     if t in _MEN_WINNER_TICKERS:
         return "ATP"
+    if t.startswith("KXITFW"):
+        return "WTA"                            # ITF women (KXITFWMATCH); men KXITFMATCH falls through to ATP
     if t.startswith("KXWTA") or "WOMEN" in t:
         return "WTA"
     return "ATP"
@@ -486,8 +493,10 @@ def _tennis_score_format(cfg: SportConfig, division: str, tournament: str) -> st
 TENNIS = register(SportConfig(
     sport_id="tennis", label="Tennis", emoji="🎾",
     series_prefixes=tuple(config.TENNIS_SERIES_PREFIXES),
-    default_series=tuple(config.DEFAULT_SERIES),
+    # Fetch the FO core + the ITF head-to-head series in the default scan (ITF is exact-owned, not prefixed).
+    default_series=tuple(config.DEFAULT_SERIES) + tuple(sorted(_TENNIS_EXACT)),
     winner_tickers=frozenset(config.FO_WINNER_TICKERS),
+    exact_series=_TENNIS_EXACT,
     identity=IdentityResolver(candidate_paths=("custom_strike.tennis_competitor",), id_label="tennis_competitor"),
     ladder=_TENNIS_LADDER,
     category_labels=_TENNIS_CATEGORY,
