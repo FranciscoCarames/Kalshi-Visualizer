@@ -215,10 +215,20 @@ class SportConfig:
     # get a per-market synthetic key + is_participant=False so they never pollute the participant selector;
     # the owning detector reads identity from custom_strike. Empty (default) = no-op for every sport.
     non_participant_families: frozenset[str] = field(default_factory=frozenset)
+    # Optional DERIVED market-implied indicators for the participant detail panel — quantities that are NOT
+    # directly traded but inferred from the ladder's displayed prices (e.g. golf "make the cut": since
+    # {finish Top 20} ⊆ {make the cut}, P(make cut) ≥ P(Top 20), so the Top-20 price is a FLOOR). Takes the
+    # node→display% map and returns labeled indicators ({label, comparator, value_pct, note}). DISPLAY-ONLY,
+    # gross/top-of-book bounds — never an edge, never fed to detection. None (default) = no indicators.
+    derived_indicators_fn: Callable[["SportConfig", dict[str, "float | None"]], list[dict[str, Any]]] | None = None
 
     # ---- convenience API (engine calls these) --------------------------------------------
     def family_of(self, series_ticker: str) -> str:
         return self.family_fn(self, series_ticker)
+
+    def derived_indicators(self, node_pct: dict[str, Any]) -> list[dict[str, Any]]:
+        """Derived market-implied indicators (bounds) from the ladder's display prices, or [] when none."""
+        return self.derived_indicators_fn(self, node_pct) if self.derived_indicators_fn else []
 
     def group_basket_rule_of(self, series_ticker: str) -> "GroupBasketRule | None":
         """The cardinality-floor basket rule for a series ticker, or None when the sport has none."""
@@ -733,6 +743,19 @@ def _golf_division(cfg: SportConfig, series_ticker: str) -> str:
     return ""   # no tour split (one coherent rung set per tournament)
 
 
+def _golf_make_cut_indicator(cfg: SportConfig, node_pct: dict[str, "float | None"]) -> list[dict[str, Any]]:
+    """Golf "make the cut" implied FLOOR (bounds only, v1). Finishing Top 20 requires surviving the cut, so
+    {finish Top 20} ⊆ {make the cut} ⟹ P(make cut) ≥ P(Top 20). Read straight off the Top-20 display price
+    — a BOUND, not a fair value, and not a traded market. Absent when Top 20 isn't listed."""
+    top20 = node_pct.get("Top 20")
+    if top20 is None:
+        return []
+    return [{"label": "Make the cut", "comparator": "≥", "value_pct": top20,
+             "note": "Derived — not a traded market. Finishing Top 20 requires making the cut, so the market "
+                     "implies at least this chance to make the cut (the Top-20 price). Gross, top-of-book; "
+                     "a bound, not a fair value."}]
+
+
 GOLF = register(SportConfig(
     sport_id="golf", label="Golf", emoji="⛳",
     series_prefixes=(), default_series=tuple(sorted(_GOLF_EXACT)),
@@ -746,6 +769,7 @@ GOLF = register(SportConfig(
     match_family="",                           # no head-to-head → no dutch books
     divisions={},
     division_label="",
+    derived_indicators_fn=_golf_make_cut_indicator,
     family_fn=_golf_family,
     stage_fn=_golf_stage,
     node_fn=_golf_node,
