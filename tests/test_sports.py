@@ -664,3 +664,15 @@ def test_participant_default_invariant_for_existing_sports():
         _nba_market("KXNBA-26-BOS", "Boston", "uuid-bos", "0.40", "0.42",
                     "Will the Boston win the 2026 Pro Basketball Finals?")])])[0]
     assert r["is_participant"] is True and r["participant_type"] == "participant"
+
+
+def test_golf_make_cut_floor_indicator_and_default_noop():
+    # P(make cut) >= P(Top 20): the derived indicator reads the Top-20 display % as a FLOOR (a bound).
+    out = sports.GOLF.derived_indicators({"Top 20": 18.0, "Top 10": 9.0, "Top 5": 4.0})
+    assert len(out) == 1
+    assert out[0]["label"] == "Make the cut" and out[0]["comparator"] == "≥" and out[0]["value_pct"] == 18.0
+    # absent when Top 20 isn't listed (no floor to read)
+    assert sports.GOLF.derived_indicators({"Top 10": 9.0}) == []
+    # every other sport has no hook -> defaulted no-op returns []
+    assert sports.TENNIS.derived_indicators({"Reach Semifinal": 60.0}) == []
+    assert sports.NBA.derived_indicators({"Reach Playoffs": 80.0}) == []
