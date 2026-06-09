@@ -126,6 +126,30 @@ _NOTE_CELL_SLOT = (
 )
 
 
+def _wrap_cell_slot(field: str) -> str:
+    """A left-aligned, wrapping free-text cell for an arbitrary row field (e.g. the full caveat prose)."""
+    return ('<q-td :props="props" class="text-left" '
+            'style="white-space: normal; min-width: 18rem; max-width: 32rem;">'
+            "{{ props.row.%s }}</q-td>") % field
+
+
+def _label_cell_slot(label_field: str) -> str:
+    """Display the `*_label` string for a quote-quality column whose `field` is the numeric `*_rank` (so
+    the column SORTS by rank Tight→Crossed→Unknown but SHOWS the human label)."""
+    return '<q-td :props="props" class="text-center">{{ props.row.%s }}</q-td>' % label_field
+
+
+# Qualifier caveat cell (PR — top-two parity): compact structural / settlement chips (each with a tooltip)
+# replacing the old long prose Note. The full prose lives in the hidden "Full caveat" column + the detail
+# panel. Neutral grey — these are advisory/structural, not blockers.
+_QS_CAVEAT_CELL_SLOT = (
+    '<q-td :props="props" class="text-left" style="white-space: normal; max-width: 22rem;">'
+    '<q-badge v-for="b in props.row.caveat_badges" :key="b.label" color="grey-7" '
+    'class="q-mr-xs q-mb-xs">{{ b.label }}'
+    '<q-tooltip max-width="22rem">{{ b.tooltip }}</q-tooltip></q-badge></q-td>'
+)
+
+
 def _notify(message: str, *, type: str = "info", position: str = "top-right") -> None:
     """Single entry point for transient toasts (PR A2). Defaults to the top-right corner so toasts don't
     cover the controls/rows the user is reading. Call within a page context (like ui.notify itself)."""
@@ -236,19 +260,52 @@ _NEARMISS_COLUMNS = [
 ]
 
 # Qualifier-setups table (#4/#5). NO gross-edge / ROI / size / profit columns (those are blank for a
-# non-Actionable signal and would imply tradability). The qualifier-minus-top-two-cost gap (exact-order
-# two tiers) and the ask-support score (game-support) each populate only their own column.
+# non-Actionable signal and would imply tradability). Default-visible columns are the exact-order top-two
+# economics; the rest start hidden behind the column chooser. Numeric columns hold RAW numbers (cell slots
+# format display only, so numeric sort is preserved); the two quote columns sort on a numeric `*_rank`
+# field while DISPLAYING the `*_label` string (custom Tight→Crossed order). The hidden Support score ¢ is
+# the only meaningful column for game-support rows (a heuristic — see its tooltip). Group / Event ticker
+# are intentionally absent (not in the unified schema; deferred to a separate schema PR).
 _QS_COLUMNS = [
     {"name": "new", "label": "", "field": "new", "align": "center", "required": True},
     {"name": "sport", "label": "Sport", "field": "sport", "align": "center", "sortable": True},
     {"name": "name", "label": "Team", "field": "name", "align": "left", "sortable": True},
     {"name": "setup", "label": "Setup", "field": "setup", "align": "left", "sortable": True},
-    {"name": "qualifier", "label": "Qualify YES ¢", "field": "qualifier", "align": "center", "sortable": True},
-    {"name": "premium", "label": "Qualifier − top-two cost ¢", "field": "premium", "align": "center", "sortable": True},
-    {"name": "support", "label": "Support score ¢", "field": "support", "align": "center", "sortable": True},
+    {"name": "qualifier", "label": "Qualifier YES ask ¢", "field": "qualifier", "align": "center", "sortable": True},
+    {"name": "cost", "label": "Top-two bundle cost ¢", "field": "cost", "align": "center", "sortable": True},
+    {"name": "premium", "label": "Cheaper vs qualifier ¢", "field": "premium", "align": "center", "sortable": True},
+    {"name": "if_top2", "label": "If top two ¢", "field": "if_top2", "align": "center", "sortable": True},
+    {"name": "if_not_top2", "label": "If not top two ¢", "field": "if_not_top2", "align": "center", "sortable": True},
+    {"name": "max_units", "label": "Max units", "field": "max_units", "align": "center", "sortable": True},
+    {"name": "worst_leg_quote", "label": "Worst leg quote", "field": "worst_leg_quote_rank", "align": "center", "sortable": True},
+    {"name": "comparator_quote", "label": "Comparator quote", "field": "comparator_quote_rank", "align": "center", "sortable": True},
     {"name": "legs", "label": "Legs", "field": "legs", "align": "center", "sortable": True},
-    {"name": "note", "label": "Note", "field": "note", "align": "left"},
+    {"name": "review_status", "label": "Review status", "field": "review_status", "align": "center", "sortable": True},
+    {"name": "caveat", "label": "Caveat", "field": "caveat", "align": "left"},
+    # --- hidden optional (default-hidden via _QS_HIDDEN) ---
+    {"name": "support", "label": "Support score ¢", "field": "support", "align": "center", "sortable": True},
+    {"name": "highest_leg", "label": "Highest leg ask ¢", "field": "highest_leg", "align": "center", "sortable": True},
+    {"name": "median_leg", "label": "Median leg price ¢", "field": "median_leg", "align": "center", "sortable": True},
+    {"name": "range_leg", "label": "Leg price range ¢", "field": "range_leg", "align": "center", "sortable": True},
+    {"name": "inactive_legs", "label": "Inactive legs", "field": "inactive_legs", "align": "center", "sortable": True},
+    {"name": "no_quote_legs", "label": "No-quote legs", "field": "no_quote_legs", "align": "center", "sortable": True},
+    {"name": "wide_legs", "label": "Wide legs", "field": "wide_legs", "align": "center", "sortable": True},
+    {"name": "comparator_spread", "label": "Comparator spread ¢", "field": "comparator_spread", "align": "center", "sortable": True},
+    {"name": "worst_leg_spread", "label": "Worst leg spread ¢", "field": "worst_leg_spread", "align": "center", "sortable": True},
+    {"name": "qualifier_market_status", "label": "Qualifier market status", "field": "qualifier_market_status", "align": "center", "sortable": True},
+    {"name": "all_legs_active", "label": "All legs active", "field": "all_legs_active", "align": "center", "sortable": True},
+    {"name": "opp_id", "label": "Opportunity ID", "field": "opportunity_id", "align": "left", "sortable": True},
+    {"name": "market_tickers", "label": "Market tickers", "field": "market_tickers", "align": "left"},
+    {"name": "comparator_ticker", "label": "Comparator ticker", "field": "comparator_ticker", "align": "left", "sortable": True},
+    {"name": "tournament_key", "label": "Tournament key", "field": "tournament_key", "align": "left", "sortable": True},
+    {"name": "full_caveat", "label": "Full caveat", "field": "caveat", "align": "left"},
 ]
+# Default-hidden qualifier columns (everything past the focused default-visible set). The leading `new`
+# marker is `required` and never offered.
+_QS_HIDDEN = ("support", "highest_leg", "median_leg", "range_leg", "inactive_legs", "no_quote_legs",
+              "wide_legs", "comparator_spread", "worst_leg_spread", "qualifier_market_status",
+              "all_legs_active", "opp_id", "market_tickers", "comparator_ticker", "tournament_key",
+              "full_caveat")
 _BACKLOG_COLUMNS = [
     {"name": "sport", "label": "Sport", "field": "sport", "align": "center", "sortable": True},
     {"name": "name", "label": "Participant / match", "field": "name", "align": "left", "sortable": True},
@@ -507,6 +564,13 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                     lk[tkr] = row
         return lk
 
+    def _comparator_contract_for(opp: dict[str, Any]) -> dict[str, Any] | None:
+        """The qualifier COMPARATOR's stored contract row (its `ticker_2`), for the comparator spread /
+        market-status columns. The comparator is NOT in the legs list, so `_contract_lookup_for` never
+        indexes it. None when the ticker is blank or unresolved (the columns then blank out)."""
+        tkr = opp.get("ticker_2") or ""
+        return engine.contract_by_ticker(tkr, sport=opp.get("sport") or None) if tkr else None
+
     def open_panel(opp: dict[str, Any]) -> None:
         dialog.clear()
         lines = vm.explanation_lines(opp, show_ids=show_ids.value, long_short=pos_framing_sw.value)
@@ -763,7 +827,12 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         _t.add_slot("body-cell-caveat", _CAVEAT_CELL_SLOT)  # compact severity chip
     rb_table.add_slot("body-cell-caveat", _CAVEAT_CELL_SLOT)
     nm_table.add_slot("body-cell-note", _NOTE_CELL_SLOT)    # readable wrapping note
-    qs_table.add_slot("body-cell-note", _NOTE_CELL_SLOT)    # the best-third / not-expected-points caveat
+    # Qualifier-setups: compact caveat chips + the full prose (hidden col); the two quote columns show the
+    # label while sorting on their numeric rank.
+    qs_table.add_slot("body-cell-caveat", _QS_CAVEAT_CELL_SLOT)
+    qs_table.add_slot("body-cell-full_caveat", _wrap_cell_slot("caveat"))
+    qs_table.add_slot("body-cell-worst_leg_quote", _label_cell_slot("worst_leg_quote_label"))
+    qs_table.add_slot("body-cell-comparator_quote", _label_cell_slot("comparator_quote_label"))
     # Thousands-separated numeric cells (display only; numeric sort preserved). 'edge' is handled above.
     for _t in (actionable, review, blocked):
         for _f in ("roi", "units", "profit", "net_edge", "net_profit", "fees"):
@@ -773,7 +842,9 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         rb_table.add_slot(f"body-cell-{_f}", _num_cell_slot(_f))
     for _f in ("cost", "overpay"):
         nm_table.add_slot(f"body-cell-{_f}", _num_cell_slot(_f))
-    for _f in ("qualifier", "support", "legs"):
+    for _f in ("qualifier", "cost", "if_top2", "if_not_top2", "max_units", "support", "legs",
+               "highest_leg", "median_leg", "range_leg", "inactive_legs", "no_quote_legs", "wide_legs",
+               "comparator_spread", "worst_leg_spread"):
         qs_table.add_slot(f"body-cell-{_f}", _num_cell_slot(_f))
     qs_table.add_slot("body-cell-premium", _PREMIUM_CELL_SLOT)   # sign-aware text, numeric sort preserved
     # Compact empty states: a shown-but-empty section renders a small message row, not a bare grid.
@@ -793,7 +864,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         with _hdr:
             opp_menus.append(build_column_menu(_tbl, _OPP_COLUMNS, default_hidden=_NET_COLUMNS))
     with qs_hdr:
-        build_column_menu(qs_table, _QS_COLUMNS)
+        build_column_menu(qs_table, _QS_COLUMNS, default_hidden=_QS_HIDDEN)
     with rb_cols_row:
         build_column_menu(rb_table, _RISK_COLUMNS, default_hidden=_RISK_HIDDEN)
     with nm_cols_row:
@@ -1125,9 +1196,11 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         actionable.rows = [vm.opp_row(o, new_ids, chg, flash, long_short=ls) for o in view if o.get("bucket") == "actionable"]
         review.rows = [vm.opp_row(o, new_ids, chg, flash, long_short=ls) for o in view if o.get("bucket") == "review_signal"]
         blocked.rows = [vm.opp_row(o, new_ids, chg, flash, long_short=ls) for o in view if o.get("bucket") == "blocked"]
-        qs_table.rows = [vm.qualifier_row(o, new_ids, chg, flash)
-                         for o in vm.order_qualifier_rows(o for o in view
-                                                          if o.get("bucket") == "qualifier_setup")]
+        qs_opps = [o for o in view if o.get("bucket") == "qualifier_setup"]
+        qs_table.rows = [vm.qualifier_row(o, new_ids, chg, flash,
+                                          leg_lookup=_contract_lookup_for(o),
+                                          comparator_contract=_comparator_contract_for(o))
+                         for o in vm.order_qualifier_rows(qs_opps)]
         for hdr, tbl, sw in ((review_hdr, review, show_review_sw), (blocked_hdr, blocked, show_blocked_sw),
                              (qs_hdr, qs_table, qs_switch)):
             hdr.set_visibility(sw.value)
