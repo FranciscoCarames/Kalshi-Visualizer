@@ -538,7 +538,7 @@ def _buy_text(side: str | None, leg: str | None, price_c: Any,
 
 def _row(player: str, player_key: str, chain: str, child: dict | None, parent: dict | None, comp: dict,
          child_node: str = "", parent_node: str = "", tournament: str = "",
-         relationship_type: str = "", opp_id: str = "") -> dict:
+         relationship_type: str = "", opp_id: str = "", simultaneous: bool = False) -> dict:
     """Assemble one consistency-table row.
 
     `relationship_type` (`containment_adjacent` | `match_alignment`) and `opp_id` (a stable
@@ -567,6 +567,11 @@ def _row(player: str, player_key: str, chain: str, child: dict | None, parent: d
         "player_key": player_key,
         "chain": chain,
         "relationship_type": relationship_type,
+        # Resolution shape for the Bounded-Loss "Vertical vs Calendar" split (presentation, NOT detection).
+        # A match-alignment equivalence ("QF win ≡ Reach SF") resolves at ONE match → vertical; a
+        # finishing-position ladder pair (simultaneous) → vertical; everything sequential → calendar.
+        "resolution_mode": ("vertical" if (relationship_type == "match_alignment" or simultaneous)
+                            else "calendar"),
         "opportunity_id": opp_id,
         "tour": tour,
         "competition": competition,
@@ -662,7 +667,7 @@ def build_checks(df: pd.DataFrame, *, risk_budget_max_loss_c: int = 0) -> pd.Dat
     and every existing caller are a pure no-op, and only the scanner (which passes the band) surfaces them."""
     columns = [
         "player", "player_key", "chain",
-        "relationship_type", "opportunity_id", "bucket", "blocked_reason",
+        "relationship_type", "resolution_mode", "opportunity_id", "bucket", "blocked_reason",
         "tour", "competition", "child_node", "parent_node",
         "child_event_ticker", "parent_event_ticker", "layers",
         "child_contract", "parent_contract", "child_display_pct",
@@ -741,12 +746,12 @@ def build_checks(df: pd.DataFrame, *, risk_budget_max_loss_c: int = 0) -> pd.Dat
                 }
                 out.append(_row(player, player_key, chain, child, parent, comp,
                                 child_node=child_node, parent_node=parent_node, tournament=_tournament,
-                                relationship_type=rel, opp_id=oid))
+                                relationship_type=rel, opp_id=oid, simultaneous=ladder.simultaneous))
             else:
                 out.append(_row(player, player_key, chain, child, parent,
                                 _classify(child, parent, False, risk_budget_max_loss_c),
                                 child_node=child_node, parent_node=parent_node, tournament=_tournament,
-                                relationship_type=rel, opp_id=oid))
+                                relationship_type=rel, opp_id=oid, simultaneous=ladder.simultaneous))
 
         # Transitive containment: when a MIDDLE ladder node is absent, the adjacent loop above only emits
         # MISSING_LAYER for the gap — it never compares the present broader vs deeper nodes that span it,
@@ -768,7 +773,7 @@ def build_checks(df: pd.DataFrame, *, risk_budget_max_loss_c: int = 0) -> pd.Dat
             out.append(_row(player, player_key, chain, child, parent,
                             _classify(child, parent, False, risk_budget_max_loss_c),
                             child_node=deeper_node, parent_node=broader_node, tournament=_tournament,
-                            relationship_type=rel, opp_id=oid))
+                            relationship_type=rel, opp_id=oid, simultaneous=ladder.simultaneous))
 
         # Match-alignment (equivalence) rows where both a market and a confident match exist. One
         # equivalence per node (build_player_nodes keeps a single representative per source), so the
@@ -782,7 +787,7 @@ def build_checks(df: pd.DataFrame, *, risk_budget_max_loss_c: int = 0) -> pd.Dat
                 out.append(_row(player, player_key, chain, match_row, market_row,
                                 _classify(match_row, market_row, True),
                                 child_node=node, parent_node=node, tournament=_tournament,
-                                relationship_type=rel, opp_id=oid))
+                                relationship_type=rel, opp_id=oid, simultaneous=ladder.simultaneous))
 
         # Surface match contracts whose round does NOT map to a tracked layer (e.g. R16) as
         # UNKNOWN_RELATIONSHIP so they are acknowledged, never silently treated as violations.
@@ -805,7 +810,7 @@ def build_checks(df: pd.DataFrame, *, risk_budget_max_loss_c: int = 0) -> pd.Dat
                 oid = opportunity_id(rel, player_key, _tournament,
                                      f"unmapped:{row.get('event_ticker', '')}:{row.get('stage', '')}")
                 out.append(_row(player, player_key, f"{row.get('stage') or '?'} match", row, None, comp,
-                                tournament=_tournament, relationship_type=rel, opp_id=oid))
+                                tournament=_tournament, relationship_type=rel, opp_id=oid, simultaneous=ladder.simultaneous))
 
     return pd.DataFrame(out, columns=columns)
 

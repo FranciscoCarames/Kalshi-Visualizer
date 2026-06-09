@@ -104,6 +104,38 @@ def test_row_emits_display_outright_context():
     assert row["spread_over_parent"] == 10 / 30 and row["spread_over_child"] == 10 / 20
 
 
+# --- resolution mode (PR B): Vertical (simultaneous) vs Calendar (sequential) — presentation only ------
+def _res_row(*, relationship_type, simultaneous):
+    child, parent = leg(display_c=20, bid_c=19, ask_c=21), leg(display_c=30, bid_c=29, ask_c=31)
+    return consistency._row("P", "k", "chain", child, parent,
+                            consistency._classify(child, parent, equivalence=(relationship_type == "match_alignment")),
+                            child_node="c", parent_node="p", tournament="T",
+                            relationship_type=relationship_type, simultaneous=simultaneous)
+
+
+def test_resolution_mode_finishing_ladder_is_vertical():
+    # A finishing-position ladder pair (golf Top-N / motorsport) settles all rungs at one event -> vertical.
+    assert _res_row(relationship_type="containment_adjacent", simultaneous=True)["resolution_mode"] == "vertical"
+
+
+def test_resolution_mode_sequential_ladder_is_calendar():
+    # A stage-advancement pair (reach final ⊇ win) settles across rounds -> calendar (the conservative base).
+    assert _res_row(relationship_type="containment_adjacent", simultaneous=False)["resolution_mode"] == "calendar"
+
+
+def test_resolution_mode_match_alignment_is_vertical_regardless_of_flag():
+    # "QF win ≡ Reach SF" resolves at ONE match -> vertical even on a sequential-base sport.
+    assert _res_row(relationship_type="match_alignment", simultaneous=False)["resolution_mode"] == "vertical"
+
+
+def test_resolution_mode_defaults_to_calendar():
+    child, parent = leg(display_c=20), leg(display_c=30)
+    row = consistency._row("P", "k", "chain", child, parent,
+                           consistency._classify(child, parent, equivalence=False),
+                           child_node="c", parent_node="p", tournament="T")   # no rel / flag -> default
+    assert row["resolution_mode"] == "calendar"
+
+
 def test_scenario_payoffs_containment_three_states_and_floor_equals_gap():
     # child bid 37 / ask 38 > parent ask 35 → forward containment executable violation, gap 2.
     child = leg(display_c=37, bid_c=37, ask_c=38)

@@ -109,6 +109,12 @@ class LadderSpec:
     # linearised). When such a leaf (or its anchor) is absent, `build_checks` skips the pair silently rather
     # than emitting MISSING_LAYER noise — the leaf is opportunistic, not a required rung. Default: none.
     optional_children: frozenset[str] = frozenset()
+    # Resolution shape (drives the Bounded-Loss "Vertical vs Calendar" split, NOT detection). A
+    # finishing-position ladder (golf Top-N, motorsport) settles ALL its rungs at one event's final
+    # standings → its containment pairs resolve SIMULTANEOUSLY (`True`). A stage-advancement ladder
+    # (tennis/playoff knockouts) settles rungs across successive rounds → SEQUENTIAL (`False`, the
+    # conservative default). Per-pair overrides (match-alignment equivalences) live in `_classify`.
+    simultaneous: bool = False
 
 
 @dataclass(frozen=True)
@@ -686,6 +692,7 @@ _GOLF_LADDER = LadderSpec(
     adjacent_pairs=(("Win Tournament", "Top 5"), ("Top 5", "Top 10"), ("Top 10", "Top 20")),
     match_stage_to_node={},                    # no head-to-head
     advance_stage_to_node={"Top 20": "Top 20", "Top 10": "Top 10", "Top 5": "Top 5"},
+    simultaneous=True,                         # all finishing rungs settle at the tournament's final standings
 )
 
 
@@ -1177,7 +1184,8 @@ _MOTOR_STAGE_RANK = {"Top 20": 1, "Top 10": 2, "Top 5": 3, "Top 3": 4, "Podium":
 def _motor_ladder(*nodes: str) -> LadderSpec:
     pairs = tuple((nodes[i + 1], nodes[i]) for i in range(len(nodes) - 1))   # (deeper child, broader parent)
     return LadderSpec(node_order=nodes, adjacent_pairs=pairs, match_stage_to_node={},
-                      advance_stage_to_node={n: n for n in nodes if n != "Win Race"})
+                      advance_stage_to_node={n: n for n in nodes if n != "Win Race"},
+                      simultaneous=True)        # one race's final classification settles every rung at once
 
 
 _MOTOR_LADDERS = {

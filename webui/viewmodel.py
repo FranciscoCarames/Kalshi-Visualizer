@@ -327,6 +327,18 @@ def risk_budget_view(opps: Iterable[dict[str, Any]] | None, *, max_loss_c: float
     return out
 
 
+def split_by_resolution(opps: Iterable[dict[str, Any]] | None) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Partition bounded-loss rows into (vertical, calendar) by `resolution_mode`. Vertical = the two legs
+    resolve SIMULTANEOUSLY (one event's outcome — e.g. golf Top-N, a match-alignment equivalence); calendar
+    = they resolve SEQUENTIALLY across rounds. Only the explicit "vertical" goes vertical; anything else
+    (incl. a missing value on an older snapshot) defaults to calendar — the conservative bucket. Input
+    order is preserved within each list, so the caller's ranking carries through."""
+    vertical, calendar = [], []
+    for o in (opps or []):
+        (vertical if o.get("resolution_mode") == "vertical" else calendar).append(o)
+    return vertical, calendar
+
+
 def near_miss_view(opps: Iterable[dict[str, Any]] | None, *, max_over_c: float) -> list[dict[str, Any]]:
     """Near-miss dutch books overpriced by 1..`max_over_c` ¢ over their payout floor (a flat-payout
     guaranteed loss as a bundle — watchlist only)."""
