@@ -484,11 +484,20 @@ def test_soccer_registered_and_exact_only_ownership():
     # shadows KXWCGAME/KXWCROUND/etc.).
     for tk in ("KXWCGAME", "KXWCROUND", "KXWCGROUPQUAL", "KXWCGROUPWIN", "KXMENWORLDCUP"):
         assert sports.sport_for_series(tk).sport_id == "soccer", tk
-    # Field-shaped + not-live series must NOT be owned by soccer (resolve to unknown). KXWCGROUPWINNER
-    # ("Group to Win") is a distinct contract; KXWC is the retired dormant guess; KXMWORLDCUP is a dead
-    # lookalike with no open event (the live outright is KXMENWORLDCUP).
-    for tk in ("KXWCSTAGE", "KXWCGROUPWINNER", "KXFIFAGAME", "KXFIFAADVANCE", "KXWCGOALLEADER",
-               "KXWC", "KXMWORLDCUP"):
+    # Known-but-out-of-scope World Cup series are OWNED (resolve to soccer) but classify as "other" so they
+    # surface in the coverage audit / Debug as "recognized + other" instead of silently vanishing — yet are
+    # never fetched/detected (the "Other" family is stripped from every fetch scope). The fractional
+    # co-winner fields (BESTHOST / FURTHESTADVANCING) MUST stay "other" so they can never reach _detect_field.
+    for tk in ("KXWCSTAGE", "KXWCBESTHOST", "KXWCFURTHESTADVANCING", "KXWCGOALLEADER", "KXWCAWARD",
+               "KXWCTOTALGOAL", "KXWCTEAMGOALS", "KXWCGROUPGOALS", "KXWCGROUPWINNER"):
+        cfg = sports.sport_for_series(tk)
+        assert cfg.sport_id == "soccer", tk
+        assert cfg.family_of(tk) == "other", tk
+    # The "Other" label keeps them out of the fetch scope entirely.
+    assert "Other" not in data.non_other_families(sports.SOCCER)
+    # Genuine non-soccer lookalikes still resolve to unknown: KXFIFA* are a different namespace; KXWC is the
+    # retired dormant guess; KXMWORLDCUP is a dead lookalike with no open event (live outright = KXMENWORLDCUP).
+    for tk in ("KXFIFAGAME", "KXFIFAADVANCE", "KXWC", "KXMWORLDCUP"):
         assert sports.sport_for_series(tk).sport_id == "unknown", tk
 
 

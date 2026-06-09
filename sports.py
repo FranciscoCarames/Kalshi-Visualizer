@@ -815,8 +815,28 @@ GOLF = register(SportConfig(
 # contract — not owned. The Tie market reuses a CONSTANT soccer_team UUID across all games (non-participant
 # draw leg, per-event synthetic key via tie_fn). No head-to-head series (match_family="").
 SOCCER_TIE_UUID = "111193d4-9b1f-4bd8-ab7c-9de252737f05"
+# World Cup series that are CURRENT on Kalshi but deliberately OUT of detector scope — owned only so they
+# resolve to soccer (not the UNKNOWN sport) and surface in the coverage audit / Debug "considered"
+# inventory as "recognized + other" rather than silently disappearing. `_soccer_family` returns "other"
+# for all of them (the default branch), so they get the "Other" category label, which `data.non_other_
+# families` strips from every fetch scope → owned but NEVER fetched and NEVER detected (verified safe even
+# under scan_all: discover_series_for_sport returns all exact_series, then series_for_families drops the
+# "other" ones). CRITICAL: KXWCBESTHOST / KXWCFURTHESTADVANCING settle FRACTIONALLY ($1/N on co-winners),
+# which violates the one-winner assumption in dutchbook.prove_field_mece — keeping them "other" guarantees
+# they can never enter field_families and so can never produce a FALSE field dutch book.
+_SOCCER_KNOWN_OTHER = frozenset({
+    "KXWCSTAGE",              # furthest stage by host/region — synthetic entity, not a soccer_team
+    "KXWCBESTHOST",           # best-performing host nation — FRACTIONAL co-winner settlement (excluded)
+    "KXWCFURTHESTADVANCING",  # furthest-advancing nation by region — FRACTIONAL co-winner settlement
+    "KXWCGOALLEADER",         # Golden Boot / goal leader — award/stat, out of scope
+    "KXWCAWARD",              # tournament awards — out of scope
+    "KXWCTOTALGOAL",          # scalar total-goals threshold — out of scope
+    "KXWCTEAMGOALS",          # per-team goals scalar — out of scope
+    "KXWCGROUPGOALS",         # per-group goals scalar — out of scope
+    "KXWCGROUPWINNER",        # "Group to Win" — a DIFFERENT contract from KXWCGROUPWIN; not modeled
+})
 _SOCCER_EXACT = frozenset({"KXWCGAME", "KXWCROUND", "KXWCGROUPQUAL", "KXWCGROUPWIN", "KXMENWORLDCUP",
-                           "KXWCGROUPORDER"})
+                           "KXWCGROUPORDER"}) | _SOCCER_KNOWN_OTHER
 # `exact_order` MUST have a non-"other" category label, else data.non_other_families would treat it as a
 # prop and the cross-sport fetch path would never load KXWCGROUPORDER.
 _SOCCER_CATEGORY = {"game": "Match (3-way)", "advance": "Stage advancement",
@@ -902,7 +922,9 @@ def _soccer_tie(cfg, market):
 
 SOCCER = register(SportConfig(
     sport_id="soccer", label="Soccer (World Cup)", emoji="⚽",
-    series_prefixes=(), default_series=tuple(sorted(_SOCCER_EXACT)),
+    # default_series is the bounded fetch subset — the SUPPORTED series only. Known-other tickers are owned
+    # (in _SOCCER_EXACT, so they resolve to soccer) but excluded here so they never enter the default scan.
+    series_prefixes=(), default_series=tuple(sorted(_SOCCER_EXACT - _SOCCER_KNOWN_OTHER)),
     winner_tickers=frozenset({"KXMENWORLDCUP"}),   # live per-team outright field (KXMENWORLDCUP-26)
     identity=IdentityResolver(candidate_paths=("custom_strike.soccer_team",), id_label="soccer_team"),
     ladder=_SOCCER_LADDER,
