@@ -13,6 +13,7 @@ exec_min_size / market_status); richer quote/layer filters need the persisted *c
 from __future__ import annotations
 
 import math
+import statistics
 import urllib.parse
 from collections import Counter
 from datetime import datetime, timezone
@@ -414,9 +415,9 @@ _SETUP_TYPE_LABEL = {
 
 
 def _premium_display(prem: Any) -> str:
-    """Sign-aware text for the 'qualifier minus top-two cost' column. Positive ⇒ the bundle is cheaper
-    than the direct qualifier; negative ⇒ more expensive. Blank when absent. (The numeric value drives
-    sorting; this string is display-only.)"""
+    """Sign-aware text for the 'cheaper vs qualifier' column. Positive ⇒ the bundle is cheaper than the
+    direct qualifier; negative ⇒ more expensive. Blank when absent. (The numeric value drives sorting;
+    this string is display-only.)"""
     if _num_or_none(prem) is None:
         return ""
     p = int(prem)
@@ -427,11 +428,117 @@ def _premium_display(prem: Any) -> str:
     return "0¢ level"
 
 
+# Quote-quality sort order, best → worst, matching data.quote_quality (Tight/OK/Wide/Very wide/One-sided/
+# No quote/Crossed). "Unknown" is a DISPLAY/SORT FALLBACK ONLY for a blank or unrecognized quality — it is
+# never a real quote_quality value and is never written back into engine opportunity / contract data.
+QUOTE_QUALITY_SORT_ORDER = ["Tight", "OK", "Wide", "Very wide", "One-sided", "No quote", "Crossed",
+                            "Unknown"]
+_QUOTE_QUALITY_RANK = {q: i + 1 for i, q in enumerate(QUOTE_QUALITY_SORT_ORDER)}
+
+
+def quote_quality_rank(q: Any) -> int:
+    """1..8 rank for the custom quote-quality sort (best Tight=1 … worst Crossed=7); a blank or
+    unrecognized value falls back to "Unknown" (8). Drives the numeric sort field while the column
+    still DISPLAYS the label string (see `qualifier_row`)."""
+    return _QUOTE_QUALITY_RANK.get(str(q or "").strip(), _QUOTE_QUALITY_RANK["Unknown"])
+
+
+def _quote_label(q: Any) -> str:
+    """The quote-quality label shown in the cell — the real value, or "Unknown" when blank."""
+    return str(q or "").strip() or "Unknown"
+
+
+def _bundle_leg_price_stats(opp: dict[str, Any]) -> dict[str, Any]:
+    """Pure display stats over the bundle legs' ask prices (¢): highest, median, range. Uses
+    `_bundle_legs` so a stale 13-leg snapshot's legacy comparator leg is excluded. Returns all-None when
+    there are no valid integer-cent prices (empty/partial legs) — never raises. Display-only; the median
+    may be x.5 and never feeds economic comparison or actionability."""
+    prices = [int(p) for p in (lg.get("price_c") for lg in _bundle_legs(opp))
+              if _num_or_none(p) is not None]
+    if not prices:
+        return {"highest_leg": None, "median_leg": None, "range_leg": None}
+    return {"highest_leg": max(prices),
+            "median_leg": statistics.median(prices),   # may be x.5 — display only
+            "range_leg": max(prices) - min(prices)}
+
+
+def _bundle_leg_health(opp: dict[str, Any],
+                       leg_lookup: dict[str, dict[str, Any]] | None) -> dict[str, Any]:
+    """Tri-state per-leg health over the bundle legs, sourced from the contract snapshot (`leg_lookup`:
+    ticker -> stored contract row). MISSING EVIDENCE IS NEVER A FINDING: a count is None (blank) when NO
+    leg resolves, and `all_legs_active` is "Unknown" unless evidence is conclusive. No-quote counts the
+    "No quote" state ONLY (Crossed / One-sided are distinct). Pure; display-only; exact-order rows only."""
+    lookup = leg_lookup or {}
+    legs = _bundle_legs(opp)
+    statuses: list[str] = []
+    qualities: list[str] = []
+    spreads: list[float] = []
+    for lg in legs:
+        tkr = str(lg.get("ticker") or "")
+        c = lookup.get(tkr) if tkr else None
+        if c is None:
+            continue
+        statuses.append(str(c.get("status") or ""))
+        qualities.append(str(c.get("quote_quality") or ""))
+        sp = _num_or_none(c.get("spread_cents"))
+        if sp is not None:
+            spreads.append(sp)
+    if not statuses:                                   # nothing resolved → no finding, just blanks
+        return {"inactive_legs": None, "no_quote_legs": None, "worst_leg_spread": None,
+                "all_legs_active": "Unknown"}
+    inactive = sum(1 for s in statuses if s and s != "active")
+    no_quote = sum(1 for q in qualities if q == "No quote")
+    all_resolved = len(statuses) == len(legs)
+    all_active = "No" if inactive > 0 else ("Yes" if all_resolved else "Unknown")
+    return {"inactive_legs": inactive, "no_quote_legs": no_quote,
+            "worst_leg_spread": (max(spreads) if spreads else None), "all_legs_active": all_active}
+
+
+def _comparator_evidence(comparator_contract: dict[str, Any] | None) -> dict[str, Any]:
+    """Comparator (qualifier `ticker_2`) spread + market status from the contract snapshot — blank /
+    "" when the ticker doesn't resolve. The comparator QUOTE QUALITY itself comes from the
+    opportunity-level field (precedence), NOT from here."""
+    c = comparator_contract
+    if not isinstance(c, dict):
+        return {"comparator_spread": None, "qualifier_market_status": ""}
+    return {"comparator_spread": _num_or_none(c.get("spread_cents")),
+            "qualifier_market_status": str(c.get("status") or "")}
+
+
+def _caveat_badges(o: dict[str, Any]) -> list[dict[str, str]]:
+    """Compact caveat chips (replacing the long Note), deterministic order. The two STRUCTURAL badges
+    apply to exact-order top-two rows only (the qualifier is a comparator, never a leg; the bundle pays
+    only if the team finishes top two). "Settlement caveat" is conditional. Each chip carries a tooltip
+    for accessibility. Wording is conservative — no arbitrage/hedge/locked/riskless."""
+    badges: list[dict[str, str]] = []
+    if _is_exact_order_bundle(o):
+        badges.append({"label": "Comparator only",
+                       "tooltip": "The direct qualifier market is a comparator, not a trade leg — the "
+                                  "bundle is the exact-order Buy-YES legs only."})
+        badges.append({"label": "Top-two only",
+                       "tooltip": "Pays only if the team finishes top two; a best-third-place "
+                                  "qualification can make the qualifier pay while this bundle pays zero."})
+    sc = o.get("settlement_caveat")
+    if isinstance(sc, str) and sc:
+        badges.append({"label": "Settlement caveat",
+                       "tooltip": "Gross, top-of-book, settlement-unverified — review the settlement "
+                                  "rules before treating this as an edge."})
+    return badges
+
+
 def order_qualifier_rows(opps: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
-    """In-section ordering for the Qualifier-setups table (the rows carry no exec_gap to rank globally):
-    Speculative top-two ideas first, then Diagnostic bundles by relative gap (cheaper first), then
-    game-support signals, then anything else; ties broken by name. Pure; input order preserved within a
-    bucket via the stable sort + name tiebreak."""
+    """In-section ordering for the Qualifier-setups table (rows carry no exec_gap to rank globally). The
+    SETUP TIER stays outermost (Speculative → Diagnostic → game-support → other) so the two row-families
+    don't interleave; then the requested keys: (1) cheaper-vs-qualifier desc, (2) worst-bundle quote
+    best→worst, (3) comparator quote best→worst, (4) max units desc, (5) bundle cost asc; ties broken by
+    name. Pure; keys read opp-level fields (this runs BEFORE `qualifier_row` maps them). A missing numeric
+    value always sorts last in either direction."""
+    def _num_key(v: Any, *, descending: bool = False) -> float:
+        n = _num_or_none(v)
+        if n is None:
+            return float("inf")                        # missing → always last, both directions
+        return -float(n) if descending else float(n)
+
     def key(o: dict[str, Any]) -> tuple:
         if str(o.get("status") or "") == "SPECULATIVE_TOP2_RELATIVE_VALUE":
             tier = 0
@@ -441,33 +548,86 @@ def order_qualifier_rows(opps: Iterable[dict[str, Any]]) -> list[dict[str, Any]]
             tier = 2
         else:
             tier = 3
-        prem = o.get("qualifier_vs_top2_premium_c")
-        prem_key = -float(prem) if _num_or_none(prem) is not None else float("inf")
-        return (tier, prem_key, str(o.get("name") or ""))
+        return (tier,
+                _num_key(o.get("qualifier_vs_top2_premium_c"), descending=True),   # cheaper first
+                quote_quality_rank(o.get("worst_bundle_quote_quality")),           # best → worst
+                quote_quality_rank(o.get("comparator_quote_quality")),             # best → worst
+                _num_key(o.get("top2_max_units"), descending=True),                # more units first
+                _num_key(o.get("synthetic_top_two_cost_c")),                       # cheaper bundle first
+                str(o.get("name") or ""))
     return sorted(list(opps or []), key=key)
 
 
 def qualifier_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str] | None = None,
-                  flash_ids: set[str] | None = None) -> dict[str, Any]:
-    """Display row for the Qualifier-setups table. No gross-edge / ROI / size / profit (a non-executable
-    signal). For exact-order rows the `premium` column is the (numeric, sortable) qualifier-minus-bundle
-    gap; `premium_display` is the sign-aware text shown in the cell. The note carries the
-    'not expected points / not arbitrage / best-third' caveat."""
-    return _stamp_severity({
-        "opportunity_id": o.get("opportunity_id"),
-        "new": o.get("opportunity_id") in new_ids,   # bool → a coloured "NEW" badge in the cell slot
-        "_change": (changes or {}).get(o.get("opportunity_id"), ""),
-        "_flash": o.get("opportunity_id") in (flash_ids or set()),
+                  flash_ids: set[str] | None = None, *,
+                  leg_lookup: dict[str, dict[str, Any]] | None = None,
+                  comparator_contract: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Display row for the Qualifier-setups table. No gross-edge / ROI / size / profit (a non-executable,
+    Review-only signal). TWO ROW-FAMILIES: the top-two economics, leg-price stats, leg-health and the two
+    structural caveat badges are EXACT-ORDER only; game-support rows leave them blank and carry only the
+    (hidden) heuristic support score. Numeric columns hold raw numbers (cell slots format display only);
+    quote-quality columns sort on the `*_rank` field while showing the `*_label`. `leg_lookup` /
+    `comparator_contract` (ticker -> stored contract row) enrich per-leg / comparator evidence with
+    TRI-STATE blanks when a ticker is unresolved — never inferred."""
+    is_exact = _is_exact_order_bundle(o)
+    oid = o.get("opportunity_id")
+    legs = _bundle_legs(o)
+    worst_q = o.get("worst_bundle_quote_quality") if is_exact else None
+    comp_q = o.get("comparator_quote_quality") if is_exact else None
+    stats = (_bundle_leg_price_stats(o) if is_exact
+             else {"highest_leg": None, "median_leg": None, "range_leg": None})
+    health = (_bundle_leg_health(o, leg_lookup) if is_exact
+              else {"inactive_legs": None, "no_quote_legs": None, "worst_leg_spread": None,
+                    "all_legs_active": "Unknown"})
+    comp = (_comparator_evidence(comparator_contract) if is_exact
+            else {"comparator_spread": None, "qualifier_market_status": ""})
+    tickers = [str(lg.get("ticker") or "") for lg in legs if lg.get("ticker")]
+    row = {
+        "opportunity_id": oid,
+        "new": oid in new_ids,                       # bool → a coloured "NEW" badge in the cell slot
+        "_change": (changes or {}).get(oid, ""),
+        "_flash": oid in (flash_ids or set()),
         "sport": o.get("sport_label") or o.get("sport") or "",
         "name": o.get("name") or "",
         "setup": _SETUP_TYPE_LABEL.get(o.get("setup_type") or "", o.get("setup_type") or "Diagnostic"),
+        # Economics — raw numeric → numeric sort; cell slots format display only. Exact-order only.
         "qualifier": _num_or_none(o.get("qualifier_yes_ask_c")),
-        "premium": _num_or_none(o.get("qualifier_vs_top2_premium_c")),   # numeric → sorts numerically
-        "premium_display": _premium_display(o.get("qualifier_vs_top2_premium_c")),
-        "support": _num_or_none(o.get("ask_support_score_total_c")),
-        "legs": _num_or_none(o.get("n_legs")),
-        "note": o.get("settlement_caveat") or "",
-    }, o)
+        "cost": _num_or_none(o.get("synthetic_top_two_cost_c")) if is_exact else None,
+        "premium": _num_or_none(o.get("qualifier_vs_top2_premium_c")) if is_exact else None,
+        "premium_display": _premium_display(o.get("qualifier_vs_top2_premium_c")) if is_exact else "",
+        "if_top2": _num_or_none(o.get("top2_net_if_top2_c")) if is_exact else None,
+        "if_not_top2": _num_or_none(o.get("top2_loss_if_not_top2_c")) if is_exact else None,
+        "max_units": _num_or_none(o.get("top2_max_units")) if is_exact else None,
+        # Quote quality — the rank sorts, the label displays.
+        "worst_leg_quote_rank": quote_quality_rank(worst_q if is_exact else "Unknown"),
+        "worst_leg_quote_label": _quote_label(worst_q) if is_exact else "",
+        "comparator_quote_rank": quote_quality_rank(comp_q if is_exact else "Unknown"),
+        "comparator_quote_label": _quote_label(comp_q) if is_exact else "",
+        "legs": len(legs) if is_exact else _num_or_none(o.get("n_legs")),
+        "review_status": o.get("tradable_now") or "Diagnostic only",   # never "Actionable"
+        # Caveat — compact structural/settlement chips replace the long note; full prose is the hidden col.
+        "caveat_badges": _caveat_badges(o),
+        "caveat": o.get("settlement_caveat") or "",
+        # Game-support heuristic (hidden-optional) — blank for exact-order rows.
+        "support": _num_or_none(o.get("ask_support_score_total_c")) if not is_exact else None,
+        # Leg-price stats (exact-order only).
+        "highest_leg": stats["highest_leg"],
+        "median_leg": stats["median_leg"],
+        "range_leg": stats["range_leg"],
+        # Leg health (tri-state) + comparator evidence.
+        "inactive_legs": health["inactive_legs"],
+        "no_quote_legs": health["no_quote_legs"],
+        "wide_legs": _num_or_none(o.get("wide_bundle_leg_count")) if is_exact else None,
+        "worst_leg_spread": health["worst_leg_spread"],
+        "all_legs_active": health["all_legs_active"],
+        "comparator_spread": comp["comparator_spread"],
+        "qualifier_market_status": comp["qualifier_market_status"],
+        # Identity / reference (hidden-optional).
+        "market_tickers": ", ".join(tickers),
+        "comparator_ticker": o.get("ticker_2") or "",
+        "tournament_key": o.get("tournament") or "",
+    }
+    return _stamp_severity(row, o)
 
 
 def backlog_row(b: dict[str, Any], tz: str) -> dict[str, Any]:
