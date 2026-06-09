@@ -236,12 +236,20 @@ _RISK_COLUMNS = [
     # Descriptive class (PR M): Candidate / Breakeven / Negative proxy / Inverted / Data quality — near the
     # left so junk rows are obvious at a glance.
     {"name": "signal", "label": "Signal", "field": "signal", "align": "left", "sortable": True},
+    # PR E — Kind (Vertical/Calendar) shown in the combined "All" table; redundant (constant) in the splits.
+    {"name": "kind", "label": "Kind", "field": "resolution", "align": "center", "sortable": True},
     {"name": "sport", "label": "Sport", "field": "sport", "align": "center", "sortable": True},
     {"name": "name", "label": "Participant / chain", "field": "name", "align": "left", "sortable": True},
     {"name": "detail", "label": "Detail", "field": "detail", "align": "left"},
+    # PR E — trader columns: the payoff zone in words, then top-of-book size + a $100 gross-allocation sizing.
+    {"name": "wins_if", "label": "Wins if…", "field": "wins_if", "align": "left", "sortable": True},
     {"name": "cost", "label": "Cost ¢", "field": "cost", "align": "center", "sortable": True},
     {"name": "max_loss", "label": "Max loss ¢", "field": "max_loss", "align": "center", "sortable": True},
     {"name": "max_profit", "label": "Max profit ¢", "field": "max_profit", "align": "center", "sortable": True},
+    {"name": "max_units", "label": "Max units", "field": "max_units", "align": "center", "sortable": True},
+    {"name": "loss_100", "label": "Max loss @ $100 ($)", "field": "loss_100", "align": "center", "sortable": True},
+    {"name": "upside_100", "label": "Best upside @ $100 ($)", "field": "upside_100", "align": "center", "sortable": True},
+    {"name": "quote_health", "label": "Quote health", "field": "quote_health", "align": "center", "sortable": True},
     {"name": "ratio", "label": "Upside:risk", "field": "ratio", "align": "center", "sortable": True},
     # PR M — the implied metric, shown as its legible decomposition (gross, top-of-book ranking aids; never an
     # edge). Market gap (pp) = parent−child display gap; Breakeven % = the chance the payoff zone needs;
@@ -257,9 +265,12 @@ _RISK_COLUMNS = [
     {"name": "child_outright", "label": "Child outright ¢", "field": "child_outright", "align": "center", "sortable": True},
     {"name": "caveat", "label": "Caveat", "field": "caveat", "align": "left"},
 ]
-# Default-hidden advanced context (PR M moves the diagnostic ratios + worst-case ROC + raw outrights here, so
-# the decision columns — signal / max loss / breakeven / gap-vs-breakeven / implied EV — lead).
-_RISK_HIDDEN = ("roc", "spread_over_parent", "spread_over_child", "parent_outright", "child_outright")
+# Default-hidden advanced context: diagnostic ratios + worst-case ROC + raw outrights + gross entry cost
+# (secondary to max loss). The decision columns — signal / kind / wins-if / max loss / $100 sizing / max
+# units / quote health / market gap / implied EV — lead.
+_RISK_HIDDEN = ("cost", "roc", "spread_over_parent", "spread_over_child", "parent_outright", "child_outright")
+# In the Vertical/Calendar split tables the Kind column is constant → hide it there (shown only in "All").
+_RISK_HIDDEN_SPLIT = _RISK_HIDDEN + ("kind",)
 # Overpriced Books (near-miss) table — cost, overpay (= the flat guaranteed loss), and the watchlist note.
 _NEARMISS_COLUMNS = [
     {"name": "new", "label": "", "field": "new", "align": "center", "required": True},
@@ -674,6 +685,9 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             ui.label(vm.relationship_explanation(opp)).classes("text-sm text-gray-600")
             for line in vm.explanation_lines(opp, show_ids=show_ids.value, long_short=pos_framing_sw.value)[2:]:
                 ui.label(line).classes("text-sm")
+            # PR E — bounded-loss decision block (Can I lose money? / Wins big if / Why ranked / Why skip).
+            for _lbl, _txt in vm.speculative_explainer(opp):
+                ui.label(f"{_lbl}: {_txt}").classes("text-sm text-gray-700")
             avail = engine.frame_availability()
             if avail != "present" or not pkey:
                 ui.label("Evidence frames not captured for this snapshot — detail tables unavailable."
@@ -851,6 +865,12 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                             pagination=10).props("dense").classes("w-full overflow-x-auto opp-sel")
             return _title, _cols, _tbl
 
+        # PR E — combined "All" table FIRST (every bounded-loss bet, ranked together, with a Kind column),
+        # then the Vertical / Calendar split below for focus.
+        rb_all_title, rb_all_cols, rb_all = _rb_subsection(
+            "All bounded-loss bets",
+            "Every bounded-loss bet ranked together (Vertical + Calendar). The Kind column marks which is "
+            "which; the two sections below split them out for focus.")
         rb_vert_title, rb_vert_cols, rb_vertical = _rb_subsection(
             "Vertical — both legs resolve together",
             "Both legs settle at one event's outcome (e.g. golf Top-10 vs Top-5, or a match-win ≡ "
@@ -859,6 +879,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             "Calendar — legs resolve on different days",
             "The legs settle in sequence across rounds (e.g. reach the final, then win it), so you hold "
             "staged exposure across the gap. Same capped max loss as a vertical bet — just a longer hold.")
+    rb_all.on_select(_on_select(rb_all))
     rb_vertical.on_select(_on_select(rb_vertical))
     rb_calendar.on_select(_on_select(rb_calendar))
 
@@ -882,14 +903,14 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                             pagination=10).props("dense").classes("w-full overflow-x-auto opp-sel")
     nm_table.on_select(_on_select(nm_table))
 
-    _sel_tables.extend([actionable, review, blocked, qs_table, rb_vertical, rb_calendar, nm_table])
+    _sel_tables.extend([actionable, review, blocked, qs_table, rb_all, rb_vertical, rb_calendar, nm_table])
     for _t in _sel_tables:                 # the change-signal / NEW-badge indicator column on every table
         _t.add_slot("body-cell-new", _CHANGE_CELL_SLOT)
     for _t in (actionable, review, blocked):
         _t.add_slot("body-cell-edge", _EDGE_CELL_SLOT)      # colour the edge value on change
         _t.add_slot("body-cell-action", _ACTION_CELL_SLOT)  # left-aligned legs
         _t.add_slot("body-cell-caveat", _CAVEAT_CELL_SLOT)  # compact severity chip
-    for _rb in (rb_vertical, rb_calendar):
+    for _rb in (rb_all, rb_vertical, rb_calendar):
         _rb.add_slot("body-cell-caveat", _CAVEAT_CELL_SLOT)
     nm_table.add_slot("body-cell-note", _NOTE_CELL_SLOT)    # readable wrapping note
     # Qualifier-setups: compact caveat chips + the full prose (hidden col); the two quote columns show the
@@ -902,9 +923,10 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
     for _t in (actionable, review, blocked):
         for _f in ("roi", "units", "profit", "net_edge", "net_profit", "fees"):
             _t.add_slot(f"body-cell-{_f}", _num_cell_slot(_f))
-    for _f in ("cost", "max_loss", "max_profit", "ratio", "ev", "breakeven", "gap_vs_be", "roc",
-               "spread_over_parent", "spread_over_child", "parent_outright", "child_outright", "display_spread"):
-        for _rb in (rb_vertical, rb_calendar):
+    for _f in ("cost", "max_loss", "max_profit", "max_units", "loss_100", "upside_100", "ratio", "ev",
+               "breakeven", "gap_vs_be", "roc", "spread_over_parent", "spread_over_child",
+               "parent_outright", "child_outright", "display_spread"):
+        for _rb in (rb_all, rb_vertical, rb_calendar):
             _rb.add_slot(f"body-cell-{_f}", _num_cell_slot(_f))
     for _f in ("cost", "overpay"):
         nm_table.add_slot(f"body-cell-{_f}", _num_cell_slot(_f))
@@ -918,6 +940,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                      (review, "No review-required opportunities in the current filters."),
                      (blocked, "No blocked opportunities in the current filters."),
                      (qs_table, "No qualifier setups in the current filters."),
+                     (rb_all, "No bounded-loss bets in the current filters."),
                      (rb_vertical, "No vertical (same-event) bounded-loss bets in the current filters."),
                      (rb_calendar, "No calendar (multi-day) bounded-loss bets in the current filters."),
                      (nm_table, "No overpriced books in the current filters.")):
@@ -932,10 +955,12 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             opp_menus.append(build_column_menu(_tbl, _OPP_COLUMNS, default_hidden=_NET_COLUMNS))
     with qs_hdr:
         build_column_menu(qs_table, _QS_COLUMNS, default_hidden=_QS_HIDDEN)
+    with rb_all_cols:
+        build_column_menu(rb_all, _RISK_COLUMNS, default_hidden=_RISK_HIDDEN)            # combined: show Kind
     with rb_vert_cols:
-        build_column_menu(rb_vertical, _RISK_COLUMNS, default_hidden=_RISK_HIDDEN)
+        build_column_menu(rb_vertical, _RISK_COLUMNS, default_hidden=_RISK_HIDDEN_SPLIT)  # split: hide Kind
     with rb_cal_cols:
-        build_column_menu(rb_calendar, _RISK_COLUMNS, default_hidden=_RISK_HIDDEN)
+        build_column_menu(rb_calendar, _RISK_COLUMNS, default_hidden=_RISK_HIDDEN_SPLIT)
     with nm_cols_row:
         build_column_menu(nm_table, _NEARMISS_COLUMNS)
 
@@ -1267,9 +1292,12 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             min_outright_c=int(rb_min_outright.value or 0),
             max_spread_ratio_hundredths=round(float(rb_max_ratio.value or 0) * 100)) if include_rb else []
         rb_vert, rb_cal = vm.split_by_resolution(rbv)
+        # PR E: the combined "All" table shows the full ranked set; the splits show each kind.
+        rb_all.rows = [vm.risk_budget_row(o, new_ids, chg, flash) for o in rbv]
         rb_vertical.rows = [vm.risk_budget_row(o, new_ids, chg, flash) for o in rb_vert]
         rb_calendar.rows = [vm.risk_budget_row(o, new_ids, chg, flash) for o in rb_cal]
         rb_title.set_text(f"Bounded-Loss Bets — capped downside, convex upside ({len(rbv):,})")
+        rb_all_title.set_text(f"All bounded-loss bets ({len(rbv):,})")
         rb_vert_title.set_text(f"Vertical — both legs resolve together ({len(rb_vert):,})")
         rb_cal_title.set_text(f"Calendar — legs resolve on different days ({len(rb_cal):,})")
         rb_expansion.set_visibility(include_rb)
@@ -1491,6 +1519,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         (show_net_sw, "Show estimated net-of-fees columns"),
         (actionable, "Actionable opportunities"), (review, "Review-required opportunities"),
         (blocked, "Blocked opportunities"), (qs_table, "Qualifier setups"),
+        (rb_all, "Bounded-loss bets (all)"),
         (rb_vertical, "Bounded-loss bets (vertical)"), (rb_calendar, "Bounded-loss bets (calendar)"),
         (rb_expansion, "Bounded-loss bets section"),
         (nm_table, "Overpriced books"), (nm_expansion, "Overpriced books section"),

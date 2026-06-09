@@ -76,6 +76,9 @@ UNIFIED_COLUMNS = [
     # Probability-context display outrights (risk-budget "spread / outright" view) — None for non-containment
     # shapes. display_c is the DISPLAY OUTRIGHT price (reasonable-quote midpoint, else last trade).
     "parent_display_c", "child_display_c", "display_spread_c", "spread_over_parent", "spread_over_child",
+    # Phase 2 E (display-only, containment rows): ladder rung labels for "Wins if …" + worst-leg quote
+    # quality for "Quote health". Never read by bucket_of / _rank_key.
+    "child_node", "parent_node", "comp_quote_quality",
     # World Cup Qualifier Setups (PR1): a cross-cutting product tag, SEPARATE from bucket/routing. Read only
     # by a UI badge — never by bucket_of / _rank_key / filters. `setup_family` = product area
     # ("wc_qualifier"); `setup_type` = the specific setup (qualifier_not_winner / qualifier_yes_basket /
@@ -194,6 +197,9 @@ def _finalize_unified(d: dict[str, Any], *, payout_floor_c: Any) -> dict[str, An
     # Bounded-Loss vertical/calendar split: default to the conservative "calendar" so dutch-book / synthetic
     # rows and pre-field snapshots stay safe (only risk-budget containment rows carry a real value).
     d.setdefault("resolution_mode", "calendar")
+    # Phase 2 E display-only fields default empty on non-containment shapes + pre-field snapshots.
+    for _k in ("child_node", "parent_node", "comp_quote_quality"):
+        d.setdefault(_k, "")
     # Exact-order top-two bundle two-tier economics — default on every row so old snapshots stay safe.
     for _k in ("opportunity_class", "worst_bundle_quote_quality", "comparator_quote_quality"):
         d.setdefault(_k, "")
@@ -235,6 +241,10 @@ def _to_unified_consistency(r: dict[str, Any], cfg) -> dict[str, Any]:
         "display_spread_c": _num(r.get("display_spread_c")),
         "spread_over_parent": _num(r.get("spread_over_parent")),
         "spread_over_child": _num(r.get("spread_over_child")),
+        # Phase 2 E (display-only): the ladder rung labels (for "Wins if …") + the worst-leg quote quality
+        # (for "Quote health"). Read only by the speculative viewmodel; never by bucket_of / _rank_key.
+        "child_node": r.get("child_node") or "", "parent_node": r.get("parent_node") or "",
+        "comp_quote_quality": r.get("comp_quote_quality") or "",
     }
     d["participant_keys"], d["participant_labels"] = _participants([(r.get("player_key"), r.get("player"))])
     # WC Qualifier Setups (PR1): tag ONLY the soccer "Win group ⊆ Reach Round of 32" leaf — setup #1

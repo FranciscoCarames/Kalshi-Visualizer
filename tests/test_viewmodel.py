@@ -708,3 +708,42 @@ def test_derived_indicators_from_chain_golf_make_cut():
     assert vm.derived_indicators([{"layer": "Top 10", "display_pct": 9.0}], "golf") == []
     assert vm.derived_indicators([{"layer": "Reach Semifinal", "display_pct": 60.0}], "tennis") == []
     assert vm.derived_indicators(None, "golf") == []
+
+
+# --- PR E: trader columns + $100 sizing + wins-if + speculative explainer ----------------------------
+def test_wins_if_from_ladder_rungs():
+    assert vm._wins_if({"parent_node": "Reach Final", "child_node": "Win Tournament"}) \
+        == "Reach Final but not Win Tournament"
+    assert vm._wins_if({"parent_node": "", "child_node": "Win Tournament"}) == ""   # blank when a rung missing
+
+
+def test_sized_at_budget_caps_by_book_size():
+    o = {"cost_c": 102, "exec_min_size": 50, "worst_case_profit_c": -2, "best_case_profit_c": 98}
+    assert vm._sized_at_budget(o) == (50, 100, 4900)          # min(10000//102=98, 50)=50; loss 2*50, upside 98*50
+    assert vm._sized_at_budget({**o, "exec_min_size": 1000})[0] == 98   # not capped when the book is deep
+    assert vm._sized_at_budget({"cost_c": None, "worst_case_profit_c": -2, "best_case_profit_c": 98}) is None
+
+
+def test_risk_budget_row_trader_columns():
+    row = vm.risk_budget_row({"opportunity_id": "x", "bucket": "risk_budget", "cost_c": 102,
+                              "exec_min_size": 50, "worst_case_profit_c": -2, "best_case_profit_c": 98,
+                              "parent_node": "Reach Final", "child_node": "Win Tournament",
+                              "comp_quote_quality": "OK", "resolution_mode": "calendar",
+                              "display_spread_c": 12}, set())
+    assert row["resolution"] == "Calendar"
+    assert row["wins_if"] == "Reach Final but not Win Tournament"
+    assert row["max_units"] == 50 and row["quote_health"] == "OK"
+    assert row["units_100"] == 50 and row["loss_100"] == 1.0 and row["upside_100"] == 49.0
+
+
+def test_speculative_explainer_only_for_risk_budget_and_conservative():
+    assert vm.speculative_explainer({"bucket": "actionable"}) == []
+    lines = vm.speculative_explainer({"bucket": "risk_budget", "worst_case_profit_c": -2,
+                                      "best_case_profit_c": 98, "display_spread_c": 12,
+                                      "parent_node": "Reach Final", "child_node": "Win Tournament"})
+    labels = [lbl for lbl, _ in lines]
+    assert "Can I lose money?" in labels and "Why ranked here" in labels
+    assert any("doing nothing" in lbl for lbl in labels)
+    blob = " ".join(t for _, t in lines).lower()
+    for banned in ("riskless", "locked", "true arbitrage", "guaranteed"):
+        assert banned not in blob

@@ -365,12 +365,42 @@ def _upside_risk(worst: Any, best: Any) -> Any:
     return None if _isna(best) else round(best / risk, 1)
 
 
+_BUDGET_C = 10000   # $100 gross top-of-book reference allocation, in cents
+
+
+def _wins_if(o: dict[str, Any]) -> str:
+    """Plain-English payoff zone for a bounded-loss bet — the broader rung happens but NOT the deeper one
+    (e.g. 'Reach Final but not Win Tournament', 'Top 10 but not Top 5'). Blank when the rung labels are
+    absent (display-only — `parent_node`/`child_node` never feed executable logic)."""
+    parent, child = str(o.get("parent_node") or "").strip(), str(o.get("child_node") or "").strip()
+    return f"{parent} but not {child}" if parent and child else ""
+
+
+def _sized_at_budget(o: dict[str, Any], budget_c: int = _BUDGET_C) -> tuple[int, int, int] | None:
+    """A $100 (gross, top-of-book) allocation sized down to what's affordable AND fillable:
+    units = min(budget // cost, top-of-book size). Returns (units, gross max-loss ¢, gross best-upside ¢),
+    or None when cost / per-unit payoffs / a positive fillable size are missing. Scales the per-unit
+    worst/best-case profit already on the row — no payoff math is duplicated here."""
+    cost = _num_or_none(o.get("cost_c"))
+    wc, bc = _num_or_none(o.get("worst_case_profit_c")), _num_or_none(o.get("best_case_profit_c"))
+    if cost is None or cost <= 0 or wc is None or bc is None:
+        return None
+    units = int(budget_c // cost)
+    size = _num_or_none(o.get("exec_min_size"))
+    if size is not None:
+        units = min(units, int(size))
+    if units <= 0:
+        return None
+    return units, round(-wc * units), round(bc * units)
+
+
 def risk_budget_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str] | None = None,
                     flash_ids: set[str] | None = None) -> dict[str, Any]:
     """Display row for the risk-budget table: leads with the convex economics (max loss / max profit /
     upside:risk); worst-case ROC is a labelled secondary, never the headline (it's honestly negative)."""
     wc, bc = o.get("worst_case_profit_c"), o.get("best_case_profit_c")
     _r2 = lambda x: None if _num_or_none(x) is None else round(x, 2)   # noqa: E731 — display rounding
+    _sized = _sized_at_budget(o)   # PR E: ($100-capped units, gross max-loss ¢, gross best-upside ¢) or None
     return _stamp_severity({
         "opportunity_id": o.get("opportunity_id"),
         "new": o.get("opportunity_id") in new_ids,   # bool → a coloured "NEW" badge in the cell slot
@@ -391,6 +421,16 @@ def risk_budget_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str
         "breakeven": _breakeven_pct(o),
         "gap_vs_be": _gap_vs_breakeven_pp(o),
         "signal": _signal_class(o),
+        # PR E — trader columns (display-only): resolution kind, the payoff zone in words, top-of-book
+        # fillable size, worst-leg quote quality, and a $100 gross allocation's units / max loss $ / best
+        # upside $ (capped by the book). All blank when their inputs are missing.
+        "resolution": "Vertical" if o.get("resolution_mode") == "vertical" else "Calendar",
+        "wins_if": _wins_if(o),
+        "max_units": _num_or_none(o.get("exec_min_size")),
+        "quote_health": str(o.get("comp_quote_quality") or ""),
+        "units_100": _sized[0] if _sized else None,
+        "loss_100": round(_sized[1] / 100, 1) if _sized else None,    # gross max loss at $100, in dollars
+        "upside_100": round(_sized[2] / 100, 1) if _sized else None,  # gross best upside at $100, in dollars
         # NOTE: no "tradable" field — a speculative bounded-loss BUNDLE is not auto-placeable even when its
         # legs are active, so we never surface tradable_now here (PR 1: de-risk speculative framing).
         "roc": o.get("roi_pct"),                       # worst-case ROC (gross, negative) — labelled, secondary
@@ -404,6 +444,37 @@ def risk_budget_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str
         "caveat": "; ".join(p for p in (o.get("settlement_caveat"), o.get("blocked_reason"))
                             if isinstance(p, str) and p),
     }, o)
+
+
+def speculative_explainer(o: dict[str, Any]) -> list[tuple[str, str]]:
+    """Plain-English decision lines for a bounded-loss (risk_budget) candidate, for the detail panel:
+    Can-I-lose-money / Wins-big-if / Why-ranked-here / Why-skip. [] for non-risk-budget opps. Display-only,
+    honest: a bet (not an edge), gross, top-of-book, Uncalibrated."""
+    if o.get("bucket") != "risk_budget":
+        return []
+    wc = _num_or_none(o.get("worst_case_profit_c"))
+    gap, be, gvb = _num_or_none(o.get("display_spread_c")), _breakeven_pct(o), _gap_vs_breakeven_pp(o)
+    sig, wins = _signal_class(o), _wins_if(o)
+    lines: list[tuple[str, str]] = [
+        ("Can I lose money?", f"Yes — a bet, not an edge. The loss is CAPPED at the overpay "
+                              f"({'—' if wc is None else f'{-wc:.0f}¢/unit'}); you lose it unless the payoff "
+                              "zone happens."),
+    ]
+    if wins:
+        lines.append(("Wins big if", wins))
+    lines.append(("Why ranked here",
+                  f"Signal: {sig}. Market gap {'—' if gap is None else f'{gap:g}'}pp vs breakeven "
+                  f"{'—' if be is None else f'{be:g}'}% → gap-vs-breakeven "
+                  f"{'—' if gvb is None else f'{gvb:g}'}pp (Uncalibrated, gross, top-of-book)."))
+    skip = []
+    if sig in ("Inverted / diagnostic", "Data quality"):
+        skip.append("the displayed prices are inverted or incomplete — treat as diagnostic, not a bet")
+    elif gvb is not None and gvb <= 0:
+        skip.append("the market prices the payoff zone at/below its breakeven — no quote-implied edge")
+    skip.append("metrics are gross & UNCALIBRATED (fees, full-depth fill, outcome calibration not modeled); "
+                "doing nothing avoids the capped loss")
+    lines.append(("Why skip / doing nothing may be better", "; ".join(skip)))
+    return lines
 
 
 def near_miss_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str] | None = None,

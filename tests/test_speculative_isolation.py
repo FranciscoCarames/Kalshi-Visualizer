@@ -22,7 +22,10 @@ SPECULATIVE_FIELDS = {
     "spread_over_parent": 0.4, "spread_over_child": 0.6,
     "resolution_mode": "vertical", "resolution": "Vertical",
     "cheap_cost": True, "cheap_ratio": False,                                   # PR F (future)
-    "wins_if": "reaches the final but does not win", "max_units": 12, "quote_health": "OK",  # PR E (future)
+    # PR E trader columns + $100 sizing + the raw display fields they derive from.
+    "wins_if": "Reach Final but not Win Tournament", "max_units": 12, "quote_health": "OK",
+    "units_100": 50, "loss_100": 1.0, "upside_100": 49.0,
+    "child_node": "Win Tournament", "parent_node": "Reach Final", "comp_quote_quality": "OK",
 }
 
 # The executable fields the invariant protects (the per-row fingerprint).

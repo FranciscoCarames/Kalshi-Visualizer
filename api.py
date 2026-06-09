@@ -86,6 +86,10 @@ class Opportunity(BaseModel):
     display_spread_c: float | None = None
     spread_over_parent: float | None = None
     spread_over_child: float | None = None
+    # Phase 2 E (display-only): ladder rung labels ("Wins if …") + worst-leg quote quality ("Quote health").
+    child_node: str | None = None
+    parent_node: str | None = None
+    comp_quote_quality: str | None = None
     bucket: str | None = None
     status: str | None = None
     tradable_now: str | None = None
