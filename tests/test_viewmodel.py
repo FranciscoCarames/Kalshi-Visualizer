@@ -198,11 +198,11 @@ def test_filter_opps_participant_or_match_by_key():
 
 # --- ranking modes (#1/#9) — payoff geometry, no probability ----------------------------------------
 def _o(oid, bucket="actionable", gap=None, roi=None, wc=None, bc=None,
-       child_c=None, parent_c=None, soc=None, sop=None):
+       child_c=None, parent_c=None, soc=None, sop=None, ds=None):
     return {"opportunity_id": oid, "bucket": bucket, "exec_gap_c": gap, "roi_pct": roi,
             "worst_case_profit_c": wc, "best_case_profit_c": bc,
             "child_display_c": child_c, "parent_display_c": parent_c,
-            "spread_over_child": soc, "spread_over_parent": sop}
+            "spread_over_child": soc, "spread_over_parent": sop, "display_spread_c": ds}
 
 
 def test_risk_budget_geometry_from_payoff_fields():
@@ -257,6 +257,59 @@ def test_spread_ratio_unknown_outright_sorts_last():
             _o("zero", "risk_budget", child_c=0, parent_c=0)]
     ordered = [o["opportunity_id"] for o in vm.rank_opps(rows, "spread_ratio")]
     assert ordered[0] == "has" and set(ordered[1:]) == {"missing", "zero"}
+
+
+# --- implied EV (PR C) — chance-weighted ranking aid; cents-only; gross, market-implied prob ----------
+def test_implied_ev_c_is_cents_only_no_unit_mixup():
+    # band 12¢ (=12% implied chance), overpay 10¢ (max loss = -wc) -> EV = +2¢. NOT a probability-mixed
+    # value like 0.12*88 - 0.88*10 (which would be ~1.8) and NOT 1190 etc.
+    assert vm._implied_ev_c({"display_spread_c": 12, "worst_case_profit_c": -10}) == 2
+    # missing either input -> None (never silently 0)
+    assert vm._implied_ev_c({"display_spread_c": None, "worst_case_profit_c": -10}) is None
+    assert vm._implied_ev_c({"display_spread_c": 12, "worst_case_profit_c": None}) is None
+
+
+def test_implied_ev_orders_chance_weighted_and_flips_vs_ratio():
+    # "longshot": band 1% / overpay 2¢ -> EV = -1; upside:risk = 98/2 = 49.
+    # "likely":   band 32% / overpay 8¢ -> EV = +24; upside:risk = 88/8 = 11.
+    rows = [_o("longshot", "risk_budget", wc=-2, bc=98, ds=1),
+            _o("likely", "risk_budget", wc=-8, bc=88, ds=32)]
+    # Implied EV is chance-weighted: the far-likelier lower-ratio bet ranks first...
+    assert [o["opportunity_id"] for o in vm.rank_opps(rows, "implied_ev")] == ["likely", "longshot"]
+    # ...the exact opposite of pure upside:risk geometry, which leads with the 49x longshot.
+    assert [o["opportunity_id"] for o in vm.rank_opps(rows, "spread_upside")] == ["longshot", "likely"]
+
+
+def test_implied_ev_missing_inputs_sort_last_not_zero():
+    rows = [_o("scored", "risk_budget", wc=-2, bc=98, ds=10),     # EV = +8
+            _o("noband", "risk_budget", wc=-2, bc=98),            # no display_spread -> EV None
+            _o("noloss", "risk_budget", ds=10)]                   # no worst_case -> EV None
+    ordered = [o["opportunity_id"] for o in vm.rank_opps(rows, "implied_ev")]
+    assert ordered[0] == "scored" and set(ordered[1:]) == {"noband", "noloss"}
+
+
+def test_implied_ev_negative_band_not_attractive():
+    # A negative band (child priced ABOVE parent — a ladder inversion) yields a worse EV than a normal
+    # positive-band bet, so it never floats to the top of the implied-EV ranking.
+    rows = [_o("inverted", "risk_budget", wc=-2, bc=98, ds=-5),   # EV = -7
+            _o("normal", "risk_budget", wc=-2, bc=98, ds=10)]     # EV = +8
+    assert [o["opportunity_id"] for o in vm.rank_opps(rows, "implied_ev")] == ["normal", "inverted"]
+
+
+def test_implied_ev_falls_back_to_edge_for_non_risk_budget():
+    rows = [_o("a", "actionable", gap=2), _o("b", "actionable", gap=9)]
+    assert [o["opportunity_id"] for o in vm.rank_opps(rows, "implied_ev")] == ["b", "a"]
+
+
+def test_risk_budget_row_exposes_implied_ev_field():
+    row = vm.risk_budget_row({"opportunity_id": "x", "bucket": "risk_budget",
+                              "display_spread_c": 12, "worst_case_profit_c": -10,
+                              "best_case_profit_c": 90}, set())
+    assert row["ev"] == 2
+    # missing display gap -> blank EV, never 0
+    row2 = vm.risk_budget_row({"opportunity_id": "y", "bucket": "risk_budget",
+                               "worst_case_profit_c": -10}, set())
+    assert row2["ev"] is None
 
 
 def test_blended_uses_edge_roi_geometry_no_probability():
