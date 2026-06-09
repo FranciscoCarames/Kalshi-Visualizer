@@ -507,6 +507,18 @@ def test_soccer_game_not_laddered_and_reach_stage_nodes():
         assert a.family == "advance" and a.ladder_node == node, tk
 
 
+def test_soccer_stage_of_elim_owned_classified_non_laddered():
+    # KXWCSTAGEOFELIM: owned, classified stage_of_elim, NON-laddered (per-team 7-bucket MECE set), with a
+    # readable per-bucket display stage parsed from the market-ticker suffix.
+    assert sports.sport_for_series("KXWCSTAGEOFELIM").sport_id == "soccer"
+    assert sports.SOCCER.category_labels["stage_of_elim"] == "Stage of elimination"
+    assert "KXWCSTAGEOFELIM" in sports.SOCCER.default_series
+    for suffix, label in (("R32", "Eliminated: Round of 32"), ("FW", "Winner"), ("FL", "Runner-up (lost Final)")):
+        c = sports.SOCCER.classify("KXWCSTAGEOFELIM", {"ticker": f"KXWCSTAGEOFELIM-26USA-{suffix}", "title": "x"})
+        assert c.family == "stage_of_elim" and c.ladder_node is None
+        assert c.eligible_for_ladder_checks is False and c.stage == label
+
+
 def test_soccer_winner_rung_live_outright():
     # The LIVE tournament outright (KXMENWORLDCUP-26) classifies as the deepest ladder rung "Win the World
     # Cup" (node == display label). The dead lookalike KXMWORLDCUP and the retired dormant guess KXWC are

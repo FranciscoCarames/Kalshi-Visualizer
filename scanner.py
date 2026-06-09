@@ -28,6 +28,7 @@ import dutchbook
 import exact_order
 import game_support
 import sports
+import stage_elim
 import synthetic_bundle
 
 # Section priority for ranking (lower = surfaced first). Mirrors the dashboard's importance order;
@@ -321,6 +322,25 @@ def _to_unified_group_basket(r: dict[str, Any], cfg) -> dict[str, Any]:
     return d
 
 
+def _to_unified_stage_elim_book(r: dict[str, Any], cfg) -> dict[str, Any]:
+    """Map a standalone stage-of-elimination 7-way MECE book onto the unified schema. Shares the dutch-book
+    finding shape (clean executable edge), tagged ``source="stage_elim"``."""
+    d = _to_unified_dutchbook(r, cfg)
+    d["source"] = "stage_elim"
+    d["relationship_type"] = r.get("relationship_type") or stage_elim.BOOK_CHECK_TYPE
+    return d
+
+
+def _to_unified_stage_elim_synth(r: dict[str, Any], cfg) -> dict[str, Any]:
+    """Map a cross-family tail-sum (advance-rung replication) onto the unified schema. Review-only: carries
+    ``rule_flag="SETTLEMENT_CHECK_REQUIRED"`` and self-assigns its review_signal/blocked bucket."""
+    d = _to_unified_dutchbook(r, cfg)
+    d["source"] = "stage_elim_synth"
+    d["relationship_type"] = r.get("relationship_type") or stage_elim.SYNTH_CHECK_TYPE
+    d["rule_flag"] = r.get("rule_flag") or "SETTLEMENT_CHECK_REQUIRED"
+    return d
+
+
 def _to_unified_exact_order(r: dict[str, Any], cfg) -> dict[str, Any]:
     """Map an exact-order top-two bundle finding (#4) onto the unified schema. Two tiers (Diagnostic /
     Speculative — the finding self-assigns its status/relationship/setup_type/opportunity_class), both
@@ -491,6 +511,8 @@ def unified_opportunities(
             game_signals = game_support.find_game_support_signals(
                 records, strong_score_c=config.WC_SUPPORT_SCORE_STRONG_C,
                 qualifier_band_c=config.WC_QUALIFIER_BAND_C)
+            stage_books = stage_elim.find_stage_elim_books(records)
+            stage_synths = stage_elim.find_stage_elim_synthetics(records)
         except Exception as exc:
             errors.append({"sport": cfg.sport_id, "error": str(exc)})
             continue
@@ -500,6 +522,8 @@ def unified_opportunities(
         rows.extend(_to_unified_synthetic(r, cfg) for r in bundles)
         rows.extend(_to_unified_exact_order(r, cfg) for r in exact_orders)
         rows.extend(_to_unified_game_support(r, cfg) for r in game_signals)
+        rows.extend(_to_unified_stage_elim_book(r, cfg) for r in stage_books)
+        rows.extend(_to_unified_stage_elim_synth(r, cfg) for r in stage_synths)
         if frames_out is not None:
             for frame_type, frame_rows in (("contracts", records), ("checks", checks_records),
                                            ("dutchbook", books), ("group_basket", baskets)):

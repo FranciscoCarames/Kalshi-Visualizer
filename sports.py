@@ -816,12 +816,23 @@ GOLF = register(SportConfig(
 # draw leg, per-event synthetic key via tie_fn). No head-to-head series (match_family="").
 SOCCER_TIE_UUID = "111193d4-9b1f-4bd8-ab7c-9de252737f05"
 _SOCCER_EXACT = frozenset({"KXWCGAME", "KXWCROUND", "KXWCGROUPQUAL", "KXWCGROUPWIN", "KXMENWORLDCUP",
-                           "KXWCGROUPORDER"})
+                           "KXWCGROUPORDER", "KXWCSTAGEOFELIM"})
+# KXWCSTAGEOFELIM "stage of elimination" partition: per-team, exactly ONE of these 7 buckets settles YES
+# (the stage where the team is eliminated; FW = wins the final). Ordered broad→deep by the market-ticker
+# suffix; the SAME ordered set the detector (stage_elim.py) uses, so it is single-sourced here. Live-probed
+# 2026-06-09: 48 events, mutually_exclusive=True, constant soccer_team UUID across a team's 7 buckets.
+WC_STAGE_ELIM_BUCKETS = (
+    ("GS", "Eliminated: Group Stage"), ("R32", "Eliminated: Round of 32"),
+    ("R16", "Eliminated: Round of 16"), ("QF", "Eliminated: Quarterfinals"),
+    ("SF", "Eliminated: Semifinals"), ("FL", "Runner-up (lost Final)"), ("FW", "Winner"),
+)
+_WC_STAGE_ELIM_LABEL = dict(WC_STAGE_ELIM_BUCKETS)
 # `exact_order` MUST have a non-"other" category label, else data.non_other_families would treat it as a
 # prop and the cross-sport fetch path would never load KXWCGROUPORDER.
 _SOCCER_CATEGORY = {"game": "Match (3-way)", "advance": "Stage advancement",
                     "group_winner": "Group winner", "winner": "Tournament winner",
-                    "exact_order": "Exact group order", "other": "Other"}
+                    "exact_order": "Exact group order", "stage_of_elim": "Stage of elimination",
+                    "other": "Other"}
 _SOCCER_STAGE_RANK = {"Round of 32": 1, "Round of 16": 2, "Quarterfinals": 3, "Semifinals": 4, "Finals": 5}
 _SOCCER_LADDER = LadderSpec(
     node_order=("Reach Round of 32", "Reach Round of 16", "Reach Quarterfinals",
@@ -853,12 +864,19 @@ def _soccer_family(cfg, series_ticker):
         return "group_winner"                                        # per-team "win the group" — containment leaf
     if t == "KXWCGROUPORDER":
         return "exact_order"                                         # 24-way exact standings — diagnostic only (#4)
+    if t == "KXWCSTAGEOFELIM":
+        return "stage_of_elim"                                       # per-team 7-bucket elimination MECE set
     if t in cfg.winner_tickers:
         return "winner"                                              # tournament outright (KXMENWORLDCUP)
     return "other"
 
 
 def _soccer_stage(cfg, family, market):
+    if family == "stage_of_elim":
+        # The elimination bucket is the market-ticker suffix (…-GS / …-R32 / … / …-FW). Display-only label;
+        # the family is non-laddered, so this never enters a containment comparison.
+        suffix = str(market.get("ticker") or "").rsplit("-", 1)[-1].upper()
+        return _WC_STAGE_ELIM_LABEL.get(suffix, "")
     if family != "advance":
         return ""
     # The round lives in the market ticker segment (e.g. KXWCROUND-26RO16-PAR / KXWCGROUPQUAL-26L-PAN)
