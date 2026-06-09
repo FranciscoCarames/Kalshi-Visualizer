@@ -9,6 +9,7 @@ the engine / `viewmodel`; this module is the thin NiceGUI shell.
 """
 from __future__ import annotations
 
+import time
 from typing import Any
 
 from nicegui import app, run, ui
@@ -232,6 +233,9 @@ _NET_COLUMNS = ("net_edge", "net_profit", "fees")
 # comparison; spread÷parent/child stay visible; the raw outright context starts hidden.
 _RISK_COLUMNS = [
     {"name": "new", "label": "", "field": "new", "align": "center", "required": True},
+    # Descriptive class (PR M): Candidate / Breakeven / Negative proxy / Inverted / Data quality — near the
+    # left so junk rows are obvious at a glance.
+    {"name": "signal", "label": "Signal", "field": "signal", "align": "left", "sortable": True},
     {"name": "sport", "label": "Sport", "field": "sport", "align": "center", "sortable": True},
     {"name": "name", "label": "Participant / chain", "field": "name", "align": "left", "sortable": True},
     {"name": "detail", "label": "Detail", "field": "detail", "align": "left"},
@@ -239,9 +243,12 @@ _RISK_COLUMNS = [
     {"name": "max_loss", "label": "Max loss ¢", "field": "max_loss", "align": "center", "sortable": True},
     {"name": "max_profit", "label": "Max profit ¢", "field": "max_profit", "align": "center", "sortable": True},
     {"name": "ratio", "label": "Upside:risk", "field": "ratio", "align": "center", "sortable": True},
-    # Implied chance of the convex payoff (the parent−child display gap, ¢ = %) + implied EV (chance −
-    # overpay). Both are market-implied ranking aids — gross, top-of-book; never an edge.
-    {"name": "display_spread", "label": "Implied chance of payoff %", "field": "display_spread", "align": "center", "sortable": True},
+    # PR M — the implied metric, shown as its legible decomposition (gross, top-of-book ranking aids; never an
+    # edge). Market gap (pp) = parent−child display gap; Breakeven % = the chance the payoff zone needs;
+    # Gap vs breakeven (pp) = the two compared; Implied EV ¢ ≈ that gap (kept for one-number ranking).
+    {"name": "display_spread", "label": "Market gap (pp)", "field": "display_spread", "align": "center", "sortable": True},
+    {"name": "breakeven", "label": "Breakeven %", "field": "breakeven", "align": "center", "sortable": True},
+    {"name": "gap_vs_be", "label": "Gap vs breakeven (pp)", "field": "gap_vs_be", "align": "center", "sortable": True},
     {"name": "ev", "label": "Implied EV ¢", "field": "ev", "align": "center", "sortable": True},
     {"name": "roc", "label": "Worst-case ROC %", "field": "roc", "align": "center", "sortable": True},
     {"name": "spread_over_parent", "label": "Spread÷parent", "field": "spread_over_parent", "align": "center", "sortable": True},
@@ -250,8 +257,9 @@ _RISK_COLUMNS = [
     {"name": "child_outright", "label": "Child outright ¢", "field": "child_outright", "align": "center", "sortable": True},
     {"name": "caveat", "label": "Caveat", "field": "caveat", "align": "left"},
 ]
-# Raw outright context starts hidden (implied chance / implied EV / spread÷parent/child stay visible).
-_RISK_HIDDEN = ("parent_outright", "child_outright")
+# Default-hidden advanced context (PR M moves the diagnostic ratios + worst-case ROC + raw outrights here, so
+# the decision columns — signal / max loss / breakeven / gap-vs-breakeven / implied EV — lead).
+_RISK_HIDDEN = ("roc", "spread_over_parent", "spread_over_child", "parent_outright", "child_outright")
 # Overpriced Books (near-miss) table — cost, overpay (= the flat guaranteed loss), and the watchlist note.
 _NEARMISS_COLUMNS = [
     {"name": "new", "label": "", "field": "new", "align": "center", "required": True},
@@ -405,7 +413,12 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                              # Cascading filters: a re-entrancy guard so the programmatic option/value prune
                              # in _refresh_cascade (which fires the selects' on_value_change) never re-renders
                              # mid-cascade or recurses. Handlers no-op while it's True.
-                             "_suppress_cascade": False}
+                             "_suppress_cascade": False,
+                             # PR R — responsiveness. `view` = the ranked+filtered opp list, cached so a
+                             # bounded-loss/near-miss control change re-slices it WITHOUT re-filtering or
+                             # rebuilding the other tables. `scan_status` cached so the hot path never reads
+                             # the store. `pending_refresh` = (kind, monotonic deadline) for the debounce.
+                             "view": [], "scan_status": None, "pending_refresh": None}
 
     ui.add_css(_SELECTED_ROW_CSS)        # selected-row highlight (#14) — see module note
     ui.add_css(_A11Y_CSS)                 # accessibility (#10): focus-visible ring + opt-in larger text
@@ -804,9 +817,11 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         ui.label("Buy the broader YES + the deeper NO for just over 100¢: your loss is capped at the small "
                  "overpay, with convex upside (the broader-but-not-deeper outcome pays about +$1). A bet, NOT "
                  "an edge — gross of fees.").classes("text-xs text-gray-500")
-        ui.label("Implied chance of payoff = the parent−child display gap; Implied EV = that chance − the "
-                 "overpay. Both are gross, top-of-book and assume the market-implied probability — ranking "
-                 "aids to compare bets across sports, NOT a guarantee or a probability model.").classes(
+        ui.label("Market gap (pp) = parent−child display-price gap (the payoff zone's implied chance). "
+                 "Breakeven % = the chance that zone needs to clear the overpay (≈ max loss). "
+                 "Gap vs breakeven (pp) = the two compared; Implied EV ¢ ≈ the same number. All gross, "
+                 "top-of-book, market-implied — ranking aids, not a guarantee or a probability model. A "
+                 "negative gap means an inverted ladder (flagged 'Inverted / diagnostic'), never a chance.").classes(
                      "text-xs text-gray-500")
 
         # Split by resolution shape (PR B): Vertical = both legs settle at one event (golf Top-N, a
@@ -873,8 +888,8 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
     for _t in (actionable, review, blocked):
         for _f in ("roi", "units", "profit", "net_edge", "net_profit", "fees"):
             _t.add_slot(f"body-cell-{_f}", _num_cell_slot(_f))
-    for _f in ("cost", "max_loss", "max_profit", "ratio", "ev", "roc", "spread_over_parent",
-               "spread_over_child", "parent_outright", "child_outright", "display_spread"):
+    for _f in ("cost", "max_loss", "max_profit", "ratio", "ev", "breakeven", "gap_vs_be", "roc",
+               "spread_over_parent", "spread_over_child", "parent_outright", "child_outright", "display_spread"):
         for _rb in (rb_vertical, rb_calendar):
             _rb.add_slot(f"body-cell-{_f}", _num_cell_slot(_f))
     for _f in ("cost", "overpay"):
@@ -1205,12 +1220,51 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         # then clear so subsequent filter rerenders within this snapshot don't replay the animation.
         state["flash_now"] = ({oid for oid, c in state["changes"].items() if c == "new"} | new_ids
                               if advanced else set())
+        # PR R: cache the scan status here (once per snapshot apply) so the hot-path rerender never reads the
+        # store; cancel any pending debounced control refresh — this full rebuild is authoritative.
+        state["scan_status"] = engine.scan_status()
+        state["pending_refresh"] = None
         rerender(force_diagnostics=True)
         state["flash_now"] = set()
 
     async def reload_data() -> None:
         bundle = await run.io_bound(_read_bundle, *_read_args())   # store I/O off the event loop
         _apply_bundle(bundle)
+
+    def refresh_bounded_loss() -> None:
+        """PR R scoped path: rebuild ONLY the bounded-loss tables from the cached `state["view"]` — re-slice
+        by the rb band controls; no re-filter/re-rank of the full set, no store read, the other tables
+        untouched. Used by the debounced rb-control handler and by the full rerender."""
+        view = state.get("view") or []
+        new_ids, chg = state.get("new_ids") or set(), state.get("changes") or {}
+        flash = state.get("flash_now") or set()
+        include_rb = rb_switch.value
+        rbv = vm.risk_budget_view(
+            view, max_loss_c=int(rb_max_loss.value or 0),
+            min_ratio_tenths=round(float(rb_min_ratio.value or 0) * 10),
+            min_outright_c=int(rb_min_outright.value or 0),
+            max_spread_ratio_hundredths=round(float(rb_max_ratio.value or 0) * 100)) if include_rb else []
+        rb_vert, rb_cal = vm.split_by_resolution(rbv)
+        rb_vertical.rows = [vm.risk_budget_row(o, new_ids, chg, flash) for o in rb_vert]
+        rb_calendar.rows = [vm.risk_budget_row(o, new_ids, chg, flash) for o in rb_cal]
+        rb_title.set_text(f"Bounded-Loss Bets — capped downside, convex upside ({len(rbv):,})")
+        rb_vert_title.set_text(f"Vertical — both legs resolve together ({len(rb_vert):,})")
+        rb_cal_title.set_text(f"Calendar — legs resolve on different days ({len(rb_cal):,})")
+        rb_expansion.set_visibility(include_rb)
+        for _c in (rb_max_loss, rb_min_ratio, rb_min_outright, rb_max_ratio):
+            _c.set_enabled(include_rb)
+
+    def refresh_near_miss() -> None:
+        """PR R scoped path: rebuild ONLY the overpriced-books (near-miss) table from the cached view."""
+        view = state.get("view") or []
+        new_ids, chg = state.get("new_ids") or set(), state.get("changes") or {}
+        flash = state.get("flash_now") or set()
+        include_nm = nm_switch.value
+        nmv = vm.near_miss_view(view, max_over_c=int(nm_max_over.value or 0)) if include_nm else []
+        nm_table.rows = [vm.near_miss_row(o, new_ids, chg, flash) for o in nmv]
+        nm_title.set_text(f"Overpriced Books — flat guaranteed loss, watch-only ({len(nmv):,})")
+        nm_expansion.set_visibility(include_nm)
+        nm_max_over.set_enabled(include_nm)
 
     def rerender(force_diagnostics: bool = False) -> None:
         """Pure in-memory re-render from `state` — NO store access. Re-filter + push only the VISIBLE
@@ -1225,10 +1279,11 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         cov = state.get("cov") or {}
         filters = _current_filters()
         view = vm.rank_opps(vm.filter_opps(opps, **filters), rank_sel.value)   # display-time re-sort, no rescan
+        state["view"] = view      # PR R: cache so the scoped bounded-loss / near-miss refreshers can reuse it
         # Truthful empty state by scope (PR 26a): no-scan / scanning / scan-failed / no-opportunities /
-        # filter-hid-all — or hidden when there's content to show.
+        # filter-hid-all — or hidden when there's content to show. scan_status is cached (no hot-path store read).
         msg = vm.empty_state(cov=cov, total_opps=len(opps), shown_opps=len(view),
-                             scan_status=engine.scan_status())
+                             scan_status=state.get("scan_status"))
         empty.set_text(msg or "")
         empty.set_visibility(msg is not None)
 
@@ -1246,33 +1301,10 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             hdr.set_visibility(sw.value)
             tbl.set_visibility(sw.value)
 
-        # Two watchlist sections (split): each filtered from the membership/threshold-filtered view by its
-        # band controls; no rescan. Each collapsed section shows only when its switch is on; its title carries
-        # the live count; its band inputs disable when off.
-        include_rb, include_nm = rb_switch.value, nm_switch.value
-        rbv = vm.risk_budget_view(
-            view, max_loss_c=int(rb_max_loss.value or 0),
-            min_ratio_tenths=round(float(rb_min_ratio.value or 0) * 10),
-            min_outright_c=int(rb_min_outright.value or 0),
-            max_spread_ratio_hundredths=round(float(rb_max_ratio.value or 0) * 100)) if include_rb else []
-        nmv = vm.near_miss_view(view, max_over_c=int(nm_max_over.value or 0)) if include_nm else []
-        # Split the (already ranked + filtered) bounded-loss set by resolution shape; each side keeps the
-        # selected rank order. A missing resolution_mode (older snapshot) defaults to calendar.
-        rb_vert, rb_cal = vm.split_by_resolution(rbv)
-        rb_vertical.rows = [vm.risk_budget_row(o, new_ids, chg, flash) for o in rb_vert]
-        rb_calendar.rows = [vm.risk_budget_row(o, new_ids, chg, flash) for o in rb_cal]
-        nm_table.rows = [vm.near_miss_row(o, new_ids, chg, flash) for o in nmv]
-        rb_title.set_text(f"Bounded-Loss Bets — capped downside, convex upside ({len(rbv):,})")
-        rb_vert_title.set_text(f"Vertical — both legs resolve together ({len(rb_vert):,})")
-        rb_cal_title.set_text(f"Calendar — legs resolve on different days ({len(rb_cal):,})")
-        nm_title.set_text(f"Overpriced Books — flat guaranteed loss, watch-only ({len(nmv):,})")
-        rb_expansion.set_visibility(include_rb)
-        nm_expansion.set_visibility(include_nm)
-        rb_max_loss.set_enabled(include_rb)
-        rb_min_ratio.set_enabled(include_rb)
-        rb_min_outright.set_enabled(include_rb)
-        rb_max_ratio.set_enabled(include_rb)
-        nm_max_over.set_enabled(include_nm)
+        # Two watchlist sections (split) — rebuilt via the scoped refreshers so a bounded-loss/near-miss
+        # control change can call them directly (PR R) without re-running this full rerender.
+        refresh_bounded_loss()
+        refresh_near_miss()
 
         backlog.rows = [vm.backlog_row(b, tz) for b in (state.get("backlog") or [])]
         backlog_events_table.rows = [vm.backlog_event_row(b, tz) for b in (state.get("backlog_events") or [])]
@@ -1428,13 +1460,44 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
     export_btn.on_click(do_export)
     _seed()        # set control values from the URL BEFORE binding handlers (so seeding fires no render)
 
-    # Filter / display controls re-render PURELY in-memory from the cached snapshot (no store, no fetch).
-    # The lambda no-ops while `_suppress_cascade` is set, so the programmatic option/value prune inside
-    # _refresh_cascade (which fires participant_sel.on_value_change) never re-renders mid-cascade.
-    for ctrl in (tz_select, rank_sel, show_ids, participant_sel, min_size_in, active_sw,
-                 show_review_sw, show_blocked_sw, qs_switch, rb_switch, rb_max_loss, rb_min_ratio,
-                 rb_min_outright, rb_max_ratio, nm_switch, nm_max_over):
+    # PR R — coalesce a burst of control changes into ONE re-render after a short idle, and SCOPE the work so
+    # a bounded-loss / near-miss control rebuilds only its own tables (reusing the cached view), never the
+    # whole page. A single recurring tick timer (created below) fires the pending refresh past its deadline.
+    def _request_refresh(kind: str) -> None:
+        if state.get("_suppress_cascade"):
+            return
+        prev = state.get("pending_refresh")
+        if prev is not None and prev[0] != kind:
+            kind = "full"        # mixed scopes pending within one idle window -> just do a full refresh
+        state["pending_refresh"] = (kind, time.monotonic() + config.UI_DEBOUNCE_SECONDS)
+
+    def _debounce_tick() -> None:
+        pending = state.get("pending_refresh")
+        if not pending:
+            return
+        kind, deadline = pending
+        if time.monotonic() < deadline:
+            return               # still settling — wait for the idle window to elapse
+        state["pending_refresh"] = None
+        if kind == "bounded_loss":
+            refresh_bounded_loss()
+        elif kind == "near_miss":
+            refresh_near_miss()
+        else:
+            rerender()
+
+    # Filter / display controls re-render PURELY in-memory from the cached snapshot (no store, no fetch). The
+    # handler no-ops while `_suppress_cascade` is set, so the programmatic prune inside _refresh_cascade never
+    # re-renders mid-cascade. Single-interaction controls (selects/switches) fire once → full re-render now.
+    # The NUMBER inputs fire per keystroke/spin → DEBOUNCED, and the bounded-loss/near-miss bands are SCOPED
+    # to their own tables (a Max-loss change no longer rebuilds the other tables or reads the store).
+    for ctrl in (tz_select, rank_sel, show_ids, participant_sel, active_sw,
+                 show_review_sw, show_blocked_sw, qs_switch, rb_switch, nm_switch):
         ctrl.on_value_change(lambda _=None: None if state.get("_suppress_cascade") else rerender())
+    min_size_in.on_value_change(lambda _=None: _request_refresh("full"))        # membership filter → view
+    for ctrl in (rb_max_loss, rb_min_ratio, rb_min_outright, rb_max_ratio):
+        ctrl.on_value_change(lambda _=None: _request_refresh("bounded_loss"))    # only the bounded-loss tables
+    nm_max_over.on_value_change(lambda _=None: _request_refresh("near_miss"))     # only the near-miss table
 
     # Sport / Tournament are the cascade drivers: changing one re-narrows the downstream option lists
     # (and prunes now-invalid picks) BEFORE a single rerender. participant_sel (the leaf) drives no
@@ -1482,3 +1545,4 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
 
     ui.timer(config.UI_POLL_SECONDS, poll)        # snapshot-change watcher (cheap; reloads only on a new id)
     ui.timer(1.0, tick_age)
+    ui.timer(config.UI_DEBOUNCE_TICK_SECONDS, _debounce_tick)   # PR R: fire coalesced/scoped control refreshes

@@ -672,3 +672,29 @@ def test_order_qualifier_rows_speculative_first():
           "status": "GAME_SUPPORT_SIGNAL", "name": "Z"}
     ordered = [o["opportunity_id"] for o in vm.order_qualifier_rows([gs, diag, spec])]
     assert ordered[0] == "s" and ordered.index("d") < ordered.index("g")
+
+
+# --- PR M: breakeven decomposition + signal class (show both; never a negative "chance") --------------
+def test_breakeven_and_gap_vs_breakeven_decomposition():
+    o = _o("x", "risk_budget", wc=-5, bc=95, ds=12)
+    assert vm._breakeven_pct(o) == 5.0                       # max_loss/(max_loss+max_profit)*100 = 5/100*100
+    assert vm._gap_vs_breakeven_pp(o) == 7.0                 # market gap 12 − breakeven 5
+    assert vm._gap_vs_breakeven_pp(o) == vm._implied_ev_c(o) # equals Implied EV for the canonical 2-leg spread
+    # missing inputs → None, never a fake 0
+    assert vm._breakeven_pct(_o("y", "risk_budget", ds=12)) is None
+    assert vm._gap_vs_breakeven_pp(_o("z", "risk_budget", wc=-5, bc=95)) is None   # no display gap
+
+
+def test_signal_class_is_descriptive_and_flags_inverted():
+    assert vm._signal_class(_o("d", "risk_budget")) == "Data quality"                       # no display gap
+    assert vm._signal_class(_o("i", "risk_budget", wc=-5, bc=95, ds=-3)) == "Inverted / diagnostic"
+    assert vm._signal_class(_o("c", "risk_budget", wc=-5, bc=95, ds=12)) == "Candidate"     # gap−be = +7
+    assert vm._signal_class(_o("b", "risk_budget", wc=-5, bc=95, ds=5)) == "Breakeven"      # gap−be = 0
+    assert vm._signal_class(_o("n", "risk_budget", wc=-5, bc=95, ds=3)) == "Negative proxy" # gap−be = −2
+
+
+def test_risk_budget_row_exposes_decomposition_fields():
+    row = vm.risk_budget_row({"opportunity_id": "x", "bucket": "risk_budget", "display_spread_c": 12,
+                              "worst_case_profit_c": -5, "best_case_profit_c": 95}, set())
+    assert row["breakeven"] == 5.0 and row["gap_vs_be"] == 7.0
+    assert row["signal"] == "Candidate" and row["ev"] == 7      # ev == gap_vs_be for the canonical spread

@@ -242,6 +242,11 @@ UI_POLL_SECONDS = 1       # dashboard poll cadence (P2): a cheap `store.latest_s
                           # surfaces to every browser within ~1s. Idle ticks do almost nothing.
 UI_REFRESH_SECONDS = 10   # legacy heavy timed-rebuild cadence (pre-P2). Superseded by UI_POLL_SECONDS;
                           # kept for compatibility / any external reference.
+# Filter/threshold debounce (PR R): a burst of control changes (e.g. dragging "Max loss ¢") coalesces into
+# ONE re-render this many seconds after the LAST change, instead of one synchronous rebuild per keystroke
+# (which blocks the event loop → "connection lost"). A lightweight tick timer checks the idle deadline.
+UI_DEBOUNCE_SECONDS = 0.3
+UI_DEBOUNCE_TICK_SECONDS = 0.1
 
 # --- In-process auto-scan scheduler (scan_scheduler.py) -------------------------------
 # A single process-wide background loop that triggers the NON-force scan on a timer, so `python serve.py`

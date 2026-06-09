@@ -385,6 +385,12 @@ def risk_budget_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str
         # Implied EV ¢ (chance-weighted ranking aid): implied payoff chance (band) − overpay. Cents-only,
         # None-safe. NOT an edge / NOT a probability model — see `_implied_ev_c`.
         "ev": _implied_ev_c(o),
+        # PR M — legible decomposition of the same metric (SHOW BOTH): the market gap (pp, = display_spread),
+        # the breakeven chance %, their difference (== ev for the 2-leg spread), and a descriptive signal
+        # class so negative/inverted rows are flagged and never read as a "chance".
+        "breakeven": _breakeven_pct(o),
+        "gap_vs_be": _gap_vs_breakeven_pp(o),
+        "signal": _signal_class(o),
         # NOTE: no "tradable" field — a speculative bounded-loss BUNDLE is not auto-placeable even when its
         # legs are active, so we never surface tradable_now here (PR 1: de-risk speculative framing).
         "roc": o.get("roi_pct"),                       # worst-case ROC (gross, negative) — labelled, secondary
@@ -952,6 +958,45 @@ def _implied_ev_c(o: dict[str, Any]) -> float | None:
     if band_c is None or wc is None:
         return None
     return band_c - max(0.0, -wc)        # band_c − overpay_c  (overpay = the capped max loss)
+
+
+def _breakeven_pct(o: dict[str, Any]) -> float | None:
+    """Breakeven payoff chance % for a bounded-loss bet: `max_loss / (max_loss + max_profit) × 100`. For a
+    two-leg containment spread `max_loss + max_profit ≈ 100`, so this ≈ the max loss in ¢ — the minimum
+    chance the convex payoff zone needs before the bet is worth its overpay. None when inputs are missing or
+    the spread is degenerate (denominator ≤ 0)."""
+    wc, bc = _num_or_none(o.get("worst_case_profit_c")), _num_or_none(o.get("best_case_profit_c"))
+    if wc is None or bc is None:
+        return None
+    max_loss, max_profit = max(0.0, -wc), max(0.0, bc)
+    denom = max_loss + max_profit
+    return round(max_loss / denom * 100, 1) if denom > 0 else None
+
+
+def _gap_vs_breakeven_pp(o: dict[str, Any]) -> float | None:
+    """Market gap (pp) MINUS the breakeven chance — the legible twin of Implied EV (equal for the canonical
+    two-leg spread, where breakeven ≈ max loss). Positive ⇒ displayed prices imply a better chance of the
+    payoff zone than the bet needs. None when either input is missing."""
+    gap, be = _num_or_none(o.get("display_spread_c")), _breakeven_pct(o)
+    return None if (gap is None or be is None) else round(gap - be, 1)
+
+
+def _signal_class(o: dict[str, Any]) -> str:
+    """Descriptive class for a bounded-loss row (display + ranking honesty; NOT an actionability threshold):
+    Data quality (no display gap) / Inverted (deeper priced above broader — a negative gap, never shown as a
+    "chance") / Candidate (gap beats breakeven) / Breakeven / Negative proxy. Computed from full-precision
+    values so display rounding can't flip it."""
+    gap = _num_or_none(o.get("display_spread_c"))
+    if gap is None:
+        return "Data quality"
+    if gap < 0:
+        return "Inverted / diagnostic"
+    gvb = _gap_vs_breakeven_pp(o)
+    if gvb is None:
+        return "Data quality"
+    if gvb > 0:
+        return "Candidate"
+    return "Breakeven" if gvb == 0 else "Negative proxy"
 
 
 def _norm(vals: list[float | None]) -> list[float | None]:
