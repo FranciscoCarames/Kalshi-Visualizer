@@ -516,6 +516,45 @@ def test_soccer_game_not_laddered_and_reach_stage_nodes():
         assert a.family == "advance" and a.ladder_node == node, tk
 
 
+def test_soccer_group_bottom_is_exact_cardinality_basket_not_laddered():
+    # "Team to finish bottom" is an EXACT cardinality basket (mutually_exclusive=False on the live API),
+    # owned + classified group_bottom, NOT laddered, with a 4-team 1-YES/3-NO basket rule.
+    assert sports.sport_for_series("KXWCGROUPBOTTOM").sport_id == "soccer"
+    c = sports.SOCCER.classify("KXWCGROUPBOTTOM", {"ticker": "KXWCGROUPBOTTOM-26H-CPV", "title": "x"})
+    assert c.family == "group_bottom" and c.ladder_node is None
+    assert c.eligible_for_ladder_checks is False
+    assert sports.SOCCER.category_labels["group_bottom"] == "Group bottom"
+    # NOT a flagged winner field — must stay out of field_families (else a false overround on the ME flag).
+    assert "group_bottom" not in sports.SOCCER.field_families
+    rule = sports.SOCCER.group_basket_rule_of("KXWCGROUPBOTTOM")
+    assert rule is not None and rule.team_count == 4 and rule.yes_floor == 1 and rule.no_floor == 3
+
+
+_GBOTTOM_FIX = Path(__file__).parent / "fixtures" / "wc_group_bottom"
+
+
+def test_group_bottom_live_fixtures_flow_through_engine():
+    """The REAL captured KXWCGROUPBOTTOM events (live probe 2026-06-09) must classify as 4 distinct
+    group_bottom participants per event and be consumable by the basket detector without error."""
+    import dutchbook
+    files = sorted(_GBOTTOM_FIX.glob("KXWCGROUPBOTTOM-*.json"))
+    assert len(files) >= 3, "expected >=3 captured groups as B-probe evidence"
+    all_rows = []
+    for fp in files:
+        ev = json.loads(fp.read_text(encoding="utf-8"))
+        rows = data.build_contracts("KXWCGROUPBOTTOM", [ev])
+        assert len(rows) == 4, fp.name                       # 4 teams per group
+        keys = {r["player_key"] for r in rows}
+        assert len(keys) == 4, fp.name                       # distinct soccer_team UUIDs
+        assert all(r["kind"] == "group_bottom" for r in rows), fp.name
+        assert all(r["is_participant"] for r in rows), fp.name
+        all_rows.extend(rows)
+    # The basket detector consumes them NaN-safely (a finding may or may not fire on live prices).
+    out = dutchbook.find_group_baskets([{**r} for r in pd.DataFrame(all_rows).to_dict("records")])
+    for f in out:
+        assert f["status"] == dutchbook.EXECUTABLE_GROUP_BASKET and f["n_legs"] == 4
+
+
 def test_soccer_winner_rung_live_outright():
     # The LIVE tournament outright (KXMENWORLDCUP-26) classifies as the deepest ladder rung "Win the World
     # Cup" (node == display label). The dead lookalike KXMWORLDCUP and the retired dormant guess KXWC are

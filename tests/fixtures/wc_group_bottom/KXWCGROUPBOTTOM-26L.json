@@ -1,0 +1,76 @@
+{
+  "event_ticker": "KXWCGROUPBOTTOM-26L",
+  "series_ticker": "KXWCGROUPBOTTOM",
+  "title": "Group L Team to Finish Bottom",
+  "mutually_exclusive": true,
+  "markets": [
+    {
+      "ticker": "KXWCGROUPBOTTOM-26L-PAN",
+      "yes_sub_title": "Panama",
+      "status": "active",
+      "yes_bid_dollars": "0.5100",
+      "yes_ask_dollars": "0.5500",
+      "no_bid_dollars": "0.4500",
+      "no_ask_dollars": "0.4900",
+      "yes_bid_size_fp": "5.00",
+      "yes_ask_size_fp": "5.36",
+      "volume_fp": "5013.26",
+      "open_interest_fp": "3932.99",
+      "custom_strike": {
+        "soccer_team": "48a29c49-797e-4ca7-bab4-b1d22d724fe4"
+      },
+      "rules_primary": "If Panama is the team to finish bottom of Group L in the 2026 Men's FIFA World Cup, then the market resolves to Yes."
+    },
+    {
+      "ticker": "KXWCGROUPBOTTOM-26L-GHA",
+      "yes_sub_title": "Ghana",
+      "status": "active",
+      "yes_bid_dollars": "0.3600",
+      "yes_ask_dollars": "0.4000",
+      "no_bid_dollars": "0.6000",
+      "no_ask_dollars": "0.6400",
+      "yes_bid_size_fp": "2818.00",
+      "yes_ask_size_fp": "12.00",
+      "volume_fp": "3403.29",
+      "open_interest_fp": "3392.35",
+      "custom_strike": {
+        "soccer_team": "5c4b405e-5b26-47cf-bb23-acd90eda9e99"
+      },
+      "rules_primary": "If Ghana is the team to finish bottom of Group L in the 2026 Men's FIFA World Cup, then the market resolves to Yes."
+    },
+    {
+      "ticker": "KXWCGROUPBOTTOM-26L-ENG",
+      "yes_sub_title": "England",
+      "status": "active",
+      "yes_bid_dollars": "0.0000",
+      "yes_ask_dollars": "0.0500",
+      "no_bid_dollars": "0.9500",
+      "no_ask_dollars": "1.0000",
+      "yes_bid_size_fp": "0.00",
+      "yes_ask_size_fp": "5000.00",
+      "volume_fp": "0.00",
+      "open_interest_fp": "0.00",
+      "custom_strike": {
+        "soccer_team": "1a449f3f-c95a-40f0-a1b6-001c35b4191c"
+      },
+      "rules_primary": "If England is the team to finish bottom of Group L in the 2026 Men's FIFA World Cup, then the market resolves to Yes."
+    },
+    {
+      "ticker": "KXWCGROUPBOTTOM-26L-CRO",
+      "yes_sub_title": "Croatia",
+      "status": "active",
+      "yes_bid_dollars": "0.0400",
+      "yes_ask_dollars": "0.1200",
+      "no_bid_dollars": "0.8800",
+      "no_ask_dollars": "0.9600",
+      "yes_bid_size_fp": "400.00",
+      "yes_ask_size_fp": "954.00",
+      "volume_fp": "7.00",
+      "open_interest_fp": "6.00",
+      "custom_strike": {
+        "soccer_team": "36f9c1f8-3cde-40d5-af5a-dfe6623db91f"
+      },
+      "rules_primary": "If Croatia is the team to finish bottom of Group L in the 2026 Men's FIFA World Cup, then the market resolves to Yes."
+    }
+  ]
+}

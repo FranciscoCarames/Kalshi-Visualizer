@@ -140,6 +140,9 @@ class GroupBasketRule:
     label: str
     yes_ceiling_count: int | None = None
     no_ceiling_count: int | None = None
+    # Trader-facing noun for the legs in the finding text (e.g. "qualifier" / "bottom-finisher"). Default
+    # "qualifier" preserves the existing World Cup group-qualifier wording byte-for-byte.
+    noun: str = "qualifier"
 
 
 @dataclass(frozen=True)
@@ -836,12 +839,12 @@ _SOCCER_KNOWN_OTHER = frozenset({
     "KXWCGROUPWINNER",        # "Group to Win" — a DIFFERENT contract from KXWCGROUPWIN; not modeled
 })
 _SOCCER_EXACT = frozenset({"KXWCGAME", "KXWCROUND", "KXWCGROUPQUAL", "KXWCGROUPWIN", "KXMENWORLDCUP",
-                           "KXWCGROUPORDER"}) | _SOCCER_KNOWN_OTHER
+                           "KXWCGROUPORDER", "KXWCGROUPBOTTOM"}) | _SOCCER_KNOWN_OTHER
 # `exact_order` MUST have a non-"other" category label, else data.non_other_families would treat it as a
 # prop and the cross-sport fetch path would never load KXWCGROUPORDER.
 _SOCCER_CATEGORY = {"game": "Match (3-way)", "advance": "Stage advancement",
                     "group_winner": "Group winner", "winner": "Tournament winner",
-                    "exact_order": "Exact group order", "other": "Other"}
+                    "exact_order": "Exact group order", "group_bottom": "Group bottom", "other": "Other"}
 _SOCCER_STAGE_RANK = {"Round of 32": 1, "Round of 16": 2, "Quarterfinals": 3, "Semifinals": 4, "Finals": 5}
 _SOCCER_LADDER = LadderSpec(
     node_order=("Reach Round of 32", "Reach Round of 16", "Reach Quarterfinals",
@@ -873,6 +876,8 @@ def _soccer_family(cfg, series_ticker):
         return "group_winner"                                        # per-team "win the group" — containment leaf
     if t == "KXWCGROUPORDER":
         return "exact_order"                                         # 24-way exact standings — diagnostic only (#4)
+    if t == "KXWCGROUPBOTTOM":
+        return "group_bottom"                                        # 4-team "finish bottom" one-winner field
     if t in cfg.winner_tickers:
         return "winner"                                              # tournament outright (KXMENWORLDCUP)
     return "other"
@@ -950,9 +955,18 @@ SOCCER = register(SportConfig(
     # floor of 100¢ for the all-four basket. The CONDITIONAL ceilings: up to 3 qualify when the 3rd-placed
     # team takes a best-third slot (YES 300¢), and up to 2 fail otherwise (NO 200¢). See
     # dutchbook.find_group_baskets.
-    group_basket_rules={"KXWCGROUPQUAL": GroupBasketRule(team_count=4, yes_floor=2, no_floor=1,
-                                                         yes_ceiling_count=3, no_ceiling_count=2,
-                                                         label="World Cup group")},
+    # KXWCGROUPQUAL = top-2 qualify (floors 2/1, conditional best-third ceiling 3/2). KXWCGROUPBOTTOM =
+    # which of the 4 finishes bottom: EXACTLY one does, so exactly 1 leg settles YES and 3 settle NO — an
+    # EXACT cardinality basket (floor == ceiling, no conditional band). Live-probed 2026-06-09: the event is
+    # mutually_exclusive=False (independent binaries), so it is a basket, NOT a flagged winner field.
+    group_basket_rules={
+        "KXWCGROUPQUAL": GroupBasketRule(team_count=4, yes_floor=2, no_floor=1,
+                                         yes_ceiling_count=3, no_ceiling_count=2,
+                                         label="World Cup group"),
+        "KXWCGROUPBOTTOM": GroupBasketRule(team_count=4, yes_floor=1, no_floor=3,
+                                           yes_ceiling_count=1, no_ceiling_count=3,
+                                           label="World Cup group", noun="bottom-finisher"),
+    },
 ))
 
 
