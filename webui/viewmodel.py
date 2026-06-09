@@ -370,6 +370,9 @@ def risk_budget_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str
         "max_loss": None if _isna(wc) else -wc,
         "max_profit": None if _isna(bc) else bc,
         "ratio": _upside_risk(wc, bc),
+        # Implied EV ¢ (chance-weighted ranking aid): implied payoff chance (band) − overpay. Cents-only,
+        # None-safe. NOT an edge / NOT a probability model — see `_implied_ev_c`.
+        "ev": _implied_ev_c(o),
         # NOTE: no "tradable" field — a speculative bounded-loss BUNDLE is not auto-placeable even when its
         # legs are active, so we never surface tradable_now here (PR 1: de-risk speculative framing).
         "roc": o.get("roi_pct"),                       # worst-case ROC (gross, negative) — labelled, secondary
@@ -850,7 +853,7 @@ def bucket_counts_line(counts: dict[str, dict[str, int]] | None,
 # the cached opportunities — no rescan, no store read. Risk-budget geometry comes from the existing PR29
 # payoff fields (worst/best_case_profit_c); a row missing them simply sorts last within its bucket.
 RANK_MODES = {"blended": "Blended", "edge": "Per-unit edge ¢", "spread_upside": "Spread upside",
-              "spread_ratio": "Outright + spread"}
+              "spread_ratio": "Outright + spread", "implied_ev": "Implied EV"}
 RANK_MODE_DEFAULT = "blended"
 # Within-bucket Blended weights (renormalized over the components a row actually has). ROI is weighted a
 # touch above absolute edge so the owner's "a 2¢→3¢ gap is a 50% improvement just like 20¢→30¢" shows up —
@@ -926,6 +929,19 @@ def _geometry(o: dict[str, Any]) -> tuple[float, float, float] | None:
     return (max_loss, bc, ratio)
 
 
+def _implied_ev_c(o: dict[str, Any]) -> float | None:
+    """Implied EV in cents for a bounded-loss row: the implied chance of the convex payoff (the
+    parent−child display gap `display_spread_c`, in cents = %) MINUS the overpay (= the capped max loss,
+    −worst_case_profit_c). A RANKING AID built from DISPLAYED prices treated as-if true — gross,
+    top-of-book, market-implied probability; NOT a guarantee and NOT a probability model. Returns None when
+    either input is missing (never silently 0). Defined in cents only — no cents/probability unit mixing."""
+    band_c = _num_or_none(o.get("display_spread_c"))
+    wc = _num_or_none(o.get("worst_case_profit_c"))
+    if band_c is None or wc is None:
+        return None
+    return band_c - max(0.0, -wc)        # band_c − overpay_c  (overpay = the capped max loss)
+
+
 def _norm(vals: list[float | None]) -> list[float | None]:
     """Min-max normalize the present (non-None) values to 0..1; a constant set -> all 0; absent -> None."""
     present = [v for v in vals if v is not None]
@@ -997,6 +1013,23 @@ def _spread_ratio_order(group: list[dict[str, Any]], is_risk: bool) -> list[dict
     return sorted(group, key=key)
 
 
+def _implied_ev_order(group: list[dict[str, Any]], is_risk: bool) -> list[dict[str, Any]]:
+    """Chance-weighted order for risk-budget rows: highest IMPLIED EV first (implied payoff chance −
+    overpay; see `_implied_ev_c`). This is the lens that distinguishes a high upside:risk at near-zero
+    chance from a lower ratio that is far likelier to pay. A row missing either input sorts AFTER all
+    scored rows (never treated as ev=0). Non-risk buckets have no convex payoff -> fall back to per-unit
+    edge. RANKING AID only — gross, top-of-book, market-implied probability; never an edge."""
+    if not is_risk:
+        return sorted(group, key=lambda o: (-_edge(o), o.get("opportunity_id") or ""))
+
+    def key(o: dict[str, Any]) -> tuple:
+        ev = _implied_ev_c(o)
+        if ev is None:                                  # no implied EV -> last, deterministic by id
+            return (1, 0.0, o.get("opportunity_id") or "")
+        return (0, -ev, o.get("opportunity_id") or "")  # highest implied EV first
+    return sorted(group, key=key)
+
+
 def rank_opps(opps: Iterable[dict[str, Any]] | None, mode: str = RANK_MODE_DEFAULT) -> list[dict[str, Any]]:
     """Re-order opportunities by `mode` (see RANK_MODES). Buckets group first; the mode re-orders within a
     bucket only. Pure in-memory — switching modes never rescans or reads the store."""
@@ -1012,6 +1045,8 @@ def rank_opps(opps: Iterable[dict[str, Any]] | None, mode: str = RANK_MODE_DEFAU
             out.extend(_spread_upside_order(group, is_risk))
         elif mode == "spread_ratio":
             out.extend(_spread_ratio_order(group, is_risk))
+        elif mode == "implied_ev":
+            out.extend(_implied_ev_order(group, is_risk))
         elif mode == "blended":
             out.extend(_blended_order(group, is_risk))
         else:                                           # "edge" (and any unknown mode) -> per-unit edge ¢

@@ -227,8 +227,9 @@ _OPP_COLUMNS = [
 ]
 # Net-of-fees columns (PR E) — default-hidden in the opp tables; toggled by the "Show net of fees" switch.
 _NET_COLUMNS = ("net_edge", "net_profit", "fees")
-# Bounded-Loss Bets table (split from the old merged watchlist): convex economics up front; spread÷parent
-# and spread÷child are VISIBLE BY DEFAULT (owner); the outright/display-spread context starts hidden.
+# Bounded-Loss Bets table (split from the old merged watchlist): convex economics up front. The implied
+# payoff CHANCE (parent−child display gap) and IMPLIED EV (chance − overpay) lead the cross-sport
+# comparison; spread÷parent/child stay visible; the raw outright context starts hidden.
 _RISK_COLUMNS = [
     {"name": "new", "label": "", "field": "new", "align": "center", "required": True},
     {"name": "sport", "label": "Sport", "field": "sport", "align": "center", "sortable": True},
@@ -238,16 +239,19 @@ _RISK_COLUMNS = [
     {"name": "max_loss", "label": "Max loss ¢", "field": "max_loss", "align": "center", "sortable": True},
     {"name": "max_profit", "label": "Max profit ¢", "field": "max_profit", "align": "center", "sortable": True},
     {"name": "ratio", "label": "Upside:risk", "field": "ratio", "align": "center", "sortable": True},
+    # Implied chance of the convex payoff (the parent−child display gap, ¢ = %) + implied EV (chance −
+    # overpay). Both are market-implied ranking aids — gross, top-of-book; never an edge.
+    {"name": "display_spread", "label": "Implied chance of payoff %", "field": "display_spread", "align": "center", "sortable": True},
+    {"name": "ev", "label": "Implied EV ¢", "field": "ev", "align": "center", "sortable": True},
     {"name": "roc", "label": "Worst-case ROC %", "field": "roc", "align": "center", "sortable": True},
     {"name": "spread_over_parent", "label": "Spread÷parent", "field": "spread_over_parent", "align": "center", "sortable": True},
     {"name": "spread_over_child", "label": "Spread÷child", "field": "spread_over_child", "align": "center", "sortable": True},
     {"name": "parent_outright", "label": "Parent outright ¢", "field": "parent_outright", "align": "center", "sortable": True},
     {"name": "child_outright", "label": "Child outright ¢", "field": "child_outright", "align": "center", "sortable": True},
-    {"name": "display_spread", "label": "Display spread ¢", "field": "display_spread", "align": "center", "sortable": True},
     {"name": "caveat", "label": "Caveat", "field": "caveat", "align": "left"},
 ]
-# Outright/display-spread context starts hidden (spread÷parent/child stay visible per owner).
-_RISK_HIDDEN = ("parent_outright", "child_outright", "display_spread")
+# Raw outright context starts hidden (implied chance / implied EV / spread÷parent/child stay visible).
+_RISK_HIDDEN = ("parent_outright", "child_outright")
 # Overpriced Books (near-miss) table — cost, overpay (= the flat guaranteed loss), and the watchlist note.
 _NEARMISS_COLUMNS = [
     {"name": "new", "label": "", "field": "new", "align": "center", "required": True},
@@ -498,8 +502,10 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             rank_sel = ui.select(vm.RANK_MODES, value=vm.RANK_MODE_DEFAULT, label="Rank by").tooltip(
                 "Within each section: Per-unit edge ¢, Spread upside (speculative bounded-loss geometry: "
                 "upside:risk, then spread, then lower max loss), Outright + spread (speculative: highest deeper "
-                "display outright first, then lowest display spread÷outright), or Blended (edge + ROI % + "
-                "geometry). Gross — not a probability model.")
+                "display outright first, then lowest display spread÷outright), Implied EV (bounded-loss only: "
+                "implied payoff chance − overpay — chance-weighted, so a high ratio at near-zero chance ranks "
+                "below a lower ratio that is far likelier to pay; a market-implied ranking AID, not a guarantee), "
+                "or Blended (edge + ROI % + geometry). Gross, top-of-book — not a probability model.")
             window_select = ui.select(list(config.BACKLOG_WINDOWS), value=config.BACKLOG_DEFAULT,
                                        label="Backlog window").props("stack-label").classes("min-w-[11rem]")
         ui.label("Time & refresh").classes("text-sm font-bold mt-2")
@@ -798,6 +804,10 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         ui.label("Buy the broader YES + the deeper NO for just over 100¢: your loss is capped at the small "
                  "overpay, with convex upside (the broader-but-not-deeper outcome pays about +$1). A bet, NOT "
                  "an edge — gross of fees.").classes("text-xs text-gray-500")
+        ui.label("Implied chance of payoff = the parent−child display gap; Implied EV = that chance − the "
+                 "overpay. Both are gross, top-of-book and assume the market-implied probability — ranking "
+                 "aids to compare bets across sports, NOT a guarantee or a probability model.").classes(
+                     "text-xs text-gray-500")
         rb_table = ui.table(columns=_RISK_COLUMNS, rows=[], row_key="opportunity_id", selection="single",
                             pagination=10).props("dense").classes("w-full overflow-x-auto opp-sel")
     rb_table.on_select(_on_select(rb_table))
@@ -841,7 +851,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
     for _t in (actionable, review, blocked):
         for _f in ("roi", "units", "profit", "net_edge", "net_profit", "fees"):
             _t.add_slot(f"body-cell-{_f}", _num_cell_slot(_f))
-    for _f in ("cost", "max_loss", "max_profit", "ratio", "roc", "spread_over_parent",
+    for _f in ("cost", "max_loss", "max_profit", "ratio", "ev", "roc", "spread_over_parent",
                "spread_over_child", "parent_outright", "child_outright", "display_spread"):
         rb_table.add_slot(f"body-cell-{_f}", _num_cell_slot(_f))
     for _f in ("cost", "overpay"):
