@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import dataclasses
+import time
 
 import pytest
 
@@ -43,6 +44,35 @@ class _Resp:
 def test_backoff_honors_retry_after_and_caps():
     assert kc._backoff_seconds(_Resp(429, {"Retry-After": "2"}), attempt=0) == 2.0
     assert kc._backoff_seconds(_Resp(429, {"Retry-After": "99999"}), attempt=0) == config.BACKOFF_MAX
+
+
+# --- series-title TTL cache (perf/parallel-sport-fetch) ------------------------------
+def test_series_title_cache_hits_and_resets(monkeypatch):
+    kc.reset_title_cache()
+    calls = {"n": 0}
+
+    def fake_get(path, _params):
+        calls["n"] += 1
+        return {"series": {"title": "French Open"}}
+
+    monkeypatch.setattr(kc, "_get", fake_get)
+    assert kc.get_series_titles(["KXFOWOMEN"]) == {"KXFOWOMEN": "French Open"}
+    assert kc.get_series_titles(["KXFOWOMEN"]) == {"KXFOWOMEN": "French Open"}
+    assert calls["n"] == 1                          # second call served from cache, no GET
+    kc.reset_title_cache()
+    assert kc.get_series_titles(["KXFOWOMEN"]) == {"KXFOWOMEN": "French Open"}
+    assert calls["n"] == 2                          # reset forces a fresh GET
+
+
+def test_series_title_cache_short_ttl_for_misses(monkeypatch):
+    kc.reset_title_cache()
+    monkeypatch.setattr(kc, "_get", lambda *_a: {"series": {}})    # no title -> empty
+    now = time.monotonic()
+    assert kc.get_series_titles(["KXEMPTY"]) == {"KXEMPTY": ""}
+    expiry, title = kc._title_cache["KXEMPTY"]
+    assert title == ""
+    # an empty/miss result lives only the short TTL (~60s), not the 24h success TTL
+    assert expiry - now <= kc.TITLE_TTL_MISS_SECONDS + 1 < kc.TITLE_TTL_OK_SECONDS
 
 
 def test_backoff_exponential_without_header():

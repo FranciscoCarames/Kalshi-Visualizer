@@ -115,6 +115,12 @@ MAX_PAGES = 100
 # limiter, since each keeps its own and the aggregate rate is MAX_RPS x process_count (serve.py warns).
 MAX_RPS = 15                # max requests/second issued by this process (~75% of the ~20/s Basic ceiling)
 CONCURRENCY = 4             # thread-pool workers for the per-series fan-out (throttle paces them)
+# Per-SPORT fetch fan-out (scanner.run_scan): how many sports fetch concurrently. Each sport's fetch
+# already fans out across its series at CONCURRENCY, and the process-wide MAX_RPS throttle still caps
+# total issuance — this only fills the idle gaps between sports (no extra Kalshi requests). Kept
+# conservative (3) so nested fan-out stays under the HTTP connection pool; raise to 4 only after a
+# benchmark. SPORT_FETCH_CONCURRENCY=1 reproduces the original serial scan exactly.
+SPORT_FETCH_CONCURRENCY = 3
 MAX_RETRIES = 5             # attempts per request before raising
 BACKOFF_BASE = 1.0          # seconds; exponential backoff base for 429/5xx/network errors
 BACKOFF_MAX = 30.0          # seconds; cap on a single backoff sleep

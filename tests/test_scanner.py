@@ -6,8 +6,11 @@ test_sports). These tests cover aggregation, sport stamping, ranking, partial-fa
 injected snapshot write."""
 from __future__ import annotations
 
+import time
+
 import pandas as pd
 
+import config
 import scanner
 import sports
 import store
@@ -370,6 +373,60 @@ def _group_basket_df(yes_ask=45):
             "time_value": None,
         }
     return pd.DataFrame([qual("A", "ka"), qual("B", "kb"), qual("C", "kc"), qual("D", "kd")])
+
+
+# --- perf/parallel-sport-fetch: concurrent per-sport fetch (deterministic, isolated, timed) ----------
+def test_sport_fetch_concurrency_one_matches_parallel(monkeypatch):
+    """SPORT_FETCH_CONCURRENCY=1 (serial) and a high concurrency must produce IDENTICAL unified output
+    and the same coverage counts — only the timings may differ."""
+    monkeypatch.setattr(config, "SPORT_FETCH_CONCURRENCY", 1)
+    u1, c1, _ = scanner.run_scan(_tuple_fetch, fetched_at="FA")
+    monkeypatch.setattr(config, "SPORT_FETCH_CONCURRENCY", 8)
+    u8, c8, _ = scanner.run_scan(_tuple_fetch, fetched_at="FA")
+    assert list(u1["opportunity_id"]) == list(u8["opportunity_id"])      # deterministic order
+    for k in ("scanned", "loaded", "failed", "excluded", "skipped_no_name",
+              "contracts_scanned", "checks_tested"):
+        assert c1[k] == c8[k]
+    assert c1["series_errors"] == c8["series_errors"]
+
+
+def test_parallel_fetch_faster_than_serial_with_slow_sports(monkeypatch):
+    """A stubbed per-sport delay dominates wall-clock: parallel fetch must be markedly faster than serial."""
+    def slow_fetch(_sid):
+        time.sleep(0.05)
+        return pd.DataFrame(), "fa", [], 0, 0, 0, 0
+
+    monkeypatch.setattr(config, "SPORT_FETCH_CONCURRENCY", 1)
+    t0 = time.monotonic()
+    scanner.run_scan(slow_fetch, fetched_at="FA")
+    serial = time.monotonic() - t0
+    monkeypatch.setattr(config, "SPORT_FETCH_CONCURRENCY", len(sports.all_sports()))
+    t0 = time.monotonic()
+    scanner.run_scan(slow_fetch, fetched_at="FA")
+    parallel = time.monotonic() - t0
+    assert parallel < serial * 0.6        # generous margin to stay non-flaky
+
+
+def test_fetch_status_by_sport_isolates_failure_with_timing(monkeypatch):
+    """Every registered sport appears in fetch_status_by_sport with a fetch_ms; a failing sport carries
+    ok=False + its error and never blanks the others."""
+    monkeypatch.setattr(config, "SPORT_FETCH_CONCURRENCY", 4)
+
+    def fetch_fn(sid):
+        if sid == "tennis":
+            raise RuntimeError("down")
+        if sid == "nba":
+            return _dutchbook_df(gap=7), "fa", [], 6, 6, 0, 0
+        return pd.DataFrame(), "fa", [], 6, 0, 0, 0
+
+    unified, cov, _ = scanner.run_scan(fetch_fn, fetched_at="FA")
+    fsbs = cov["fetch_status_by_sport"]
+    assert {c.sport_id for c in sports.all_sports()} == set(fsbs)        # every sport reported
+    assert all("fetch_ms" in v for v in fsbs.values())
+    assert fsbs["tennis"] == {"ok": False, "fetch_ms": fsbs["tennis"]["fetch_ms"], "error": "down"}
+    assert fsbs["nba"]["ok"] is True
+    assert any(e["sport"] == "tennis" and "down" in e["error"] for e in cov["sport_errors"])
+    assert set(unified["sport"]) <= {"nba"}                              # others still scanned
 
 
 def test_scanner_includes_group_basket_with_legs():

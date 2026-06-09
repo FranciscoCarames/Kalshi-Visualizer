@@ -214,19 +214,47 @@ def discover_tennis_series() -> list[str]:
     return discover_series_for_sport(sports.TENNIS)
 
 
+# --- Series-title cache (perf/parallel-sport-fetch) ----------------------------------
+# Titles only build slugged web URLs and change rarely, so cache them to skip a /series GET on every
+# scan. Thread-safe (read under the parallel per-sport fetch). Non-empty titles live ~24h; an empty
+# result (miss/transient failure) lives only ~60s so it self-heals. Cache NEVER affects identity,
+# pricing, or detection — only URL building. `reset_title_cache()` is the test/refresh hook.
+TITLE_TTL_OK_SECONDS = 24 * 3600
+TITLE_TTL_MISS_SECONDS = 60
+_title_cache: dict[str, tuple[float, str]] = {}   # UPPER ticker -> (expiry_monotonic, title)
+_title_lock = threading.Lock()
+
+
+def reset_title_cache() -> None:
+    """Drop all cached series titles (test hook / forced refresh)."""
+    with _title_lock:
+        _title_cache.clear()
+
+
 def get_series_titles(tickers: list[str], max_workers: int = CONCURRENCY) -> dict[str, str]:
     """Fetch the human title for each series (used to build slugged Kalshi web URLs).
 
     Returns ``{ticker: title}``. A series whose metadata can't be fetched degrades to an empty
     string (the URL builder then falls back to the series page) — this never raises, because a
-    missing title must not break the data load.
+    missing title must not break the data load. Titles are cached with a TTL (see above) so repeat
+    scans skip the /series round-trip.
     """
     titles: dict[str, str] = {}
 
     def _title(ticker: str) -> str:
+        key = ticker.upper()
+        now = time.monotonic()
+        with _title_lock:
+            hit = _title_cache.get(key)
+            if hit is not None and hit[0] > now:
+                return hit[1]                       # fresh cache entry — skip the GET
         payload = _get(f"/series/{ticker}", {})
         series = payload.get("series") or payload
-        return str(series.get("title") or "")
+        title = str(series.get("title") or "")
+        ttl = TITLE_TTL_OK_SECONDS if title else TITLE_TTL_MISS_SECONDS
+        with _title_lock:
+            _title_cache[key] = (now + ttl, title)
+        return title
 
     with ThreadPoolExecutor(max_workers=max_workers) as pool:
         futures = {pool.submit(_title, t): t for t in tickers}

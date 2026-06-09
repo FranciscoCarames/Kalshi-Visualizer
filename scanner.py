@@ -16,6 +16,8 @@ this module only adds `sport` and the unified projection, then ranks.
 """
 from __future__ import annotations
 
+import time
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Callable
 
 import pandas as pd
@@ -518,17 +520,44 @@ def run_scan(fetch_fn: Callable[[str], tuple], *, fetched_at: Any = None,
     no store, no network. A per-sport fetch failure is recorded and that sport contributes nothing.
     """
     before = request_count() if request_count else None
+    sport_cfgs = list(sports.all_sports())
+
+    def _fetch_one(sid: str) -> tuple[str, tuple | None, str | None, float]:
+        """Fetch one sport off the pool. Never raises — a failure is returned as the error string so the
+        pool can't blank the scan. Returns (sid, result_tuple_or_None, error_or_None, elapsed_seconds)."""
+        t0 = time.monotonic()
+        try:
+            return sid, fetch_fn(sid), None, time.monotonic() - t0
+        except Exception as exc:   # a single sport's fetch failure must not blank the scan
+            return sid, None, str(exc), time.monotonic() - t0
+
+    # Fetch sports CONCURRENTLY (PR perf/parallel-sport-fetch): each sport still fans out across its
+    # series internally and the process-wide MAX_RPS throttle still caps total issuance, so this only
+    # fills the idle gaps between sports (no extra Kalshi requests). `pool.map` preserves input order;
+    # we key results by sport and aggregate below in sports.all_sports() order, so output is
+    # DETERMINISTIC regardless of completion order. SPORT_FETCH_CONCURRENCY=1 == the old serial scan.
+    workers = max(1, min(len(sport_cfgs), config.SPORT_FETCH_CONCURRENCY))
+    if workers == 1:
+        fetched = [_fetch_one(cfg.sport_id) for cfg in sport_cfgs]
+    else:
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            fetched = list(pool.map(lambda c: _fetch_one(c.sport_id), sport_cfgs))
+    by_sport = {sid: (res, err, secs) for sid, res, err, secs in fetched}
+
     dfs: dict[str, Any] = {}
     scanned = loaded = skipped = excluded = 0
     series_errors: list[dict[str, Any]] = []
     fetch_errors: list[dict[str, Any]] = []
-    for cfg in sports.all_sports():
+    fetch_status_by_sport: dict[str, dict[str, Any]] = {}
+    for cfg in sport_cfgs:                       # aggregate in registered order -> deterministic
         sid = cfg.sport_id
-        try:
-            df, _fa, errors, n_scanned, n_loaded, skipped_no_name, n_excluded = fetch_fn(sid)
-        except Exception as exc:   # a single sport's fetch failure must not blank the scan
-            fetch_errors.append({"sport": sid, "error": str(exc)})
+        res, err, secs = by_sport[sid]
+        fetch_ms = round(secs * 1000, 1)
+        if err is not None:
+            fetch_errors.append({"sport": sid, "error": err})
+            fetch_status_by_sport[sid] = {"ok": False, "fetch_ms": fetch_ms, "error": err}
             continue
+        df, _fa, errors, n_scanned, n_loaded, skipped_no_name, n_excluded = res
         dfs[sid] = df
         scanned += n_scanned
         loaded += n_loaded
@@ -536,6 +565,7 @@ def run_scan(fetch_fn: Callable[[str], tuple], *, fetched_at: Any = None,
         excluded += n_excluded
         for s, msg in (errors or []):
             series_errors.append({"sport": sid, "series": s, "error": str(msg)})
+        fetch_status_by_sport[sid] = {"ok": True, "fetch_ms": fetch_ms}
 
     # Reuse the pure aggregator over the already-fetched per-sport frames (it adds its own
     # per-sport PROCESSING errors — build_checks/find_dutch_books failures — to the set).
@@ -553,6 +583,7 @@ def run_scan(fetch_fn: Callable[[str], tuple], *, fetched_at: Any = None,
         "contracts_scanned": contracts_scanned, "checks_tested": checks_tested,
         "sport_errors": fetch_errors + processing_errors,   # fetch-level + processing-level
         "series_errors": series_errors,
+        "fetch_status_by_sport": fetch_status_by_sport,      # per-sport {ok, fetch_ms[, error]} timing
     }
     if before is not None:
         coverage["kalshi_requests"] = request_count() - before
