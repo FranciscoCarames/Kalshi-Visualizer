@@ -49,8 +49,9 @@ def test_exact_series_wins_over_broad_prefix_regardless_of_order(monkeypatch):
 
 
 def test_real_sports_unchanged_with_empty_exact_series():
-    """Registered sports default exact_series to empty, so resolution is byte-identical to before."""
-    assert sports.TENNIS.exact_series == frozenset()
+    """A prefix-owned sport defaults exact_series to empty, so resolution is byte-identical to before.
+    (Tennis now exact-owns ITF — see test_itf_* — so NBA is the empty-exact_series exemplar here.)"""
+    assert sports.NBA.exact_series == frozenset()
     assert sports.sport_for_series("KXATPMATCH").sport_id == "tennis"
     assert sports.sport_for_series("KXNBA").sport_id == "nba"
     assert sports.sport_for_series("KXWNBA").sport_id == "wnba"   # prefix precedence still holds
@@ -751,3 +752,41 @@ def test_derived_indicators_generalized_to_all_laddered_sports_and_guarded():
     # ...but a consistent neighbour still emits: P(Reach Final | Reach Semifinal) = 10/30*100
     pf = next(i for i in out if i["label"] == "P(Reach Final | Reach Semifinal)")
     assert round(pf["value_pct"], 1) == 33.3
+
+
+# --- ITF tennis (lower-tour head-to-head matches; exact-owned) -----------------------
+_ITF_FIX = Path(__file__).parent / "fixtures" / "itf"
+
+
+def test_itf_owned_classified_match_and_division():
+    # ITF lives outside KXATP*/KXWTA* prefixes, so tennis must own it via exact_series.
+    assert sports.sport_for_series("KXITFWMATCH").sport_id == "tennis"
+    assert sports.sport_for_series("KXITFMATCH").sport_id == "tennis"
+    # Both classify as the 2-way head-to-head "match" family.
+    assert sports.TENNIS.classify("KXITFWMATCH", {"title": "x"}).family == "match"
+    assert sports.TENNIS.classify("KXITFMATCH", {"title": "x"}).family == "match"
+    # Division fix: ITF women -> WTA, ITF men -> ATP (women would otherwise mislabel as ATP).
+    assert sports.TENNIS.division_of("KXITFWMATCH") == "WTA"
+    assert sports.TENNIS.division_of("KXITFMATCH") == "ATP"
+    # Fetched in the default scan (exact-owned series appended to default_series).
+    assert "KXITFWMATCH" in sports.TENNIS.default_series and "KXITFMATCH" in sports.TENNIS.default_series
+
+
+def test_itf_live_fixtures_flow_through_engine():
+    """Real captured ITF events (live probe 2026-06-09): each is a 2-market head-to-head with
+    custom_strike.tennis_competitor identity, and the 2-way dutch-book detector consumes them."""
+    import dutchbook
+    files = sorted(_ITF_FIX.glob("KXITF*MATCH-*.json"))
+    assert len(files) >= 2, "expected a men's + a women's ITF fixture as D-probe evidence"
+    for fp in files:
+        ev = json.loads(fp.read_text(encoding="utf-8"))
+        series = ev["series_ticker"]
+        rows = data.build_contracts(series, [ev])
+        assert len(rows) == 2, fp.name                                  # head-to-head: 2 markets
+        assert all(r["kind"] == "match" for r in rows), fp.name
+        assert len({r["player_key"] for r in rows}) == 2, fp.name       # distinct competitor UUIDs
+        assert all(r["mapping_confidence"] == "high" for r in rows), fp.name  # tennis_competitor present
+        # The 2-way detector consumes them NaN-safely (a book may or may not fire on live prices).
+        out = dutchbook.find_dutch_books([{**r} for r in pd.DataFrame(rows).to_dict("records")])
+        for f in out:
+            assert f["status"] == dutchbook.EXECUTABLE_DUTCH_BOOK

@@ -1,0 +1,47 @@
+{
+  "event_ticker": "KXITFWMATCH-26JUN10YEXCHA",
+  "series_ticker": "KXITFWMATCH",
+  "title": "Ye vs Chanta",
+  "product_metadata": {
+    "competition": "ITF",
+    "competition_scope": "Game"
+  },
+  "markets": [
+    {
+      "ticker": "KXITFWMATCH-26JUN10YEXCHA-YEX",
+      "yes_sub_title": "Shiyu Ye",
+      "status": "active",
+      "yes_bid_dollars": "0.0400",
+      "yes_ask_dollars": "0.6100",
+      "no_bid_dollars": "0.3900",
+      "no_ask_dollars": "0.9600",
+      "yes_bid_size_fp": "1.00",
+      "yes_ask_size_fp": "43.00",
+      "last_price_dollars": "0.0000",
+      "volume_fp": "0.00",
+      "open_interest_fp": "0.00",
+      "custom_strike": {
+        "tennis_competitor": "bbe5153d-33b2-44b0-8f6f-5bc0a59540d3"
+      },
+      "title": "Will Shiyu Ye win the Ye vs Chanta: W100 Wuning Round of 32 match?"
+    },
+    {
+      "ticker": "KXITFWMATCH-26JUN10YEXCHA-CHA",
+      "yes_sub_title": "Anchisa Chanta",
+      "status": "active",
+      "yes_bid_dollars": "0.4300",
+      "yes_ask_dollars": "0.9700",
+      "no_bid_dollars": "0.0300",
+      "no_ask_dollars": "0.5700",
+      "yes_bid_size_fp": "2.00",
+      "yes_ask_size_fp": "2952.00",
+      "last_price_dollars": "0.0000",
+      "volume_fp": "0.00",
+      "open_interest_fp": "0.00",
+      "custom_strike": {
+        "tennis_competitor": "c49c2e83-3d0d-4432-8483-6696d93ce342"
+      },
+      "title": "Will Anchisa Chanta win the Ye vs Chanta: W100 Wuning Round of 32 match?"
+    }
+  ]
+}
