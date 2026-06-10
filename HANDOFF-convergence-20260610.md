@@ -80,6 +80,36 @@ owned `KXWCGROUPWIN` — worth a probe). Full list: run `python scripts/audit_se
    headless suite can't drive row selection — manual check added to `docs/DEPLOYMENT.md` §4b).
 3. `CLAUDE.md`: stale "dormant KXWC guess" soccer row replaced with verified facts; ITF row added.
 
+## Follow-on branch: `feat/ui-table-clarity` (off feat/ui-trust-fixes)
+
+Bounded-loss table clarity pass — 8 display-layer changes from the two UI audits (engine, buckets,
+`tradable_now`, `scanner._rank_key`, API schema all untouched):
+
+1. **Negative-margin/diagnostic rows hidden by default** behind a "Show negative-margin / diagnostic
+   rows" switch, with an honest amber hidden-count line. Live impact at build time: 299 rb rows → 57
+   shown (242 were Negative proxy).
+2. **Default (Blended) ordering for the risk bucket now chance-weighted** (delegates to the implied-EV
+   order) — a negative-margin 49:1 longshot can no longer outrank a positive-margin candidate by
+   default; the explicit "Spread upside"/"Outright + spread" geometry modes are unchanged. Live: the
+   two genuine Candidates (+21¢/+18¢ display EV) now lead.
+3. **Five opaque labels renamed:** Implied bonus chance (pp) / Bonus breakeven % / Margin vs breakeven
+   (pp) / Display EV ¢ (uncalibrated) / Top-book units; $100 columns now say "(size-capped)" (the math
+   was always capped — the label now admits it).
+4. **Default-visible columns trimmed** (cheap, detail, display_spread, caveat → hidden; all available
+   via each table's Columns button). Caveated rows still show their severity chip.
+5. **NEW column: Top-book capacity $** = cost × top-book units / 100 (dollars to take the whole
+   visible book; explicitly NOT full-depth tradability).
+6. **Coloured Signal chips** (green Candidate / grey Breakeven / amber Negative proxy / blue-grey
+   diagnostic) — colour + text, never colour alone.
+7. **Section renamed** "Bounded-Loss Candidates"; explainer paragraph rewritten to the new vocabulary.
+8. **Peer-cheapness is toggle-independent** (computed on the full band-filtered set BEFORE the
+   visibility filter, per audit amendment) — flipping the switch never changes a row's badge.
+
+Verified: **904 tests pass** (3 new: capacity math incl. the 102×49→$49.98 case, signal filter,
+blended-vs-geometry ordering), ruff clean, imports clean, boot smoke on **non-default port 8010**
+(/, /healthz, /readyz, /metrics OK), live-data check of filter/ordering/capacity above. Manual
+browser checks added to docs/DEPLOYMENT.md §4b ("Bounded-loss clarity" line).
+
 ## Manual checks before merging (owner)
 
 - `docs/DEPLOYMENT.md` §4b "Before hosting" — especially the new stale-selection + scan-indicator

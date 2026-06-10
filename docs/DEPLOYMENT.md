@@ -282,6 +282,11 @@ engine + pure builders; the steps below cover what a headless test can't):
       it → the highlight drops in every table, the click-panel dialog closes if open, and Selected
       Detail collapses with a "Selection cleared" note. During a real "Refresh snapshot" the
       "Scanning — new data shortly…" label appears next to the freshness banner, then disappears.
+- [ ] **Bounded-loss clarity:** negative-margin/diagnostic rows are absent by default with an amber
+      hidden-count line; the "Show negative-margin / diagnostic rows" switch reveals them; Signal
+      chips are coloured (green Candidate / grey Breakeven / amber Negative proxy); Top-book
+      capacity $ renders with separators; flipping the toggle does NOT change any row's
+      "Cheap vs peers" badge.
 
 **Security / LAN exposure (only if hosting beyond loopback)**
 - [ ] `NICEGUI_STORAGE_SECRET` set to a long random string (serve.py refuses a non-loopback bind without it).

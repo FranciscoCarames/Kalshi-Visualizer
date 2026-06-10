@@ -822,3 +822,47 @@ def test_selection_left_view_selected_absent_clears():
 def test_selection_left_view_missing_id_keys_are_none_safe():
     # A selection lacking opportunity_id can't match a normal view -> treated as departed.
     assert vm.selection_left_view({"name": "x"}, [_opp("a")]) is True
+
+
+# --- bounded-loss table clarity pass: capacity / signal filter / default ordering -------
+def _rbopp(oid, *, wc=-2, bc=98, cost=102, size=49, spread=5.0):
+    """A risk_budget opp with controllable economics. spread (display_spread_c) vs breakeven (~= -wc for
+    the canonical 2-leg spread) sets the signal class: spread > -wc -> Candidate, < -wc -> Negative proxy,
+    negative spread -> Inverted / diagnostic, None -> Data quality."""
+    return {"opportunity_id": oid, "bucket": "risk_budget", "sport": "tennis", "name": oid,
+            "worst_case_profit_c": wc, "best_case_profit_c": bc, "cost_c": cost, "exec_min_size": size,
+            "display_spread_c": spread, "exec_gap_c": -2, "roi_pct": -1.9}
+
+
+def test_rb_capacity_dollars():
+    # cost 102c x 49 units / 100 = $49.98 (the audit's acceptance case)
+    assert vm.risk_budget_row(_rbopp("a"), set())["capacity"] == 49.98
+    # missing / non-positive inputs -> None, never silently 0
+    assert vm.risk_budget_row(_rbopp("b", cost=None), set())["capacity"] is None
+    assert vm.risk_budget_row(_rbopp("c", size=None), set())["capacity"] is None
+    assert vm.risk_budget_row(_rbopp("d", size=0), set())["capacity"] is None
+
+
+def test_filter_rb_signals_default_keeps_candidate_and_breakeven_only():
+    cand = _rbopp("cand", spread=5.0)        # 5pp gap vs 2% breakeven -> Candidate
+    brk = _rbopp("brk", spread=2.0)          # gap == breakeven -> Breakeven
+    neg = _rbopp("neg", spread=0.0)          # below breakeven -> Negative proxy
+    inv = _rbopp("inv", spread=-3.0)         # inverted ladder -> Inverted / diagnostic
+    dq = _rbopp("dq", spread=None)           # no display gap -> Data quality
+    rows = [cand, brk, neg, inv, dq]
+    assert [o["opportunity_id"] for o in vm.filter_rb_signals(rows, show_all=False)] == ["cand", "brk"]
+    assert vm.filter_rb_signals(rows, show_all=True) == rows           # toggle on = identity
+    assert vm.filter_rb_signals(None, show_all=False) == []            # None-safe
+
+
+def test_blended_default_orders_risk_bucket_by_display_ev_not_geometry():
+    # A 49:1 ratio priced BELOW breakeven (negative margin) must sort BELOW a modest positive-margin row
+    # under the DEFAULT (blended) mode; rows without EV inputs sort last.
+    lottery = _rbopp("lottery", wc=-2, bc=98, spread=0.0)   # ratio 49, EV = 0 - 2 = -2c
+    solid = _rbopp("solid", wc=-5, bc=95, spread=9.0)       # ratio 19, EV = 9 - 5 = +4c
+    no_ev = _rbopp("noev", spread=None)                     # no display gap -> unscored, last
+    ordered = vm.rank_opps([lottery, no_ev, solid], "blended")
+    assert [o["opportunity_id"] for o in ordered] == ["solid", "lottery", "noev"]
+    # Explicit geometry modes are untouched: Spread upside still leads with the bigger ratio.
+    geo = vm.rank_opps([lottery, solid], "spread_upside")
+    assert geo[0]["opportunity_id"] == "lottery"

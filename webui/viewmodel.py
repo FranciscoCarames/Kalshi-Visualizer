@@ -327,6 +327,20 @@ def risk_budget_view(opps: Iterable[dict[str, Any]] | None, *, max_loss_c: float
     return out
 
 
+def filter_rb_signals(opps: Iterable[dict[str, Any]] | None, show_all: bool) -> list[dict[str, Any]]:
+    """Visibility filter for bounded-loss rows by descriptive signal class (see `_signal_class`).
+    Default view (`show_all=False`) keeps only `Candidate` / `Breakeven` — rows whose displayed prices
+    imply at least the breakeven chance of the payoff zone. `Negative proxy` / `Inverted / diagnostic` /
+    `Data quality` rows are hidden until the "show negative-margin / diagnostic" toggle reveals them, so
+    a high upside:risk longshot whose display margin is negative never reads as a top opportunity by
+    default. `show_all=True` is the identity. Pure + order-preserving (the caller's ranking carries
+    through); display-only — never touches buckets or actionability."""
+    rows = list(opps or [])
+    if show_all:
+        return rows
+    return [o for o in rows if _signal_class(o) in ("Candidate", "Breakeven")]
+
+
 def split_by_resolution(opps: Iterable[dict[str, Any]] | None) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     """Partition bounded-loss rows into (vertical, calendar) by `resolution_mode`. Vertical = the two legs
     resolve SIMULTANEOUSLY (one event's outcome — e.g. golf Top-N, a match-alignment equivalence); calendar
@@ -440,6 +454,16 @@ def flag_peer_cheapness(opps: Iterable[dict[str, Any]] | None, *, band_tol_c: fl
     return rows
 
 
+def _rb_capacity_dollars(o: dict[str, Any]) -> float | None:
+    """Top-book capacity in DOLLARS: cost_c × exec_min_size / 100 — what it costs to take the entire
+    currently visible top-of-book size at the row's bundle cost. None when either input is missing or
+    non-positive (never silently 0). Gross, top-of-book; says nothing about full-depth tradability."""
+    cost, size = _num_or_none(o.get("cost_c")), _num_or_none(o.get("exec_min_size"))
+    if cost is None or size is None or cost <= 0 or size <= 0:
+        return None
+    return round(cost * size / 100, 2)
+
+
 def risk_budget_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str] | None = None,
                     flash_ids: set[str] | None = None) -> dict[str, Any]:
     """Display row for the risk-budget table: leads with the convex economics (max loss / max profit /
@@ -477,6 +501,10 @@ def risk_budget_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str
         "cheap": ", ".join(lbl for lbl, on in (("cost", o.get("cheap_cost")), ("ratio", o.get("cheap_ratio")))
                            if on),
         "max_units": _num_or_none(o.get("exec_min_size")),
+        # Top-book capacity $ — dollars required to take the whole currently VISIBLE top-of-book size
+        # (cost ¢ × units / 100). Liquidity made tangible: a per-unit-identical row with 49 units vs
+        # 44,000 units differs only here. Top-of-book only — NOT full-depth tradability.
+        "capacity": _rb_capacity_dollars(o),
         "quote_health": str(o.get("comp_quote_quality") or ""),
         "units_100": _sized[0] if _sized else None,
         "loss_100": round(_sized[1] / 100, 1) if _sized else None,    # gross max loss at $100, in dollars
@@ -513,8 +541,8 @@ def speculative_explainer(o: dict[str, Any]) -> list[tuple[str, str]]:
     if wins:
         lines.append(("Wins big if", wins))
     lines.append(("Why ranked here",
-                  f"Signal: {sig}. Market gap {'—' if gap is None else f'{gap:g}'}pp vs breakeven "
-                  f"{'—' if be is None else f'{be:g}'}% → gap-vs-breakeven "
+                  f"Signal: {sig}. Implied bonus chance {'—' if gap is None else f'{gap:g}'}pp vs bonus "
+                  f"breakeven {'—' if be is None else f'{be:g}'}% → margin vs breakeven "
                   f"{'—' if gvb is None else f'{gvb:g}'}pp (Uncalibrated, gross, top-of-book)."))
     skip = []
     if sig in ("Inverted / diagnostic", "Data quality"):
@@ -1132,6 +1160,12 @@ def _norm(vals: list[float | None]) -> list[float | None]:
 
 
 def _blended_order(group: list[dict[str, Any]], is_risk: bool) -> list[dict[str, Any]]:
+    # Risk-budget rows: the DEFAULT lens is chance-weighted (implied-EV order), NOT the geometry blend —
+    # a 49:1 upside:risk whose display margin is negative must never outrank a positive-margin candidate
+    # by default. The geometry lenses remain available as the explicit "Spread upside" / "Outright +
+    # spread" rank modes. Display-only ordering; strict buckets/classification untouched.
+    if is_risk:
+        return _implied_ev_order(group, True)
     n = len(group)
     edges = _norm([_num_or_none(o.get("exec_gap_c")) for o in group])
     rois = _norm([_num_or_none(o.get("roi_pct")) for o in group])

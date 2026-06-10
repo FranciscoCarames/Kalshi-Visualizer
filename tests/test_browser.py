@@ -62,7 +62,7 @@ async def test_renders_core_sections(user: User, seeded_db) -> None:
     await user.should_see("Kalshi Opportunity Engine")     # header (no emoji)
     await user.should_see("Actionable — executable gross edges")
     await user.should_see("Review Required — settlement-dependent")   # clearer rename of "Review signal"
-    await user.should_see("Bounded-Loss Bets")             # split watchlist section 1 (switch on by default)
+    await user.should_see("Bounded-Loss Candidates")       # split watchlist section 1 (switch on by default)
     await user.should_see("Overpriced Books")              # split watchlist section 2
     await user.should_see("Diagnostics & Debug")
     await user.should_see("Refresh snapshot")               # the manual refresh/scan button

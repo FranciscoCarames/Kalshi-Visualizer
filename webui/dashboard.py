@@ -140,6 +140,19 @@ def _label_cell_slot(label_field: str) -> str:
     return '<q-td :props="props" class="text-center">{{ props.row.%s }}</q-td>' % label_field
 
 
+# Bounded-loss Signal chip (table-clarity pass): the descriptive class gets VISUAL WEIGHT so a
+# "Negative proxy" row never reads as the visual equal of a "Candidate" — green=Candidate (margin beats
+# breakeven), grey=Breakeven, amber=Negative proxy (priced below breakeven), red-grey=Inverted/diagnostic
+# + Data quality. Colour + text (never colour alone — a11y convention #10).
+_SIGNAL_CELL_SLOT = (
+    '<q-td :props="props" class="text-left">'
+    '<q-badge v-if="props.row.signal" '
+    ':color="props.row.signal===\'Candidate\' ? \'positive\' : '
+    'props.row.signal===\'Breakeven\' ? \'grey-7\' : '
+    'props.row.signal===\'Negative proxy\' ? \'warning\' : \'blue-grey-8\'">'
+    "{{ props.row.signal }}</q-badge></q-td>"
+)
+
 # Qualifier caveat cell (PR — top-two parity): compact structural / settlement chips (each with a tooltip)
 # replacing the old long prose Note. The full prose lives in the hidden "Full caveat" column + the detail
 # panel. Neutral grey — these are advisory/structural, not blockers.
@@ -248,18 +261,23 @@ _RISK_COLUMNS = [
     {"name": "cost", "label": "Cost ¢", "field": "cost", "align": "center", "sortable": True},
     {"name": "max_loss", "label": "Max loss ¢", "field": "max_loss", "align": "center", "sortable": True},
     {"name": "max_profit", "label": "Max profit ¢", "field": "max_profit", "align": "center", "sortable": True},
-    {"name": "max_units", "label": "Max units", "field": "max_units", "align": "center", "sortable": True},
-    {"name": "loss_100", "label": "Max loss @ $100 ($)", "field": "loss_100", "align": "center", "sortable": True},
-    {"name": "upside_100", "label": "Best upside @ $100 ($)", "field": "upside_100", "align": "center", "sortable": True},
+    # Renamed for clarity (table-clarity pass): "Top-book" = the currently VISIBLE top-of-book size, not
+    # full-depth tradability; the $100 sizing has ALWAYS been capped by the book (_sized_at_budget) — the
+    # label now says so. Top-book capacity $ = cost × units (dollars to take the whole visible book).
+    {"name": "max_units", "label": "Top-book units", "field": "max_units", "align": "center", "sortable": True},
+    {"name": "capacity", "label": "Top-book capacity $", "field": "capacity", "align": "center", "sortable": True},
+    {"name": "loss_100", "label": "Loss @ $100 (size-capped)", "field": "loss_100", "align": "center", "sortable": True},
+    {"name": "upside_100", "label": "Upside @ $100 (size-capped)", "field": "upside_100", "align": "center", "sortable": True},
     {"name": "quote_health", "label": "Quote health", "field": "quote_health", "align": "center", "sortable": True},
     {"name": "ratio", "label": "Upside:risk", "field": "ratio", "align": "center", "sortable": True},
-    # PR M — the implied metric, shown as its legible decomposition (gross, top-of-book ranking aids; never an
-    # edge). Market gap (pp) = parent−child display gap; Breakeven % = the chance the payoff zone needs;
-    # Gap vs breakeven (pp) = the two compared; Implied EV ¢ ≈ that gap (kept for one-number ranking).
-    {"name": "display_spread", "label": "Market gap (pp)", "field": "display_spread", "align": "center", "sortable": True},
-    {"name": "breakeven", "label": "Breakeven %", "field": "breakeven", "align": "center", "sortable": True},
-    {"name": "gap_vs_be", "label": "Gap vs breakeven (pp)", "field": "gap_vs_be", "align": "center", "sortable": True},
-    {"name": "ev", "label": "Implied EV ¢", "field": "ev", "align": "center", "sortable": True},
+    # PR M — the implied metric, shown as its legible decomposition (gross, top-of-book ranking aids; never
+    # an edge). Implied bonus chance (pp) = parent−child display gap = the payoff zone's market-implied
+    # chance; Bonus breakeven % = the chance that zone needs; Margin vs breakeven (pp) = the two compared;
+    # Display EV ¢ ≈ that margin (kept for one-number ranking; UNCALIBRATED display math, not a model).
+    {"name": "display_spread", "label": "Implied bonus chance (pp)", "field": "display_spread", "align": "center", "sortable": True},
+    {"name": "breakeven", "label": "Bonus breakeven %", "field": "breakeven", "align": "center", "sortable": True},
+    {"name": "gap_vs_be", "label": "Margin vs breakeven (pp)", "field": "gap_vs_be", "align": "center", "sortable": True},
+    {"name": "ev", "label": "Display EV ¢ (uncalibrated)", "field": "ev", "align": "center", "sortable": True},
     {"name": "roc", "label": "Worst-case ROC %", "field": "roc", "align": "center", "sortable": True},
     {"name": "spread_over_parent", "label": "Spread÷parent", "field": "spread_over_parent", "align": "center", "sortable": True},
     {"name": "spread_over_child", "label": "Spread÷child", "field": "spread_over_child", "align": "center", "sortable": True},
@@ -268,9 +286,13 @@ _RISK_COLUMNS = [
     {"name": "caveat", "label": "Caveat", "field": "caveat", "align": "left"},
 ]
 # Default-hidden advanced context: diagnostic ratios + worst-case ROC + raw outrights + gross entry cost
-# (secondary to max loss). The decision columns — signal / kind / wins-if / max loss / $100 sizing / max
-# units / quote health / market gap / implied EV — lead.
-_RISK_HIDDEN = ("cost", "roc", "spread_over_parent", "spread_over_child", "parent_outright", "child_outright")
+# (secondary to max loss) — plus, from the table-clarity pass: `cheap` (sparse badge), `detail` (duplicated
+# by Wins-if + the click panel), `display_spread` (Margin vs breakeven carries its conclusion), and
+# `caveat` (an EMPTY caveat column reads as "no caveats"; caveated rows still show their severity chip and
+# the column stays available via the Columns button). The decision columns — signal / kind / wins-if / max
+# loss / top-book units+capacity / $100 sizing / quote health / breakeven / margin — fit one screen.
+_RISK_HIDDEN = ("cost", "roc", "spread_over_parent", "spread_over_child", "parent_outright",
+                "child_outright", "cheap", "detail", "display_spread", "caveat")
 # In the Vertical/Calendar split tables the Kind column is constant → hide it there (shown only in "All").
 _RISK_HIDDEN_SPLIT = _RISK_HIDDEN + ("kind",)
 # Overpriced Books (near-miss) table — cost, overpay (= the flat guaranteed loss), and the watchlist note.
@@ -529,6 +551,13 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                                      min=0, max=10, step=0.05, format="%.2f").classes("w-36").tooltip(
                 "Hide speculative rows whose deeper display spread÷outright exceeds this. 0 = off. "
                 "Caps relative risk (scale-invariant — does not remove longshots on its own).")
+            # Table-clarity pass: negative-margin / diagnostic rows are HIDDEN by default — a high
+            # upside:risk priced below its breakeven is a review-only lottery shape, not a top candidate.
+            # An honest hidden-count label inside the section says how many the toggle is hiding.
+            rb_show_negative = ui.switch("Show negative-margin / diagnostic rows", value=False).tooltip(
+                "Also show bounded-loss rows whose displayed prices imply LESS than the breakeven chance "
+                "(Negative proxy), plus Inverted / diagnostic and Data-quality rows. Hidden by default — "
+                "their margin vs breakeven says the market is not paying for the risk.")
             nm_switch = ui.switch("Near-miss books", value=True)  # PR A2: on (collapsed in PR C)
             nm_max_over = ui.number("Max overpay ¢", value=config.NEAR_MISS_DEFAULT_OVER_C,
                                     min=1, max=config.NEAR_MISS_MAX_OVER_C, format="%.0f").classes("w-28")
@@ -541,7 +570,9 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                 "display outright first, then lowest display spread÷outright), Implied EV (bounded-loss only: "
                 "implied payoff chance − overpay — chance-weighted, so a high ratio at near-zero chance ranks "
                 "below a lower ratio that is far likelier to pay; a market-implied ranking AID, not a guarantee), "
-                "or Blended (edge + ROI % + geometry). Gross, top-of-book — not a probability model.")
+                "or Blended (edge + ROI % + geometry; bounded-loss rows order by Display EV — "
+                "chance-weighted, so geometry alone never tops the default view). Gross, top-of-book — "
+                "not a probability model.")
             window_select = ui.select(list(config.BACKLOG_WINDOWS), value=config.BACKLOG_DEFAULT,
                                        label="Backlog window").props("stack-label").classes("min-w-[11rem]")
         ui.label("Time & refresh").classes("text-sm font-bold mt-2")
@@ -850,17 +881,22 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
     # bet (capped loss, convex upside) and the trader's primary cross-sport comparison surface. A bet, NOT
     # an edge. Its opposite-shape sibling "Overpriced Books" stays below, after the qualifier section.
     rb_expansion, rb_title, rb_cols_row = _expansion_header(
-        "Bounded-Loss Bets — capped downside, convex upside", expanded=True)
+        "Bounded-Loss Candidates — capped downside, convex upside", expanded=True)
     with rb_expansion:
         ui.label("Buy the broader YES + the deeper NO for just over 100¢: your loss is capped at the small "
                  "overpay, with convex upside (the broader-but-not-deeper outcome pays about +$1). A bet, NOT "
                  "an edge — gross of fees.").classes("text-xs text-gray-500")
-        ui.label("Market gap (pp) = parent−child display-price gap (the payoff zone's implied chance). "
-                 "Breakeven % = the chance that zone needs to clear the overpay (≈ max loss). "
-                 "Gap vs breakeven (pp) = the two compared; Implied EV ¢ ≈ the same number. All gross, "
-                 "top-of-book, market-implied — ranking aids, not a guarantee or a probability model. A "
-                 "negative gap means an inverted ladder (flagged 'Inverted / diagnostic'), never a chance.").classes(
+        ui.label("Implied bonus chance (pp) = parent−child display-price gap (the payoff zone's "
+                 "market-implied chance). Bonus breakeven % = the chance that zone needs to clear the "
+                 "overpay (≈ max loss). Margin vs breakeven (pp) = the two compared; Display EV ¢ ≈ the "
+                 "same number — UNCALIBRATED display math, gross, top-of-book; ranking aids, not a "
+                 "guarantee or a probability model. Top-book capacity $ = dollars needed to take the "
+                 "currently visible top-of-book size — not full-depth tradability. A negative gap means an "
+                 "inverted ladder (flagged 'Inverted / diagnostic'), never a chance.").classes(
                      "text-xs text-gray-500")
+        # Honest hidden-count line for the default negative-margin/diagnostic filter (clarity pass): the
+        # section never silently implies the visible rows are the whole universe.
+        rb_hidden_lbl = ui.label().classes("text-xs text-amber-700")
 
         # Split by resolution shape (PR B): Vertical = both legs settle at one event (golf Top-N, a
         # match-alignment equivalence) so there's no carry between them; Calendar = the legs settle on
@@ -878,9 +914,9 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         # PR E — combined "All" table FIRST (every bounded-loss bet, ranked together, with a Kind column),
         # then the Vertical / Calendar split below for focus.
         rb_all_title, rb_all_cols, rb_all = _rb_subsection(
-            "All bounded-loss bets",
-            "Every bounded-loss bet ranked together (Vertical + Calendar). The Kind column marks which is "
-            "which; the two sections below split them out for focus.")
+            "All bounded-loss candidates",
+            "Every bounded-loss candidate ranked together (Vertical + Calendar). The Kind column marks "
+            "which is which; the two sections below split them out for focus.")
         rb_vert_title, rb_vert_cols, rb_vertical = _rb_subsection(
             "Vertical — both legs resolve together",
             "Both legs settle at one event's outcome (e.g. golf Top-10 vs Top-5, or a match-win ≡ "
@@ -922,6 +958,8 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         _t.add_slot("body-cell-caveat", _CAVEAT_CELL_SLOT)  # compact severity chip
     for _rb in (rb_all, rb_vertical, rb_calendar):
         _rb.add_slot("body-cell-caveat", _CAVEAT_CELL_SLOT)
+        _rb.add_slot("body-cell-signal", _SIGNAL_CELL_SLOT)          # coloured class chip (clarity pass)
+        _rb.add_slot("body-cell-capacity", _num_cell_slot("capacity"))   # $ with thousands separators
     nm_table.add_slot("body-cell-note", _NOTE_CELL_SLOT)    # readable wrapping note
     # Qualifier-setups: compact caveat chips + the full prose (hidden col); the two quote columns show the
     # label while sorting on their numeric rank.
@@ -1296,23 +1334,35 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         new_ids, chg = state.get("new_ids") or set(), state.get("changes") or {}
         flash = state.get("flash_now") or set()
         include_rb = rb_switch.value
-        rbv = vm.risk_budget_view(
+        rb_full = vm.risk_budget_view(
             view, max_loss_c=int(rb_max_loss.value or 0),
             min_ratio_tenths=round(float(rb_min_ratio.value or 0) * 10),
             min_outright_c=int(rb_min_outright.value or 0),
             max_spread_ratio_hundredths=round(float(rb_max_ratio.value or 0) * 100)) if include_rb else []
-        vm.flag_peer_cheapness(rbv)        # PR F: stamp cheap_cost/cheap_ratio (same-sport peers); display-only
+        # PR F cheapness is computed on the FULL band-filtered set BEFORE the signal-visibility filter, so
+        # flipping the negative-rows toggle never changes a row's cheap-vs-peers badge (the peer universe
+        # is toggle-independent).
+        vm.flag_peer_cheapness(rb_full)    # PR F: stamp cheap_cost/cheap_ratio (same-sport peers); display-only
+        # Clarity pass: negative-margin / diagnostic rows hidden unless the toggle shows them; the label
+        # below keeps the hidden count honest.
+        rbv = vm.filter_rb_signals(rb_full, rb_show_negative.value)
+        n_hidden = len(rb_full) - len(rbv)
+        rb_hidden_lbl.set_text(
+            f"{n_hidden:,} negative-margin / diagnostic row{'s' if n_hidden != 1 else ''} hidden — "
+            "use the 'Show negative-margin / diagnostic rows' switch in the filters to include them."
+            if n_hidden else "")
+        rb_hidden_lbl.set_visibility(bool(n_hidden))
         rb_vert, rb_cal = vm.split_by_resolution(rbv)
         # PR E: the combined "All" table shows the full ranked set; the splits show each kind.
         rb_all.rows = [vm.risk_budget_row(o, new_ids, chg, flash) for o in rbv]
         rb_vertical.rows = [vm.risk_budget_row(o, new_ids, chg, flash) for o in rb_vert]
         rb_calendar.rows = [vm.risk_budget_row(o, new_ids, chg, flash) for o in rb_cal]
-        rb_title.set_text(f"Bounded-Loss Bets — capped downside, convex upside ({len(rbv):,})")
-        rb_all_title.set_text(f"All bounded-loss bets ({len(rbv):,})")
+        rb_title.set_text(f"Bounded-Loss Candidates — capped downside, convex upside ({len(rbv):,})")
+        rb_all_title.set_text(f"All bounded-loss candidates ({len(rbv):,})")
         rb_vert_title.set_text(f"Vertical — both legs resolve together ({len(rb_vert):,})")
         rb_cal_title.set_text(f"Calendar — legs resolve on different days ({len(rb_cal):,})")
         rb_expansion.set_visibility(include_rb)
-        for _c in (rb_max_loss, rb_min_ratio, rb_min_outright, rb_max_ratio):
+        for _c in (rb_max_loss, rb_min_ratio, rb_min_outright, rb_max_ratio, rb_show_negative):
             _c.set_enabled(include_rb)
 
     def refresh_near_miss() -> None:
@@ -1551,6 +1601,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         (rb_min_ratio, "Speculative minimum upside-to-risk ratio"),
         (rb_min_outright, "Speculative minimum child display outright in cents"),
         (rb_max_ratio, "Speculative maximum child display spread-to-outright ratio"),
+        (rb_show_negative, "Show negative-margin and diagnostic bounded-loss rows"),
         (nm_switch, "Show overpriced books (near-miss)"), (nm_max_over, "Near-miss max overpay in cents"),
         (show_net_sw, "Show estimated net-of-fees columns"),
         (actionable, "Actionable opportunities"), (review, "Review-required opportunities"),
@@ -1605,7 +1656,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                  show_review_sw, show_blocked_sw, qs_switch, rb_switch, nm_switch):
         ctrl.on_value_change(lambda _=None: None if state.get("_suppress_cascade") else rerender())
     min_size_in.on_value_change(lambda _=None: _request_refresh("full"))        # membership filter → view
-    for ctrl in (rb_max_loss, rb_min_ratio, rb_min_outright, rb_max_ratio):
+    for ctrl in (rb_max_loss, rb_min_ratio, rb_min_outright, rb_max_ratio, rb_show_negative):
         ctrl.on_value_change(lambda _=None: _request_refresh("bounded_loss"))    # only the bounded-loss tables
     nm_max_over.on_value_change(lambda _=None: _request_refresh("near_miss"))     # only the near-miss table
 
