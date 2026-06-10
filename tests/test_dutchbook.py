@@ -694,9 +694,10 @@ def test_winner_field_scanner_round_trip():
 
 
 # --- World Cup "team to finish bottom" group basket (KXWCGROUPBOTTOM) --------------------------------
-# Live-probed 2026-06-09: the event is mutually_exclusive=False (independent binaries), so it is NOT a
-# flagged winner field — it is an EXACT cardinality basket. Exactly one of 4 teams finishes bottom →
-# exactly 1 leg settles YES (floor 100¢) and 3 settle NO (floor 300¢). Detected by find_group_baskets.
+# Routed as an EXACT cardinality basket, NOT a flagged winner field: exactly one of 4 teams finishes
+# bottom → exactly 1 leg settles YES (floor 100¢) and 3 settle NO (floor 300¢), detected by
+# find_group_baskets. The proof is format-derived and FLAG-INDEPENDENT (the live mutually_exclusive flag
+# flipped False→True between the 2026-06-09 probe and 2026-06-10 kickoff eve; routing unaffected).
 def gbottom(team, *, event="KXWCGROUPBOTTOM-26H", player_key=None, yes_ask_c=None, no_ask_c=None,
             yes_bid_size=100, yes_ask_size=100, quality="Tight", status="active"):
     """A per-team World Cup 'finish bottom' row (series KXWCGROUPBOTTOM — an EXACT cardinality basket leg)."""

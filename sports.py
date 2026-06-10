@@ -985,8 +985,10 @@ SOCCER = register(SportConfig(
     # dutchbook.find_group_baskets.
     # KXWCGROUPQUAL = top-2 qualify (floors 2/1, conditional best-third ceiling 3/2). KXWCGROUPBOTTOM =
     # which of the 4 finishes bottom: EXACTLY one does, so exactly 1 leg settles YES and 3 settle NO — an
-    # EXACT cardinality basket (floor == ceiling, no conditional band). Live-probed 2026-06-09: the event is
-    # mutually_exclusive=False (independent binaries), so it is a basket, NOT a flagged winner field.
+    # EXACT cardinality basket (floor == ceiling, no conditional band). Live-probed 2026-06-09 the events
+    # were mutually_exclusive=False; re-probed 2026-06-10 (kickoff eve) they now flag True. The routing is
+    # deliberately FLAG-INDEPENDENT: the basket proof is the format-derived cardinality floor, so the flip
+    # changes nothing here, and group_bottom stays OUT of field_families (never a flagged winner field).
     group_basket_rules={
         "KXWCGROUPQUAL": GroupBasketRule(team_count=4, yes_floor=2, no_floor=1,
                                          yes_ceiling_count=3, no_ceiling_count=2,
