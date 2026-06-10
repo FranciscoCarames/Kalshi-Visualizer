@@ -1,0 +1,145 @@
+{
+  "event_ticker": "KXWCSTAGEOFELIM-26USA",
+  "series_ticker": "KXWCSTAGEOFELIM",
+  "title": "USA: Stage of Elimination",
+  "mutually_exclusive": true,
+  "product_metadata": {
+    "competition": "FIFA World Cup",
+    "competition_scope": "Stage of Elimination"
+  },
+  "markets": [
+    {
+      "ticker": "KXWCSTAGEOFELIM-26USA-GS",
+      "yes_sub_title": "Group Stage",
+      "status": "active",
+      "yes_bid_dollars": "0.1500",
+      "yes_ask_dollars": "0.1600",
+      "no_bid_dollars": "0.8400",
+      "no_ask_dollars": "0.8500",
+      "last_price_dollars": "0.1700",
+      "yes_bid_size_fp": "2009.88",
+      "yes_ask_size_fp": "13.89",
+      "volume_fp": "7669.03",
+      "open_interest_fp": "7147.44",
+      "custom_strike": {
+        "Sporting Outcome": "Eliminated in the Group Stage",
+        "soccer_team": "d7a243f5-e50d-47ed-87b0-b027c71fca22"
+      },
+      "title": "Will USA get eliminated in the Group Stage of the 2026 Men's FIFA World Cup?"
+    },
+    {
+      "ticker": "KXWCSTAGEOFELIM-26USA-R32",
+      "yes_sub_title": "Round of 32",
+      "status": "active",
+      "yes_bid_dollars": "0.3400",
+      "yes_ask_dollars": "0.3600",
+      "no_bid_dollars": "0.6400",
+      "no_ask_dollars": "0.6600",
+      "last_price_dollars": "0.3600",
+      "yes_bid_size_fp": "2986.00",
+      "yes_ask_size_fp": "2000.07",
+      "volume_fp": "3645.85",
+      "open_interest_fp": "2637.84",
+      "custom_strike": {
+        "Sporting Outcome": "Eliminated in the Round of 32",
+        "soccer_team": "d7a243f5-e50d-47ed-87b0-b027c71fca22"
+      },
+      "title": "Will USA get eliminated in the Round of 32 of the 2026 Men's FIFA World Cup?"
+    },
+    {
+      "ticker": "KXWCSTAGEOFELIM-26USA-R16",
+      "yes_sub_title": "Round of 16",
+      "status": "active",
+      "yes_bid_dollars": "0.2600",
+      "yes_ask_dollars": "0.2700",
+      "no_bid_dollars": "0.7300",
+      "no_ask_dollars": "0.7400",
+      "last_price_dollars": "0.2700",
+      "yes_bid_size_fp": "258.65",
+      "yes_ask_size_fp": "8252.46",
+      "volume_fp": "7341.83",
+      "open_interest_fp": "6860.31",
+      "custom_strike": {
+        "Sporting Outcome": "Eliminated in the Round of 16",
+        "soccer_team": "d7a243f5-e50d-47ed-87b0-b027c71fca22"
+      },
+      "title": "Will USA get eliminated in the Round of 16 of the 2026 Men's FIFA World Cup?"
+    },
+    {
+      "ticker": "KXWCSTAGEOFELIM-26USA-QF",
+      "yes_sub_title": "Quarterfinals",
+      "status": "active",
+      "yes_bid_dollars": "0.1300",
+      "yes_ask_dollars": "0.1500",
+      "no_bid_dollars": "0.8500",
+      "no_ask_dollars": "0.8700",
+      "last_price_dollars": "0.1400",
+      "yes_bid_size_fp": "3129.00",
+      "yes_ask_size_fp": "7446.03",
+      "volume_fp": "6671.93",
+      "open_interest_fp": "6431.93",
+      "custom_strike": {
+        "Sporting Outcome": "Eliminated in the Quarterfinals",
+        "soccer_team": "d7a243f5-e50d-47ed-87b0-b027c71fca22"
+      },
+      "title": "Will USA get eliminated in the Quarterfinals of the 2026 Men's FIFA World Cup?"
+    },
+    {
+      "ticker": "KXWCSTAGEOFELIM-26USA-SF",
+      "yes_sub_title": "Semifinals",
+      "status": "active",
+      "yes_bid_dollars": "0.0500",
+      "yes_ask_dollars": "0.0700",
+      "no_bid_dollars": "0.9300",
+      "no_ask_dollars": "0.9500",
+      "last_price_dollars": "0.0400",
+      "yes_bid_size_fp": "2000.00",
+      "yes_ask_size_fp": "7528.18",
+      "volume_fp": "3706.46",
+      "open_interest_fp": "3689.21",
+      "custom_strike": {
+        "Sporting Outcome": "Eliminated in the Semifinals",
+        "soccer_team": "d7a243f5-e50d-47ed-87b0-b027c71fca22"
+      },
+      "title": "Will USA get eliminated in the Semifinals of the 2026 Men's FIFA World Cup?"
+    },
+    {
+      "ticker": "KXWCSTAGEOFELIM-26USA-FL",
+      "yes_sub_title": "Runner-Up",
+      "status": "active",
+      "yes_bid_dollars": "0.0100",
+      "yes_ask_dollars": "0.0200",
+      "no_bid_dollars": "0.9800",
+      "no_ask_dollars": "0.9900",
+      "last_price_dollars": "0.0200",
+      "yes_bid_size_fp": "49.91",
+      "yes_ask_size_fp": "2000.00",
+      "volume_fp": "805.84",
+      "open_interest_fp": "805.84",
+      "custom_strike": {
+        "Sporting Outcome": "Eliminated in the Final",
+        "soccer_team": "d7a243f5-e50d-47ed-87b0-b027c71fca22"
+      },
+      "title": "Will USA get eliminated in the Finals of the 2026 Men's FIFA World Cup?"
+    },
+    {
+      "ticker": "KXWCSTAGEOFELIM-26USA-FW",
+      "yes_sub_title": "Outright Winner",
+      "status": "active",
+      "yes_bid_dollars": "0.0100",
+      "yes_ask_dollars": "0.0200",
+      "no_bid_dollars": "0.9800",
+      "no_ask_dollars": "0.9900",
+      "last_price_dollars": "0.0200",
+      "yes_bid_size_fp": "57.00",
+      "yes_ask_size_fp": "12720.58",
+      "volume_fp": "10988.60",
+      "open_interest_fp": "10988.60",
+      "custom_strike": {
+        "Sporting Outcome": "Wins the Final",
+        "soccer_team": "d7a243f5-e50d-47ed-87b0-b027c71fca22"
+      },
+      "title": "Will USA win the final of the 2026 Men's FIFA World Cup?"
+    }
+  ]
+}

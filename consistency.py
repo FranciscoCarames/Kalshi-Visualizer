@@ -84,6 +84,11 @@ STATUS_GROUP = {
     "EXACT_ORDER_DIAGNOSTIC": "Qualifier setup",
     "SPECULATIVE_TOP2_RELATIVE_VALUE": "Qualifier setup",
     "GAME_SUPPORT_SIGNAL": "Qualifier setup",
+    # Stage-of-elimination (sibling `stage_elim` module; literals kept here to avoid an import). The
+    # standalone within-event 7-way MECE book is a clean executable edge (Broken, like a dutch book); the
+    # cross-family tail-sum is ALWAYS settlement-caveated / review-only (Warning, like a synthetic bundle).
+    "EXECUTABLE_STAGE_ELIM_BOOK": "Broken",
+    "STAGE_ELIM_SYNTHETIC": "Warning",
     "DISPLAY_VIOLATION": "Warning",
     "WIDE_QUOTE": "Warning",
     "MISSING_QUOTE": "Missing data",
@@ -950,7 +955,12 @@ def bucket_of(check_row: dict[str, Any]) -> str:
         # Its own bucket regardless of tradable_now — a near-miss is never strict-actionable, so this never
         # leaks into `actionable` even though its legs may be tradable ("Yes").
         return "risk_budget"
-    if status in ("EXECUTABLE_VIOLATION", "EXECUTABLE_DUTCH_BOOK", "EXECUTABLE_GROUP_BASKET"):
+    if status == "STAGE_ELIM_SYNTHETIC":
+        # Cross-family tail-sum: ALWAYS settlement-caveated (elimination buckets vs an advance market are
+        # different markets), so never auto-tradable — mirrors the synthetic-bundle routing.
+        return "review_signal" if str(check_row.get("tradable_now") or "").startswith("Review") else "blocked"
+    if status in ("EXECUTABLE_VIOLATION", "EXECUTABLE_DUTCH_BOOK", "EXECUTABLE_GROUP_BASKET",
+                  "EXECUTABLE_STAGE_ELIM_BOOK"):
         # Firm executable edges: tradable now -> actionable, else blocked (no size / inactive leg). A
         # dutch book / hard-floor basket carries no rule caveat (plain Yes/No); the basket's group-settlement
         # caveat is advisory only. (Basket findings self-assign `bucket`; this keeps the router complete.)
