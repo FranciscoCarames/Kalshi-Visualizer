@@ -438,7 +438,10 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                              # the 1s tick only pushes when it actually changed.
                              "rerender_count": 0, "last_total_rerender_ms": None, "last_filter_ms": None,
                              "last_cascade_ms": None, "last_row_build_ms": None,
-                             "last_table_update_ms": None, "freshness_text": None}
+                             "last_table_update_ms": None, "freshness_text": None,
+                             # Last-pushed scan-indicator state (bool) — the 1s tick only pushes a label
+                             # change on an idle<->in_progress transition, mirroring the freshness guard.
+                             "scan_indicator": None}
 
     ui.add_css(_SELECTED_ROW_CSS)        # selected-row highlight (#14) — see module note
     ui.add_css(_A11Y_CSS)                 # accessibility (#10): focus-visible ring + opt-in larger text
@@ -566,7 +569,12 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
     chips = ui.row().classes("gap-2 flex-wrap")
 
     # `tabular-nums` keeps the live age digits a constant width so the per-second tick doesn't reflow (PR 4).
-    freshness = ui.label().classes("text-sm").style("font-variant-numeric: tabular-nums")
+    # The scan indicator sits NEXT to the freshness banner: during a 3-4s scan the dashboard otherwise
+    # silently shows the previous snapshot — the label makes "old data, refresh in flight" visible. It covers
+    # every scan source (scheduler, another LAN viewer, POST /scan), not just this client's "Scan now".
+    with ui.row().classes("items-center gap-3"):
+        freshness = ui.label().classes("text-sm").style("font-variant-numeric: tabular-nums")
+        scanning_lbl = ui.label().classes("text-sm text-primary font-medium")
     # Per-bucket counts status line (PR 4): shown vs in-scope per bucket, hidden-by-toggle made explicit.
     counts_line = ui.label().classes("text-sm text-gray-600").style("font-variant-numeric: tabular-nums")
     banner = ui.label().classes("text-sm font-medium")
@@ -1326,6 +1334,21 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             freshness.set_text(text)
             state["freshness_text"] = text
 
+    def _clear_selection() -> None:
+        """A filter change removed the selected opportunity from the view: drop the highlight in every
+        table and clear the now-stale detail surfaces (click-panel dialog only if it is open; the
+        persistent Selected Detail section gets a truthful placeholder instead of yesterday's evidence)."""
+        state["selected"] = None
+        for t in _sel_tables:
+            t.selected = []                      # same idiom as _on_select
+        if dialog.value:
+            dialog.close()
+        detail_box.clear()
+        with detail_box:
+            ui.label("Selection cleared — the selected opportunity is no longer in the current view."
+                     ).classes("text-sm text-gray-500")
+        detail_expansion.close()
+
     def rerender(force_diagnostics: bool = False) -> None:
         """Pure in-memory re-render from `state` — NO store access. Re-filter + push only the VISIBLE
         tables; refresh empty-state / chips / URL / freshness. Diagnostics (heavy store reads) rebuild
@@ -1342,6 +1365,16 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         _t_filter = time.monotonic()
         view = vm.rank_opps(vm.filter_opps(opps, **filters), rank_sel.value)   # display-time re-sort, no rescan
         state["view"] = view      # PR R: cache so the scoped bounded-loss / near-miss refreshers can reuse it
+        # Stale-selection guard: clear the highlight + detail surfaces when the selected opp left the
+        # MEMBERSHIP-filtered view. Bucket-visibility toggles and rb/nm band thresholds do NOT clear —
+        # the opp is still in scope, just in a hidden/narrowed section, so its detail stays valid.
+        if vm.selection_left_view(state.get("selected"), view):
+            _clear_selection()
+        elif state.get("selected"):
+            # Same opp still in view: re-point at the freshest dict so the rules/wording toggles
+            # re-render current data after a snapshot advance (no UI push here).
+            sid = state["selected"].get("opportunity_id")
+            state["selected"] = state["opps"].get(sid, state["selected"])
         state["last_filter_ms"] = round((time.monotonic() - _t_filter) * 1000, 1)
         # Truthful empty state by scope (PR 26a): no-scan / scanning / scan-failed / no-opportunities /
         # filter-hid-all — or hidden when there's content to show. scan_status is cached (no hot-path store read).
@@ -1529,6 +1562,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         (backlog, "Recently-actionable backlog"),
         (backlog_events_table, "Durable 7-day backlog"), (backlog_events_cat, "Durable backlog category"),
         (detail_expansion, "Selected detail"), (diagnostics_expansion, "Diagnostics and debug"),
+        (scanning_lbl, "Scan in progress indicator"),
     ):
         _el.props(f'aria-label="{_aria}"')
 
@@ -1621,7 +1655,17 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         # Re-render only the freshness/scope line each second (scope_banner recomputes the age live).
         # Guarded so an unchanged string pushes nothing (Branch 2).
         _set_freshness(vm.scope_banner(state.get("cov"), tz_select.value))
+        # Scan-in-progress indicator: engine.scan_status() is an in-process dict copy (no store/network),
+        # safe at 1 Hz. Push only on transition; refresh the cached scan_status on transition too, so the
+        # empty-state "Scanning..." branch (vm.empty_state) is live instead of one-snapshot stale.
+        st = engine.scan_status()
+        in_prog = (st or {}).get("status") == "in_progress"
+        if in_prog != state.get("scan_indicator"):
+            state["scan_indicator"] = in_prog
+            state["scan_status"] = st
+            scanning_lbl.set_text("Scanning — new data shortly…" if in_prog else "")
 
+    tick_age()     # paint the scan indicator on first load if a scan is already in flight (scheduler / other viewer)
     ui.timer(config.UI_POLL_SECONDS, poll)        # snapshot-change watcher (cheap; reloads only on a new id)
     ui.timer(1.0, tick_age)
     ui.timer(config.UI_DEBOUNCE_TICK_SECONDS, _debounce_tick)   # PR R: fire coalesced/scoped control refreshes

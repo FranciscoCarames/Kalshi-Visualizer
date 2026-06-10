@@ -798,3 +798,27 @@ def test_risk_budget_row_cheap_badge():
                                "cheap_cost": True, "cheap_ratio": False}, set())["cheap"] == "cost"
     assert vm.risk_budget_row({"opportunity_id": "y", "bucket": "risk_budget",
                                "cheap_cost": True, "cheap_ratio": True}, set())["cheap"] == "cost, ratio"
+
+
+# --- stale-selection guard (UI trust fix 2): pure predicate ----------------------------
+# The headless browser suite cannot click-select table rows (documented limit), so the clear/keep
+# decision lives in this pure helper and is unit-tested here; the dashboard wiring is a manual check.
+def test_selection_left_view_none_selection_never_clears():
+    assert vm.selection_left_view(None, [_opp("a")]) is False
+    assert vm.selection_left_view({}, [_opp("a")]) is False     # falsy dict == no selection
+
+
+def test_selection_left_view_selected_still_present_keeps():
+    view = [_opp("a"), _opp("b")]
+    assert vm.selection_left_view(_opp("a"), view) is False
+
+
+def test_selection_left_view_selected_absent_clears():
+    assert vm.selection_left_view(_opp("gone"), [_opp("a"), _opp("b")]) is True
+    assert vm.selection_left_view(_opp("gone"), []) is True     # empty view: any selection departed
+    assert vm.selection_left_view(_opp("gone"), None) is True   # None-safe view
+
+
+def test_selection_left_view_missing_id_keys_are_none_safe():
+    # A selection lacking opportunity_id can't match a normal view -> treated as departed.
+    assert vm.selection_left_view({"name": "x"}, [_opp("a")]) is True

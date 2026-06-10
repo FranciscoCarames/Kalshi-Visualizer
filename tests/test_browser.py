@@ -131,3 +131,34 @@ async def test_market_telemetry_is_a_labelled_non_signal_section(user: User, see
     _seed(seeded_db, [_actionable_opp()])
     await user.open("/")
     await user.should_see("Market Telemetry — Liquidity & Volatility")   # collapsed; liquidity lives here now
+
+
+# --- scan-in-progress indicator (UI trust fix 1) ---------------------------------------
+# During a scan the dashboard otherwise silently shows the previous snapshot; the label makes the
+# in-flight refresh visible for EVERY scan source (scheduler, another LAN viewer, POST /scan), not
+# just this client's "Scan now" button. manager state is isolated by the seeded_db fixture's reset().
+_SCANNING_TEXT = "Scanning — new data shortly"
+
+
+@pytest.mark.nicegui_main_file(MAIN)
+async def test_scanning_indicator_shows_when_scan_in_flight_at_open(user: User, seeded_db) -> None:
+    _seed(seeded_db, [_actionable_opp()])
+    scan_manager.manager._status["status"] = "in_progress"   # fake an in-flight scan (status() copies this)
+    await user.open("/")
+    await user.should_see(_SCANNING_TEXT)                    # painted by the post-build tick_age() call
+
+
+@pytest.mark.nicegui_main_file(MAIN)
+async def test_scanning_indicator_hidden_when_idle(user: User, seeded_db) -> None:
+    _seed(seeded_db, [_actionable_opp()])
+    await user.open("/")                                     # fixture reset() → status "idle"
+    await user.should_not_see(_SCANNING_TEXT)
+
+
+@pytest.mark.nicegui_main_file(MAIN)
+async def test_scanning_indicator_appears_via_tick(user: User, seeded_db) -> None:
+    _seed(seeded_db, [_actionable_opp()])
+    await user.open("/")
+    await user.should_not_see(_SCANNING_TEXT)
+    scan_manager.manager._status["status"] = "in_progress"   # scan starts AFTER the page opened
+    await user.should_see(_SCANNING_TEXT)                    # should_see retries past the 1s tick (P2 pattern)

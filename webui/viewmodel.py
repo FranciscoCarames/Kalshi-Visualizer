@@ -1232,6 +1232,17 @@ def rank_opps(opps: Iterable[dict[str, Any]] | None, mode: str = RANK_MODE_DEFAU
     return out
 
 
+def selection_left_view(selected: dict[str, Any] | None, view: Iterable[dict[str, Any]]) -> bool:
+    """True when a selection exists but its opportunity_id is absent from the filtered view — the
+    dashboard then clears the row highlight and the stale detail surfaces. None-safe and pure (the
+    headless browser suite can't click-select table rows, so the decision logic lives here for unit
+    tests)."""
+    if not selected:
+        return False
+    sid = selected.get("opportunity_id")
+    return sid not in {o.get("opportunity_id") for o in view or []}
+
+
 # --- "most liquid right now" (PR F) — over the stored CONTRACT rows (opportunities lack size/spread) ---
 def liquidity_panel(contracts: Iterable[dict[str, Any]] | None, n: int = 5) -> dict[str, list]:
     """Top-N most liquid sports + contracts RIGHT NOW (pure, DISPLAY-ONLY telemetry — NOT an opportunity
