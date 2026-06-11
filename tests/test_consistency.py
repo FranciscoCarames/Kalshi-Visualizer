@@ -761,3 +761,49 @@ def test_transitive_not_emitted_when_all_nodes_present():
     ]
     checks = consistency.build_checks(pd.DataFrame(rows))
     assert "containment_transitive" not in [c["relationship_type"] for _, c in checks.iterrows()]
+
+
+# --- field-de-vig per node (DISPLAY-ONLY conditional panel) ---------------------------
+def _crow(pk, node, c):
+    return {"player_key": pk, "series": "KXATPADVANCE", "ladder_node": node, "kind": "advance",
+            "display_c": c}
+
+
+def test_devig_field_by_node_normalizes_when_overround_present():
+    import sports
+    cfg = sports.get_sport("tennis")
+    # Win field (k=1): 3 players @ 40¢ ⇒ Σmass 1.20 ≥ 1 ⇒ renormalize to sum 1.0 (partial False).
+    # Reach Final field (k=2): 3 players @ 70¢ ⇒ Σmass 2.10 ≥ 2 ⇒ sum 2.0.
+    rows = []
+    for pk, w, f in (("A", 40, 70), ("B", 40, 70), ("C", 40, 70)):
+        rows += [_crow(pk, "Win Tournament", w), _crow(pk, "Reach Final", f)]
+    res = consistency.devig_field_by_node(rows, cfg)
+    assert res["Win Tournament"]["k"] == 1 and res["Win Tournament"]["partial"] is False
+    assert abs(sum(res["Win Tournament"]["probs"].values()) - 1.0) < 1e-9
+    assert res["Reach Final"]["k"] == 2 and res["Reach Final"]["partial"] is False
+    assert abs(sum(res["Reach Final"]["probs"].values()) - 2.0) < 1e-9
+
+
+def test_devig_field_by_node_sparse_field_is_a_floor():
+    import sports
+    cfg = sports.get_sport("tennis")
+    # Only 2 thin winners priced (Σmass 0.35 < k=1) ⇒ floors, never inflated; partial True.
+    rows = [_crow("A", "Win Tournament", 20), _crow("B", "Win Tournament", 15)]
+    res = consistency.devig_field_by_node(rows, cfg)
+    assert res["Win Tournament"]["partial"] is True
+    assert res["Win Tournament"]["probs"] == {"A": 0.20, "B": 0.15}
+
+
+def test_devig_field_by_node_skips_unmapped_k_node():
+    import sports
+    cfg = sports.get_sport("nba")
+    # "Reach Playoffs" is deliberately unmapped (k=None) ⇒ omitted; champion node is mapped ⇒ present.
+    rows = [{"player_key": "A", "series": "KXNBA", "ladder_node": "Reach Playoffs",
+             "kind": "advance", "display_c": 60},
+            {"player_key": "A", "series": "KXNBA", "ladder_node": "Win Championship",
+             "kind": "winner", "display_c": 20},
+            {"player_key": "B", "series": "KXNBA", "ladder_node": "Win Championship",
+             "kind": "winner", "display_c": 25}]
+    res = consistency.devig_field_by_node(rows, cfg)
+    assert "Reach Playoffs" not in res
+    assert "Win Championship" in res and res["Win Championship"]["k"] == 1

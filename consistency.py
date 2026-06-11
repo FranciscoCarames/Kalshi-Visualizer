@@ -18,6 +18,7 @@ from typing import Any
 
 import pandas as pd
 
+import probability
 import sports
 from config import DISPLAY_TOL_C, NEAR_EDGE_MIN_C
 from data import opportunity_id, rule_tokens
@@ -226,6 +227,65 @@ def layer_spreads(player_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "inverted": spread_pct is not None and spread_pct < 0,
             }
         )
+    return out
+
+
+def devig_field_by_node(
+    all_tournament_rows: list[dict[str, Any]],
+    cfg,
+    ladder=None,
+) -> dict[str, dict[str, Any]]:
+    """Field-implied de-vig of a whole tournament's display prices, per ladder node.
+
+    For each node in the (per-group) ladder, gathers every participant's representative display price
+    (cents) and de-vigs the field with ``probability.devig_field(prices_c, k, exhaustive=False)`` where
+    ``k = cfg.survivors_of(node)``. Returns ``{node: {"probs": {player_key: prob_0_1}, "partial": bool,
+    "k": int}}`` — the de-vigged per-participant marginal at that node, keyed by ``player_key``.
+
+    DISPLAY-ONLY (the detail-panel conditional view) — NEVER read by `_classify`, `bucket_of`, or any
+    ranking. Fail-soft and conservative: a node is OMITTED entirely when its survivor count ``k`` is
+    unmapped (fragile node) or no participant has a priceable display price there, so a wrong/ambiguous
+    ``k`` can never manufacture a number. ``partial=True`` marks a sparse one-winner field whose de-vig is
+    a floor (see `probability.devig_field`). Uses ``cfg.ladder_for(rows)`` (None-guarded) so per-group /
+    dynamic-ladder sports map correctly.
+    """
+    rows = list(all_tournament_rows or [])
+    spec = ladder if ladder is not None else (cfg.ladder_for(rows) if cfg else None)
+    order = getattr(spec, "node_order", ()) if spec else ()
+    if not order:
+        return {}
+
+    by_player: dict[str, list[dict[str, Any]]] = {}
+    for r in rows:
+        pk = r.get("player_key")
+        if pk:
+            by_player.setdefault(pk, []).append(r)
+
+    # node -> list of (player_key, display_c) over the priceable field
+    node_field: dict[str, list[tuple[str, float]]] = {n: [] for n in order}
+    for pk, prows in by_player.items():
+        nodes = build_player_nodes(prows)
+        for node in order:
+            rep = representative(nodes.get(node))
+            c = _num(rep.get("display_c")) if rep else None
+            if c is not None:
+                node_field[node].append((pk, float(c)))
+
+    out: dict[str, dict[str, Any]] = {}
+    for node in order:
+        k = cfg.survivors_of(node, spec) if cfg else None
+        field = node_field.get(node) or []
+        if k is None or not field:
+            continue
+        res = probability.devig_field([c for (_pk, c) in field], k, exhaustive=False)
+        if res is None:
+            continue
+        probs, partial = res
+        out[node] = {
+            "probs": {pk: probs[i] for i, (pk, _c) in enumerate(field)},
+            "partial": bool(partial),
+            "k": k,
+        }
     return out
 
 

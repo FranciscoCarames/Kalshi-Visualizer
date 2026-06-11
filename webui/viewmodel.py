@@ -1769,6 +1769,98 @@ def derived_indicators(chain: list[dict[str, Any]] | None, sport: str) -> list[d
     return cfg.derived_indicators(node_pct)
 
 
+def _cond_ratio(numer_pct: Any, denom_pct: Any) -> tuple[float | None, bool]:
+    """Conditional ratio numer/denom as a %, with an `inverted` flag. Returns (None, False) when a price
+    is missing or the parent is ≤ 0; (None, True) when the ladder is INVERTED (deeper priced above the
+    parent → ratio > 1) — never assert a > 100% 'probability'. Same guard as SportConfig.derived_indicators."""
+    if numer_pct is None or denom_pct is None or denom_pct <= 0:
+        return None, False
+    if numer_pct > denom_pct:
+        return None, True
+    return round(numer_pct / denom_pct * 100, 1), False
+
+
+def _cond_ratio_dv(numer_p: Any, denom_p: Any) -> float | None:
+    """Conditional ratio for de-vigged probabilities (0..1 masses). None when missing, parent ≤ 0, or
+    inverted (deeper mass above parent)."""
+    if numer_p is None or denom_p is None or denom_p <= 0 or numer_p > denom_p:
+        return None
+    return round(numer_p / denom_p * 100, 1)
+
+
+def conditional_probabilities(
+    prows: list[dict[str, Any]],
+    field_rows: list[dict[str, Any]] | None,
+    sport: str,
+) -> list[dict[str, Any]]:
+    """The PDF's core logic, per participant: a head-to-head/outright market IS a conditional probability,
+    `P(deeper | parent) = price(deeper) / price(parent)`. For each parent stage in this participant's
+    ladder emit, computed TWO ways:
+
+    - **Win | stage** — outright-win chance given the stage (the headline conditional);
+    - **Next rung | stage** — the adjacent-rung conversion (identical to `derived_indicators`' adjacent pair);
+
+    each as a **raw** market-price ratio (`*_cond_raw`) and a **field-implied de-vig** ratio (`*_cond_dv`,
+    from `consistency.devig_field_by_node` keyed by this participant's player_key — None when the node's `k`
+    is unmapped or the field is unavailable). `ladder_inverted` marks an inverted ladder (no > 100% value
+    shown); `partial` marks a sparse de-vig field (the de-vig number is a floor). DISPLAY-ONLY: never read
+    by classification, bucketing, or ranking. [] for a sport with no (≥2-node) ladder."""
+    cfg = sports.get_sport(sport)
+    prow_list = list(prows or [])
+    field_list = list(field_rows or [])
+    spec = cfg.ladder_for(field_list or prow_list) if cfg else None
+    order = tuple(getattr(spec, "node_order", ()) or ()) if spec else ()
+    if len(order) < 2:
+        return []
+    win_node = order[-1]
+
+    # This participant's per-node display % (same node set the de-vig uses).
+    pnodes = consistency.build_player_nodes(prow_list)
+    disp = {n: (_num(consistency.representative(pnodes.get(n)).get("display_pct"))
+                if consistency.representative(pnodes.get(n)) else None) for n in order}
+
+    # Field-implied de-vig, indexed by this participant's player_key.
+    pkey = next((r.get("player_key") for r in prow_list if r.get("player_key")), None)
+    field = (consistency.devig_field_by_node(field_list, cfg, ladder=spec)
+             if (field_list and pkey) else {})
+
+    def dv(node: str) -> tuple[float | None, bool]:
+        d = field.get(node)
+        if not d:
+            return None, False
+        return d["probs"].get(pkey), bool(d.get("partial"))
+
+    win_pct = disp.get(win_node)
+    win_dv_p, win_partial = dv(win_node)
+
+    out: list[dict[str, Any]] = []
+    for i, s in enumerate(order[:-1]):
+        parent_pct = disp.get(s)
+        s_dv_p, s_partial = dv(s)
+        win_raw, win_inv = _cond_ratio(win_pct, parent_pct)
+        win_dv = _cond_ratio_dv(win_dv_p, s_dv_p)
+
+        next_node = order[i + 1]
+        next_pct = disp.get(next_node)
+        n_dv_p, n_partial = dv(next_node)
+        next_raw, next_inv = _cond_ratio(next_pct, parent_pct)
+        next_dv = _cond_ratio_dv(n_dv_p, s_dv_p)
+
+        out.append({
+            "parent": s,
+            "parent_pct": parent_pct,
+            "win_node": win_node,
+            "win_cond_raw": win_raw,
+            "win_cond_dv": win_dv,
+            "next_node": next_node,
+            "next_cond_raw": next_raw,
+            "next_cond_dv": next_dv,
+            "ladder_inverted": bool(win_inv or next_inv),
+            "partial": bool(win_partial or s_partial or n_partial),
+        })
+    return out
+
+
 def detail_spreads(prows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Raw adjacent-layer stage-ladder spreads (broader − deeper). Reuses consistency.layer_spreads."""
     return consistency.layer_spreads(list(prows or []))

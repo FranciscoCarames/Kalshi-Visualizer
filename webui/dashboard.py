@@ -454,6 +454,18 @@ _EXPECTED_COLUMNS = [
     {"name": "found", "label": "Found", "field": "found"},
     {"name": "source", "label": "Source", "field": "source"},
 ]
+# Conditional-probability panel (DISPLAY-ONLY): P(deeper | parent) = price(deeper) / price(parent), shown
+# raw AND field-implied (de-vig). De-vig headers say "field-impl. est." — never "probability"/"fair".
+_COND_COLUMNS = [
+    {"name": "parent", "label": "Parent stage", "field": "parent", "align": "left"},
+    {"name": "parent_pct", "label": "Stage %", "field": "parent_pct", "align": "right"},
+    {"name": "win_raw", "label": "Win | stage (raw)", "field": "win_raw", "align": "right"},
+    {"name": "win_dv", "label": "Win | stage (field-impl. est.)", "field": "win_dv", "align": "right"},
+    {"name": "next_node", "label": "Next rung", "field": "next_node", "align": "left"},
+    {"name": "next_raw", "label": "Next | stage (raw)", "field": "next_raw", "align": "right"},
+    {"name": "next_dv", "label": "Next | stage (field-impl. est.)", "field": "next_dv", "align": "right"},
+    {"name": "flag", "label": "", "field": "flag", "align": "left"},
+]
 _DETAIL_CONTRACT_COLUMNS = [
     {"name": "contract", "label": "Contract", "field": "contract"},
     {"name": "category", "label": "Category", "field": "category"},
@@ -810,6 +822,41 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                 shown = "—" if v is None else f"{ind.get('comparator', '')} {v:.0f}%".strip()
                 ui.label(f"Implied: {ind.get('label')} {shown}").classes("text-sm mt-3")
                 ui.label(ind.get("note") or "").classes("text-xs text-gray-500")
+            # Conditional probability (PDF "core logic"): P(deeper | parent) = price(deeper)/price(parent),
+            # shown raw AND field-implied (de-vig over the whole tournament field). DISPLAY-ONLY — never an
+            # edge, never fed to detection. Field-de-vig needs the whole field, so load it once here.
+            cond = vm.conditional_probabilities(
+                prows, engine.tournament_field(sport, opp.get("tournament") or ""), sport)
+            if cond and any(r.get("win_cond_raw") is not None or r.get("next_cond_raw") is not None
+                            for r in cond):
+                def _pf(v: float | None) -> str:
+                    return "—" if v is None else f"{v:.0f}%"
+                any_partial = any(r.get("partial") for r in cond)
+                crows = [{
+                    "parent": r.get("parent"),
+                    "parent_pct": _pf(r.get("parent_pct")),
+                    "win_raw": _pf(r.get("win_cond_raw")),
+                    "win_dv": _pf(r.get("win_cond_dv")),
+                    "next_node": r.get("next_node"),
+                    "next_raw": _pf(r.get("next_cond_raw")),
+                    "next_dv": _pf(r.get("next_cond_dv")),
+                    "flag": "⚠ ladder inverted" if r.get("ladder_inverted") else
+                            ("· field-implied = floor" if r.get("partial") else ""),
+                } for r in cond]
+                ui.label("Conditional probability — chance of converting from a stage").classes(
+                    "font-medium mt-3")
+                ui.table(columns=_COND_COLUMNS, rows=crows, row_key="parent").classes(
+                    "w-full overflow-x-auto")
+                ui.label("P(deeper | parent) = price(deeper) ÷ price(parent). Market-implied; gross, "
+                         "top-of-book, Uncalibrated — NOT a fair value or true probability.").classes(
+                    "text-xs text-gray-500")
+                if any_partial:
+                    ui.label("⚠ Partial field — the field-implied (de-vig) estimate is a FLOOR (lower "
+                             "bound), not a full probability; thinly-priced fields are not inflated.").classes(
+                        "text-xs text-amber-700")
+                if sport == "golf":
+                    ui.label("Golf Top-N can settle for more than N players on a tie (dead heat), so the "
+                             "field-implied estimate is floor-leaning.").classes("text-xs text-gray-500")
             spreads = vm.detail_spreads(prows)
             if spreads:
                 ui.label("Raw stage-ladder spreads").classes("font-medium mt-3")

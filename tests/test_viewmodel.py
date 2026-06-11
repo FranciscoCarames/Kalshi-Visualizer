@@ -932,3 +932,75 @@ def test_risk_budget_row_old_snapshot_missing_new_fields_renders_blank():
     assert row["midpoint_only"] is False
     assert row["parent_over_maxloss"] is None
     assert row["flags"] == []
+
+
+# --- conditional probability (PDF core logic), DISPLAY-ONLY ---------------------------
+def _cc(pk, node, c, pct):
+    return {"player_key": pk, "series": "KXATPADVANCE", "ladder_node": node, "kind": "advance",
+            "display_c": c, "display_pct": pct}
+
+
+def test_conditional_probabilities_raw_matches_derived_indicators():
+    # PDF: P(Win | Reach SF) = 17.5 / 47 = 37.2%. Adjacent-rung raw == derived_indicators exactly.
+    A = [_cc("A", "Reach Semifinal", 47, 47.0), _cc("A", "Reach Final", 30, 30.0),
+         _cc("A", "Win Tournament", 17.5, 17.5)]
+    field = A + [_cc("B", "Reach Semifinal", 43, 43.0), _cc("B", "Win Tournament", 16.0, 16.0),
+                 _cc("C", "Reach Semifinal", 36, 36.0), _cc("C", "Win Tournament", 10.8, 10.8)]
+    rows = vm.conditional_probabilities(A, field, "tennis")
+    sf = next(r for r in rows if r["parent"] == "Reach Semifinal")
+    assert sf["win_cond_raw"] == 37.2
+    # adjacent next-rung raw equals the matching derived_indicators value (no divergence)
+    chain = vm.detail_chain(A, "tennis")
+    di = {i["label"]: round(i["value_pct"], 1) for i in vm.derived_indicators(chain, "tennis")}
+    assert sf["next_cond_raw"] == di["P(Reach Final | Reach Semifinal)"]
+    fin = next(r for r in rows if r["parent"] == "Reach Final")
+    assert fin["win_cond_raw"] == di["P(Win Tournament | Reach Final)"]
+
+
+def test_conditional_probabilities_inverted_ladder_suppresses_value():
+    # Win priced ABOVE Reach Final (inconsistent) ⇒ no value, ladder_inverted flag (never > 100%).
+    A = [_cc("A", "Reach Final", 30, 30.0), _cc("A", "Win Tournament", 40, 40.0)]
+    rows = vm.conditional_probabilities(A, A, "tennis")
+    fin = next(r for r in rows if r["parent"] == "Reach Final")
+    assert fin["win_cond_raw"] is None and fin["ladder_inverted"] is True
+
+
+def test_conditional_probabilities_devig_diverges_from_raw_on_complete_field():
+    # Complete Reach-Final (k=2) + Win (k=1) fields ⇒ de-vig differs from the raw ratio, partial False.
+    rows_in = []
+    for pk in ("A", "B", "C"):
+        rows_in += [_cc(pk, "Reach Final", 70, 70.0), _cc(pk, "Win Tournament", 40, 40.0)]
+    A = [r for r in rows_in if r["player_key"] == "A"]
+    rows = vm.conditional_probabilities(A, rows_in, "tennis")
+    fin = next(r for r in rows if r["parent"] == "Reach Final")
+    assert fin["win_cond_raw"] == 57.1                       # 40/70
+    assert fin["win_cond_dv"] == 50.0                        # (40/120) / (70/210*2)
+    assert fin["win_cond_dv"] != fin["win_cond_raw"] and fin["partial"] is False
+
+
+def test_conditional_probabilities_partial_flag_propagates_on_sparse_field():
+    A = [_cc("A", "Reach Semifinal", 47, 47.0), _cc("A", "Win Tournament", 17.5, 17.5)]
+    rows = vm.conditional_probabilities(A, A, "tennis")     # 1-player field ⇒ sparse ⇒ floor
+    assert any(r["partial"] for r in rows)
+
+
+def test_conditional_probabilities_does_not_mutate_inputs():
+    A = [_cc("A", "Reach Semifinal", 47, 47.0), _cc("A", "Win Tournament", 17.5, 17.5)]
+    before = [dict(r) for r in A]
+    vm.conditional_probabilities(A, A, "tennis")
+    assert A == before
+
+
+def test_conditional_fields_isolated_from_executable_schema():
+    """INVARIANT: the display-only conditional/de-vig fields never leak into the executable surfaces
+    (UNIFIED_COLUMNS / api.Opportunity) that drive classification, bucketing, and ranking."""
+    import api
+    import scanner
+    A = [_cc("A", "Reach Semifinal", 47, 47.0), _cc("A", "Win Tournament", 17.5, 17.5)]
+    cond_fields = set(vm.conditional_probabilities(A, A, "tennis")[0].keys())
+    leaky = {"win_cond_raw", "win_cond_dv", "next_cond_raw", "next_cond_dv", "ladder_inverted"}
+    assert leaky & cond_fields == leaky                                   # the function does emit them
+    assert leaky.isdisjoint(set(scanner.UNIFIED_COLUMNS))                 # ...but not into the unified schema
+    opp_fields = set(getattr(api.Opportunity, "model_fields", None)
+                     or api.Opportunity.__fields__)                       # ...nor the API model
+    assert leaky.isdisjoint(opp_fields)

@@ -167,6 +167,18 @@ def participant_contracts(sport: str, player_key: str, db_path: str | None = Non
     return [r for r in rows if r.get("player_key") == player_key]
 
 
+def tournament_field(sport: str, tournament: str, db_path: str | None = None) -> list[dict[str, Any]]:
+    """Every stored contract row for one tournament (the whole field across all participants) from the
+    latest snapshot (cached), or [] when absent. Mirrors `participant_contracts` but filters on
+    `tournament` instead of `player_key` — feeds the DISPLAY-ONLY field-de-vig conditional panel. No
+    live fetch."""
+    snap = _cached_latest(db_path)
+    if snap is None or not tournament:
+        return []
+    rows = _cached_frame_rows(snap["snapshot_id"], sport, "contracts", db_path)
+    return [r for r in rows if r.get("tournament") == tournament]
+
+
 def participant_checks(sport: str, player_key: str, db_path: str | None = None) -> list[dict[str, Any]]:
     """A participant's stored consistency-check rows for the latest snapshot (cached), or []."""
     snap = _cached_latest(db_path)
