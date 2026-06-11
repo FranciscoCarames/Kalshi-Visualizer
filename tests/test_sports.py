@@ -790,3 +790,25 @@ def test_itf_live_fixtures_flow_through_engine():
         out = dutchbook.find_dutch_books([{**r} for r in pd.DataFrame(rows).to_dict("records")])
         for f in out:
             assert f["status"] == dutchbook.EXECUTABLE_DUTCH_BOOK
+
+
+# --- survivor-count (k) map for the DISPLAY-ONLY conditional-probability panel --------
+def test_survivors_of_maps_unambiguous_nodes_only():
+    """Conservative k map: unambiguous knockout/champion nodes are mapped; fragile nodes (play-in
+    'Reach Playoffs', soccer 'Win group') are deliberately UNMAPPED (None) so the de-vig is skipped."""
+    t = sports.get_sport("tennis")
+    assert (t.survivors_of("Reach Semifinal"), t.survivors_of("Reach Final"),
+            t.survivors_of("Win Tournament")) == (4, 2, 1)
+    g = sports.get_sport("golf")
+    assert (g.survivors_of("Top 20"), g.survivors_of("Top 10"), g.survivors_of("Top 5"),
+            g.survivors_of("Win Tournament")) == (20, 10, 5, 1)
+    s = sports.get_sport("soccer")
+    assert s.survivors_of("Reach Round of 32") == 32 and s.survivors_of("Win the World Cup") == 1
+    assert s.survivors_of("Win group") is None            # ambiguous group cardinality → unmapped
+    for sid in ("nba", "nhl", "nfl", "mlb"):
+        cfg = sports.get_sport(sid)
+        # champion mapped to 1; "Reach Playoffs" deliberately unmapped (play-in churn).
+        champ = cfg.ladder.node_order[-1]
+        assert cfg.survivors_of(champ) == 1
+        assert cfg.survivors_of("Reach Playoffs") is None
+    assert t.survivors_of("Nonexistent Node") is None     # unknown node → None, never a crash

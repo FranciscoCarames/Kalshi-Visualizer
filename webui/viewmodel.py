@@ -22,6 +22,7 @@ from typing import Any, Iterable
 import config
 import consistency
 import data
+import no_structures
 import scanner
 import sports
 import viz
@@ -573,6 +574,241 @@ def near_miss_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str] 
     }
 
 
+# --- NO-anchored structures ("Cheap bounded-loss NO fades") — opt-in, speculative, never actionable -----
+# A cheap convex fade anchored on a Buy-NO leg: a single Buy NO (OUTRIGHT, a directional fade watchlist) or
+# a Buy NO deeper + Buy YES broader band (BAND, bounded loss = cost − 100). Pure band-filter + display-row
+# builders over the membership/threshold-filtered `view`. Ranking leads with the BOUNDED DOWNSIDE and the
+# BREAKEVEN chance (not convexity — convexity alone overranks 1¢ longshots); cheapness stays a filter + a
+# column + the final tiebreak. Integer cents throughout. NEVER read by bucket_of / _rank_key.
+def _is_band(o: dict[str, Any]) -> bool:
+    return o.get("relationship_type") == "no_structure_band"
+
+
+def no_structure_view(opps: Iterable[dict[str, Any]] | None, *, max_loss_c: float,
+                      max_buy_no_c: float = 0, kind: str = "all",
+                      good_quote_only: bool = True) -> list[dict[str, Any]]:
+    """NO-anchored structures whose bounded max-loss ≤ `max_loss_c` ¢. `kind` ∈ {all, band, outright}
+    (band == the ladder-bounded structures; outright == single Buy-NO watchlist). `max_buy_no_c` (0 = off)
+    caps the Buy-NO leg cost — the "cheapest NO" gate. `good_quote_only` keeps only Tight/OK books (the
+    default; the wide/one-sided cheap NOs are usually stale, not opportunities). A row missing a gated field
+    is hidden only when that filter is active."""
+    out: list[dict[str, Any]] = []
+    for o in (opps or []):
+        if o.get("bucket") != "no_structure":
+            continue
+        if kind == "band" and not _is_band(o):
+            continue
+        if kind == "outright" and _is_band(o):
+            continue
+        wc = o.get("worst_case_profit_c")
+        if _isna(wc):
+            continue
+        if max(0.0, -wc) > max_loss_c:                # bounded max-loss ¢ (band: cost−100; outright: cost)
+            continue
+        if max_buy_no_c:
+            no = _num_or_none(o.get("action_2_price_c"))   # the Buy-NO leg cost
+            if no is None or no > max_buy_no_c:
+                continue
+        if good_quote_only and str(o.get("comp_quote_quality") or "") not in ("Tight", "OK"):
+            continue
+        out.append(o)
+    return out
+
+
+def _no_structure_order(group: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Within-section order (improves on convexity-first, which overranks tiny longshots): lowest bounded
+    max-loss first, then lowest breakeven chance, then highest bonus profit, then cheapest Buy-NO, then a
+    stable id tiebreak. Cheapness leads the FILTER + the column; the SORT leads with downside/plausibility."""
+    def key(o: dict[str, Any]) -> tuple:
+        wc = _num_or_none(o.get("worst_case_profit_c"))
+        max_loss = max(0.0, -wc) if wc is not None else float("inf")
+        be = _breakeven_pct(o)
+        be = be if be is not None else float("inf")
+        bonus = _num_or_none(o.get("best_case_profit_c"))
+        bonus = bonus if bonus is not None else float("-inf")
+        no = _num_or_none(o.get("action_2_price_c"))
+        no = no if no is not None else float("inf")
+        return (max_loss, be, -bonus, no, o.get("opportunity_id") or "")
+    return sorted(group, key=key)
+
+
+def no_structure_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str] | None = None,
+                     flash_ids: set[str] | None = None) -> dict[str, Any]:
+    """Display row for the NO-fades table: leads with the Buy-NO cost + bounded max-loss + breakeven chance;
+    convexity is a visible-but-secondary column. Honest: a cheap bounded fade, NOT an edge."""
+    band = _is_band(o)
+    cost = _num_or_none(o.get("cost_c"))
+    bc = _num_or_none(o.get("best_case_profit_c"))
+    wc = _num_or_none(o.get("worst_case_profit_c"))
+    best_payout = (bc + cost) if (bc is not None and cost is not None) else None
+    convexity = round(best_payout / cost, 2) if (best_payout is not None and cost) else None
+    no_c = _num_or_none(o.get("action_2_price_c"))
+    parent_c = _num_or_none(o.get("action_1_price_c"))
+    wins = _wins_if(o) if band else (f"{o.get('detail') or 'the outcome'} does NOT happen")
+    _sized = _sized_at_budget(o)
+    return _stamp_severity({
+        "opportunity_id": o.get("opportunity_id"),
+        "new": o.get("opportunity_id") in new_ids,
+        "_change": (changes or {}).get(o.get("opportunity_id"), ""),
+        "_flash": o.get("opportunity_id") in (flash_ids or set()),
+        "kind": "Band" if band else "Outright",
+        "sport": o.get("sport_label") or o.get("sport") or "",
+        "name": o.get("name") or "", "detail": o.get("detail") or "",
+        "wins_if": wins,
+        "buy_no": no_c,                                # the cheap-NO anchor cost
+        "parent_yes": parent_c,                        # the bounding Buy-YES cost (blank for an outright)
+        "cost": cost,
+        "max_loss": None if wc is None else max(0.0, -wc),
+        "breakeven": _breakeven_pct(o),                # min payoff chance % the bounded loss needs (gross)
+        "bonus_profit": bc,                            # net gain in the win state (band: 200−cost)
+        "convexity": convexity,                        # best payout ÷ cost — secondary, not the headline
+        "max_units": _num_or_none(o.get("exec_min_size")),
+        "loss_100": round(_sized[1] / 100, 1) if _sized else None,
+        "upside_100": round(_sized[2] / 100, 1) if _sized else None,
+        "quote_health": str(o.get("comp_quote_quality") or ""),
+        "caveat": "; ".join(p for p in (o.get("settlement_caveat"), o.get("blocked_reason"))
+                            if isinstance(p, str) and p),
+    }, o)
+
+
+def no_structure_explainer(o: dict[str, Any]) -> list[tuple[str, str]]:
+    """Plain-English decision lines for the detail panel of a NO-anchored structure. For a band, the 3-state
+    payoff is reused from `consistency.scenario_payoffs` (the same enumeration the risk-budget panel uses)."""
+    if o.get("bucket") != "no_structure":
+        return []
+    band = _is_band(o)
+    wc = _num_or_none(o.get("worst_case_profit_c"))
+    be = _breakeven_pct(o)
+    wins = _wins_if(o) if band else f"{o.get('detail') or 'the outcome'} does not happen"
+    lines: list[tuple[str, str]] = [
+        ("What is this?", ("A cheap bounded fade — Buy NO the deeper rung, Buy YES the broader rung that "
+                           "contains it, so you win the band 'reaches the broader stage but not the deeper "
+                           "one'. NOT an edge, not arbitrage.") if band else
+                          ("A single cheap Buy NO — a directional fade (you win if the outcome does NOT "
+                           "happen). A watchlist idea, NOT an edge: it's cheap because the market thinks "
+                           "the YES is very likely.")),
+        ("Can I lose money?", f"Yes — capped at {'—' if wc is None else f'{max(0.0, -wc):.0f}¢/unit'} "
+                              f"(the Buy-NO {'overpay' if band else 'cost'}). You lose it unless the fade "
+                              "pays."),
+        ("Wins if", wins),
+        ("Breakeven chance", f"{'—' if be is None else f'{be:g}%'} — the minimum chance the win state needs "
+                             "before fees/slippage (gross, top-of-book, uncalibrated)."),
+    ]
+    if band:
+        payoff = consistency.scenario_payoffs({**o, "status": "RISK_BUDGET_CANDIDATE"},
+                                              units=o.get("exec_min_size"))
+        if payoff:
+            for s in payoff["scenarios"]:
+                pc = s.get("profit_c")
+                lines.append((f"  · {s['label']}", "—" if pc is None else f"{pc:+.0f}¢/unit"))
+    return lines
+
+
+# --- NO-fade ladder (per-participant) + cascade upside score (DISPLAY-ONLY) ---------------------------
+# A participant's path to a deep outcome is a chain of YES events; a single NO (one elimination) cascades —
+# every deeper outcome reverts to NO. So a cheap NO at a BROAD rung is a maximally-leveraged longshot fade.
+# `cascade_score = (max-win ÷ cost) × (deeper rungs dominated)` is an ORDINAL longshot-upside/consequence
+# score — NOT EV, probability, fair value, or mispricing; a higher score usually means a LOWER implied
+# chance. Pure + display-only: never read by classify / bucket_of / _rank_key.
+def no_fade_ladder(prows: list[dict[str, Any]], sport: str, *,
+                   oid_by_ticker: dict[str, str] | None = None) -> dict[str, Any] | None:
+    """One participant's full NO-fade ladder card from their stored contract rows, or None when there is
+    no ≥2-node ladder / no rows / no scorable cheap rung (fail-closed). Reuses
+    `consistency.build_player_nodes` + `representative`, `cfg.ladder_for`, `consistency._buy_no_c`, and
+    `no_structures._firm`. `oid_by_ticker` maps a cheap-NO opp's NO-leg `market_ticker` → opportunity_id
+    (purely structural — no label parsing); a rung is `cheap` iff its representative ticker is in that map."""
+    cfg = sports.get_sport(sport)
+    rows = list(prows or [])
+    if not rows:
+        return None                                          # fail-closed: no frames → no card
+    spec = cfg.ladder_for(rows) if cfg else None
+    order = tuple(getattr(spec, "node_order", ()) or ()) if spec else ()
+    if len(order) < 2:
+        return None
+    oid_by_ticker = oid_by_ticker or {}
+    nodes = consistency.build_player_nodes(rows)
+    n = len(order)
+    rungs: list[dict[str, Any]] = []
+    prev_no: float | None = None
+    inverted = False
+    for i, node in enumerate(order):
+        rep = consistency.representative(nodes.get(node))
+        firm = bool(rep) and no_structures._firm(rep)
+        no_c = consistency._buy_no_c(rep) if firm else None
+        ticker = str(rep.get("market_ticker") or "") if rep else ""
+        cheap = bool(ticker) and ticker in oid_by_ticker
+        dominated = (n - 1) - i                               # strictly-deeper rungs this NO collapses
+        zero_cost = no_c is not None and no_c <= 0
+        if no_c is not None and no_c > 0:
+            max_win: float | None = 100 - no_c
+            leverage: float | None = round(max_win / no_c, 2)
+            cascade_score: float | None = round(leverage * dominated, 1)
+            if prev_no is not None and no_c < prev_no:       # NO cost should rise broad→deep
+                inverted = True
+            prev_no = no_c
+        else:
+            max_win = (100 - no_c) if no_c is not None else None
+            leverage = cascade_score = None
+        rungs.append({
+            "rung": node, "reach_pct": _num(rep.get("display_pct")) if rep else None,
+            "no_c": no_c, "max_win": max_win, "leverage": leverage, "dominated": dominated,
+            "cascade_score": cascade_score, "cheap": cheap, "zero_cost": zero_cost,
+            "opportunity_id": oid_by_ticker.get(ticker) if cheap else None,
+            "quote": (rep.get("quote_quality") or "") if rep else "",
+            "size": _num(rep.get("yes_bid_size")) if rep else None,
+            "market_ticker": ticker,
+        })
+    scorable = [r for r in rungs if r["cheap"] and r["cascade_score"] is not None]
+    if not scorable:
+        return None                  # gated but no scorable cheap LADDER rung (e.g. cheap NO is a prop)
+    top = max(scorable, key=lambda r: r["cascade_score"])
+    win_rep = consistency.representative(nodes.get(order[-1]))
+    return {
+        "sport": sport, "sport_label": getattr(cfg, "label", sport) if cfg else sport,
+        "player": next((r.get("player") for r in rows if r.get("player")), ""),
+        "player_key": next((r.get("player_key") for r in rows if r.get("player_key")), ""),
+        "tournament": next((r.get("tournament") for r in rows if r.get("tournament")), ""),
+        "win_label": order[-1],
+        "implied_win_pct": _num(win_rep.get("display_pct")) if win_rep else None,
+        "card_score": top["cascade_score"], "top_rung": top["rung"],
+        "safe_key": min(r["no_c"] for r in scorable),        # cheapest cheap-rung NO = lowest max-loss
+        "inverted": inverted,
+        "rungs": rungs,
+    }
+
+
+def no_fade_ladder_view(opps: Iterable[dict[str, Any]] | None, prows_for, *, max_loss_c: float,
+                        max_buy_no_c: float = 0, kind: str = "all",
+                        sort: str = "safe") -> list[dict[str, Any]]:
+    """Per-participant NO-fade ladder cards. Participants are GATED by the cheap-NO opps (reuse
+    `no_structure_view`) grouped by the opp's structured `(sport, player_key, tournament)`; each card's
+    full ladder is rebuilt from `prows_for(sport, player_key, tournament)` (the dashboard injects stored
+    contract rows — keeps this pure). `sort="cascade"` → highest card cascade score first (longshot
+    upside); `sort="safe"` → lowest cheap-rung max-loss first (default)."""
+    gated = no_structure_view(opps, max_loss_c=max_loss_c, max_buy_no_c=max_buy_no_c, kind=kind)
+    groups: dict[tuple[str, str, str], list[dict[str, Any]]] = {}
+    for o in gated:
+        key = (str(o.get("sport") or ""), str(o.get("player_key") or ""), str(o.get("tournament") or ""))
+        if not key[1]:
+            continue
+        groups.setdefault(key, []).append(o)
+    cards: list[dict[str, Any]] = []
+    for (sport, pkey, tournament), gopps in groups.items():
+        oid_by_ticker: dict[str, str] = {}
+        for o in gopps:                                       # NO-leg ticker → opp id (outright + band child)
+            for t in (o.get("ticker"), o.get("child_ticker")):
+                if t:
+                    oid_by_ticker[str(t)] = o.get("opportunity_id")
+        card = no_fade_ladder(prows_for(sport, pkey, tournament), sport, oid_by_ticker=oid_by_ticker)
+        if card is not None:
+            cards.append(card)
+    if sort == "cascade":
+        cards.sort(key=lambda c: (-(c["card_score"]), c.get("player") or "", c["player_key"]))
+    else:
+        cards.sort(key=lambda c: (c["safe_key"], c.get("player") or "", c["player_key"]))
+    return cards
+
+
 # World Cup Qualifier Setups — human labels for the setup types (two exact-order tiers + game support).
 _SETUP_TYPE_LABEL = {
     "exact_order_top2_bundle": "Diagnostic top-two bundle",
@@ -977,8 +1213,10 @@ def filter_opps(opps: Iterable[dict[str, Any]], *, sports: Iterable[str] | None 
 # dashboard). Thresholds spare Actionable / dutch-book, so for those shown == in_scope by construction.
 _MEMBERSHIP_KEYS = ("sports", "tournaments", "participant")
 _BUCKET_LABEL = {"actionable": "Actionable", "review_signal": "Review", "blocked": "Blocked",
-                 "risk_budget": "Speculative", "near_miss": "Near-miss", "qualifier_setup": "Qualifier setups"}
-_BUCKET_ORDER = ["actionable", "review_signal", "blocked", "risk_budget", "near_miss", "qualifier_setup"]
+                 "risk_budget": "Speculative", "near_miss": "Near-miss", "qualifier_setup": "Qualifier setups",
+                 "no_structure": "Cheap NO fades"}
+_BUCKET_ORDER = ["actionable", "review_signal", "blocked", "risk_budget", "near_miss", "qualifier_setup",
+                 "no_structure"]
 
 
 def _count_by_bucket(rows: Iterable[dict[str, Any]]) -> dict[str, int]:
@@ -1342,6 +1580,11 @@ def rank_opps(opps: Iterable[dict[str, Any]] | None, mode: str = RANK_MODE_DEFAU
     for bucket in sorted(by_bucket, key=lambda b: scanner.BUCKET_PRIORITY.get(b, 99)):
         group = by_bucket[bucket]
         is_risk = bucket == "risk_budget"
+        if bucket == "no_structure":
+            # Independent of the global rank mode: a cheap-NO fade is ordered by bounded downside +
+            # breakeven (see _no_structure_order), never by the executable-edge modes.
+            out.extend(_no_structure_order(group))
+            continue
         if mode == "spread_upside":
             out.extend(_spread_upside_order(group, is_risk))
         elif mode == "spread_ratio":
@@ -1630,6 +1873,98 @@ def derived_indicators(chain: list[dict[str, Any]] | None, sport: str) -> list[d
     cfg = sports.get_sport(sport)
     node_pct = {r.get("layer"): _num(r.get("display_pct")) for r in (chain or [])}
     return cfg.derived_indicators(node_pct)
+
+
+def _cond_ratio(numer_pct: Any, denom_pct: Any) -> tuple[float | None, bool]:
+    """Conditional ratio numer/denom as a %, with an `inverted` flag. Returns (None, False) when a price
+    is missing or the parent is ≤ 0; (None, True) when the ladder is INVERTED (deeper priced above the
+    parent → ratio > 1) — never assert a > 100% 'probability'. Same guard as SportConfig.derived_indicators."""
+    if numer_pct is None or denom_pct is None or denom_pct <= 0:
+        return None, False
+    if numer_pct > denom_pct:
+        return None, True
+    return round(numer_pct / denom_pct * 100, 1), False
+
+
+def _cond_ratio_dv(numer_p: Any, denom_p: Any) -> float | None:
+    """Conditional ratio for de-vigged probabilities (0..1 masses). None when missing, parent ≤ 0, or
+    inverted (deeper mass above parent)."""
+    if numer_p is None or denom_p is None or denom_p <= 0 or numer_p > denom_p:
+        return None
+    return round(numer_p / denom_p * 100, 1)
+
+
+def conditional_probabilities(
+    prows: list[dict[str, Any]],
+    field_rows: list[dict[str, Any]] | None,
+    sport: str,
+) -> list[dict[str, Any]]:
+    """The PDF's core logic, per participant: a head-to-head/outright market IS a conditional probability,
+    `P(deeper | parent) = price(deeper) / price(parent)`. For each parent stage in this participant's
+    ladder emit, computed TWO ways:
+
+    - **Win | stage** — outright-win chance given the stage (the headline conditional);
+    - **Next rung | stage** — the adjacent-rung conversion (identical to `derived_indicators`' adjacent pair);
+
+    each as a **raw** market-price ratio (`*_cond_raw`) and a **field-implied de-vig** ratio (`*_cond_dv`,
+    from `consistency.devig_field_by_node` keyed by this participant's player_key — None when the node's `k`
+    is unmapped or the field is unavailable). `ladder_inverted` marks an inverted ladder (no > 100% value
+    shown); `partial` marks a sparse de-vig field (the de-vig number is a floor). DISPLAY-ONLY: never read
+    by classification, bucketing, or ranking. [] for a sport with no (≥2-node) ladder."""
+    cfg = sports.get_sport(sport)
+    prow_list = list(prows or [])
+    field_list = list(field_rows or [])
+    spec = cfg.ladder_for(field_list or prow_list) if cfg else None
+    order = tuple(getattr(spec, "node_order", ()) or ()) if spec else ()
+    if len(order) < 2:
+        return []
+    win_node = order[-1]
+
+    # This participant's per-node display % (same node set the de-vig uses).
+    pnodes = consistency.build_player_nodes(prow_list)
+    disp = {n: (_num(consistency.representative(pnodes.get(n)).get("display_pct"))
+                if consistency.representative(pnodes.get(n)) else None) for n in order}
+
+    # Field-implied de-vig, indexed by this participant's player_key.
+    pkey = next((r.get("player_key") for r in prow_list if r.get("player_key")), None)
+    field = (consistency.devig_field_by_node(field_list, cfg, ladder=spec)
+             if (field_list and pkey) else {})
+
+    def dv(node: str) -> tuple[float | None, bool]:
+        d = field.get(node)
+        if not d:
+            return None, False
+        return d["probs"].get(pkey), bool(d.get("partial"))
+
+    win_pct = disp.get(win_node)
+    win_dv_p, win_partial = dv(win_node)
+
+    out: list[dict[str, Any]] = []
+    for i, s in enumerate(order[:-1]):
+        parent_pct = disp.get(s)
+        s_dv_p, s_partial = dv(s)
+        win_raw, win_inv = _cond_ratio(win_pct, parent_pct)
+        win_dv = _cond_ratio_dv(win_dv_p, s_dv_p)
+
+        next_node = order[i + 1]
+        next_pct = disp.get(next_node)
+        n_dv_p, n_partial = dv(next_node)
+        next_raw, next_inv = _cond_ratio(next_pct, parent_pct)
+        next_dv = _cond_ratio_dv(n_dv_p, s_dv_p)
+
+        out.append({
+            "parent": s,
+            "parent_pct": parent_pct,
+            "win_node": win_node,
+            "win_cond_raw": win_raw,
+            "win_cond_dv": win_dv,
+            "next_node": next_node,
+            "next_cond_raw": next_raw,
+            "next_cond_dv": next_dv,
+            "ladder_inverted": bool(win_inv or next_inv),
+            "partial": bool(win_partial or s_partial or n_partial),
+        })
+    return out
 
 
 def detail_spreads(prows: list[dict[str, Any]]) -> list[dict[str, Any]]:

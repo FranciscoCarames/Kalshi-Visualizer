@@ -129,6 +129,8 @@ def coverage(db_path: str | None = None) -> dict[str, Any]:
         # Volume counters + Kalshi requests (PR 21a) — distinct from the opportunity count.
         "contracts_scanned": meta.get("contracts_scanned", 0), "checks_tested": meta.get("checks_tested", 0),
         "kalshi_requests": meta.get("kalshi_requests"),
+        # Phase 0 instrumentation: retry-backoffs + seconds this scan spent retrying (429/5xx/network).
+        "retry_count": meta.get("retry_count"), "backoff_seconds_total": meta.get("backoff_seconds_total"),
     }
 
 
@@ -165,6 +167,18 @@ def participant_contracts(sport: str, player_key: str, db_path: str | None = Non
         return []
     rows = _cached_frame_rows(snap["snapshot_id"], sport, "contracts", db_path)
     return [r for r in rows if r.get("player_key") == player_key]
+
+
+def tournament_field(sport: str, tournament: str, db_path: str | None = None) -> list[dict[str, Any]]:
+    """Every stored contract row for one tournament (the whole field across all participants) from the
+    latest snapshot (cached), or [] when absent. Mirrors `participant_contracts` but filters on
+    `tournament` instead of `player_key` — feeds the DISPLAY-ONLY field-de-vig conditional panel. No
+    live fetch."""
+    snap = _cached_latest(db_path)
+    if snap is None or not tournament:
+        return []
+    rows = _cached_frame_rows(snap["snapshot_id"], sport, "contracts", db_path)
+    return [r for r in rows if r.get("tournament") == tournament]
 
 
 def participant_checks(sport: str, player_key: str, db_path: str | None = None) -> list[dict[str, Any]]:

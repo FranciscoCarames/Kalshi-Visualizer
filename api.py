@@ -408,7 +408,8 @@ def get_alerts(persistence_s: float | None = None, db_path: str | None = Depends
 
 def _scan_run_fn(fetch_fn: Callable[[str], tuple]) -> Callable[[str], tuple]:
     def run_fn(fetched_at: str) -> tuple:
-        return scanner.run_scan(fetch_fn, fetched_at=fetched_at, request_count=kalshi_client.request_count)
+        return scanner.run_scan(fetch_fn, fetched_at=fetched_at, request_count=kalshi_client.request_count,
+                                retry_stats=kalshi_client.retry_stats)
     return run_fn
 
 

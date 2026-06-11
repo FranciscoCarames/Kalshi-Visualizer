@@ -332,6 +332,52 @@ _NEARMISS_COLUMNS = [
     {"name": "note", "label": "Note", "field": "note", "align": "left"},
 ]
 
+# Cheap NO fades (NO-anchored structures) table — leads with the Buy-NO anchor cost + bounded max-loss +
+# breakeven chance; convexity is a visible-but-secondary column (it overranks tiny longshots if it leads).
+# A speculative, opt-in, never-actionable fade — NOT an edge.
+_NO_STRUCTURE_COLUMNS = [
+    {"name": "new", "label": "", "field": "new", "align": "center", "required": True},
+    {"name": "kind", "label": "Kind", "field": "kind", "align": "center", "sortable": True},
+    {"name": "sport", "label": "Sport", "field": "sport", "align": "center", "sortable": True},
+    {"name": "name", "label": "Participant", "field": "name", "align": "left", "sortable": True},
+    {"name": "wins_if", "label": "Wins if…", "field": "wins_if", "align": "left", "sortable": True},
+    {"name": "buy_no", "label": "Buy NO ¢", "field": "buy_no", "align": "center", "sortable": True},
+    {"name": "cost", "label": "Cost ¢", "field": "cost", "align": "center", "sortable": True},
+    {"name": "max_loss", "label": "Max loss ¢", "field": "max_loss", "align": "center", "sortable": True},
+    {"name": "breakeven", "label": "Breakeven %", "field": "breakeven", "align": "center", "sortable": True},
+    {"name": "bonus_profit", "label": "Win profit ¢", "field": "bonus_profit", "align": "center", "sortable": True},
+    {"name": "convexity", "label": "Payout÷cost", "field": "convexity", "align": "center", "sortable": True},
+    {"name": "quote_health", "label": "Quote health", "field": "quote_health", "align": "center", "sortable": True},
+    {"name": "caveat", "label": "Caveat", "field": "caveat", "align": "left"},
+    # --- default-hidden context ---
+    {"name": "detail", "label": "Detail", "field": "detail", "align": "left"},
+    {"name": "parent_yes", "label": "Buy YES (bound) ¢", "field": "parent_yes", "align": "center", "sortable": True},
+    {"name": "max_units", "label": "Max units", "field": "max_units", "align": "center", "sortable": True},
+    {"name": "loss_100", "label": "Max loss @ $100 ($)", "field": "loss_100", "align": "center", "sortable": True},
+    {"name": "upside_100", "label": "Best upside @ $100 ($)", "field": "upside_100", "align": "center", "sortable": True},
+]
+_NO_STRUCTURE_HIDDEN = ("detail", "parent_yes", "max_units", "loss_100", "upside_100")
+_NO_STRUCTURE_NUMS = ("buy_no", "parent_yes", "cost", "max_loss", "breakeven", "bonus_profit",
+                      "convexity", "max_units", "loss_100", "upside_100")
+# Kind filter options for the Cheap-NO-fades section.
+_NO_STRUCTURE_KINDS = {"all": "All", "band": "Bounded bands", "outright": "Single NO"}
+# Per-participant NO-fade LADDER (grouped view): one row per rung, broad→deep. "Cascade score" is an
+# ORDINAL longshot-upside score (max-win÷cost × deeper rungs dominated) — never EV/probability/fair value.
+_NO_FADE_LADDER_COLUMNS = [
+    {"name": "rung", "label": "Rung (broad → deep)", "field": "rung", "align": "left"},
+    {"name": "reach_pct", "label": "Reach %", "field": "reach_pct", "align": "right"},
+    {"name": "buy_no", "label": "Buy NO ¢", "field": "buy_no", "align": "right"},
+    {"name": "max_win", "label": "Max win ¢", "field": "max_win", "align": "right"},
+    {"name": "leverage", "label": "Leverage ×", "field": "leverage", "align": "right"},
+    {"name": "dominated", "label": "Dominates (deeper)", "field": "dominated", "align": "right"},
+    {"name": "cascade", "label": "Cascade score", "field": "cascade", "align": "right", "sortable": True},
+    {"name": "quote", "label": "Quote", "field": "quote", "align": "center"},
+    {"name": "size", "label": "Size", "field": "size", "align": "right"},
+    {"name": "tag", "label": "", "field": "tag", "align": "left"},
+]
+_NO_FADE_SORTS = {"safe": "Safest first", "cascade": "Cascade upside (longshot)"}
+_NO_FADE_LADDER_MAX_CARDS = 50          # cap rebuilt expansion cards per refresh (no silent truncation)
+
 # Qualifier-setups table (#4/#5). NO gross-edge / ROI / size / profit columns (those are blank for a
 # non-Actionable signal and would imply tradability). Default-visible columns are the exact-order top-two
 # economics; the rest start hidden behind the column chooser. Numeric columns hold RAW numbers (cell slots
@@ -423,6 +469,18 @@ _EXPECTED_COLUMNS = [
     {"name": "layer", "label": "Layer", "field": "layer"},
     {"name": "found", "label": "Found", "field": "found"},
     {"name": "source", "label": "Source", "field": "source"},
+]
+# Conditional-probability panel (DISPLAY-ONLY): P(deeper | parent) = price(deeper) / price(parent), shown
+# raw AND field-implied (de-vig). De-vig headers say "field-impl. est." — never "probability"/"fair".
+_COND_COLUMNS = [
+    {"name": "parent", "label": "Parent stage", "field": "parent", "align": "left"},
+    {"name": "parent_pct", "label": "Stage %", "field": "parent_pct", "align": "right"},
+    {"name": "win_raw", "label": "Win | stage (raw)", "field": "win_raw", "align": "right"},
+    {"name": "win_dv", "label": "Win | stage (field-impl. est.)", "field": "win_dv", "align": "right"},
+    {"name": "next_node", "label": "Next rung", "field": "next_node", "align": "left"},
+    {"name": "next_raw", "label": "Next | stage (raw)", "field": "next_raw", "align": "right"},
+    {"name": "next_dv", "label": "Next | stage (field-impl. est.)", "field": "next_dv", "align": "right"},
+    {"name": "flag", "label": "", "field": "flag", "align": "left"},
 ]
 _DETAIL_CONTRACT_COLUMNS = [
     {"name": "contract", "label": "Contract", "field": "contract"},
@@ -580,6 +638,25 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             nm_switch = ui.switch("Near-miss books", value=True)  # PR A2: on (collapsed in PR C)
             nm_max_over = ui.number("Max overpay ¢", value=config.NEAR_MISS_DEFAULT_OVER_C,
                                     min=1, max=config.NEAR_MISS_MAX_OVER_C, format="%.0f").classes("w-28")
+            ns_switch = ui.switch("Cheap NO fades", value=True).tooltip(  # on by default (promoted below Bounded-Loss)
+                "A speculative, opt-in fade: the cheapest Buy-NO you can take, optionally bounded by a Buy-YES "
+                "on the broader rung that contains it (a defined band). NOT an edge — a cheap NO is cheap "
+                "because the market thinks the YES is likely. Gross, top-of-book, uncalibrated.")
+            ns_kind = ui.select(_NO_STRUCTURE_KINDS, value="all", label="NO-fade kind").props(
+                "stack-label").classes("min-w-[9rem]")
+            ns_max_loss = ui.number("Max loss ¢", value=config.NO_STRUCTURE_DEFAULT_MAX_LOSS_C,
+                                    min=0, max=config.NO_STRUCTURE_BAND_MAX_LOSS_C, format="%.0f").classes("w-28")
+            ns_max_buy_no = ui.number("Max Buy-NO ¢", value=config.NO_STRUCTURE_DEFAULT_MAX_BUY_NO_C,
+                                      min=0, max=config.NO_STRUCTURE_OUTRIGHT_MAX_C, format="%.0f").classes(
+                "w-32").tooltip("Cap the Buy-NO anchor cost — the 'cheapest NO' gate. 0 = off.")
+            ns_group = ui.switch("Group by participant (ladder)", value=False).tooltip(
+                "Group the cheap NOs into each participant's containment ladder (broad → deep). A single NO "
+                "anywhere cascades — one elimination = no-win — so a cheap NO at a broad rung is a "
+                "maximally-leveraged longshot fade.")
+            ns_sort = ui.select(_NO_FADE_SORTS, value="safe", label="Ladder sort").props(
+                "stack-label").classes("min-w-[12rem]").tooltip(
+                "Cascade score is an ORDINAL longshot-upside score — NOT EV, probability, fair value, or "
+                "mispricing. A higher score usually means a LOWER implied chance.")
         ui.label("Filters & thresholds").classes("text-sm font-bold mt-2")
         with ui.row().classes("items-end gap-4 flex-wrap"):
             active_sw = ui.switch("Active only").tooltip("Hide non-active (finalized/settled) markets.")
@@ -746,6 +823,9 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             # PR E — bounded-loss decision block (Can I lose money? / Wins big if / Why ranked / Why skip).
             for _lbl, _txt in vm.speculative_explainer(opp):
                 ui.label(f"{_lbl}: {_txt}").classes("text-sm text-gray-700")
+            # Cheap-NO-fade decision block (what is this / can I lose money / wins if / breakeven / payoff).
+            for _lbl, _txt in vm.no_structure_explainer(opp):
+                ui.label(f"{_lbl}: {_txt}").classes("text-sm text-gray-700")
             avail = engine.frame_availability()
             if avail != "present" or not pkey:
                 ui.label("Evidence frames not captured for this snapshot — detail tables unavailable."
@@ -766,6 +846,41 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                 shown = "—" if v is None else f"{ind.get('comparator', '')} {v:.0f}%".strip()
                 ui.label(f"Implied: {ind.get('label')} {shown}").classes("text-sm mt-3")
                 ui.label(ind.get("note") or "").classes("text-xs text-gray-500")
+            # Conditional probability (PDF "core logic"): P(deeper | parent) = price(deeper)/price(parent),
+            # shown raw AND field-implied (de-vig over the whole tournament field). DISPLAY-ONLY — never an
+            # edge, never fed to detection. Field-de-vig needs the whole field, so load it once here.
+            cond = vm.conditional_probabilities(
+                prows, engine.tournament_field(sport, opp.get("tournament") or ""), sport)
+            if cond and any(r.get("win_cond_raw") is not None or r.get("next_cond_raw") is not None
+                            for r in cond):
+                def _pf(v: float | None) -> str:
+                    return "—" if v is None else f"{v:.0f}%"
+                any_partial = any(r.get("partial") for r in cond)
+                crows = [{
+                    "parent": r.get("parent"),
+                    "parent_pct": _pf(r.get("parent_pct")),
+                    "win_raw": _pf(r.get("win_cond_raw")),
+                    "win_dv": _pf(r.get("win_cond_dv")),
+                    "next_node": r.get("next_node"),
+                    "next_raw": _pf(r.get("next_cond_raw")),
+                    "next_dv": _pf(r.get("next_cond_dv")),
+                    "flag": "⚠ ladder inverted" if r.get("ladder_inverted") else
+                            ("· field-implied = floor" if r.get("partial") else ""),
+                } for r in cond]
+                ui.label("Conditional probability — chance of converting from a stage").classes(
+                    "font-medium mt-3")
+                ui.table(columns=_COND_COLUMNS, rows=crows, row_key="parent").classes(
+                    "w-full overflow-x-auto")
+                ui.label("P(deeper | parent) = price(deeper) ÷ price(parent). Market-implied; gross, "
+                         "top-of-book, Uncalibrated — NOT a fair value or true probability.").classes(
+                    "text-xs text-gray-500")
+                if any_partial:
+                    ui.label("⚠ Partial field — the field-implied (de-vig) estimate is a FLOOR (lower "
+                             "bound), not a full probability; thinly-priced fields are not inflated.").classes(
+                        "text-xs text-amber-700")
+                if sport == "golf":
+                    ui.label("Golf Top-N can settle for more than N players on a tie (dead heat), so the "
+                             "field-implied estimate is floor-leaning.").classes("text-xs text-gray-500")
             spreads = vm.detail_spreads(prows)
             if spreads:
                 ui.label("Raw stage-ladder spreads").classes("font-medium mt-3")
@@ -950,15 +1065,35 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
     rb_vertical.on_select(_on_select(rb_vertical))
     rb_calendar.on_select(_on_select(rb_calendar))
 
+    # Cheap NO fades (NO-anchored structures): promoted directly BELOW Bounded-Loss Bets and ON by default —
+    # it's the closest sibling (a cheap convex fade anchored on a Buy-NO leg). Collapsible + switch-gated like
+    # the other watch-only sections. A speculative watch-only fade, NOT an edge.
+    ns_expansion, ns_title, ns_cols_row = _expansion_header("Cheap NO fades — bounded-loss NO anchor (watch-only)")
+    with ns_expansion:
+        ui.label("The cheapest Buy-NO you can take. A 'band' bounds it with a Buy-YES on the broader rung "
+                 "that contains it, so loss is capped at the small overpay (cost − 100¢) and the "
+                 "'reaches broader, not deeper' window pays about +$1; a 'single NO' is an unbounded "
+                 "directional fade watchlist. A cheap NO is cheap because the market thinks the YES is "
+                 "likely — this is NOT an edge. Gross, top-of-book, uncalibrated.").classes(
+                     "text-xs text-gray-500")
+        ns_table = ui.table(columns=_NO_STRUCTURE_COLUMNS, rows=[], row_key="opportunity_id", selection="single",
+                            pagination=10).props("dense").classes("w-full overflow-x-auto opp-sel")
+        # Grouped per-participant ladder cards (opt-in via ns_group) — rebuilt in refresh_no_structure.
+        ns_cards = ui.column().classes("w-full gap-2")
+    ns_table.on_select(_on_select(ns_table))
+
     # World Cup Qualifier Setups (PR3): a separate, default-on, opt-in DIAGNOSTIC section — kept out of the
     # strict Actionable/Review/Blocked sections. Populated by the exact-order (#4) top-two bundles + game-
     # support (#5) signals; the flagged baskets/spreads still live in their own sections (PR1 badge).
-    qs_hdr = _section_header(
-        "Qualifier setups — World Cup group-stage ideas & signals",
-        "Speculative top-two ideas (review-only) + diagnostic reference bundles + game-support signals — "
-        "gross, top-of-book, settlement-unverified; NOT arbitrage and never Actionable.")
-    qs_table = ui.table(columns=_QS_COLUMNS, rows=[], row_key="opportunity_id", selection="single",
-                        pagination=10).props("dense").classes("w-full overflow-x-auto opp-sel")
+    # Collapsible like the other watch-only sections (switch-gated via qs_switch).
+    qs_expansion, qs_title, qs_cols_row = _expansion_header(
+        "Qualifier setups — World Cup group-stage ideas & signals")
+    with qs_expansion:
+        ui.label("Speculative top-two ideas (review-only) + diagnostic reference bundles + game-support "
+                 "signals — gross, top-of-book, settlement-unverified; NOT arbitrage and never "
+                 "Actionable.").classes("text-xs text-gray-500")
+        qs_table = ui.table(columns=_QS_COLUMNS, rows=[], row_key="opportunity_id", selection="single",
+                            pagination=10).props("dense").classes("w-full overflow-x-auto opp-sel")
     qs_table.on_select(_on_select(qs_table))
 
     nm_expansion, nm_title, nm_cols_row = _expansion_header("Overpriced Books — flat guaranteed loss (watch-only)")
@@ -970,7 +1105,8 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                             pagination=10).props("dense").classes("w-full overflow-x-auto opp-sel")
     nm_table.on_select(_on_select(nm_table))
 
-    _sel_tables.extend([actionable, review, blocked, qs_table, rb_all, rb_vertical, rb_calendar, nm_table])
+    _sel_tables.extend([actionable, review, blocked, qs_table, rb_all, rb_vertical, rb_calendar, nm_table,
+                        ns_table])
     for _t in _sel_tables:                 # the change-signal / NEW-badge indicator column on every table
         _t.add_slot("body-cell-new", _CHANGE_CELL_SLOT)
     for _t in (actionable, review, blocked):
@@ -1001,6 +1137,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             "HIGHER = better — more in-the-money probability per cent actually at risk; deep-longshot parents "
             "sink. Gross, top-of-book, uncalibrated.", ""))
     nm_table.add_slot("body-cell-note", _NOTE_CELL_SLOT)    # readable wrapping note
+    ns_table.add_slot("body-cell-caveat", _CAVEAT_CELL_SLOT)   # compact severity chip (same as the rb tables)
     # Qualifier-setups: compact caveat chips + the full prose (hidden col); the two quote columns show the
     # label while sorting on their numeric rank.
     qs_table.add_slot("body-cell-caveat", _QS_CAVEAT_CELL_SLOT)
@@ -1018,6 +1155,8 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             _rb.add_slot(f"body-cell-{_f}", _num_cell_slot(_f))
     for _f in ("cost", "overpay"):
         nm_table.add_slot(f"body-cell-{_f}", _num_cell_slot(_f))
+    for _f in _NO_STRUCTURE_NUMS:
+        ns_table.add_slot(f"body-cell-{_f}", _num_cell_slot(_f))
     for _f in ("qualifier", "cost", "if_top2", "if_not_top2", "max_units", "support", "legs",
                "highest_leg", "median_leg", "range_leg", "inactive_legs", "no_quote_legs", "wide_legs",
                "comparator_spread", "worst_leg_spread"):
@@ -1031,7 +1170,8 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                      (rb_all, "No bounded-loss bets in the current filters."),
                      (rb_vertical, "No vertical (same-event) bounded-loss bets in the current filters."),
                      (rb_calendar, "No calendar (multi-day) bounded-loss bets in the current filters."),
-                     (nm_table, "No overpriced books in the current filters.")):
+                     (nm_table, "No overpriced books in the current filters."),
+                     (ns_table, "No cheap NO fades in the current filters.")):
         _t.props(f'no-data-label="{_msg}"')
 
     # Per-table column menus (redesigned) — a "Columns" button by each table opening labeled checkboxes.
@@ -1041,7 +1181,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
     for _hdr, _tbl in ((act_hdr, actionable), (review_hdr, review), (blocked_hdr, blocked)):
         with _hdr:
             opp_menus.append(build_column_menu(_tbl, _OPP_COLUMNS, default_hidden=_NET_COLUMNS))
-    with qs_hdr:
+    with qs_cols_row:
         build_column_menu(qs_table, _QS_COLUMNS, default_hidden=_QS_HIDDEN)
     with rb_all_cols:
         build_column_menu(rb_all, _RISK_COLUMNS, default_hidden=_RISK_HIDDEN)            # combined: show Kind
@@ -1051,6 +1191,8 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         build_column_menu(rb_calendar, _RISK_COLUMNS, default_hidden=_RISK_HIDDEN_SPLIT)
     with nm_cols_row:
         build_column_menu(nm_table, _NEARMISS_COLUMNS)
+    with ns_cols_row:
+        build_column_menu(ns_table, _NO_STRUCTURE_COLUMNS, default_hidden=_NO_STRUCTURE_HIDDEN)
 
     # "Show net of fees" — reveal/hide the net columns across the opp tables at once (drives their menus).
     def _toggle_net(show: bool) -> None:
@@ -1185,7 +1327,8 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             ui.label(
                 f"render #{state.get('rerender_count') or 0} · total {state.get('last_total_rerender_ms')}ms"
                 f" (filter {state.get('last_filter_ms')} · cascade {state.get('last_cascade_ms')}"
-                f" · build {state.get('last_row_build_ms')} · apply {state.get('last_table_update_ms')})"
+                f" · build {state.get('last_row_build_ms')} · apply {state.get('last_table_update_ms')}"
+                f" · diag {state.get('last_diagnostics_ms')})"
                 f" · write {((state.get('scan_status') or {}).get('last_result') or {}).get('write_fn_ms')}ms"
             ).classes("text-xs text-gray-500 font-mono")
             ui.label(f"Sum of independent row maxima (actionable): ${vm.sum_row_maxima(view):,.2f}"
@@ -1405,6 +1548,90 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         nm_expansion.set_visibility(include_nm)
         nm_max_over.set_enabled(include_nm)
 
+    def refresh_no_structure() -> None:
+        """Scoped path: rebuild ONLY the Cheap-NO-fades section from the cached view. Flat table by default;
+        the opt-in 'Group by participant' view renders per-participant ladder cards (cascade-scored)."""
+        view = state.get("view") or []
+        new_ids, chg = state.get("new_ids") or set(), state.get("changes") or {}
+        flash = state.get("flash_now") or set()
+        include_ns = ns_switch.value
+        grouped = include_ns and ns_group.value
+        ns_expansion.set_visibility(include_ns)
+        for _c in (ns_kind, ns_max_loss, ns_max_buy_no, ns_group):
+            _c.set_enabled(include_ns)
+        ns_sort.set_enabled(grouped)
+        ns_table.set_visibility(include_ns and not grouped)
+        ns_cards.set_visibility(grouped)
+        if not include_ns:
+            ns_table.rows = []
+            ns_cards.clear()
+            ns_title.set_text("Cheap NO fades — bounded-loss NO anchor, watch-only (0)")
+            return
+        if not grouped:                                       # flat table path (unchanged behaviour)
+            nsv = vm.no_structure_view(view, max_loss_c=int(ns_max_loss.value or 0),
+                                       max_buy_no_c=int(ns_max_buy_no.value or 0), kind=ns_kind.value)
+            ns_table.rows = [vm.no_structure_row(o, new_ids, chg, flash) for o in nsv]
+            ns_cards.clear()
+            ns_title.set_text(f"Cheap NO fades — bounded-loss NO anchor, watch-only ({len(nsv):,})")
+            return
+        # Grouped per-participant ladder cards.
+        ns_cards.clear()
+        ns_table.rows = []
+        if engine.frame_availability() != "present":          # fail-closed: no frames → no partial ladders
+            with ns_cards:
+                ui.label("Evidence frames not captured for this snapshot — grouped ladder unavailable. "
+                         "Use the flat view (toggle off) or Scan now.").classes("text-orange-700")
+            ns_title.set_text("Cheap NO fades — grouped ladder (frames unavailable)")
+            return
+
+        def _prows_for(sport: str, pkey: str, tournament: str) -> list[dict[str, Any]]:
+            return [r for r in engine.participant_contracts(sport, pkey)
+                    if str(r.get("tournament") or "") == tournament]
+
+        cards = vm.no_fade_ladder_view(view, _prows_for, max_loss_c=int(ns_max_loss.value or 0),
+                                       max_buy_no_c=int(ns_max_buy_no.value or 0), kind=ns_kind.value,
+                                       sort=ns_sort.value)
+        ns_title.set_text(f"Cheap NO fades — grouped ladder, watch-only ({len(cards):,})")
+        shown = cards[:_NO_FADE_LADDER_MAX_CARDS]
+        with ns_cards:
+            if not shown:
+                ui.label("No cheap NO fades with a ladder rung in the current filters.").classes(
+                    "text-gray-500")
+            for card in shown:
+                _render_fade_card(card)
+            if len(cards) > len(shown):
+                ui.label(f"Showing top {len(shown)} of {len(cards):,} by {('cascade upside' if ns_sort.value == 'cascade' else 'safest')} "
+                         "— narrow filters to see more.").classes("text-xs text-amber-700")
+
+    def _render_fade_card(card: dict[str, Any]) -> None:
+        """One participant's NO-fade ladder as a collapsible card (rungs broad→deep, components + score)."""
+        def _f(v: Any) -> str:
+            return "—" if v is None else (f"{v:g}" if isinstance(v, (int, float)) else str(v))
+        crows = []
+        for r in card["rungs"]:
+            crows.append({
+                "rung": r["rung"], "reach_pct": _f(r["reach_pct"]),
+                "buy_no": "0¢ — inspect quote" if r["zero_cost"] else _f(r["no_c"]),
+                "max_win": _f(r["max_win"]),
+                "leverage": "—" if r["leverage"] is None else f"{r['leverage']:g}×",
+                "dominated": r["dominated"],
+                "cascade": _f(r["cascade_score"]),
+                "quote": r["quote"], "size": _f(r["size"]),
+                "tag": "● cheap" if r["cheap"] else "",
+            })
+        title = f"{card['sport_label']} · {card['player'] or card['player_key']} — cascade {card['card_score']:g}"
+        if card.get("implied_win_pct") is not None:
+            title += f" · implied win {card['implied_win_pct']:g}%"
+        if card.get("inverted"):
+            title += " · ⚠ inverted ladder"
+        with ui.expansion(title).classes("w-full border rounded"):
+            ui.table(columns=_NO_FADE_LADDER_COLUMNS, rows=crows, row_key="rung").props(
+                "dense").classes("w-full overflow-x-auto")
+            ui.label("Cascade score is an ordinal longshot-upside score — NOT EV, probability, fair "
+                     "value, or mispricing; a higher score usually means a LOWER implied chance. A single "
+                     "NO collapses the whole ladder to no-win. Gross, top-of-book, uncalibrated; not an "
+                     "edge.").classes("text-xs text-gray-500")
+
     def _set_freshness(text: str) -> None:
         """Set the freshness/scope banner only when its text actually changed — the 1s tick and every
         rerender call this, so the guard avoids a needless text push (Branch 2)."""
@@ -1426,6 +1653,59 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             ui.label("Selection cleared — the selected opportunity is no longer in the current view."
                      ).classes("text-sm text-gray-500")
         detail_expansion.close()
+
+    def _apply_gated_sections() -> None:
+        """Build + assign the toggle-gated tables (review / blocked / qualifier) from the cached view,
+        SKIPPING hidden sections (Phase 1a). The default view shows only Actionable, so this avoids
+        building the review/blocked/qualifier row-models (the bulk of the ~2k-row, ~5s build) that are
+        never seen. Sets each section's header+table visibility. Reused by rerender() and the
+        visibility-only section-toggle handler (Phase 1c)."""
+        view = state.get("view") or []
+        new_ids = state.get("new_ids") or set()
+        chg = state.get("changes") or {}
+        flash = state.get("flash_now") or set()
+        ls = pos_framing_sw.value
+        review.rows = ([vm.opp_row(o, new_ids, chg, flash, long_short=ls)
+                        for o in view if o.get("bucket") == "review_signal"] if show_review_sw.value else [])
+        blocked.rows = ([vm.opp_row(o, new_ids, chg, flash, long_short=ls)
+                         for o in view if o.get("bucket") == "blocked"] if show_blocked_sw.value else [])
+        if qs_switch.value:
+            qs_opps = [o for o in view if o.get("bucket") == "qualifier_setup"]
+            qs_table.rows = [vm.qualifier_row(o, new_ids, chg, flash,
+                                              leg_lookup=_contract_lookup_for(o),
+                                              comparator_contract=_comparator_contract_for(o))
+                             for o in vm.order_qualifier_rows(qs_opps)]
+        else:
+            qs_table.rows = []
+        for hdr, tbl, sw in ((review_hdr, review, show_review_sw), (blocked_hdr, blocked, show_blocked_sw)):
+            hdr.set_visibility(sw.value)
+            tbl.set_visibility(sw.value)
+        # Qualifier setups is now a collapsible expansion (switch-gated): toggle the whole expansion + count.
+        qs_expansion.set_visibility(qs_switch.value)
+        qs_title.set_text(
+            f"Qualifier setups — World Cup group-stage ideas & signals ({len(qs_table.rows):,})")
+
+    def _refresh_counts() -> None:
+        """Update the per-bucket counts line from the full snapshot + current filters. Cheap O(n) filter —
+        the expensive ~5s part was the row-model build, which a section toggle now skips (Phase 1c)."""
+        opps = state.get("opps_list") or []
+        counts_line.set_text(vm.bucket_counts_line(
+            vm.bucket_counts(opps, _current_filters()),
+            {"review_signal": show_review_sw.value, "blocked": show_blocked_sw.value,
+             "risk_budget": rb_switch.value, "near_miss": nm_switch.value,
+             "qualifier_setup": qs_switch.value, "no_structure": ns_switch.value}))
+
+    def _on_section_toggle() -> None:
+        """Phase 1c: a section show/hide toggle rebuilds ONLY the affected sections + counts from the cached
+        view — no re-filter/re-rank and no actionable/liquidity/chips/diagnostics rebuild (the full
+        rerender). Skips the ~5s build that made these toggles feel frozen."""
+        if state.get("_suppress_cascade"):
+            return
+        _apply_gated_sections()        # review/blocked/qualifier: visibility + on-demand build
+        refresh_bounded_loss()         # rb/nm/ns are scoped + self-gating (set their own visibility)
+        refresh_near_miss()
+        refresh_no_structure()
+        _refresh_counts()
 
     def rerender(force_diagnostics: bool = False) -> None:
         """Pure in-memory re-render from `state` — NO store access. Re-filter + push only the VISIBLE
@@ -1462,32 +1742,21 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         empty.set_visibility(msg is not None)
 
         ls = pos_framing_sw.value      # Long/Short YES display wording (default off → Buy YES/Buy NO)
-        _t_build = time.monotonic()    # build the row-models (Python), distinct from the widget-apply below
+        _t_build = time.monotonic()    # build the always-visible row-models (Actionable + backlog)
         act_rows = [vm.opp_row(o, new_ids, chg, flash, long_short=ls) for o in view if o.get("bucket") == "actionable"]
-        rev_rows = [vm.opp_row(o, new_ids, chg, flash, long_short=ls) for o in view if o.get("bucket") == "review_signal"]
-        blk_rows = [vm.opp_row(o, new_ids, chg, flash, long_short=ls) for o in view if o.get("bucket") == "blocked"]
-        qs_opps = [o for o in view if o.get("bucket") == "qualifier_setup"]
-        qs_rows = [vm.qualifier_row(o, new_ids, chg, flash,
-                                    leg_lookup=_contract_lookup_for(o),
-                                    comparator_contract=_comparator_contract_for(o))
-                   for o in vm.order_qualifier_rows(qs_opps)]
         bl_rows = [vm.backlog_row(b, tz) for b in (state.get("backlog") or [])]
         ble_rows = [vm.backlog_event_row(b, tz) for b in (state.get("backlog_events") or [])]
         state["last_row_build_ms"] = round((time.monotonic() - _t_build) * 1000, 1)
 
-        # Assign the built models to the Quasar tables + toggle section visibility — the widget-apply cost,
-        # measured separately from row construction (the PR1b row-diffing gate).
+        # Assign the built models to the Quasar tables. Gated sections (review/blocked/qualifier) are built
+        # ONLY when their switch is on (Phase 1a, via _apply_gated_sections); the watchlist sections
+        # (rb/nm/ns) are rebuilt via their scoped, self-gating refreshers.
         _t_apply = time.monotonic()
-        actionable.rows, review.rows, blocked.rows, qs_table.rows = act_rows, rev_rows, blk_rows, qs_rows
-        for hdr, tbl, sw in ((review_hdr, review, show_review_sw), (blocked_hdr, blocked, show_blocked_sw),
-                             (qs_hdr, qs_table, qs_switch)):
-            hdr.set_visibility(sw.value)
-            tbl.set_visibility(sw.value)
-
-        # Two watchlist sections (split) — rebuilt via the scoped refreshers so a bounded-loss/near-miss
-        # control change can call them directly (PR R) without re-running this full rerender.
+        actionable.rows = act_rows
+        _apply_gated_sections()
         refresh_bounded_loss()
         refresh_near_miss()
+        refresh_no_structure()
 
         backlog.rows = bl_rows
         backlog_events_table.rows = ble_rows
@@ -1496,13 +1765,9 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         # scope banner (with the PR 21a counters) + per-bucket counts + filter chips + URL state
         _set_freshness(vm.scope_banner(cov, tz))
         # Per-bucket counts (PR 4): computed from the FULL snapshot + current filters (in-memory; no store
-        # read), reusing filter_opps so the numbers match the rendered tables. Toggle state -> "hidden by
-        # settings" wording. `opps` is the full snapshot list; `filters` are the membership+threshold values.
-        counts_line.set_text(vm.bucket_counts_line(
-            vm.bucket_counts(opps, filters),
-            {"review_signal": show_review_sw.value, "blocked": show_blocked_sw.value,
-             "risk_budget": rb_switch.value, "near_miss": nm_switch.value,
-             "qualifier_setup": qs_switch.value}))
+        # read) so the numbers match the rendered tables + reflect "hidden by settings". Shared with the
+        # Phase 1c section-toggle path via _refresh_counts.
+        _refresh_counts()
         # Market telemetry — fill the four liquidity columns (depth / contracts / tightest / most-traded).
         panel = state.get("liquidity_panel") or {}
         for _col in (liq_sports, liq_contracts, liq_tightest, liq_traded):
@@ -1528,10 +1793,15 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             for chip in vm.active_filter_chips(filters, state["options"]):
                 ui.badge(chip).props("color=grey-7")
         _sync_url(filters)
-        if force_diagnostics or diagnostics_expansion.value:   # heavy (store reads): snapshot change or open
-            render_diagnostics(view)
+        # Phase 0: stamp the render counters BEFORE the (heavy, optional) diagnostics build so the
+        # Diagnostics panel reads THIS render's total — not the previous render's (the build>total mix that
+        # made the old timings untrustworthy). Diagnostics is timed separately as `last_diagnostics_ms`.
         state["rerender_count"] = (state.get("rerender_count") or 0) + 1
         state["last_total_rerender_ms"] = round((time.monotonic() - _t_start) * 1000, 1)
+        if force_diagnostics or diagnostics_expansion.value:   # heavy (store reads): snapshot change or open
+            _t_diag = time.monotonic()
+            render_diagnostics(view)
+            state["last_diagnostics_ms"] = round((time.monotonic() - _t_diag) * 1000, 1)
 
     async def poll() -> None:
         """Cheap 1s tick: reload + rerender ONLY when a new snapshot id has landed. Otherwise this is a
@@ -1630,6 +1900,11 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         (rb_min_outright, "Speculative minimum child display outright in cents"),
         (rb_max_ratio, "Speculative maximum child display spread-to-outright ratio"),
         (nm_switch, "Show overpriced books (near-miss)"), (nm_max_over, "Near-miss max overpay in cents"),
+        (ns_switch, "Show cheap NO fades"), (ns_kind, "Cheap NO fade kind"),
+        (ns_max_loss, "Cheap NO fade max loss in cents"), (ns_max_buy_no, "Cheap NO fade max Buy-NO cost in cents"),
+        (ns_table, "Cheap NO fades"), (ns_expansion, "Cheap NO fades section"),
+        (ns_group, "Group cheap NO fades by participant ladder"), (ns_sort, "NO-fade ladder sort"),
+        (ns_cards, "NO-fade ladder cards"),
         (show_net_sw, "Show estimated net-of-fees columns"),
         (actionable, "Actionable opportunities"), (review, "Review-required opportunities"),
         (blocked, "Blocked opportunities"), (qs_table, "Qualifier setups"),
@@ -1671,6 +1946,8 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             refresh_bounded_loss()
         elif kind == "near_miss":
             refresh_near_miss()
+        elif kind == "no_structure":
+            refresh_no_structure()
         else:
             rerender()
 
@@ -1679,13 +1956,19 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
     # re-renders mid-cascade. Single-interaction controls (selects/switches) fire once → full re-render now.
     # The NUMBER inputs fire per keystroke/spin → DEBOUNCED, and the bounded-loss/near-miss bands are SCOPED
     # to their own tables (a Max-loss change no longer rebuilds the other tables or reads the store).
-    for ctrl in (tz_select, rank_sel, show_ids, participant_sel, active_sw,
-                 show_review_sw, show_blocked_sw, qs_switch, rb_switch, nm_switch):
+    for ctrl in (tz_select, rank_sel, show_ids, participant_sel, active_sw):
         ctrl.on_value_change(lambda _=None: None if state.get("_suppress_cascade") else rerender())
+    # Phase 1c: section show/hide toggles rebuild ONLY their own section + counts from the cached view
+    # (cheap), never the full rerender — so toggling Review/Blocked/Qualifier/RB/NM/NO no longer pays the
+    # multi-second row-model build.
+    for ctrl in (show_review_sw, show_blocked_sw, qs_switch, rb_switch, nm_switch, ns_switch):
+        ctrl.on_value_change(lambda _=None: _on_section_toggle())
     min_size_in.on_value_change(lambda _=None: _request_refresh("full"))        # membership filter → view
     for ctrl in (rb_max_loss, rb_min_ratio, rb_min_outright, rb_max_ratio):
         ctrl.on_value_change(lambda _=None: _request_refresh("bounded_loss"))    # only the bounded-loss tables
     nm_max_over.on_value_change(lambda _=None: _request_refresh("near_miss"))     # only the near-miss table
+    for ctrl in (ns_kind, ns_max_loss, ns_max_buy_no, ns_group, ns_sort):
+        ctrl.on_value_change(lambda _=None: _request_refresh("no_structure"))     # only the cheap-NO-fades section
 
     # Sport / Tournament are the cascade drivers: changing one re-narrows the downstream option lists
     # (and prunes now-invalid picks) BEFORE a single rerender. participant_sel (the leaf) drives no
@@ -1738,10 +2021,21 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         # empty-state "Scanning..." branch (vm.empty_state) is live instead of one-snapshot stale.
         st = engine.scan_status()
         in_prog = (st or {}).get("status") == "in_progress"
-        if in_prog != state.get("scan_indicator"):
+        # Phase 2: show a live budget-cooldown countdown so a stalled auto-scan is legible, not a silently
+        # stale snapshot. Scanning takes priority; then a cooling-down countdown; else blank.
+        cooldown = round((st or {}).get("cooldown_seconds_left") or 0.0)
+        if in_prog:
+            label = "Scanning — new data shortly…"
+        elif cooldown > 0:
+            label = f"Auto-scan cooling down ({cooldown}s) — data may be stale; use Scan now to force."
+        else:
+            label = ""
+        if label != state.get("scan_indicator_text"):   # push on any text change (incl. each countdown tick)
+            state["scan_indicator_text"] = label
+            scanning_lbl.set_text(label)
+        if in_prog != state.get("scan_indicator"):       # refresh cached scan_status on a scan-state change
             state["scan_indicator"] = in_prog
             state["scan_status"] = st
-            scanning_lbl.set_text("Scanning — new data shortly…" if in_prog else "")
 
     tick_age()     # paint the scan indicator on first load if a scan is already in flight (scheduler / other viewer)
     ui.timer(config.UI_POLL_SECONDS, poll)        # snapshot-change watcher (cheap; reloads only on a new id)

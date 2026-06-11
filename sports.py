@@ -115,6 +115,15 @@ class LadderSpec:
     # (tennis/playoff knockouts) settles rungs across successive rounds → SEQUENTIAL (`False`, the
     # conservative default). Per-pair overrides (match-alignment equivalences) live in `_classify`.
     simultaneous: bool = False
+    # Survivor-slot count per node ("k"), the field-de-vig normalizer (DISPLAY-ONLY conditional panel,
+    # never executable): how many participants a node's MECE-ish field resolves to (champion / "Win …"
+    # node = 1, finalist = 2, semifinalist = 4, golf Top-5 = 5, soccer Reach-RO16 = 16…). CONSERVATIVE BY
+    # DESIGN — map a node ONLY when its survivor count is unambiguous; leave fragile nodes ("Reach
+    # Playoffs" with play-in churn, soccer "Win group", dead-heat-capable buckets) UNMAPPED so the de-vig
+    # is skipped there (raw ratio still shown). A node absent from this map ⇒ `survivors_of(node)` is None
+    # ⇒ no field-implied number for that node (fail-soft, never a wrong-k fake-precision). See
+    # `probability.devig_field`.
+    node_survivors: dict[str, int] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -264,6 +273,15 @@ class SportConfig:
         """The containment ladder for a specific group's rows — per-group when ``ladder_fn`` is set
         (e.g. motorsport's per-competition ladders), else the static ``cfg.ladder`` (all existing sports)."""
         return self.ladder_fn(self, rows) if self.ladder_fn else self.ladder
+
+    def survivors_of(self, node: str, ladder: "LadderSpec | None" = None) -> int | None:
+        """Survivor-slot count ("k") for a ladder node, or None when the node is deliberately unmapped
+        (fragile / ambiguous count). DISPLAY-ONLY de-vig normalizer — never read by classification,
+        bucketing, or ranking. Pass an explicit ``ladder`` for per-group / dynamic-ladder sports; defaults
+        to the static ``cfg.ladder``."""
+        spec = ladder if ladder is not None else self.ladder
+        k = getattr(spec, "node_survivors", {}).get(node) if spec else None
+        return k if isinstance(k, int) and k > 0 else None
 
     def tournament_key_of(self, event: dict[str, Any]) -> tuple[str, str] | None:
         """Sport-specific event-instance grouping key, or None to use the default competition path."""
@@ -420,6 +438,8 @@ _TENNIS_LADDER = LadderSpec(
     adjacent_pairs=(("Win Tournament", "Reach Final"), ("Reach Final", "Reach Semifinal")),
     match_stage_to_node={"Quarterfinal": "Reach Semifinal", "Semifinal": "Reach Final", "Final": "Win Tournament"},
     advance_stage_to_node={"Semifinal": "Reach Semifinal", "Final": "Reach Final"},
+    # k: a single-elimination draw has exactly 4 semifinalists, 2 finalists, 1 champion — unambiguous.
+    node_survivors={"Reach Semifinal": 4, "Reach Final": 2, "Win Tournament": 1},
 )
 _WOMEN_WINNER_TICKERS = {"KXFOWOMEN", "KXFOWOMENSINGLES", "KXFOPENWMENSINGLE"}
 _MEN_WINNER_TICKERS = {"KXFOMEN", "KXFOMENSINGLES", "KXFOPENMENSINGLE"}
@@ -553,6 +573,9 @@ _NBA_LADDER = LadderSpec(
     adjacent_pairs=(("Win Championship", "Win Conference"), ("Win Conference", "Reach Playoffs")),
     match_stage_to_node={"Finals": "Win Championship", "Conference Finals": "Win Conference"},
     advance_stage_to_node={"Playoffs": "Reach Playoffs", "Conference": "Win Conference"},
+    # k: exactly 1 champion, 2 conference champions (one per conference) league-wide — unambiguous.
+    # "Reach Playoffs" UNMAPPED (count varies / play-in churn) → raw-only.
+    node_survivors={"Win Conference": 2, "Win Championship": 1},
 )
 
 
@@ -653,6 +676,9 @@ _WNBA_LADDER = LadderSpec(
     # reach-a-stage advance markets → their node (stage derived from the series ticker below)
     advance_stage_to_node={"Playoffs": "Reach Playoffs", "Semifinals": "Reach Semifinals",
                            "Finals": "Reach Finals"},
+    # k: single-bracket knockout → exactly 4 semifinalists, 2 finalists, 1 champion. "Reach Playoffs"
+    # UNMAPPED (field size / play-in churn) → raw-only.
+    node_survivors={"Reach Semifinals": 4, "Reach Finals": 2, "Win Championship": 1},
 )
 
 
@@ -738,6 +764,10 @@ _GOLF_LADDER = LadderSpec(
     match_stage_to_node={},                    # no head-to-head
     advance_stage_to_node={"Top 20": "Top 20", "Top 10": "Top 10", "Top 5": "Top 5"},
     simultaneous=True,                         # all finishing rungs settle at the tournament's final standings
+    # k = the finishing-position cutoff. DEAD-HEAT CAVEAT: a tie at the cutoff can settle >k players YES
+    # (e.g. a 3-way tie for 5th → Top-5 pays 5+ winners), so golf de-vig is a floor-leaning estimate; the
+    # detail panel labels it accordingly. Champion (Win) is always exactly 1.
+    node_survivors={"Top 20": 20, "Top 10": 10, "Top 5": 5, "Win Tournament": 1},
 )
 
 
@@ -884,6 +914,10 @@ _SOCCER_LADDER = LadderSpec(
                            "Quarterfinals": "Reach Quarterfinals", "Semifinals": "Reach Semifinals",
                            "Finals": "Reach Finals"},
     optional_children=frozenset({"Win group"}),
+    # k = knockout-bracket survivor counts (32→16→8→4→2→1), unambiguous. "Win group" is deliberately
+    # UNMAPPED: group cardinality (winners across N groups) differs from a knockout rung — raw-only there.
+    node_survivors={"Reach Round of 32": 32, "Reach Round of 16": 16, "Reach Quarterfinals": 8,
+                    "Reach Semifinals": 4, "Reach Finals": 2, "Win the World Cup": 1},
 )
 
 
@@ -1018,6 +1052,9 @@ _MLB_LADDER = LadderSpec(
     adjacent_pairs=(("Win World Series", "Win League"), ("Win League", "Reach Playoffs")),
     match_stage_to_node={},                    # no head-to-head ladder rung (KXMLBSERIES excluded)
     advance_stage_to_node={"Playoffs": "Reach Playoffs", "League": "Win League"},
+    # k: exactly 1 World Series champion, 2 league champions (AL + NL) → World Series. "Reach Playoffs"
+    # UNMAPPED (12-team field, wild-card churn) → raw-only.
+    node_survivors={"Win League": 2, "Win World Series": 1},
 )
 
 
@@ -1112,6 +1149,9 @@ _NHL_LADDER = LadderSpec(
     # Best-effort match rungs; currently unhit (no Final-series wording) → series → UNKNOWN_RELATIONSHIP.
     match_stage_to_node={"Stanley Cup Final": "Win Championship", "Conference Finals": "Win Conference"},
     advance_stage_to_node={"Playoffs": "Reach Playoffs", "Conference": "Win Conference"},
+    # k: exactly 1 Stanley Cup champion, 2 conference champions (East + West). "Reach Playoffs" UNMAPPED
+    # (16-team field) → raw-only.
+    node_survivors={"Win Conference": 2, "Win Championship": 1},
 )
 
 
@@ -1201,6 +1241,9 @@ _NFL_LADDER = LadderSpec(
     adjacent_pairs=(("Win Super Bowl", "Win Conference"), ("Win Conference", "Reach Playoffs")),
     match_stage_to_node={},                                    # no head-to-head series
     advance_stage_to_node={"Playoffs": "Reach Playoffs", "Conference": "Win Conference"},
+    # k: exactly 1 Super Bowl champion, 2 conference champions (AFC + NFC). "Reach Playoffs" UNMAPPED
+    # (14-team field, seeding churn) → raw-only.
+    node_survivors={"Win Conference": 2, "Win Super Bowl": 1},
 )
 
 

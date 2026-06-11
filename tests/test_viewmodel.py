@@ -932,3 +932,158 @@ def test_risk_budget_row_old_snapshot_missing_new_fields_renders_blank():
     assert row["midpoint_only"] is False
     assert row["parent_over_maxloss"] is None
     assert row["flags"] == []
+
+
+# --- conditional probability (PDF core logic), DISPLAY-ONLY ---------------------------
+def _cc(pk, node, c, pct):
+    return {"player_key": pk, "series": "KXATPADVANCE", "ladder_node": node, "kind": "advance",
+            "display_c": c, "display_pct": pct}
+
+
+def test_conditional_probabilities_raw_matches_derived_indicators():
+    # PDF: P(Win | Reach SF) = 17.5 / 47 = 37.2%. Adjacent-rung raw == derived_indicators exactly.
+    A = [_cc("A", "Reach Semifinal", 47, 47.0), _cc("A", "Reach Final", 30, 30.0),
+         _cc("A", "Win Tournament", 17.5, 17.5)]
+    field = A + [_cc("B", "Reach Semifinal", 43, 43.0), _cc("B", "Win Tournament", 16.0, 16.0),
+                 _cc("C", "Reach Semifinal", 36, 36.0), _cc("C", "Win Tournament", 10.8, 10.8)]
+    rows = vm.conditional_probabilities(A, field, "tennis")
+    sf = next(r for r in rows if r["parent"] == "Reach Semifinal")
+    assert sf["win_cond_raw"] == 37.2
+    # adjacent next-rung raw equals the matching derived_indicators value (no divergence)
+    chain = vm.detail_chain(A, "tennis")
+    di = {i["label"]: round(i["value_pct"], 1) for i in vm.derived_indicators(chain, "tennis")}
+    assert sf["next_cond_raw"] == di["P(Reach Final | Reach Semifinal)"]
+    fin = next(r for r in rows if r["parent"] == "Reach Final")
+    assert fin["win_cond_raw"] == di["P(Win Tournament | Reach Final)"]
+
+
+def test_conditional_probabilities_inverted_ladder_suppresses_value():
+    # Win priced ABOVE Reach Final (inconsistent) ⇒ no value, ladder_inverted flag (never > 100%).
+    A = [_cc("A", "Reach Final", 30, 30.0), _cc("A", "Win Tournament", 40, 40.0)]
+    rows = vm.conditional_probabilities(A, A, "tennis")
+    fin = next(r for r in rows if r["parent"] == "Reach Final")
+    assert fin["win_cond_raw"] is None and fin["ladder_inverted"] is True
+
+
+def test_conditional_probabilities_devig_diverges_from_raw_on_complete_field():
+    # Complete Reach-Final (k=2) + Win (k=1) fields ⇒ de-vig differs from the raw ratio, partial False.
+    rows_in = []
+    for pk in ("A", "B", "C"):
+        rows_in += [_cc(pk, "Reach Final", 70, 70.0), _cc(pk, "Win Tournament", 40, 40.0)]
+    A = [r for r in rows_in if r["player_key"] == "A"]
+    rows = vm.conditional_probabilities(A, rows_in, "tennis")
+    fin = next(r for r in rows if r["parent"] == "Reach Final")
+    assert fin["win_cond_raw"] == 57.1                       # 40/70
+    assert fin["win_cond_dv"] == 50.0                        # (40/120) / (70/210*2)
+    assert fin["win_cond_dv"] != fin["win_cond_raw"] and fin["partial"] is False
+
+
+def test_conditional_probabilities_partial_flag_propagates_on_sparse_field():
+    A = [_cc("A", "Reach Semifinal", 47, 47.0), _cc("A", "Win Tournament", 17.5, 17.5)]
+    rows = vm.conditional_probabilities(A, A, "tennis")     # 1-player field ⇒ sparse ⇒ floor
+    assert any(r["partial"] for r in rows)
+
+
+def test_conditional_probabilities_does_not_mutate_inputs():
+    A = [_cc("A", "Reach Semifinal", 47, 47.0), _cc("A", "Win Tournament", 17.5, 17.5)]
+    before = [dict(r) for r in A]
+    vm.conditional_probabilities(A, A, "tennis")
+    assert A == before
+
+
+def test_conditional_fields_isolated_from_executable_schema():
+    """INVARIANT: the display-only conditional/de-vig fields never leak into the executable surfaces
+    (UNIFIED_COLUMNS / api.Opportunity) that drive classification, bucketing, and ranking."""
+    import api
+    import scanner
+    A = [_cc("A", "Reach Semifinal", 47, 47.0), _cc("A", "Win Tournament", 17.5, 17.5)]
+    cond_fields = set(vm.conditional_probabilities(A, A, "tennis")[0].keys())
+    leaky = {"win_cond_raw", "win_cond_dv", "next_cond_raw", "next_cond_dv", "ladder_inverted"}
+    assert leaky & cond_fields == leaky                                   # the function does emit them
+    assert leaky.isdisjoint(set(scanner.UNIFIED_COLUMNS))                 # ...but not into the unified schema
+    opp_fields = set(getattr(api.Opportunity, "model_fields", None)
+                     or api.Opportunity.__fields__)                       # ...nor the API model
+    assert leaky.isdisjoint(opp_fields)
+
+
+# --- NO-fade ladder + cascade upside score (DISPLAY-ONLY) -----------------------------
+def _lr(pk, player, node, no_c, tkr, tournament="X", series="KXATPADVANCE"):
+    """A firm ladder-rung contract row: reach price = 100 - no_c."""
+    return {"player_key": pk, "player": player, "tournament": tournament, "series": series,
+            "ladder_node": node, "kind": "advance", "market_ticker": tkr,
+            "display_pct": 100 - no_c, "no_ask_c": no_c, "yes_bid_c": 100 - no_c, "yes_bid_size": 500,
+            "quote_quality": "Tight", "status": "active", "subpenny": False}
+
+
+def _nsopp(oid, pk, tkr, no_c, *, sport="tennis", tournament="X"):
+    """A cheap-NO outright opportunity (the gate the ladder view reads)."""
+    return {"opportunity_id": oid, "bucket": "no_structure", "relationship_type": "no_structure_outright",
+            "sport": sport, "player_key": pk, "tournament": tournament, "ticker": tkr,
+            "worst_case_profit_c": -no_c, "action_2_price_c": no_c, "comp_quote_quality": "Tight"}
+
+
+def test_no_fade_ladder_cascade_score_and_dominated():
+    # France-style ladder: broadest cheap NO has the highest cascade score; win rung scores 0.
+    order = [("Reach Semifinal", 10, "SF"), ("Reach Final", 50, "FIN"), ("Win Tournament", 80, "WIN")]
+    rows = [_lr("FRA", "France", n, c, t) for n, c, t in order]
+    card = vm.no_fade_ladder(rows, "tennis", oid_by_ticker={"SF": "op_sf", "FIN": "op_fin"})
+    by = {r["rung"]: r for r in card["rungs"]}
+    assert by["Reach Semifinal"]["dominated"] == 2 and by["Win Tournament"]["dominated"] == 0
+    assert by["Reach Semifinal"]["cascade_score"] == 18.0          # (90/10) * 2
+    assert by["Win Tournament"]["cascade_score"] == 0.0            # dominated 0
+    assert card["card_score"] == 18.0 and card["top_rung"] == "Reach Semifinal"
+    assert card["inverted"] is False and by["Win Tournament"]["cheap"] is False
+
+
+def test_no_fade_ladder_zero_cost_rung_visible_and_unscored():
+    rows = [_lr("A", "A", "Reach Semifinal", 0, "SF"), _lr("A", "A", "Reach Final", 20, "FIN"),
+            _lr("A", "A", "Win Tournament", 60, "WIN")]
+    card = vm.no_fade_ladder(rows, "tennis", oid_by_ticker={"SF": "z", "FIN": "f"})
+    sf = next(r for r in card["rungs"] if r["rung"] == "Reach Semifinal")
+    assert sf["zero_cost"] is True and sf["cascade_score"] is None   # free NO → flagged, not scored
+    assert card["card_score"] is not None                            # still scored off the Final cheap rung
+
+
+def test_no_fade_ladder_fail_closed_on_missing_rows():
+    assert vm.no_fade_ladder([], "tennis") is None                  # no frames → no card
+    assert vm.no_fade_ladder([_lr("A", "A", "Reach Semifinal", 10, "SF")], "tennis",
+                             oid_by_ticker={"SF": "x"}) is not None  # 3-node ladder, 1 rung present is OK
+
+
+def test_no_fade_ladder_view_cascade_vs_safe_ordering():
+    # A: only the DEEP (Final) rung is a cheap fade → lower cascade, cheaper absolute NO.
+    a_rows = [_lr("ALC", "Alcaraz", "Reach Final", 10, "A_FIN"),
+              _lr("ALC", "Alcaraz", "Win Tournament", 70, "A_WIN")]
+    # B: the BROAD (SF) rung is the cheap fade → higher cascade (dominates more), pricier absolute NO.
+    b_rows = [_lr("SIN", "Sinner", "Reach Semifinal", 15, "B_SF"),
+              _lr("SIN", "Sinner", "Reach Final", 40, "B_FIN"),
+              _lr("SIN", "Sinner", "Win Tournament", 75, "B_WIN")]
+    opps = [_nsopp("opA", "ALC", "A_FIN", 10), _nsopp("opB", "SIN", "B_SF", 15)]
+    prows = {"ALC": a_rows, "SIN": b_rows}
+
+    def prows_for(sport, pk, tour):
+        return prows.get(pk, [])
+
+    casc = vm.no_fade_ladder_view(opps, prows_for, max_loss_c=100, sort="cascade")
+    safe = vm.no_fade_ladder_view(opps, prows_for, max_loss_c=100, sort="safe")
+    assert casc[0]["player_key"] == "SIN"        # broad fade dominates more rungs → higher cascade
+    assert safe[0]["player_key"] == "ALC"        # cheapest absolute NO → safest first
+    assert {c["player_key"] for c in casc} == {"ALC", "SIN"}
+
+
+def test_no_fade_ladder_view_fail_closed_when_frames_empty():
+    opps = [_nsopp("opA", "ALC", "A_FIN", 10)]
+    assert vm.no_fade_ladder_view(opps, lambda *a: [], max_loss_c=100) == []   # no frames → no cards
+
+
+def test_no_fade_ladder_fields_isolated_from_executable_schema():
+    import api
+    import scanner
+    rows = [_lr("A", "A", "Reach Semifinal", 10, "SF"), _lr("A", "A", "Win Tournament", 80, "WIN")]
+    card = vm.no_fade_ladder(rows, "tennis", oid_by_ticker={"SF": "x"})
+    rung_fields = set(card["rungs"][0].keys()) | {"card_score"}
+    leaky = {"cascade_score", "dominated", "card_score", "leverage"}
+    assert leaky & rung_fields == leaky                              # the builder DOES emit them
+    assert leaky.isdisjoint(set(scanner.UNIFIED_COLUMNS))            # ...but never the unified schema
+    opp_fields = set(getattr(api.Opportunity, "model_fields", None) or api.Opportunity.__fields__)
+    assert leaky.isdisjoint(opp_fields)                              # ...nor the API model

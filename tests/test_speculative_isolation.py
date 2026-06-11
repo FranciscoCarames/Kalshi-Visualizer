@@ -70,6 +70,17 @@ def test_rank_key_ignores_speculative_fields():
     assert scanner._rank_key(row) == scanner._rank_key({**row, **SPECULATIVE_FIELDS})
 
 
+def test_no_structure_is_speculative_and_never_actionable():
+    # The NO-fade statuses route to their own opt-in bucket regardless of any display fields, and carry no
+    # executable gap, so they can never reach Actionable or perturb the edge rank.
+    for status in ("NO_STRUCTURE_BAND", "NO_STRUCTURE_OUTRIGHT"):
+        base = {"status": status, "bucket": "no_structure", "exec_gap_c": None, "tradable_now": "Speculative"}
+        assert consistency.bucket_of(base) == "no_structure"
+        assert consistency.bucket_of({**base, **SPECULATIVE_FIELDS}) == "no_structure"
+        # exec_gap_c None ⇒ floored within its bucket; adding speculative fields never changes the rank key.
+        assert scanner._rank_key(base) == scanner._rank_key({**base, **SPECULATIVE_FIELDS})
+
+
 def test_rank_order_unchanged_when_speculative_fields_added():
     before = [_exec_row("a", "EXECUTABLE_VIOLATION", gap=5),
               _exec_row("b", "EXECUTABLE_VIOLATION", bucket="blocked", tradable_now="No", gap=9),

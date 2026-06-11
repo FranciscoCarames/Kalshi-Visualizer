@@ -27,6 +27,7 @@ import consistency
 import dutchbook
 import exact_order
 import game_support
+import no_structures
 import sports
 import stage_elim
 import synthetic_bundle
@@ -42,11 +43,12 @@ BUCKET_PRIORITY = {
     "risk_budget": 3,     # containment near-miss: bounded loss, convex upside (opt-in)
     "near_miss": 4,       # dutch-book near-miss: flat-payout watchlist (opt-in)
     "qualifier_setup": 5,  # World Cup qualifier setups (opt-in; review-only / diagnostic — never Actionable)
-    "near_edge": 6,
-    "display_signal": 7,
-    "wide_signal": 8,
-    "data_quality": 9,
-    "clean": 10,
+    "no_structure": 6,    # cheap bounded-loss NO fades (opt-in; speculative — never Actionable)
+    "near_edge": 7,
+    "display_signal": 8,
+    "wide_signal": 9,
+    "data_quality": 10,
+    "clean": 11,
 }
 
 # The shared minimal schema both row shapes (containment checks + dutch-book findings) map onto. Stable
@@ -466,6 +468,55 @@ def _to_unified_synthetic(r: dict[str, Any], cfg) -> dict[str, Any]:
     return _finalize_unified(d, payout_floor_c=_num(r.get("payout_floor_c")))
 
 
+def _to_unified_no_structure(r: dict[str, Any], cfg) -> dict[str, Any]:
+    """Map a NO-anchored structure finding (band or outright) onto the unified schema. SPECULATIVE / opt-in:
+    self-assigns ``bucket="no_structure"`` + ``exec_gap_c=None`` so it NEVER enters _rank_key / Actionable.
+    A BAND carries the same containment fields as a risk-budget row (so the conditional/breakeven viewmodel
+    helpers work unchanged); an OUTRIGHT is single-leg (no parent — its display/containment fields stay
+    None). The convex worst/best per-unit profit drive the section's max-loss / breakeven columns."""
+    is_band = r.get("kind") == "band"
+    d = {
+        "sport": cfg.sport_id, "sport_label": cfg.label, "source": "no_structure",
+        "name": r.get("player") or "",
+        "detail": (f"{r.get('parent_node')} ⊇ {r.get('child_node')}" if is_band
+                   else (r.get("contract") or "")),
+        "tournament": r.get("tournament") or "", "tour": r.get("tour") or "",
+        "action_1_text": r.get("action_1_text") or "", "action_2_text": r.get("action_2_text") or "",
+        "action_1_price_c": _num(r.get("action_1_price_c")), "action_2_price_c": _num(r.get("action_2_price_c")),
+        "cost_c": _num(r.get("cost_c")),
+        # NEVER an executable edge — exec_gap_c=None floors it within its own opt-in section.
+        "exec_gap_c": None, "exec_min_size": _num(r.get("exec_min_size")), "exec_max_profit_dollars": None,
+        "bucket": "no_structure", "status": r.get("status") or "",
+        "tradable_now": "Speculative", "blocked_reason": "",
+        "market_status": r.get("market_status") or "active", "rule_flag": "",
+        "settlement_caveat": r.get("settlement_caveat") or "",
+        "participant_key": r.get("player_key") or "",
+        "relationship_type": "no_structure_band" if is_band else "no_structure_outright",
+        # A band is a sequential broader→deeper pair (Calendar); an outright is a single leg (Calendar).
+        "resolution_mode": "calendar",
+        "opportunity_id": r.get("opportunity_id") or "",
+        "ticker_1": (r.get("parent_ticker") if is_band else r.get("ticker")) or "",
+        "ticker_2": (r.get("child_ticker") if is_band else "") or "",
+        "url": (r.get("parent_url") if is_band else r.get("url")) or "",
+        "url_2": (r.get("child_url") if is_band else "") or "",
+        "legs": None, "n_legs": None,                  # synthesized into a leg list by _finalize_unified
+        # Convex payoff bounds (drive max-loss / breakeven / upside columns); not a risk-budget edge_class.
+        "edge_class": "", "worst_case_profit_c": _num(r.get("worst_case_profit_c")),
+        "best_case_profit_c": _num(r.get("best_case_profit_c")),
+        # Probability-context display outrights — present for bands, None for single-leg outrights.
+        "parent_display_c": _num(r.get("parent_display_c")), "child_display_c": _num(r.get("child_display_c")),
+        "display_spread_c": _num(r.get("display_spread_c")),
+        "spread_over_parent": _num(r.get("spread_over_parent")), "spread_over_child": _num(r.get("spread_over_child")),
+        "parent_yes_bid_c": _num(r.get("parent_yes_bid_c")), "child_yes_ask_c": _num(r.get("child_yes_ask_c")),
+        "child_node": r.get("child_node") or "", "parent_node": r.get("parent_node") or "",
+        "comp_quote_quality": r.get("comp_quote_quality") or "",
+    }
+    d["participant_keys"], d["participant_labels"] = _participants([(r.get("player_key"), r.get("player"))])
+    # A band's broader-YES + deeper-NO guarantees ≥100¢ in every settled state (floor 100); an outright NO
+    # has no guaranteed floor (pays 100 only if the outcome fails).
+    return _finalize_unified(d, payout_floor_c=(100 if is_band else None))
+
+
 def _rank_key(row: dict[str, Any]) -> tuple:
     """Actionable first, then largest gross edge (¢), then a stable id tiebreak."""
     bp = BUCKET_PRIORITY.get(row.get("bucket"), 99)
@@ -522,6 +573,7 @@ def unified_opportunities(
                 qualifier_band_c=config.WC_QUALIFIER_BAND_C)
             stage_books = stage_elim.find_stage_elim_books(records)
             stage_synths = stage_elim.find_stage_elim_synthetics(records)
+            no_structs = no_structures.find_no_structures(records)
         except Exception as exc:
             errors.append({"sport": cfg.sport_id, "error": str(exc)})
             continue
@@ -533,6 +585,7 @@ def unified_opportunities(
         rows.extend(_to_unified_game_support(r, cfg) for r in game_signals)
         rows.extend(_to_unified_stage_elim_book(r, cfg) for r in stage_books)
         rows.extend(_to_unified_stage_elim_synth(r, cfg) for r in stage_synths)
+        rows.extend(_to_unified_no_structure(r, cfg) for r in no_structs)
         if frames_out is not None:
             for frame_type, frame_rows in (("contracts", records), ("checks", checks_records),
                                            ("dutchbook", books), ("group_basket", baskets)):
@@ -549,7 +602,8 @@ def unified_opportunities(
 
 
 def run_scan(fetch_fn: Callable[[str], tuple], *, fetched_at: Any = None,
-             request_count: Callable[[], int] | None = None
+             request_count: Callable[[], int] | None = None,
+             retry_stats: Callable[[], tuple[int, float]] | None = None
              ) -> tuple[pd.DataFrame, dict[str, Any], list[dict[str, Any]]]:
     """Fetch every sport, aggregate coverage, and produce the unified ranked frame — the service entry.
 
@@ -563,6 +617,7 @@ def run_scan(fetch_fn: Callable[[str], tuple], *, fetched_at: Any = None,
     no store, no network. A per-sport fetch failure is recorded and that sport contributes nothing.
     """
     before = request_count() if request_count else None
+    retry_before = retry_stats() if retry_stats else None   # Phase 0: (count, seconds) read before/after
     sport_cfgs = list(sports.all_sports())
 
     def _fetch_one(sid: str) -> tuple[str, tuple | None, str | None, float]:
@@ -630,4 +685,8 @@ def run_scan(fetch_fn: Callable[[str], tuple], *, fetched_at: Any = None,
     }
     if before is not None:
         coverage["kalshi_requests"] = request_count() - before
+    if retry_before is not None:
+        rc_now, bs_now = retry_stats()
+        coverage["retry_count"] = rc_now - retry_before[0]
+        coverage["backoff_seconds_total"] = round(bs_now - retry_before[1], 2)
     return unified, coverage, frames

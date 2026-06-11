@@ -171,7 +171,10 @@ def test_stop_terminates_loop():
 
 # --- config knobs stay coherent with the scheduler / TTL contract -----------------------
 def test_config_rate_and_scheduler_knobs():
+    # ~75% of Kalshi Basic's ~20 rps ceiling; must stay under the ban threshold (Phase 2 left this at 15
+    # pending a clean single-process benchmark — see config.MAX_RPS note).
     assert config.MAX_RPS == 15
+    assert config.MAX_RPS <= 20
     opts = config.AUTO_SCAN_INTERVAL_OPTIONS
     assert opts == sorted(opts) and len(opts) == len(set(opts))
     # The fastest selectable interval must not be TTL-skipped.
