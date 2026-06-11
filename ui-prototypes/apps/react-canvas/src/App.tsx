@@ -14,6 +14,7 @@ const COLS: GridColumn[] = [
   { id: "profit", title: "Profit$", width: 90 }, { id: "tradable", title: "Tradable", width: 120 }, { id: "cav", title: "Caveat", width: 170 },
 ];
 const EDGE_COL = 4;
+const FLASH_MS = 650;
 const chgSym = (c: string) => c === "new" ? "NEW" : c === "up" ? "▲" : c === "down" ? "▼" : c === "ret" ? "↺" : "";
 const GLIDE_THEME = {
   accentColor: "#ffb000", accentLight: "rgba(255,176,0,.15)",
@@ -28,6 +29,8 @@ export default function App() {
   const ref = useRef<DataEditorRef>(null);
   const visibleRef = useRef<Row[]>([]);
   const idIdx = useRef<Map<string, number>>(new Map());
+  const flash = useRef<Map<string, { ts: number; dir: number }>>(new Map());
+  const rafId = useRef<number>();
   const bucketRef = useRef("act");
   const [bucket, setBucket] = useState("act");
   const [rowCount, setRowCount] = useState(0);
@@ -57,18 +60,33 @@ export default function App() {
 
   useEffect(() => {
     rebuild();
+    // Fade loop: while any cell is mid-flash, repaint its edge cell each frame so the tint decays smoothly.
+    const runFlash = () => {
+      const now = performance.now();
+      const cells: { cell: Item }[] = [];
+      for (const [id, f] of flash.current) {
+        if (now - f.ts > FLASH_MS) { flash.current.delete(id); continue; }
+        const i = idIdx.current.get(id); if (i !== undefined) cells.push({ cell: [EDGE_COL, i] as Item });
+      }
+      if (cells.length) ref.current?.updateCells(cells);
+      rafId.current = flash.current.size ? requestAnimationFrame(runFlash) : undefined;
+    };
     const unsub = stream.subscribe((batch) => {
       if (batch.reset) { rebuild(); }
       else {
         const cells: { cell: Item }[] = [];
-        for (const r of batch.changed) { const i = idIdx.current.get(r.id); if (i !== undefined) cells.push({ cell: [EDGE_COL, i] as Item }); }
+        for (const r of batch.changed) {
+          const i = idIdx.current.get(r.id); if (i !== undefined) cells.push({ cell: [EDGE_COL, i] as Item });
+          if (r.chg === "up" || r.chg === "down") flash.current.set(r.id, { ts: performance.now(), dir: r.chg === "up" ? 1 : -1 });
+        }
         if (cells.length) ref.current?.updateCells(cells);
+        if (rafId.current === undefined && flash.current.size) rafId.current = requestAnimationFrame(runFlash);
       }
       perf.recordLatency(performance.now() - batch.t0); perf.recordBatch();
     });
     perf.mount((rows, rate) => stream.setStress(rows, rate), (m) => stream.setMode(m as any));
     stream.start();
-    return () => { unsub(); stream.stop(); };
+    return () => { unsub(); stream.stop(); if (rafId.current) cancelAnimationFrame(rafId.current); };
   }, []);
 
   function onBucket(b: string) { setBucket(b); bucketRef.current = b; rebuild(); }
@@ -103,6 +121,18 @@ export default function App() {
             <DataEditor ref={ref} columns={COLS} rows={rowCount} getCellContent={getCellContent}
               theme={GLIDE_THEME} rowHeight={24} headerHeight={24} smoothScrollX smoothScrollY
               width="100%" height="100%" rowMarkers="none" getCellsForSelection={true}
+              drawCell={(args: any, draw: () => void) => {
+                const { ctx, rect, col, row } = args;
+                if (col === EDGE_COL) {
+                  const ro = visibleRef.current[row];
+                  const f = ro && flash.current.get(ro.id);
+                  if (f) {
+                    const a = Math.max(0, 1 - (performance.now() - f.ts) / FLASH_MS);
+                    if (a > 0) { ctx.fillStyle = f.dir > 0 ? `rgba(51,255,122,${a * 0.5})` : `rgba(255,69,58,${a * 0.5})`; ctx.fillRect(rect.x, rect.y, rect.width, rect.height); }
+                  }
+                }
+                draw();
+              }}
               onCellClicked={([, r]) => { const row = visibleRef.current[r]; if (row) setSel({ ...row }); }} />
           </div>
         </div>
