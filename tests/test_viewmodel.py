@@ -674,11 +674,261 @@ def test_order_qualifier_rows_speculative_first():
     assert ordered[0] == "s" and ordered.index("d") < ordered.index("g")
 
 
-def test_derived_indicators_from_chain_golf_make_cut():
+# --- PR M: breakeven decomposition + signal class (show both; never a negative "chance") --------------
+def test_breakeven_and_gap_vs_breakeven_decomposition():
+    o = _o("x", "risk_budget", wc=-5, bc=95, ds=12)
+    assert vm._breakeven_pct(o) == 5.0                       # max_loss/(max_loss+max_profit)*100 = 5/100*100
+    assert vm._gap_vs_breakeven_pp(o) == 7.0                 # market gap 12 − breakeven 5
+    assert vm._gap_vs_breakeven_pp(o) == vm._implied_ev_c(o) # equals Implied EV for the canonical 2-leg spread
+    # missing inputs → None, never a fake 0
+    assert vm._breakeven_pct(_o("y", "risk_budget", ds=12)) is None
+    assert vm._gap_vs_breakeven_pp(_o("z", "risk_budget", wc=-5, bc=95)) is None   # no display gap
+
+
+def test_signal_class_is_descriptive_and_flags_inverted():
+    assert vm._signal_class(_o("d", "risk_budget")) == "Data quality"                       # no display gap
+    assert vm._signal_class(_o("i", "risk_budget", wc=-5, bc=95, ds=-3)) == "Inverted / diagnostic"
+    assert vm._signal_class(_o("c", "risk_budget", wc=-5, bc=95, ds=12)) == "Candidate"     # gap−be = +7
+    assert vm._signal_class(_o("b", "risk_budget", wc=-5, bc=95, ds=5)) == "Breakeven"      # gap−be = 0
+    assert vm._signal_class(_o("n", "risk_budget", wc=-5, bc=95, ds=3)) == "Negative proxy" # gap−be = −2
+
+
+def test_risk_budget_row_exposes_decomposition_fields():
+    row = vm.risk_budget_row({"opportunity_id": "x", "bucket": "risk_budget", "display_spread_c": 12,
+                              "worst_case_profit_c": -5, "best_case_profit_c": 95}, set())
+    assert row["breakeven"] == 5.0 and row["gap_vs_be"] == 7.0
+    assert row["signal"] == "Candidate" and row["ev"] == 7      # ev == gap_vs_be for the canonical spread
+
+
+def test_derived_indicators_from_chain_generalized():
     chain = [{"layer": "Top 20", "display_pct": 18.0}, {"layer": "Top 10", "display_pct": 9.0}]
     out = vm.derived_indicators(chain, "golf")
-    assert out and out[0]["label"] == "Make the cut" and out[0]["value_pct"] == 18.0
-    # missing Top-20 price -> no floor; non-golf sport -> []
-    assert vm.derived_indicators([{"layer": "Top 10", "display_pct": 9.0}], "golf") == []
-    assert vm.derived_indicators([{"layer": "Reach Semifinal", "display_pct": 60.0}], "tennis") == []
+    labels = [i["label"] for i in out]
+    assert "In contention (Top 20)" in labels                                  # broad-rung (PR G)
+    assert any(i["label"] == "Make the cut" and i["value_pct"] == 18.0 for i in out)   # golf floor still present
+    assert "P(Top 10 | Top 20)" in labels                                      # conditional ratio 9/18*100
+    # generalized beyond golf — tennis now gets an in-contention indicator too
+    assert any(i["label"] == "In contention (Reach Semifinal)"
+               for i in vm.derived_indicators([{"layer": "Reach Semifinal", "display_pct": 60.0}], "tennis"))
     assert vm.derived_indicators(None, "golf") == []
+
+
+# --- PR E: trader columns + $100 sizing + wins-if + speculative explainer ----------------------------
+def test_wins_if_from_ladder_rungs():
+    assert vm._wins_if({"parent_node": "Reach Final", "child_node": "Win Tournament"}) \
+        == "Reach Final but not Win Tournament"
+    assert vm._wins_if({"parent_node": "", "child_node": "Win Tournament"}) == ""   # blank when a rung missing
+
+
+def test_sized_at_budget_caps_by_book_size():
+    o = {"cost_c": 102, "exec_min_size": 50, "worst_case_profit_c": -2, "best_case_profit_c": 98}
+    assert vm._sized_at_budget(o) == (50, 100, 4900)          # min(10000//102=98, 50)=50; loss 2*50, upside 98*50
+    assert vm._sized_at_budget({**o, "exec_min_size": 1000})[0] == 98   # not capped when the book is deep
+    assert vm._sized_at_budget({"cost_c": None, "worst_case_profit_c": -2, "best_case_profit_c": 98}) is None
+
+
+def test_risk_budget_row_trader_columns():
+    row = vm.risk_budget_row({"opportunity_id": "x", "bucket": "risk_budget", "cost_c": 102,
+                              "exec_min_size": 50, "worst_case_profit_c": -2, "best_case_profit_c": 98,
+                              "parent_node": "Reach Final", "child_node": "Win Tournament",
+                              "comp_quote_quality": "OK", "resolution_mode": "calendar",
+                              "display_spread_c": 12}, set())
+    assert row["resolution"] == "Calendar"
+    assert row["wins_if"] == "Reach Final but not Win Tournament"
+    assert row["max_units"] == 50 and row["quote_health"] == "OK"
+    assert row["units_100"] == 50 and row["loss_100"] == 1.0 and row["upside_100"] == 49.0
+
+
+def test_speculative_explainer_only_for_risk_budget_and_conservative():
+    assert vm.speculative_explainer({"bucket": "actionable"}) == []
+    lines = vm.speculative_explainer({"bucket": "risk_budget", "worst_case_profit_c": -2,
+                                      "best_case_profit_c": 98, "display_spread_c": 12,
+                                      "parent_node": "Reach Final", "child_node": "Win Tournament"})
+    labels = [lbl for lbl, _ in lines]
+    assert "Can I lose money?" in labels and "Why ranked here" in labels
+    assert any("doing nothing" in lbl for lbl in labels)
+    blob = " ".join(t for _, t in lines).lower()
+    for banned in ("riskless", "locked", "true arbitrage", "guaranteed"):
+        assert banned not in blob
+
+
+# --- PR F: peer-relative cheapness (same-sport, display-only badge) -----------------------------------
+def _rb(oid, sport, band, overpay, soc=None):
+    return {"opportunity_id": oid, "sport": sport, "bucket": "risk_budget",
+            "display_spread_c": band, "worst_case_profit_c": -overpay, "spread_over_child": soc}
+
+
+def test_flag_peer_cheapness_flags_same_sport_outlier():
+    bets = [_rb("cheap", "golf", 10, 1, 0.1), _rb("g1", "golf", 10, 5, 0.5),
+            _rb("g2", "golf", 11, 5, 0.5), _rb("g3", "golf", 9, 6, 0.6), _rb("g4", "golf", 10, 4, 0.4)]
+    vm.flag_peer_cheapness(bets)
+    cheap = next(b for b in bets if b["opportunity_id"] == "cheap")
+    g1 = next(b for b in bets if b["opportunity_id"] == "g1")
+    assert cheap["cheap_cost"] and cheap["cheap_ratio"]      # far below the peer median on both metrics
+    assert not g1["cheap_cost"]                              # mid-pack -> not flagged
+
+
+def test_flag_peer_cheapness_cross_sport_isolation():
+    # a cheap golf bet whose only peers are tennis -> not enough SAME-SPORT peers -> never flagged
+    bets = [_rb("g", "golf", 10, 1, 0.1)] + [_rb(f"t{i}", "tennis", 10, 5, 0.5) for i in range(4)]
+    vm.flag_peer_cheapness(bets)
+    assert not bets[0]["cheap_cost"] and not bets[0]["cheap_ratio"]
+
+
+def test_flag_peer_cheapness_insufficient_peers_not_flagged():
+    bets = [_rb("a", "golf", 10, 1, 0.1), _rb("b", "golf", 10, 5, 0.5)]   # 1 peer each (< min 4)
+    vm.flag_peer_cheapness(bets)
+    assert not any(b["cheap_cost"] for b in bets)
+
+
+def test_peer_cheap_mad_zero_requires_strict_undercut():
+    assert vm._peer_cheap(3, [5, 5, 5, 5], 1.5) is True      # strictly below a constant peer level
+    assert vm._peer_cheap(5, [5, 5, 5, 5], 1.5) is False     # equal -> not cheap
+    assert vm._peer_cheap(None, [5, 5, 5, 5], 1.5) is False  # None -> not cheap
+
+
+def test_flag_peer_cheapness_missing_band_not_flagged():
+    bets = [_rb("nb", "golf", None, 1, 0.1)] + [_rb(f"g{i}", "golf", 10, 5, 0.5) for i in range(4)]
+    vm.flag_peer_cheapness(bets)
+    assert not bets[0]["cheap_cost"]                         # no band -> skipped
+
+
+def test_risk_budget_row_cheap_badge():
+    assert vm.risk_budget_row({"opportunity_id": "x", "bucket": "risk_budget",
+                               "cheap_cost": True, "cheap_ratio": False}, set())["cheap"] == "cost"
+    assert vm.risk_budget_row({"opportunity_id": "y", "bucket": "risk_budget",
+                               "cheap_cost": True, "cheap_ratio": True}, set())["cheap"] == "cost, ratio"
+
+
+# --- stale-selection guard (UI trust fix 2): pure predicate ----------------------------
+# The headless browser suite cannot click-select table rows (documented limit), so the clear/keep
+# decision lives in this pure helper and is unit-tested here; the dashboard wiring is a manual check.
+def test_selection_left_view_none_selection_never_clears():
+    assert vm.selection_left_view(None, [_opp("a")]) is False
+    assert vm.selection_left_view({}, [_opp("a")]) is False     # falsy dict == no selection
+
+
+def test_selection_left_view_selected_still_present_keeps():
+    view = [_opp("a"), _opp("b")]
+    assert vm.selection_left_view(_opp("a"), view) is False
+
+
+def test_selection_left_view_selected_absent_clears():
+    assert vm.selection_left_view(_opp("gone"), [_opp("a"), _opp("b")]) is True
+    assert vm.selection_left_view(_opp("gone"), []) is True     # empty view: any selection departed
+    assert vm.selection_left_view(_opp("gone"), None) is True   # None-safe view
+
+
+def test_selection_left_view_missing_id_keys_are_none_safe():
+    # A selection lacking opportunity_id can't match a normal view -> treated as departed.
+    assert vm.selection_left_view({"name": "x"}, [_opp("a")]) is True
+
+
+# --- Phase 1 likelihood / comparability metrics (display-only) -----------------------------------------
+def test_cond_success_pct_is_conditional_and_fails_closed():
+    # spread_over_parent = 1 - child/parent = P(success | reached); shown as a %.
+    assert vm._cond_success_pct({"spread_over_parent": 0.4}) == 40.0
+    # fail closed: missing / <= 0 -> None (never 0.0), so an inverted ladder never reads as a chance.
+    assert vm._cond_success_pct({"spread_over_parent": None}) is None
+    assert vm._cond_success_pct({"spread_over_parent": 0}) is None
+    assert vm._cond_success_pct({"spread_over_parent": -0.1}) is None
+
+
+def test_cond_child_pct_is_complement_and_fails_closed():
+    # P(child | parent) = child/parent, as a %. SF: 4/8 -> 50.0; Spain: 42/58 -> 72.4.
+    assert vm._cond_child_pct({"parent_display_c": 8, "child_display_c": 4}) == 50.0
+    assert vm._cond_child_pct({"parent_display_c": 58, "child_display_c": 42}) == 72.4
+    # complementary: cond_child + cond_success ~= 100 on a CONSISTENT row (0.1 rounding tolerance), so a
+    # later change to one helper but not the other is caught.
+    o = {"parent_display_c": 58, "child_display_c": 42, "spread_over_parent": 1 - 42 / 58}
+    assert abs(vm._cond_child_pct(o) + vm._cond_success_pct(o) - 100.0) <= 0.1
+    # fail closed: missing leg, parent <= 0, or inverted (child > parent) -> None (never 0.0)
+    assert vm._cond_child_pct({"parent_display_c": 8}) is None
+    assert vm._cond_child_pct({"child_display_c": 4}) is None
+    assert vm._cond_child_pct({"parent_display_c": 0, "child_display_c": 0}) is None
+    assert vm._cond_child_pct({"parent_display_c": 4, "child_display_c": 8}) is None
+
+
+def test_explanation_lines_conditional_for_containment_only():
+    # Spain: parent (Reach QF) 58¢, child (Reach SF) 42¢ -> deeper 72.4%, success 27.6%, raw gap 16.0pp.
+    spain = {"sport": "Soccer", "name": "Spain", "source": "containment",
+             "detail": "Reach SF ≤ Reach QF", "tournament": "World Cup", "bucket": "risk_budget",
+             "parent_display_c": 58, "child_display_c": 42}
+    blob = "\n".join(vm.explanation_lines(spain))
+    assert "Conditional (market-implied)" in blob
+    assert "72.4%" in blob and "27.6%" in blob and "16pp" in blob   # 42/58, complement, raw gap 58−42
+    # audit: NOT a future-price promise, and flags quote health
+    assert "not a promise about the future traded price" in blob
+    assert "wide / stale / one-sided books" in blob
+    # gated off when the outrights are absent (dutch / synthetic rows) — no conditional line
+    dutch = {"sport": "NFL", "name": "x", "source": "dutch_book", "detail": "", "tournament": "t"}
+    assert "Conditional (market-implied)" not in "\n".join(vm.explanation_lines(dutch))
+
+
+def test_firm_spread_c_is_parent_bid_minus_child_ask():
+    assert vm._firm_spread_c({"parent_yes_bid_c": 48, "child_yes_ask_c": 22}) == 26
+    # a firm gap CAN be negative (that's the signal) -> returned as-is, not clamped
+    assert vm._firm_spread_c({"parent_yes_bid_c": 20, "child_yes_ask_c": 35}) == -15
+    # missing either firm quote -> None
+    assert vm._firm_spread_c({"parent_yes_bid_c": 48}) is None
+    assert vm._firm_spread_c({"child_yes_ask_c": 22}) is None
+
+
+def test_firm_success_pct_never_negative_only_positive_shown():
+    assert vm._firm_success_pct({"parent_yes_bid_c": 50, "child_yes_ask_c": 30}) == 40.0   # 20/50
+    # firm gap <= 0 -> None (a negative "chance" is nonsense, suppressed)
+    assert vm._firm_success_pct({"parent_yes_bid_c": 30, "child_yes_ask_c": 40}) is None
+    assert vm._firm_success_pct({"parent_yes_bid_c": 0, "child_yes_ask_c": 0}) is None
+
+
+def test_optimistic_only_flags_midpoint_only_rows():
+    # display positive but firm basis not -> Midpoint-only
+    assert vm._optimistic_only({"display_spread_c": 12, "parent_yes_bid_c": 20, "child_yes_ask_c": 25}) is True
+    # both bases positive -> not flagged
+    assert vm._optimistic_only({"display_spread_c": 12, "parent_yes_bid_c": 48, "child_yes_ask_c": 22}) is False
+    # firm basis missing -> can't claim a mismatch -> not flagged
+    assert vm._optimistic_only({"display_spread_c": 12}) is False
+
+
+def test_parent_over_maxloss():
+    # parent's in-the-money probability (¢) ÷ MAX LOSS (cost − 100, the overpay); higher = better.
+    assert vm._parent_over_maxloss({"cost_c": 107, "parent_display_c": 35}) == round(35 / 7, 2)   # 5.0
+    # a likely-to-reach parent scores HIGHER than a deep-longshot parent at the same max loss
+    live = vm._parent_over_maxloss({"cost_c": 102, "parent_display_c": 50})
+    longshot = vm._parent_over_maxloss({"cost_c": 102, "parent_display_c": 2})
+    assert live > longshot
+    # fail closed: missing inputs, or max loss (cost − 100) <= 0 -> None
+    assert vm._parent_over_maxloss({"parent_display_c": 35}) is None
+    assert vm._parent_over_maxloss({"cost_c": 100, "parent_display_c": 35}) is None   # max loss 0
+    assert vm._parent_over_maxloss({"cost_c": 95, "parent_display_c": 35}) is None    # max loss < 0
+
+
+def test_risk_budget_row_exposes_phase1_likelihood_fields_and_flags():
+    row = vm.risk_budget_row({
+        "opportunity_id": "x", "bucket": "risk_budget",
+        "display_spread_c": 12, "worst_case_profit_c": -10, "best_case_profit_c": 90,
+        "spread_over_parent": 0.4, "parent_yes_bid_c": 20, "child_yes_ask_c": 25,
+        "cost_c": 107, "parent_display_c": 35, "child_display_c": 30,
+        "comp_quote_quality": "Very wide",
+    }, set())
+    assert row["cond_success"] == 40.0
+    assert row["cond_child"] == round(30 / 35 * 100, 1)   # child 30 ÷ parent 35 = 85.7
+    assert row["firm_gap"] == -5            # 20 - 25
+    assert row["firm_pct"] is None          # not shown when gap <= 0
+    assert row["midpoint_only"] is True     # display + but firm -
+    assert row["parent_over_maxloss"] == round(35 / 7, 2)   # parent 35 ÷ max loss (107 − 100)
+    labels = {f["label"] for f in row["flags"]}
+    assert "Midpoint-only" in labels and "Wide basis" in labels
+
+
+def test_risk_budget_row_old_snapshot_missing_new_fields_renders_blank():
+    # An old snapshot row lacks every new key -> blank (None) cells, no flags, no crash.
+    row = vm.risk_budget_row({"opportunity_id": "old", "bucket": "risk_budget",
+                              "worst_case_profit_c": -10, "best_case_profit_c": 90}, set())
+    assert row["cond_success"] is None
+    assert row["cond_child"] is None
+    assert row["firm_gap"] is None
+    assert row["firm_pct"] is None
+    assert row["midpoint_only"] is False
+    assert row["parent_over_maxloss"] is None
+    assert row["flags"] == []

@@ -7,6 +7,15 @@ worktrees on this repo. Goal: reduce manual back-and-forth, avoid stale approved
 Companion docs (not repeated here): `docs/REVIEW_PROTOCOL.md` (risk classes + verdicts),
 `docs/PR_CHECKLIST.md` (pre-merge pass), `AGENTS.md` (Codex's review contract).
 
+## 0. Near-term delivery policy (owner, 2026-06-09)
+
+**Branch-only delivery — supersedes the per-PR cadence below until the owner lifts it.** Do NOT open a PR per
+change. Implement the **full scope** of a work item across **one or more feature branches**, verify
+(`pytest -q`, `ruff`, `serve.py` boot), then hand the branch(es) back. The owner **tests manually** and
+**merges to `main` only when satisfied**; `main` stays frozen until then. Branch off latest `main` or off the
+unmerged branch a feature depends on (note the base). The "small PRs / WIP limits / one PR per change"
+guidance in §1–§2 applies again only once this policy is lifted.
+
 ## 1. Default workflow
 
 1. **Triage the idea** — what's the actual change and is it ready to implement soon?

@@ -1,0 +1,76 @@
+{
+  "event_ticker": "KXWCGROUPBOTTOM-26K",
+  "series_ticker": "KXWCGROUPBOTTOM",
+  "title": "Group K Team to Finish Bottom",
+  "mutually_exclusive": true,
+  "markets": [
+    {
+      "ticker": "KXWCGROUPBOTTOM-26K-UZB",
+      "yes_sub_title": "Uzbekistan",
+      "status": "active",
+      "yes_bid_dollars": "0.5100",
+      "yes_ask_dollars": "0.5400",
+      "no_bid_dollars": "0.4600",
+      "no_ask_dollars": "0.4900",
+      "yes_bid_size_fp": "1000.00",
+      "yes_ask_size_fp": "81.00",
+      "volume_fp": "100.29",
+      "open_interest_fp": "98.29",
+      "custom_strike": {
+        "soccer_team": "8cc0db1b-e649-4385-a329-7890f2aa5fbb"
+      },
+      "rules_primary": "If Uzbekistan is the team to finish bottom of Group K in the 2026 Men's FIFA World Cup, then the market resolves to Yes."
+    },
+    {
+      "ticker": "KXWCGROUPBOTTOM-26K-COL",
+      "yes_sub_title": "Colombia",
+      "status": "active",
+      "yes_bid_dollars": "0.0400",
+      "yes_ask_dollars": "0.0600",
+      "no_bid_dollars": "0.9400",
+      "no_ask_dollars": "0.9600",
+      "yes_bid_size_fp": "1000.00",
+      "yes_ask_size_fp": "1000.00",
+      "volume_fp": "0.00",
+      "open_interest_fp": "0.00",
+      "custom_strike": {
+        "soccer_team": "af937b2a-7c8a-4b74-841c-996fdb32e324"
+      },
+      "rules_primary": "If Colombia is the team to finish bottom of Group K in the 2026 Men's FIFA World Cup, then the market resolves to Yes."
+    },
+    {
+      "ticker": "KXWCGROUPBOTTOM-26K-POR",
+      "yes_sub_title": "Portugal",
+      "status": "active",
+      "yes_bid_dollars": "0.0100",
+      "yes_ask_dollars": "0.0300",
+      "no_bid_dollars": "0.9700",
+      "no_ask_dollars": "0.9900",
+      "yes_bid_size_fp": "2000.00",
+      "yes_ask_size_fp": "1105.00",
+      "volume_fp": "928.43",
+      "open_interest_fp": "928.43",
+      "custom_strike": {
+        "soccer_team": "564f28ed-8151-46d3-843b-b5706f2ef7f6"
+      },
+      "rules_primary": "If Portugal is the team to finish bottom of Group K in the 2026 Men's FIFA World Cup, then the market resolves to Yes."
+    },
+    {
+      "ticker": "KXWCGROUPBOTTOM-26K-COD",
+      "yes_sub_title": "Congo DR",
+      "status": "active",
+      "yes_bid_dollars": "0.4100",
+      "yes_ask_dollars": "0.4200",
+      "no_bid_dollars": "0.5800",
+      "no_ask_dollars": "0.5900",
+      "yes_bid_size_fp": "3.85",
+      "yes_ask_size_fp": "2013.00",
+      "volume_fp": "272.85",
+      "open_interest_fp": "271.64",
+      "custom_strike": {
+        "soccer_team": "7e709603-53e3-4b31-87df-21327d852e03"
+      },
+      "rules_primary": "If Congo DR is the team to finish bottom of Group K in the 2026 Men's FIFA World Cup, then the market resolves to Yes."
+    }
+  ]
+}

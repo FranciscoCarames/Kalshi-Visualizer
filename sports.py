@@ -140,6 +140,9 @@ class GroupBasketRule:
     label: str
     yes_ceiling_count: int | None = None
     no_ceiling_count: int | None = None
+    # Trader-facing noun for the legs in the finding text (e.g. "qualifier" / "bottom-finisher"). Default
+    # "qualifier" preserves the existing World Cup group-qualifier wording byte-for-byte.
+    noun: str = "qualifier"
 
 
 @dataclass(frozen=True)
@@ -227,8 +230,31 @@ class SportConfig:
         return self.family_fn(self, series_ticker)
 
     def derived_indicators(self, node_pct: dict[str, Any]) -> list[dict[str, Any]]:
-        """Derived market-implied indicators (bounds) from the ladder's display prices, or [] when none."""
-        return self.derived_indicators_fn(self, node_pct) if self.derived_indicators_fn else []
+        """Derived, DISPLAY-ONLY market-implied indicators from the ladder's display prices (detail panel
+        only; never executable). Generic for any static-laddered sport: (1) the broadest rung as an
+        "In contention" implied chance, (2) guarded conditional ratios P(deeper | broader) over adjacent
+        rungs. Then any sport-specific bounds via `derived_indicators_fn` (e.g. golf make-cut floor). All
+        labeled Uncalibrated; conditional ratios are SUPPRESSED when the ladder is inconsistent
+        (deeper priced ≥ broader → ratio > 1, never asserted as "more than certain")."""
+        out: list[dict[str, Any]] = []
+        nodes = self.ladder.node_order if self.ladder else ()
+        if nodes:
+            broad = nodes[0]
+            top = node_pct.get(broad)
+            if top is not None:
+                out.append({"label": f"In contention ({broad})", "comparator": "≈", "value_pct": top,
+                            "note": "market-implied chance of being in the running; gross, top-of-book, "
+                                    "Uncalibrated"})
+            for broader, deeper in zip(nodes, nodes[1:]):
+                b, d = node_pct.get(broader), node_pct.get(deeper)
+                if b is None or d is None or b <= 0 or d > b:   # missing / degenerate / inconsistent ladder
+                    continue
+                out.append({"label": f"P({deeper} | {broader})", "comparator": "≈", "value_pct": d / b * 100,
+                            "note": "derived conditional estimate; assumes a consistent ladder; gross, "
+                                    "top-of-book, Uncalibrated — NOT a fair value"})
+        if self.derived_indicators_fn:
+            out.extend(self.derived_indicators_fn(self, node_pct))
+        return out
 
     def group_basket_rule_of(self, series_ticker: str) -> "GroupBasketRule | None":
         """The cardinality-floor basket rule for a series ticker, or None when the sport has none."""
@@ -397,6 +423,11 @@ _TENNIS_LADDER = LadderSpec(
 )
 _WOMEN_WINNER_TICKERS = {"KXFOWOMEN", "KXFOWOMENSINGLES", "KXFOPENWMENSINGLE"}
 _MEN_WINNER_TICKERS = {"KXFOMEN", "KXFOMENSINGLES", "KXFOPENMENSINGLE"}
+# ITF lower-tier tour matches (W15/W25/M15/M25…) live OUTSIDE the KXATP*/KXWTA* prefixes, so tennis owns
+# them explicitly. Live-probed 2026-06-09: both carry custom_strike.tennis_competitor (high-confidence
+# identity) and head-to-head events with exactly 2 markets → the standard 2-way dutch-book path
+# (_detect_pair) with no detector change. Women = KXITFWMATCH, men = KXITFMATCH.
+_TENNIS_EXACT = frozenset({"KXITFWMATCH", "KXITFMATCH"})
 
 
 def _tennis_family(cfg: SportConfig, series_ticker: str) -> str:
@@ -439,6 +470,8 @@ def _tennis_division(cfg: SportConfig, series_ticker: str) -> str:
         return "WTA"
     if t in _MEN_WINNER_TICKERS:
         return "ATP"
+    if t.startswith("KXITFW"):
+        return "WTA"                            # ITF women (KXITFWMATCH); men KXITFMATCH falls through to ATP
     if t.startswith("KXWTA") or "WOMEN" in t:
         return "WTA"
     return "ATP"
@@ -463,8 +496,10 @@ def _tennis_score_format(cfg: SportConfig, division: str, tournament: str) -> st
 TENNIS = register(SportConfig(
     sport_id="tennis", label="Tennis", emoji="🎾",
     series_prefixes=tuple(config.TENNIS_SERIES_PREFIXES),
-    default_series=tuple(config.DEFAULT_SERIES),
+    # Fetch the FO core + the ITF head-to-head series in the default scan (ITF is exact-owned, not prefixed).
+    default_series=tuple(config.DEFAULT_SERIES) + tuple(sorted(_TENNIS_EXACT)),
     winner_tickers=frozenset(config.FO_WINNER_TICKERS),
+    exact_series=_TENNIS_EXACT,
     identity=IdentityResolver(candidate_paths=("custom_strike.tennis_competitor",), id_label="tennis_competitor"),
     ladder=_TENNIS_LADDER,
     category_labels=_TENNIS_CATEGORY,
@@ -792,13 +827,45 @@ GOLF = register(SportConfig(
 # contract — not owned. The Tie market reuses a CONSTANT soccer_team UUID across all games (non-participant
 # draw leg, per-event synthetic key via tie_fn). No head-to-head series (match_family="").
 SOCCER_TIE_UUID = "111193d4-9b1f-4bd8-ab7c-9de252737f05"
+# World Cup series that are CURRENT on Kalshi but deliberately OUT of detector scope — owned only so they
+# resolve to soccer (not the UNKNOWN sport) and surface in the coverage audit / Debug "considered"
+# inventory as "recognized + other" rather than silently disappearing. `_soccer_family` returns "other"
+# for all of them (the default branch), so they get the "Other" category label, which `data.non_other_
+# families` strips from every fetch scope → owned but NEVER fetched and NEVER detected (verified safe even
+# under scan_all: discover_series_for_sport returns all exact_series, then series_for_families drops the
+# "other" ones). CRITICAL: KXWCBESTHOST / KXWCFURTHESTADVANCING settle FRACTIONALLY ($1/N on co-winners),
+# which violates the one-winner assumption in dutchbook.prove_field_mece — keeping them "other" guarantees
+# they can never enter field_families and so can never produce a FALSE field dutch book.
+_SOCCER_KNOWN_OTHER = frozenset({
+    "KXWCSTAGE",              # furthest stage by host/region — synthetic entity, not a soccer_team
+    "KXWCBESTHOST",           # best-performing host nation — FRACTIONAL co-winner settlement (excluded)
+    "KXWCFURTHESTADVANCING",  # furthest-advancing nation by region — FRACTIONAL co-winner settlement
+    "KXWCGOALLEADER",         # Golden Boot / goal leader — award/stat, out of scope
+    "KXWCAWARD",              # tournament awards — out of scope
+    "KXWCTOTALGOAL",          # scalar total-goals threshold — out of scope
+    "KXWCTEAMGOALS",          # per-team goals scalar — out of scope
+    "KXWCGROUPGOALS",         # per-group goals scalar — out of scope
+    "KXWCGROUPWINNER",        # "Group to Win" — a DIFFERENT contract from KXWCGROUPWIN; not modeled
+})
 _SOCCER_EXACT = frozenset({"KXWCGAME", "KXWCROUND", "KXWCGROUPQUAL", "KXWCGROUPWIN", "KXMENWORLDCUP",
-                           "KXWCGROUPORDER"})
+                           "KXWCGROUPORDER", "KXWCGROUPBOTTOM",
+                           "KXWCSTAGEOFELIM"}) | _SOCCER_KNOWN_OTHER
+# KXWCSTAGEOFELIM "stage of elimination" partition: per-team, exactly ONE of these 7 buckets settles YES
+# (the stage where the team is eliminated; FW = wins the final). Ordered broad→deep by the market-ticker
+# suffix; the SAME ordered set the detector (stage_elim.py) uses, so it is single-sourced here. Live-probed
+# 2026-06-09: 48 events, mutually_exclusive=True, constant soccer_team UUID across a team's 7 buckets.
+WC_STAGE_ELIM_BUCKETS = (
+    ("GS", "Eliminated: Group Stage"), ("R32", "Eliminated: Round of 32"),
+    ("R16", "Eliminated: Round of 16"), ("QF", "Eliminated: Quarterfinals"),
+    ("SF", "Eliminated: Semifinals"), ("FL", "Runner-up (lost Final)"), ("FW", "Winner"),
+)
+_WC_STAGE_ELIM_LABEL = dict(WC_STAGE_ELIM_BUCKETS)
 # `exact_order` MUST have a non-"other" category label, else data.non_other_families would treat it as a
 # prop and the cross-sport fetch path would never load KXWCGROUPORDER.
 _SOCCER_CATEGORY = {"game": "Match (3-way)", "advance": "Stage advancement",
                     "group_winner": "Group winner", "winner": "Tournament winner",
-                    "exact_order": "Exact group order", "other": "Other"}
+                    "exact_order": "Exact group order", "group_bottom": "Group bottom",
+                    "stage_of_elim": "Stage of elimination", "other": "Other"}
 _SOCCER_STAGE_RANK = {"Round of 32": 1, "Round of 16": 2, "Quarterfinals": 3, "Semifinals": 4, "Finals": 5}
 _SOCCER_LADDER = LadderSpec(
     node_order=("Reach Round of 32", "Reach Round of 16", "Reach Quarterfinals",
@@ -830,12 +897,21 @@ def _soccer_family(cfg, series_ticker):
         return "group_winner"                                        # per-team "win the group" — containment leaf
     if t == "KXWCGROUPORDER":
         return "exact_order"                                         # 24-way exact standings — diagnostic only (#4)
+    if t == "KXWCGROUPBOTTOM":
+        return "group_bottom"                                        # 4-team "finish bottom" one-winner field
+    if t == "KXWCSTAGEOFELIM":
+        return "stage_of_elim"                                       # per-team 7-bucket elimination MECE set
     if t in cfg.winner_tickers:
         return "winner"                                              # tournament outright (KXMENWORLDCUP)
     return "other"
 
 
 def _soccer_stage(cfg, family, market):
+    if family == "stage_of_elim":
+        # The elimination bucket is the market-ticker suffix (…-GS / …-R32 / … / …-FW). Display-only label;
+        # the family is non-laddered, so this never enters a containment comparison.
+        suffix = str(market.get("ticker") or "").rsplit("-", 1)[-1].upper()
+        return _WC_STAGE_ELIM_LABEL.get(suffix, "")
     if family != "advance":
         return ""
     # The round lives in the market ticker segment (e.g. KXWCROUND-26RO16-PAR / KXWCGROUPQUAL-26L-PAN)
@@ -879,7 +955,9 @@ def _soccer_tie(cfg, market):
 
 SOCCER = register(SportConfig(
     sport_id="soccer", label="Soccer (World Cup)", emoji="⚽",
-    series_prefixes=(), default_series=tuple(sorted(_SOCCER_EXACT)),
+    # default_series is the bounded fetch subset — the SUPPORTED series only. Known-other tickers are owned
+    # (in _SOCCER_EXACT, so they resolve to soccer) but excluded here so they never enter the default scan.
+    series_prefixes=(), default_series=tuple(sorted(_SOCCER_EXACT - _SOCCER_KNOWN_OTHER)),
     winner_tickers=frozenset({"KXMENWORLDCUP"}),   # live per-team outright field (KXMENWORLDCUP-26)
     identity=IdentityResolver(candidate_paths=("custom_strike.soccer_team",), id_label="soccer_team"),
     ladder=_SOCCER_LADDER,
@@ -905,9 +983,20 @@ SOCCER = register(SportConfig(
     # floor of 100¢ for the all-four basket. The CONDITIONAL ceilings: up to 3 qualify when the 3rd-placed
     # team takes a best-third slot (YES 300¢), and up to 2 fail otherwise (NO 200¢). See
     # dutchbook.find_group_baskets.
-    group_basket_rules={"KXWCGROUPQUAL": GroupBasketRule(team_count=4, yes_floor=2, no_floor=1,
-                                                         yes_ceiling_count=3, no_ceiling_count=2,
-                                                         label="World Cup group")},
+    # KXWCGROUPQUAL = top-2 qualify (floors 2/1, conditional best-third ceiling 3/2). KXWCGROUPBOTTOM =
+    # which of the 4 finishes bottom: EXACTLY one does, so exactly 1 leg settles YES and 3 settle NO — an
+    # EXACT cardinality basket (floor == ceiling, no conditional band). Live-probed 2026-06-09 the events
+    # were mutually_exclusive=False; re-probed 2026-06-10 (kickoff eve) they now flag True. The routing is
+    # deliberately FLAG-INDEPENDENT: the basket proof is the format-derived cardinality floor, so the flip
+    # changes nothing here, and group_bottom stays OUT of field_families (never a flagged winner field).
+    group_basket_rules={
+        "KXWCGROUPQUAL": GroupBasketRule(team_count=4, yes_floor=2, no_floor=1,
+                                         yes_ceiling_count=3, no_ceiling_count=2,
+                                         label="World Cup group"),
+        "KXWCGROUPBOTTOM": GroupBasketRule(team_count=4, yes_floor=1, no_floor=3,
+                                           yes_ceiling_count=1, no_ceiling_count=3,
+                                           label="World Cup group", noun="bottom-finisher"),
+    },
 ))
 
 

@@ -49,8 +49,9 @@ def test_exact_series_wins_over_broad_prefix_regardless_of_order(monkeypatch):
 
 
 def test_real_sports_unchanged_with_empty_exact_series():
-    """Registered sports default exact_series to empty, so resolution is byte-identical to before."""
-    assert sports.TENNIS.exact_series == frozenset()
+    """A prefix-owned sport defaults exact_series to empty, so resolution is byte-identical to before.
+    (Tennis now exact-owns ITF — see test_itf_* — so NBA is the empty-exact_series exemplar here.)"""
+    assert sports.NBA.exact_series == frozenset()
     assert sports.sport_for_series("KXATPMATCH").sport_id == "tennis"
     assert sports.sport_for_series("KXNBA").sport_id == "nba"
     assert sports.sport_for_series("KXWNBA").sport_id == "wnba"   # prefix precedence still holds
@@ -484,11 +485,20 @@ def test_soccer_registered_and_exact_only_ownership():
     # shadows KXWCGAME/KXWCROUND/etc.).
     for tk in ("KXWCGAME", "KXWCROUND", "KXWCGROUPQUAL", "KXWCGROUPWIN", "KXMENWORLDCUP"):
         assert sports.sport_for_series(tk).sport_id == "soccer", tk
-    # Field-shaped + not-live series must NOT be owned by soccer (resolve to unknown). KXWCGROUPWINNER
-    # ("Group to Win") is a distinct contract; KXWC is the retired dormant guess; KXMWORLDCUP is a dead
-    # lookalike with no open event (the live outright is KXMENWORLDCUP).
-    for tk in ("KXWCSTAGE", "KXWCGROUPWINNER", "KXFIFAGAME", "KXFIFAADVANCE", "KXWCGOALLEADER",
-               "KXWC", "KXMWORLDCUP"):
+    # Known-but-out-of-scope World Cup series are OWNED (resolve to soccer) but classify as "other" so they
+    # surface in the coverage audit / Debug as "recognized + other" instead of silently vanishing — yet are
+    # never fetched/detected (the "Other" family is stripped from every fetch scope). The fractional
+    # co-winner fields (BESTHOST / FURTHESTADVANCING) MUST stay "other" so they can never reach _detect_field.
+    for tk in ("KXWCSTAGE", "KXWCBESTHOST", "KXWCFURTHESTADVANCING", "KXWCGOALLEADER", "KXWCAWARD",
+               "KXWCTOTALGOAL", "KXWCTEAMGOALS", "KXWCGROUPGOALS", "KXWCGROUPWINNER"):
+        cfg = sports.sport_for_series(tk)
+        assert cfg.sport_id == "soccer", tk
+        assert cfg.family_of(tk) == "other", tk
+    # The "Other" label keeps them out of the fetch scope entirely.
+    assert "Other" not in data.non_other_families(sports.SOCCER)
+    # Genuine non-soccer lookalikes still resolve to unknown: KXFIFA* are a different namespace; KXWC is the
+    # retired dormant guess; KXMWORLDCUP is a dead lookalike with no open event (live outright = KXMENWORLDCUP).
+    for tk in ("KXFIFAGAME", "KXFIFAADVANCE", "KXWC", "KXMWORLDCUP"):
         assert sports.sport_for_series(tk).sport_id == "unknown", tk
 
 
@@ -505,6 +515,57 @@ def test_soccer_game_not_laddered_and_reach_stage_nodes():
     ]:
         a = sports.SOCCER.classify(series, {"ticker": tk, "title": "x"})
         assert a.family == "advance" and a.ladder_node == node, tk
+
+
+def test_soccer_group_bottom_is_exact_cardinality_basket_not_laddered():
+    # "Team to finish bottom" is an EXACT cardinality basket (mutually_exclusive=False on the live API),
+    # owned + classified group_bottom, NOT laddered, with a 4-team 1-YES/3-NO basket rule.
+    assert sports.sport_for_series("KXWCGROUPBOTTOM").sport_id == "soccer"
+    c = sports.SOCCER.classify("KXWCGROUPBOTTOM", {"ticker": "KXWCGROUPBOTTOM-26H-CPV", "title": "x"})
+    assert c.family == "group_bottom" and c.ladder_node is None
+    assert c.eligible_for_ladder_checks is False
+    assert sports.SOCCER.category_labels["group_bottom"] == "Group bottom"
+    # NOT a flagged winner field — must stay out of field_families (else a false overround on the ME flag).
+    assert "group_bottom" not in sports.SOCCER.field_families
+    rule = sports.SOCCER.group_basket_rule_of("KXWCGROUPBOTTOM")
+    assert rule is not None and rule.team_count == 4 and rule.yes_floor == 1 and rule.no_floor == 3
+
+
+_GBOTTOM_FIX = Path(__file__).parent / "fixtures" / "wc_group_bottom"
+
+
+def test_group_bottom_live_fixtures_flow_through_engine():
+    """The REAL captured KXWCGROUPBOTTOM events (live probe 2026-06-09) must classify as 4 distinct
+    group_bottom participants per event and be consumable by the basket detector without error."""
+    import dutchbook
+    files = sorted(_GBOTTOM_FIX.glob("KXWCGROUPBOTTOM-*.json"))
+    assert len(files) >= 3, "expected >=3 captured groups as B-probe evidence"
+    all_rows = []
+    for fp in files:
+        ev = json.loads(fp.read_text(encoding="utf-8"))
+        rows = data.build_contracts("KXWCGROUPBOTTOM", [ev])
+        assert len(rows) == 4, fp.name                       # 4 teams per group
+        keys = {r["player_key"] for r in rows}
+        assert len(keys) == 4, fp.name                       # distinct soccer_team UUIDs
+        assert all(r["kind"] == "group_bottom" for r in rows), fp.name
+        assert all(r["is_participant"] for r in rows), fp.name
+        all_rows.extend(rows)
+    # The basket detector consumes them NaN-safely (a finding may or may not fire on live prices).
+    out = dutchbook.find_group_baskets([{**r} for r in pd.DataFrame(all_rows).to_dict("records")])
+    for f in out:
+        assert f["status"] == dutchbook.EXECUTABLE_GROUP_BASKET and f["n_legs"] == 4
+
+
+def test_soccer_stage_of_elim_owned_classified_non_laddered():
+    # KXWCSTAGEOFELIM: owned, classified stage_of_elim, NON-laddered (per-team 7-bucket MECE set), with a
+    # readable per-bucket display stage parsed from the market-ticker suffix.
+    assert sports.sport_for_series("KXWCSTAGEOFELIM").sport_id == "soccer"
+    assert sports.SOCCER.category_labels["stage_of_elim"] == "Stage of elimination"
+    assert "KXWCSTAGEOFELIM" in sports.SOCCER.default_series
+    for suffix, label in (("R32", "Eliminated: Round of 32"), ("FW", "Winner"), ("FL", "Runner-up (lost Final)")):
+        c = sports.SOCCER.classify("KXWCSTAGEOFELIM", {"ticker": f"KXWCSTAGEOFELIM-26USA-{suffix}", "title": "x"})
+        assert c.family == "stage_of_elim" and c.ladder_node is None
+        assert c.eligible_for_ladder_checks is False and c.stage == label
 
 
 def test_soccer_winner_rung_live_outright():
@@ -666,13 +727,66 @@ def test_participant_default_invariant_for_existing_sports():
     assert r["is_participant"] is True and r["participant_type"] == "participant"
 
 
-def test_golf_make_cut_floor_indicator_and_default_noop():
-    # P(make cut) >= P(Top 20): the derived indicator reads the Top-20 display % as a FLOOR (a bound).
-    out = sports.GOLF.derived_indicators({"Top 20": 18.0, "Top 10": 9.0, "Top 5": 4.0})
-    assert len(out) == 1
-    assert out[0]["label"] == "Make the cut" and out[0]["comparator"] == "≥" and out[0]["value_pct"] == 18.0
-    # absent when Top 20 isn't listed (no floor to read)
-    assert sports.GOLF.derived_indicators({"Top 10": 9.0}) == []
-    # every other sport has no hook -> defaulted no-op returns []
-    assert sports.TENNIS.derived_indicators({"Reach Semifinal": 60.0}) == []
-    assert sports.NBA.derived_indicators({"Reach Playoffs": 80.0}) == []
+def test_golf_derived_indicators_in_contention_ratios_and_make_cut():
+    out = sports.GOLF.derived_indicators({"Top 20": 18.0, "Top 10": 9.0, "Top 5": 4.0, "Win Tournament": 1.0})
+    labels = [i["label"] for i in out]
+    assert "In contention (Top 20)" in labels                       # broadest rung = in-contention
+    floor = next(i for i in out if i["label"] == "Make the cut")     # golf-specific FLOOR still appended
+    assert floor["comparator"] == "≥" and floor["value_pct"] == 18.0
+    pw = next(i for i in out if i["label"] == "P(Win Tournament | Top 5)")   # conditional ratio 1/4*100
+    assert pw["value_pct"] == 25.0
+    # make-cut floor absent when Top 20 isn't listed (other rungs still yield conditional ratios)
+    assert all(i["label"] != "Make the cut" for i in sports.GOLF.derived_indicators({"Top 10": 9.0, "Top 5": 4.0}))
+
+
+def test_derived_indicators_generalized_to_all_laddered_sports_and_guarded():
+    # PR G — every laddered sport gets the broad-rung "in contention" indicator (not just golf).
+    assert any(i["label"] == "In contention (Reach Semifinal)"
+               for i in sports.TENNIS.derived_indicators({"Reach Semifinal": 60.0}))
+    assert any(i["label"] == "In contention (Reach Playoffs)"
+               for i in sports.NBA.derived_indicators({"Reach Playoffs": 80.0}))
+    assert sports.TENNIS.derived_indicators({}) == []                # no rung price -> nothing
+    # conditional ratio SUPPRESSED on an inconsistent ladder (deeper priced above broader)...
+    out = sports.TENNIS.derived_indicators({"Reach Semifinal": 30.0, "Reach Final": 10.0, "Win Tournament": 15.0})
+    assert all(i["label"] != "P(Win Tournament | Reach Final)" for i in out)
+    # ...but a consistent neighbour still emits: P(Reach Final | Reach Semifinal) = 10/30*100
+    pf = next(i for i in out if i["label"] == "P(Reach Final | Reach Semifinal)")
+    assert round(pf["value_pct"], 1) == 33.3
+
+
+# --- ITF tennis (lower-tour head-to-head matches; exact-owned) -----------------------
+_ITF_FIX = Path(__file__).parent / "fixtures" / "itf"
+
+
+def test_itf_owned_classified_match_and_division():
+    # ITF lives outside KXATP*/KXWTA* prefixes, so tennis must own it via exact_series.
+    assert sports.sport_for_series("KXITFWMATCH").sport_id == "tennis"
+    assert sports.sport_for_series("KXITFMATCH").sport_id == "tennis"
+    # Both classify as the 2-way head-to-head "match" family.
+    assert sports.TENNIS.classify("KXITFWMATCH", {"title": "x"}).family == "match"
+    assert sports.TENNIS.classify("KXITFMATCH", {"title": "x"}).family == "match"
+    # Division fix: ITF women -> WTA, ITF men -> ATP (women would otherwise mislabel as ATP).
+    assert sports.TENNIS.division_of("KXITFWMATCH") == "WTA"
+    assert sports.TENNIS.division_of("KXITFMATCH") == "ATP"
+    # Fetched in the default scan (exact-owned series appended to default_series).
+    assert "KXITFWMATCH" in sports.TENNIS.default_series and "KXITFMATCH" in sports.TENNIS.default_series
+
+
+def test_itf_live_fixtures_flow_through_engine():
+    """Real captured ITF events (live probe 2026-06-09): each is a 2-market head-to-head with
+    custom_strike.tennis_competitor identity, and the 2-way dutch-book detector consumes them."""
+    import dutchbook
+    files = sorted(_ITF_FIX.glob("KXITF*MATCH-*.json"))
+    assert len(files) >= 2, "expected a men's + a women's ITF fixture as D-probe evidence"
+    for fp in files:
+        ev = json.loads(fp.read_text(encoding="utf-8"))
+        series = ev["series_ticker"]
+        rows = data.build_contracts(series, [ev])
+        assert len(rows) == 2, fp.name                                  # head-to-head: 2 markets
+        assert all(r["kind"] == "match" for r in rows), fp.name
+        assert len({r["player_key"] for r in rows}) == 2, fp.name       # distinct competitor UUIDs
+        assert all(r["mapping_confidence"] == "high" for r in rows), fp.name  # tennis_competitor present
+        # The 2-way detector consumes them NaN-safely (a book may or may not fire on live prices).
+        out = dutchbook.find_dutch_books([{**r} for r in pd.DataFrame(rows).to_dict("records")])
+        for f in out:
+            assert f["status"] == dutchbook.EXECUTABLE_DUTCH_BOOK

@@ -39,6 +39,20 @@ FIXED_SUM_BASIS = ("dutch-booked only because the settlement rules prove a fixed
 GROUP_BASKET_BASIS = ("hard-floor group basket: gross, top-of-book, fees not modeled; the guaranteed "
                       "settle-count floor is fixed by the tournament format")
 
+# Stage-of-elimination (KXWCSTAGEOFELIM) — single-sourced conservative wording.
+# Standalone book: a per-team MECE 7-way (exactly one elimination bucket settles YES) — a clean dutch book
+# like any one-winner set, under normal progression settlement. Gross, top-of-book, fees not modeled.
+STAGE_ELIM_BOOK_BASIS = ("gross MECE pricing discrepancy over a team's 7 elimination-stage outcomes "
+                         "(exactly one settles YES), top-of-book, fees not modeled, under normal "
+                         "progression settlement — not riskless, not true arbitrage")
+# Cross-family tail-sum: a sum of elimination buckets REPLICATES an advance rung (e.g. Reach Final = lost-
+# Final + Winner), priced vs the direct advance market. NOT a dutch book and NOT arbitrage — the two
+# families are different markets and an abnormal resolution can settle them differently. Review-only.
+STAGE_ELIM_SYNTH_BASIS = ("a sum of elimination-stage buckets replicates an advance rung, priced against "
+                          "the direct advance market — gross, top-of-book, settlement-sensitive (a "
+                          "walkover/withdrawal can settle the two families differently); NOT arbitrage and "
+                          "never executable without verifying the settlement rules")
+
 # Exact-order top-two PROXY (#4) — single-sourced conservative wording. NOT an edge, NOT arbitrage: it is a
 # diagnostic spread between the qualifier YES ask and a 12-leg exact-order top-two bundle, sensitive to
 # stale/illiquid exact-order quotes and NOT settlement-proven.
@@ -63,6 +77,16 @@ SPECULATIVE_TOP2_BASIS = ("top-two bundle: Buy YES on the 12 exact-order outcome
                           "zero. Gross and top-of-book; fees, full depth, collateral and position limits "
                           "not modeled; 12-leg execution with thin / stale exact-order quotes; settlement "
                           "review required")
+
+# Three-zone disclosure (Phase 2 B) — single-sourced wording for the SPECULATIVE zone (bounded-loss
+# candidates + derived diagnostics). These are NOT executable findings: gross, top-of-book, market-implied
+# and UNCALIBRATED (no fee / full-depth / outcome-calibration model), and they CAN LOSE MONEY. Never
+# "riskless" / "locked" / "true arbitrage" / "guaranteed". Probability / EV / relative-value metrics here are
+# DISPLAY-ONLY and never feed the strict executable classification, bucket, or rank.
+SPECULATIVE_ZONE_BASIS = ("Speculative — NOT actionable and CAN LOSE MONEY. Bounded-loss candidates and "
+                          "derived signals are gross, top-of-book, market-implied and UNCALIBRATED (fees, "
+                          "full depth, and outcome calibration are not modeled). These metrics are "
+                          "display-only and never change the strict executable findings.")
 
 # --- Glossary terms (term -> {short, long}) ------------------------------------------
 GLOSSARY: dict[str, dict[str, str]] = {
@@ -338,6 +362,11 @@ BLOCKERS: dict[str, str] = {
                                "or a team withdraws / is replaced, the qualifier set may not settle as "
                                "scheduled and the guaranteed settle-count floor need not hold — review "
                                "the settlement rules before trading.",
+    "stage_elim_synthetic": "Gross discrepancy, not riskless: a sum of elimination-stage buckets "
+                            "replicates an advance rung, but the two are different markets. A walkover / "
+                            "withdrawal can advance a team without the elimination buckets settling the "
+                            "matching way, and an abandoned tournament can settle them differently — "
+                            "review the settlement rules before trading.",
 }
 
 WATCHLIST_NOTE = (

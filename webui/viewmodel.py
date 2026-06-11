@@ -365,12 +365,88 @@ def _upside_risk(worst: Any, best: Any) -> Any:
     return None if _isna(best) else round(best / risk, 1)
 
 
+_BUDGET_C = 10000   # $100 gross top-of-book reference allocation, in cents
+
+
+def _wins_if(o: dict[str, Any]) -> str:
+    """Plain-English payoff zone for a bounded-loss bet — the broader rung happens but NOT the deeper one
+    (e.g. 'Reach Final but not Win Tournament', 'Top 10 but not Top 5'). Blank when the rung labels are
+    absent (display-only — `parent_node`/`child_node` never feed executable logic)."""
+    parent, child = str(o.get("parent_node") or "").strip(), str(o.get("child_node") or "").strip()
+    return f"{parent} but not {child}" if parent and child else ""
+
+
+def _sized_at_budget(o: dict[str, Any], budget_c: int = _BUDGET_C) -> tuple[int, int, int] | None:
+    """A $100 (gross, top-of-book) allocation sized down to what's affordable AND fillable:
+    units = min(budget // cost, top-of-book size). Returns (units, gross max-loss ¢, gross best-upside ¢),
+    or None when cost / per-unit payoffs / a positive fillable size are missing. Scales the per-unit
+    worst/best-case profit already on the row — no payoff math is duplicated here."""
+    cost = _num_or_none(o.get("cost_c"))
+    wc, bc = _num_or_none(o.get("worst_case_profit_c")), _num_or_none(o.get("best_case_profit_c"))
+    if cost is None or cost <= 0 or wc is None or bc is None:
+        return None
+    units = int(budget_c // cost)
+    size = _num_or_none(o.get("exec_min_size"))
+    if size is not None:
+        units = min(units, int(size))
+    if units <= 0:
+        return None
+    return units, round(-wc * units), round(bc * units)
+
+
+def _overpay_c(o: dict[str, Any]) -> float | None:
+    wc = _num_or_none(o.get("worst_case_profit_c"))
+    return None if wc is None else max(0.0, -wc)
+
+
+def _peer_cheap(b_val: float | None, peer_vals: list, k: float) -> bool:
+    """True if `b_val` sits ≥ `k` robust z-scores (median/MAD) BELOW the peer median (lower = cheaper). MAD 0
+    (a constant peer level) → flag only a strict undercut. None inputs / no peers → not cheap."""
+    vals = [v for v in peer_vals if v is not None]
+    if b_val is None or not vals:
+        return False
+    med = statistics.median(vals)
+    mad = statistics.median([abs(v - med) for v in vals])
+    return b_val < med if mad == 0 else (med - b_val) / mad >= k
+
+
+def flag_peer_cheapness(opps: Iterable[dict[str, Any]] | None, *, band_tol_c: float | None = None,
+                        min_peers: int | None = None, k: float | None = None) -> list[dict[str, Any]]:
+    """Stamp DISPLAY-ONLY `cheap_cost` / `cheap_ratio` flags on each bounded-loss opp: cheap vs SAME-SPORT
+    peers within `band_tol_c` ¢ of the same implied-payoff band (`display_spread_c`). A bet is cheap on
+    `cost` when its overpay (max loss), or on `ratio` when its spread÷outright, is ≥ `k` robust z-scores
+    below the peer median. Needs ≥ `min_peers` same-sport in-band peers, else left unflagged (insufficient).
+    Mutates the opps in place (idempotent — every row is reset first); NEVER read by executable
+    classify/bucket/rank. Returns the same list. Defaults pulled from config."""
+    band_tol_c = config.PEER_BAND_TOLERANCE_C if band_tol_c is None else band_tol_c
+    min_peers = config.PEER_MIN_COUNT if min_peers is None else min_peers
+    k = config.PEER_CHEAP_MAD_K if k is None else k
+    rows = list(opps or [])
+    for r in rows:                                   # reset (no stale carryover from a prior, wider set)
+        r["cheap_cost"], r["cheap_ratio"] = False, False
+    for b in rows:
+        band = _num_or_none(b.get("display_spread_c"))
+        if band is None:
+            continue
+        sport = b.get("sport")
+        peers = [p for p in rows if p is not b and p.get("sport") == sport
+                 and _num_or_none(p.get("display_spread_c")) is not None
+                 and abs(_num_or_none(p.get("display_spread_c")) - band) <= band_tol_c]
+        if len(peers) < min_peers:
+            continue                                 # insufficient same-sport peers → not judged
+        b["cheap_cost"] = _peer_cheap(_overpay_c(b), [_overpay_c(p) for p in peers], k)
+        b["cheap_ratio"] = _peer_cheap(_num_or_none(b.get("spread_over_child")),
+                                       [_num_or_none(p.get("spread_over_child")) for p in peers], k)
+    return rows
+
+
 def risk_budget_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str] | None = None,
                     flash_ids: set[str] | None = None) -> dict[str, Any]:
     """Display row for the risk-budget table: leads with the convex economics (max loss / max profit /
     upside:risk); worst-case ROC is a labelled secondary, never the headline (it's honestly negative)."""
     wc, bc = o.get("worst_case_profit_c"), o.get("best_case_profit_c")
     _r2 = lambda x: None if _num_or_none(x) is None else round(x, 2)   # noqa: E731 — display rounding
+    _sized = _sized_at_budget(o)   # PR E: ($100-capped units, gross max-loss ¢, gross best-upside ¢) or None
     return _stamp_severity({
         "opportunity_id": o.get("opportunity_id"),
         "new": o.get("opportunity_id") in new_ids,   # bool → a coloured "NEW" badge in the cell slot
@@ -385,6 +461,41 @@ def risk_budget_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str
         # Implied EV ¢ (chance-weighted ranking aid): implied payoff chance (band) − overpay. Cents-only,
         # None-safe. NOT an edge / NOT a probability model — see `_implied_ev_c`.
         "ev": _implied_ev_c(o),
+        # PR M — legible decomposition of the same metric (SHOW BOTH): the market gap (pp, = display_spread),
+        # the breakeven chance %, their difference (== ev for the 2-leg spread), and a descriptive signal
+        # class so negative/inverted rows are flagged and never read as a "chance".
+        "breakeven": _breakeven_pct(o),
+        "gap_vs_be": _gap_vs_breakeven_pp(o),
+        "signal": _signal_class(o),
+        # Phase 1 likelihood + comparability (display-only; never read by bucket_of / _rank_key). The
+        # conditional chance is the headline likelihood; firm_gap is a conservative tradable-side GAP in ¢
+        # (NOT a % — a firm % reads as a tradable probability), with firm_pct surfaced only in the tooltip
+        # when positive; midpoint_only / wide_basis drive honesty badges; cost_per_pp pairs with gap_vs_be
+        # (ordered AFTER it in the table).
+        "cond_success": _cond_success_pct(o),
+        # P(child | parent) = child/parent — the complement of cond_success (the two sum to 100); the
+        # market-implied chance the deeper outcome ALSO happens given the broader is reached. Display-only.
+        "cond_child": _cond_child_pct(o),
+        "firm_gap": _firm_spread_c(o),
+        "firm_pct": _firm_success_pct(o),
+        "midpoint_only": _optimistic_only(o),
+        "wide_basis": "wide" in str(o.get("comp_quote_quality") or "").lower(),
+        "parent_over_maxloss": _parent_over_maxloss(o),
+        "flags": _rb_flags(o),
+        # PR E — trader columns (display-only): resolution kind, the payoff zone in words, top-of-book
+        # fillable size, worst-leg quote quality, and a $100 gross allocation's units / max loss $ / best
+        # upside $ (capped by the book). All blank when their inputs are missing.
+        "resolution": "Vertical" if o.get("resolution_mode") == "vertical" else "Calendar",
+        "wins_if": _wins_if(o),
+        # PR F — peer-cheapness badge (same-sport peers at a similar implied chance; display-only). Blank
+        # when not flagged / insufficient peers. Set by flag_peer_cheapness() over the bounded-loss set.
+        "cheap": ", ".join(lbl for lbl, on in (("cost", o.get("cheap_cost")), ("ratio", o.get("cheap_ratio")))
+                           if on),
+        "max_units": _num_or_none(o.get("exec_min_size")),
+        "quote_health": str(o.get("comp_quote_quality") or ""),
+        "units_100": _sized[0] if _sized else None,
+        "loss_100": round(_sized[1] / 100, 1) if _sized else None,    # gross max loss at $100, in dollars
+        "upside_100": round(_sized[2] / 100, 1) if _sized else None,  # gross best upside at $100, in dollars
         # NOTE: no "tradable" field — a speculative bounded-loss BUNDLE is not auto-placeable even when its
         # legs are active, so we never surface tradable_now here (PR 1: de-risk speculative framing).
         "roc": o.get("roi_pct"),                       # worst-case ROC (gross, negative) — labelled, secondary
@@ -398,6 +509,48 @@ def risk_budget_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str
         "caveat": "; ".join(p for p in (o.get("settlement_caveat"), o.get("blocked_reason"))
                             if isinstance(p, str) and p),
     }, o)
+
+
+def speculative_explainer(o: dict[str, Any]) -> list[tuple[str, str]]:
+    """Plain-English decision lines for a bounded-loss (risk_budget) candidate, for the detail panel:
+    Can-I-lose-money / Wins-big-if / Why-ranked-here / Why-skip. [] for non-risk-budget opps. Display-only,
+    honest: a bet (not an edge), gross, top-of-book, Uncalibrated."""
+    if o.get("bucket") != "risk_budget":
+        return []
+    wc = _num_or_none(o.get("worst_case_profit_c"))
+    gap, be, gvb = _num_or_none(o.get("display_spread_c")), _breakeven_pct(o), _gap_vs_breakeven_pp(o)
+    sig, wins = _signal_class(o), _wins_if(o)
+    lines: list[tuple[str, str]] = [
+        ("Can I lose money?", f"Yes — a bet, not an edge. The loss is CAPPED at the overpay "
+                              f"({'—' if wc is None else f'{-wc:.0f}¢/unit'}); you lose it unless the payoff "
+                              "zone happens."),
+    ]
+    if wins:
+        lines.append(("Wins big if", wins))
+    cond, firm_gap = _cond_success_pct(o), _firm_spread_c(o)
+    lines.append(("Chance of success (display-implied)",
+                  f"If reached: {'—' if cond is None else f'{cond:g}%'} (conditional, vig-aware, "
+                  f"uncalibrated). Firm success gap: {'—' if firm_gap is None else f'{firm_gap:g}¢'} "
+                  "(parent bid − child ask; ≤ 0 ⇒ not confirmed by firm quotes)."))
+    lines.append(("Why ranked here",
+                  f"Signal: {sig}. Market gap {'—' if gap is None else f'{gap:g}'}pp vs breakeven "
+                  f"{'—' if be is None else f'{be:g}'}% → gap-vs-breakeven "
+                  f"{'—' if gvb is None else f'{gvb:g}'}pp (Uncalibrated, gross, top-of-book)."))
+    skip = []
+    if sig in ("Inverted / diagnostic", "Data quality"):
+        skip.append("the displayed prices are inverted or incomplete — treat as diagnostic, not a bet")
+    elif gvb is not None and gvb <= 0:
+        skip.append("the market prices the payoff zone at/below its breakeven — no quote-implied edge")
+    if _optimistic_only(o):
+        skip.append("positive only on DISPLAY (midpoint) prices — the firm bid/ask basis does not confirm a "
+                    "success zone (Midpoint-only); treat as review-only")
+    if "wide" in str(o.get("comp_quote_quality") or "").lower():
+        skip.append("at least one leg quote is Wide/Very-wide, so the displayed number may decay or be "
+                    "untradeable (Wide basis)")
+    skip.append("metrics are gross & UNCALIBRATED (fees, full-depth fill, outcome calibration not modeled); "
+                "doing nothing avoids the capped loss")
+    lines.append(("Why skip / doing nothing may be better", "; ".join(skip)))
+    return lines
 
 
 def near_miss_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str] | None = None,
@@ -740,6 +893,21 @@ def explanation_lines(opp: dict[str, Any], *, show_ids: bool = False,
             f"Est. net of fees: fees ${nf['total_fees_c'] / 100:.2f}   ·   net edge {nf['net_edge_c']}¢"
             f"   ·   net max profit ${nf['net_profit_dollars']}"
             "   (general taker-fee estimate — display only; does not affect ranking)")
+    # Containment conditional (display-only, market-implied): given the broader outcome is reached, what
+    # the market prices the deeper outcome at TODAY. Gated on both display outrights present, parent > 0,
+    # and a non-inverted pair — so it appears only for containment rows (dutch/synthetic carry no parent/
+    # child outrights). A current implied conditional, NOT a promise about the future traded price.
+    _pc, _cc = _num_or_none(opp.get("parent_display_c")), _num_or_none(opp.get("child_display_c"))
+    if _pc is not None and _cc is not None and _pc > 0 and _cc <= _pc:
+        _deeper = round(_cc / _pc * 100, 1)
+        lines.append(
+            f"Conditional (market-implied): given the broader outcome is reached, the market prices the "
+            f"deeper outcome at about {_deeper}% today, and the success zone (broader-but-not-deeper) at "
+            f"{round(100 - _deeper, 1)}%. Unconditional success chance = the raw gap {round(_pc - _cc, 1)}pp.")
+        lines.append(
+            "A current implied conditional from display prices — not de-vigged, not fair value, not "
+            "executable fills, and not a promise about the future traded price; information, time, and "
+            "book width move it, and wide / stale / one-sided books make it misleading.")
     if opp.get("bucket") == "risk_budget":
         wc, bc = opp.get("worst_case_profit_c"), opp.get("best_case_profit_c")
         loss = "—" if _isna(wc) else -wc
@@ -954,6 +1122,127 @@ def _implied_ev_c(o: dict[str, Any]) -> float | None:
     return band_c - max(0.0, -wc)        # band_c − overpay_c  (overpay = the capped max loss)
 
 
+def _breakeven_pct(o: dict[str, Any]) -> float | None:
+    """Breakeven payoff chance % for a bounded-loss bet: `max_loss / (max_loss + max_profit) × 100`. For a
+    two-leg containment spread `max_loss + max_profit ≈ 100`, so this ≈ the max loss in ¢ — the minimum
+    chance the convex payoff zone needs before the bet is worth its overpay. None when inputs are missing or
+    the spread is degenerate (denominator ≤ 0)."""
+    wc, bc = _num_or_none(o.get("worst_case_profit_c")), _num_or_none(o.get("best_case_profit_c"))
+    if wc is None or bc is None:
+        return None
+    max_loss, max_profit = max(0.0, -wc), max(0.0, bc)
+    denom = max_loss + max_profit
+    return round(max_loss / denom * 100, 1) if denom > 0 else None
+
+
+def _gap_vs_breakeven_pp(o: dict[str, Any]) -> float | None:
+    """Market gap (pp) MINUS the breakeven chance — the legible twin of Implied EV (equal for the canonical
+    two-leg spread, where breakeven ≈ max loss). Positive ⇒ displayed prices imply a better chance of the
+    payoff zone than the bet needs. None when either input is missing."""
+    gap, be = _num_or_none(o.get("display_spread_c")), _breakeven_pct(o)
+    return None if (gap is None or be is None) else round(gap - be, 1)
+
+
+# --- Phase 1 likelihood / comparability metrics (display-only; never read by bucket_of / _rank_key) ------
+# Conditional success chance, a conservative firm-side gap, the midpoint-vs-firm basis flag, and the
+# "cost per implied pp" ratio. All None-safe and FAIL CLOSED (return None, never 0.0, on a degenerate book)
+# so a missing/inverted quote never renders as a real probability. "display-implied" = read off display
+# prices treated as-if true: gross, top-of-book, uncalibrated — a comparison aid, not a calibrated model.
+def _cond_success_pct(o: dict[str, Any]) -> float | None:
+    """Conditional success chance P(success zone | parent reached) = 1 − child/parent = spread_over_parent,
+    as a %. Less sensitive to common multiplicative vig (it cancels in the child/parent ratio) but still
+    quote-dependent and uncalibrated. Fail-closed: None when the ratio is missing or ≤ 0."""
+    sop = _num_or_none(o.get("spread_over_parent"))
+    return None if (sop is None or sop <= 0) else round(sop * 100, 1)
+
+
+def _cond_child_pct(o: dict[str, Any]) -> float | None:
+    """P(child | parent) = child/parent, as a % — the market-implied chance the DEEPER outcome occurs
+    GIVEN the broader one is reached (the complement of `_cond_success_pct`; the two sum to 100). Read off
+    DISPLAY prices: market-implied, gross, top-of-book, NOT de-vigged and NOT fair value — the ratio is
+    only LESS sensitive to a common proportional overround, not free of it. Fail-closed: None when the
+    parent outright is missing / ≤ 0 or the pair is inverted (child > parent → not a valid conditional;
+    that's a display inconsistency, never shown as a chance)."""
+    p = _num_or_none(o.get("parent_display_c"))
+    c = _num_or_none(o.get("child_display_c"))
+    if p is None or c is None or p <= 0 or c > p:
+        return None
+    return round(c / p * 100, 1)
+
+
+def _firm_spread_c(o: dict[str, Any]) -> float | None:
+    """Conservative firm-side success gap in cents: parent YES bid − child YES ask (the exit/realize sides
+    the midpoint ignores). May be ≤ 0 — that IS the signal that a midpoint positive isn't tradable. None
+    when either firm quote is absent (e.g. a pre-field snapshot)."""
+    pb, ca = _num_or_none(o.get("parent_yes_bid_c")), _num_or_none(o.get("child_yes_ask_c"))
+    return None if (pb is None or ca is None) else pb - ca
+
+
+def _firm_success_pct(o: dict[str, Any]) -> float | None:
+    """Firm-side conditional chance % — TOOLTIP ONLY, shown only when STRICTLY POSITIVE (a firm gap can be
+    ≤ 0; a negative 'chance' is nonsense, so it's suppressed). None unless parent_yes_bid_c > 0 AND the firm
+    gap > 0."""
+    pb, fs = _num_or_none(o.get("parent_yes_bid_c")), _firm_spread_c(o)
+    return round(fs / pb * 100, 1) if (pb is not None and pb > 0 and fs is not None and fs > 0) else None
+
+
+def _optimistic_only(o: dict[str, Any]) -> bool:
+    """True when the DISPLAY (midpoint) basis implies a positive success zone but the FIRM bid/ask basis does
+    not (display_spread_c > 0 ≥ firm_spread_c) — drives the 'Midpoint-only' badge. False when the firm basis
+    is missing (can't claim a mismatch) or is also positive."""
+    gap, fs = _num_or_none(o.get("display_spread_c")), _firm_spread_c(o)
+    return bool(gap is not None and gap > 0 and fs is not None and fs <= 0)
+
+
+def _parent_over_maxloss(o: dict[str, Any]) -> float | None:
+    """'Parent ÷ max loss': the parent's implied probability (the in-the-money chance the broader outcome
+    happens, in ¢ = pp) divided by the MAX LOSS (= cost_c − 100, the overpay — the only at-risk capital).
+    HIGHER = better (more in-the-money probability per cent actually at risk); deep-longshot parents sink.
+    Fail-closed: None when the parent outright or cost is missing, or max loss (cost − 100) ≤ 0."""
+    parent = _num_or_none(o.get("parent_display_c"))
+    cost = _num_or_none(o.get("cost_c"))
+    if parent is None or cost is None:
+        return None
+    max_loss = cost - 100
+    if max_loss <= 0:
+        return None
+    return round(parent / max_loss, 2)
+
+
+def _rb_flags(o: dict[str, Any]) -> list[dict[str, str]]:
+    """Display-only honesty badges for a bounded-loss row: 'Midpoint-only' (the display basis implies a
+    success zone the firm bid/ask basis does not) and 'Wide basis' (a leg quote is Wide/Very-wide). Pure
+    caution chips — never read by bucket_of / _rank_key."""
+    flags: list[dict[str, str]] = []
+    if _optimistic_only(o):
+        flags.append({"label": "Midpoint-only", "color": "warning",
+                      "tooltip": "Positive on display (midpoint) prices, but the firm bid/ask basis does "
+                                 "not confirm a success zone — treat as review-only."})
+    if "wide" in str(o.get("comp_quote_quality") or "").lower():
+        flags.append({"label": "Wide basis", "color": "grey-7",
+                      "tooltip": "At least one leg quote is Wide/Very-wide; the displayed number may decay "
+                                 "or be untradeable."})
+    return flags
+
+
+def _signal_class(o: dict[str, Any]) -> str:
+    """Descriptive class for a bounded-loss row (display + ranking honesty; NOT an actionability threshold):
+    Data quality (no display gap) / Inverted (deeper priced above broader — a negative gap, never shown as a
+    "chance") / Candidate (gap beats breakeven) / Breakeven / Negative proxy. Computed from full-precision
+    values so display rounding can't flip it."""
+    gap = _num_or_none(o.get("display_spread_c"))
+    if gap is None:
+        return "Data quality"
+    if gap < 0:
+        return "Inverted / diagnostic"
+    gvb = _gap_vs_breakeven_pp(o)
+    if gvb is None:
+        return "Data quality"
+    if gvb > 0:
+        return "Candidate"
+    return "Breakeven" if gvb == 0 else "Negative proxy"
+
+
 def _norm(vals: list[float | None]) -> list[float | None]:
     """Min-max normalize the present (non-None) values to 0..1; a constant set -> all 0; absent -> None."""
     present = [v for v in vals if v is not None]
@@ -1064,6 +1353,17 @@ def rank_opps(opps: Iterable[dict[str, Any]] | None, mode: str = RANK_MODE_DEFAU
         else:                                           # "edge" (and any unknown mode) -> per-unit edge ¢
             out.extend(sorted(group, key=lambda o: (-_edge(o), o.get("opportunity_id") or "")))
     return out
+
+
+def selection_left_view(selected: dict[str, Any] | None, view: Iterable[dict[str, Any]]) -> bool:
+    """True when a selection exists but its opportunity_id is absent from the filtered view — the
+    dashboard then clears the row highlight and the stale detail surfaces. None-safe and pure (the
+    headless browser suite can't click-select table rows, so the decision logic lives here for unit
+    tests)."""
+    if not selected:
+        return False
+    sid = selected.get("opportunity_id")
+    return sid not in {o.get("opportunity_id") for o in view or []}
 
 
 # --- "most liquid right now" (PR F) — over the stored CONTRACT rows (opportunities lack size/spread) ---

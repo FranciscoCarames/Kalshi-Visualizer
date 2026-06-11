@@ -104,6 +104,23 @@ def test_row_emits_display_outright_context():
     assert row["spread_over_parent"] == 10 / 30 and row["spread_over_child"] == 10 / 20
 
 
+def test_row_emits_firm_quote_passthrough_for_conservative_gap():
+    # The conservative tradable-side success gap needs parent YES bid + child YES ask (the sides the
+    # midpoint ignores). _row passes them straight through; None when a leg is absent.
+    child = leg(display_c=20, bid_c=19, ask_c=21)
+    parent = leg(display_c=30, bid_c=29, ask_c=31)
+    row = consistency._row("Alcaraz", "key-a", "Win ≤ Final", child, parent,
+                           consistency._classify(child, parent, equivalence=False),
+                           child_node="Win Tournament", parent_node="Reach Final", tournament="T")
+    assert row["parent_yes_bid_c"] == 29 and row["child_yes_ask_c"] == 21
+    # firm gap (parent bid − child ask) here = 29 − 21 = 8 (computed downstream in the viewmodel).
+    # A missing leg (e.g. a missing ladder layer) -> that leg's firm field is None, not a crash.
+    stub = {"status": "MISSING_LAYER", "status_group": "Missing data", "reason": ""}
+    row_missing = consistency._row("Alcaraz", "key-a", "Win ≤ Final", None, parent, stub,
+                                   child_node="Win Tournament", parent_node="Reach Final", tournament="T")
+    assert row_missing["child_yes_ask_c"] is None and row_missing["parent_yes_bid_c"] == 29
+
+
 # --- resolution mode (PR B): Vertical (simultaneous) vs Calendar (sequential) — presentation only ------
 def _res_row(*, relationship_type, simultaneous):
     child, parent = leg(display_c=20, bid_c=19, ask_c=21), leg(display_c=30, bid_c=29, ask_c=31)

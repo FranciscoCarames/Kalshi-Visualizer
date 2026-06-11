@@ -278,6 +278,10 @@ engine + pure builders; the steps below cover what a headless test can't):
 - [ ] **⬇ Export (ZIP)** downloads a snapshot zip (opportunities + per-sport frame CSVs + manifest).
 - [ ] AG-Grids in Diagnostics & debug page/filter/sort; filters narrow every section and "Clear filters"
       restores; a new scan updates the tables without a manual reload.
+- [ ] **Stale-selection clear + scan indicator:** click a row, then apply a sport filter that excludes
+      it → the highlight drops in every table, the click-panel dialog closes if open, and Selected
+      Detail collapses with a "Selection cleared" note. During a real "Refresh snapshot" the
+      "Scanning — new data shortly…" label appears next to the freshness banner, then disappears.
 
 **Security / LAN exposure (only if hosting beyond loopback)**
 - [ ] `NICEGUI_STORAGE_SECRET` set to a long random string (serve.py refuses a non-loopback bind without it).

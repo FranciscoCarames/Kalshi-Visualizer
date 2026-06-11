@@ -1,0 +1,145 @@
+{
+  "event_ticker": "KXWCSTAGEOFELIM-26UZB",
+  "series_ticker": "KXWCSTAGEOFELIM",
+  "title": "Uzbekistan: Stage of Elimination",
+  "mutually_exclusive": true,
+  "product_metadata": {
+    "competition": "FIFA World Cup",
+    "competition_scope": "Stage of Elimination"
+  },
+  "markets": [
+    {
+      "ticker": "KXWCSTAGEOFELIM-26UZB-GS",
+      "yes_sub_title": "Group Stage",
+      "status": "active",
+      "yes_bid_dollars": "0.6900",
+      "yes_ask_dollars": "0.7000",
+      "no_bid_dollars": "0.3000",
+      "no_ask_dollars": "0.3100",
+      "last_price_dollars": "0.7000",
+      "yes_bid_size_fp": "2000.00",
+      "yes_ask_size_fp": "2278.89",
+      "volume_fp": "1130.88",
+      "open_interest_fp": "1038.34",
+      "custom_strike": {
+        "Sporting Outcome": "Eliminated in the Group Stage",
+        "soccer_team": "8cc0db1b-e649-4385-a329-7890f2aa5fbb"
+      },
+      "title": "Will Uzbekistan get eliminated in the Group Stage in the 2026 Men's FIFA World Cup?"
+    },
+    {
+      "ticker": "KXWCSTAGEOFELIM-26UZB-R32",
+      "yes_sub_title": "Round of 32",
+      "status": "active",
+      "yes_bid_dollars": "0.2200",
+      "yes_ask_dollars": "0.2800",
+      "no_bid_dollars": "0.7200",
+      "no_ask_dollars": "0.7800",
+      "last_price_dollars": "0.2800",
+      "yes_bid_size_fp": "5.00",
+      "yes_ask_size_fp": "2000.00",
+      "volume_fp": "385.57",
+      "open_interest_fp": "285.57",
+      "custom_strike": {
+        "Sporting Outcome": "Eliminated in the Round of 32",
+        "soccer_team": "8cc0db1b-e649-4385-a329-7890f2aa5fbb"
+      },
+      "title": "Will Uzbekistan get eliminated in the Round of 32 in the 2026 Men's FIFA World Cup?"
+    },
+    {
+      "ticker": "KXWCSTAGEOFELIM-26UZB-R16",
+      "yes_sub_title": "Round of 16",
+      "status": "active",
+      "yes_bid_dollars": "0.0400",
+      "yes_ask_dollars": "0.0500",
+      "no_bid_dollars": "0.9500",
+      "no_ask_dollars": "0.9600",
+      "last_price_dollars": "0.0700",
+      "yes_bid_size_fp": "5655.00",
+      "yes_ask_size_fp": "2000.00",
+      "volume_fp": "756.00",
+      "open_interest_fp": "756.00",
+      "custom_strike": {
+        "Sporting Outcome": "Eliminated in the Round of 16",
+        "soccer_team": "8cc0db1b-e649-4385-a329-7890f2aa5fbb"
+      },
+      "title": "Will Uzbekistan get eliminated in the Round of 16 in the 2026 Men's FIFA World Cup?"
+    },
+    {
+      "ticker": "KXWCSTAGEOFELIM-26UZB-QF",
+      "yes_sub_title": "Quarterfinals",
+      "status": "active",
+      "yes_bid_dollars": "0.0100",
+      "yes_ask_dollars": "0.0200",
+      "no_bid_dollars": "0.9800",
+      "no_ask_dollars": "0.9900",
+      "last_price_dollars": "0.0200",
+      "yes_bid_size_fp": "50.00",
+      "yes_ask_size_fp": "4922.84",
+      "volume_fp": "78.16",
+      "open_interest_fp": "78.16",
+      "custom_strike": {
+        "Sporting Outcome": "Eliminated in the Quarterfinals",
+        "soccer_team": "8cc0db1b-e649-4385-a329-7890f2aa5fbb"
+      },
+      "title": "Will Uzbekistan get eliminated in the Quarterfinals of the 2026 Men's FIFA World Cup?"
+    },
+    {
+      "ticker": "KXWCSTAGEOFELIM-26UZB-SF",
+      "yes_sub_title": "Semifinals",
+      "status": "active",
+      "yes_bid_dollars": "0.0000",
+      "yes_ask_dollars": "0.0100",
+      "no_bid_dollars": "0.9900",
+      "no_ask_dollars": "1.0000",
+      "last_price_dollars": "0.0100",
+      "yes_bid_size_fp": "0.00",
+      "yes_ask_size_fp": "4931.78",
+      "volume_fp": "118.22",
+      "open_interest_fp": "118.22",
+      "custom_strike": {
+        "Sporting Outcome": "Eliminated in the Semifinals",
+        "soccer_team": "8cc0db1b-e649-4385-a329-7890f2aa5fbb"
+      },
+      "title": "Will Uzbekistan get eliminated in the Semifinals of the 2026 Men's FIFA World Cup?"
+    },
+    {
+      "ticker": "KXWCSTAGEOFELIM-26UZB-FL",
+      "yes_sub_title": "Runner-Up",
+      "status": "active",
+      "yes_bid_dollars": "0.0000",
+      "yes_ask_dollars": "0.0100",
+      "no_bid_dollars": "0.9900",
+      "no_ask_dollars": "1.0000",
+      "last_price_dollars": "0.0100",
+      "yes_bid_size_fp": "0.00",
+      "yes_ask_size_fp": "5000.00",
+      "volume_fp": "50.00",
+      "open_interest_fp": "50.00",
+      "custom_strike": {
+        "Sporting Outcome": "Eliminated in the Final",
+        "soccer_team": "8cc0db1b-e649-4385-a329-7890f2aa5fbb"
+      },
+      "title": "Will Uzbekistan get eliminated in the Final of the 2026 Men's FIFA World Cup?"
+    },
+    {
+      "ticker": "KXWCSTAGEOFELIM-26UZB-FW",
+      "yes_sub_title": "Outright Winner",
+      "status": "active",
+      "yes_bid_dollars": "0.0000",
+      "yes_ask_dollars": "0.0100",
+      "no_bid_dollars": "0.9900",
+      "no_ask_dollars": "1.0000",
+      "last_price_dollars": "0.0100",
+      "yes_bid_size_fp": "0.00",
+      "yes_ask_size_fp": "5000.00",
+      "volume_fp": "50.00",
+      "open_interest_fp": "50.00",
+      "custom_strike": {
+        "Sporting Outcome": "Wins the Final",
+        "soccer_team": "8cc0db1b-e649-4385-a329-7890f2aa5fbb"
+      },
+      "title": "Will Uzbekistan win the Final of the 2026 Men's FIFA World Cup?"
+    }
+  ]
+}

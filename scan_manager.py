@@ -92,8 +92,12 @@ class ScanManager:
         start = time.time()
         try:
             unified, coverage, frames = run_fn(fetched_at)
+            w0 = time.time()
             sid = write_fn(fetched_at, unified, coverage, frames, db_path)
             ok, result = True, dict(coverage or {})
+            # Measure the snapshot write HERE (not inside store.write_snapshot, which inserts the snapshot
+            # row with `meta` before the rows/frames/commit, so total write time isn't known there).
+            result["write_fn_ms"] = round((time.time() - w0) * 1000, 1)
         except Exception as exc:                       # a scan failure must not wedge the manager
             sid, ok, result = None, False, {"error": str(exc)}
         duration = time.time() - start

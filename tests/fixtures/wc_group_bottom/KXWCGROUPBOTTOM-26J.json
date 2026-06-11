@@ -1,0 +1,76 @@
+{
+  "event_ticker": "KXWCGROUPBOTTOM-26J",
+  "series_ticker": "KXWCGROUPBOTTOM",
+  "title": "Group J Team to Finish Bottom",
+  "mutually_exclusive": true,
+  "markets": [
+    {
+      "ticker": "KXWCGROUPBOTTOM-26J-JOR",
+      "yes_sub_title": "Jordan",
+      "status": "active",
+      "yes_bid_dollars": "0.6800",
+      "yes_ask_dollars": "0.7100",
+      "no_bid_dollars": "0.2900",
+      "no_ask_dollars": "0.3200",
+      "yes_bid_size_fp": "1000.00",
+      "yes_ask_size_fp": "1186.00",
+      "volume_fp": "5518.53",
+      "open_interest_fp": "5501.52",
+      "custom_strike": {
+        "soccer_team": "4e20c099-6f74-4667-83f8-04eebf25f726"
+      },
+      "rules_primary": "If Jordan is the team to finish bottom of Group J in the 2026 Men's FIFA World Cup, then the market resolves to Yes."
+    },
+    {
+      "ticker": "KXWCGROUPBOTTOM-26J-DZA",
+      "yes_sub_title": "Algeria",
+      "status": "active",
+      "yes_bid_dollars": "0.1800",
+      "yes_ask_dollars": "0.2000",
+      "no_bid_dollars": "0.8000",
+      "no_ask_dollars": "0.8200",
+      "yes_bid_size_fp": "0.07",
+      "yes_ask_size_fp": "17.00",
+      "volume_fp": "56.56",
+      "open_interest_fp": "56.56",
+      "custom_strike": {
+        "soccer_team": "d44b06f4-1188-4b43-a806-11bf0b97c96d"
+      },
+      "rules_primary": "If Algeria is the team to finish bottom of Group J in the 2026 Men's FIFA World Cup, then the market resolves to Yes."
+    },
+    {
+      "ticker": "KXWCGROUPBOTTOM-26J-ARG",
+      "yes_sub_title": "Argentina",
+      "status": "active",
+      "yes_bid_dollars": "0.0100",
+      "yes_ask_dollars": "0.0200",
+      "no_bid_dollars": "0.9800",
+      "no_ask_dollars": "0.9900",
+      "yes_bid_size_fp": "1.00",
+      "yes_ask_size_fp": "1250.00",
+      "volume_fp": "1.00",
+      "open_interest_fp": "1.00",
+      "custom_strike": {
+        "soccer_team": "c9292e7e-b5d1-49ea-96d3-65575dbbc8dd"
+      },
+      "rules_primary": "If Argentina is the team to finish bottom of Group J in the 2026 Men's FIFA World Cup, then the market resolves to Yes."
+    },
+    {
+      "ticker": "KXWCGROUPBOTTOM-26J-AUT",
+      "yes_sub_title": "Austria",
+      "status": "active",
+      "yes_bid_dollars": "0.0900",
+      "yes_ask_dollars": "0.1100",
+      "no_bid_dollars": "0.8900",
+      "no_ask_dollars": "0.9100",
+      "yes_bid_size_fp": "1000.00",
+      "yes_ask_size_fp": "1000.00",
+      "volume_fp": "52.00",
+      "open_interest_fp": "51.00",
+      "custom_strike": {
+        "soccer_team": "5a20f4eb-2dcf-4200-9471-a4af215118a7"
+      },
+      "rules_primary": "If Austria is the team to finish bottom of Group J in the 2026 Men's FIFA World Cup, then the market resolves to Yes."
+    }
+  ]
+}

@@ -693,6 +693,95 @@ def test_winner_field_scanner_round_trip():
     assert u["bucket"] == "actionable" and u["settlement_caveat"] == glossary.BLOCKERS["field_overround"]
 
 
+# --- World Cup "team to finish bottom" group basket (KXWCGROUPBOTTOM) --------------------------------
+# Routed as an EXACT cardinality basket, NOT a flagged winner field: exactly one of 4 teams finishes
+# bottom → exactly 1 leg settles YES (floor 100¢) and 3 settle NO (floor 300¢), detected by
+# find_group_baskets. The proof is format-derived and FLAG-INDEPENDENT (the live mutually_exclusive flag
+# flipped False→True between the 2026-06-09 probe and 2026-06-10 kickoff eve; routing unaffected).
+def gbottom(team, *, event="KXWCGROUPBOTTOM-26H", player_key=None, yes_ask_c=None, no_ask_c=None,
+            yes_bid_size=100, yes_ask_size=100, quality="Tight", status="active"):
+    """A per-team World Cup 'finish bottom' row (series KXWCGROUPBOTTOM — an EXACT cardinality basket leg)."""
+    return {
+        "series": "KXWCGROUPBOTTOM", "event_ticker": event, "kind": "group_bottom",
+        "player": team, "player_key": player_key or team.lower(),
+        "contract": f"{team} finish bottom", "tournament": "2026 FIFA World Cup · 26", "tour": "",
+        "yes_ask_c": yes_ask_c, "no_ask_c": no_ask_c,
+        "yes_bid_size": yes_bid_size, "yes_ask_size": yes_ask_size,
+        "quote_quality": quality, "status": status,
+        "market_ticker": f"{event}-{team[:3].upper()}", "kalshi_url": "https://kalshi.com/x",
+        "event_title": "Group H Team to Finish Bottom",
+    }
+
+
+def _bottom_group(yes_asks=None, no_asks=None, **leg_kw):
+    """Four 'finish bottom' legs (A..D). `leg_kw` applies to leg A only (to inject one odd leg)."""
+    rows = []
+    for i, t in enumerate(["A", "B", "C", "D"]):
+        kw = dict(leg_kw) if i == 0 else {}
+        if yes_asks is not None:
+            kw["yes_ask_c"] = yes_asks[i]
+        if no_asks is not None:
+            kw["no_ask_c"] = no_asks[i]
+        rows.append(gbottom(t, player_key=t.lower(), **kw))
+    return rows
+
+
+def test_group_bottom_yes_basket_floor_100_fires():
+    # 4 YES asks of 22 each = 88 < 100 floor (exactly 1 finishes bottom) -> 12c gross per unit.
+    out = dutchbook.find_group_baskets(_bottom_group(yes_asks=[22, 22, 22, 22]))
+    assert len(out) == 1
+    f = out[0]
+    assert f["status"] == dutchbook.EXECUTABLE_GROUP_BASKET
+    assert f["direction"] == "yes_basket" and f["payout_floor_c"] == 100
+    assert f["cost_c"] == 88 and f["exec_gap_c"] == 12
+    assert f["n_legs"] == 4 and all(leg["side"] == "buy_yes" for leg in f["legs"])
+    assert f["bucket"] == "actionable" and f["tradable_now"] == "Yes"
+    # EXACT basket: floor == ceiling, so worst == best (no conditional band).
+    assert f["worst_case_profit_c"] == 12 == f["best_case_profit_c"]
+    assert "bottom-finisher" in f["reason"] and "qualifier legs" not in f["reason"]
+
+
+def test_group_bottom_no_basket_floor_300_fires():
+    # 4 NO asks of 70 each = 280 < 300 floor (exactly 3 do NOT finish bottom) -> 20c. YES priced high.
+    out = dutchbook.find_group_baskets(
+        _bottom_group(yes_asks=[40, 40, 40, 40], no_asks=[70, 70, 70, 70]))
+    assert len(out) == 1
+    f = out[0]
+    assert f["direction"] == "no_basket" and f["payout_floor_c"] == 300
+    assert f["cost_c"] == 280 and f["exec_gap_c"] == 20
+    assert all(leg["side"] == "buy_no" for leg in f["legs"])
+    assert f["worst_case_profit_c"] == 20 == f["best_case_profit_c"]   # exact: no conditional upside
+
+
+def test_group_bottom_requires_four_unique_teams():
+    diag = {}
+    assert dutchbook.find_group_baskets(_bottom_group(yes_asks=[22, 22, 22, 22])[:3], diag) == []
+    assert any("expected 4" in r["reason"] for r in diag.get("rejected", []))
+
+
+def test_group_bottom_blocked_when_a_leg_is_sizeless():
+    # Price-proven (firm asks) but a zero-size leg -> blocked, not a no-finding.
+    out = dutchbook.find_group_baskets(_bottom_group(yes_asks=[22, 22, 22, 22], yes_ask_size=0))
+    assert len(out) == 1 and out[0]["bucket"] == "blocked" and out[0]["tradable_now"] == "No"
+    assert BLOCKERS_size in out[0]["blocked_reason"]
+
+
+def test_group_bottom_rule_is_exact_basket():
+    import sports
+    r = sports.SOCCER.group_basket_rule_of("KXWCGROUPBOTTOM")
+    assert r is not None and r.team_count == 4
+    assert r.yes_floor == 1 and r.no_floor == 3
+    assert r.yes_ceiling_count == 1 and r.no_ceiling_count == 3   # exact: ceiling == floor
+    assert r.noun == "bottom-finisher"
+
+
+def test_group_bottom_scanner_round_trip():
+    import scanner
+    f = dutchbook.find_group_baskets(_bottom_group(yes_asks=[22, 22, 22, 22]))[0]
+    u = scanner._to_unified_group_basket(f, sports.SOCCER)
+    assert u["source"] == "group_basket" and u["n_legs"] == 4 and u["bucket"] == "actionable"
+
+
 # --- Hard-floor GROUP BASKET (World Cup group qualifiers) ----------------------------
 def qual(team, *, event="KXWCGROUPQUAL-26L", player_key=None, yes_bid_c=None, yes_ask_c=None,
          no_ask_c=None, yes_bid_size=100, yes_ask_size=100, quality="Tight", status="active"):

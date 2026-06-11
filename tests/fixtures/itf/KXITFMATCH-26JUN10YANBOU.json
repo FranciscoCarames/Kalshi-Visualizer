@@ -1,0 +1,47 @@
+{
+  "event_ticker": "KXITFMATCH-26JUN10YANBOU",
+  "series_ticker": "KXITFMATCH",
+  "title": "Yang vs Bouzige",
+  "product_metadata": {
+    "competition": "ITF",
+    "competition_scope": "Game"
+  },
+  "markets": [
+    {
+      "ticker": "KXITFMATCH-26JUN10YANBOU-YAN",
+      "yes_sub_title": "Yuan Cheng Yang",
+      "status": "active",
+      "yes_bid_dollars": "0.0100",
+      "yes_ask_dollars": "0.9100",
+      "no_bid_dollars": "0.0900",
+      "no_ask_dollars": "0.9900",
+      "yes_bid_size_fp": "1271.00",
+      "yes_ask_size_fp": "2.00",
+      "last_price_dollars": "0.0000",
+      "volume_fp": "0.00",
+      "open_interest_fp": "0.00",
+      "custom_strike": {
+        "tennis_competitor": "00c2a807-5499-4159-a8f5-fb0bc0ddd4e5"
+      },
+      "title": "Will Yuan Cheng Yang win the Yang vs Bouzige: M15 Maanshan Round of 32 match?"
+    },
+    {
+      "ticker": "KXITFMATCH-26JUN10YANBOU-BOU",
+      "yes_sub_title": "Moerani Bouzige",
+      "status": "active",
+      "yes_bid_dollars": "0.7800",
+      "yes_ask_dollars": "0.9800",
+      "no_bid_dollars": "0.0200",
+      "no_ask_dollars": "0.2200",
+      "yes_bid_size_fp": "2.00",
+      "yes_ask_size_fp": "200.00",
+      "last_price_dollars": "0.0000",
+      "volume_fp": "0.00",
+      "open_interest_fp": "0.00",
+      "custom_strike": {
+        "tennis_competitor": "245f22a8-69fc-4e48-834d-e03433f34a80"
+      },
+      "title": "Will Moerani Bouzige win the Yang vs Bouzige: M15 Maanshan Round of 32 match?"
+    }
+  ]
+}

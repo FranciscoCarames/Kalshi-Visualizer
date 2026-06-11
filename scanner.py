@@ -16,6 +16,8 @@ this module only adds `sport` and the unified projection, then ranks.
 """
 from __future__ import annotations
 
+import time
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Callable
 
 import pandas as pd
@@ -26,6 +28,7 @@ import dutchbook
 import exact_order
 import game_support
 import sports
+import stage_elim
 import synthetic_bundle
 
 # Section priority for ranking (lower = surfaced first). Mirrors the dashboard's importance order;
@@ -74,6 +77,12 @@ UNIFIED_COLUMNS = [
     # Probability-context display outrights (risk-budget "spread / outright" view) — None for non-containment
     # shapes. display_c is the DISPLAY OUTRIGHT price (reasonable-quote midpoint, else last trade).
     "parent_display_c", "child_display_c", "display_spread_c", "spread_over_parent", "spread_over_child",
+    # Firm-quote passthrough (Phase 1, display-only honesty rail): parent YES bid + child YES ask drive the
+    # conservative tradable-side success gap + the "Midpoint-only" flag. Never read by bucket_of / _rank_key.
+    "parent_yes_bid_c", "child_yes_ask_c",
+    # Phase 2 E (display-only, containment rows): ladder rung labels for "Wins if …" + worst-leg quote
+    # quality for "Quote health". Never read by bucket_of / _rank_key.
+    "child_node", "parent_node", "comp_quote_quality",
     # World Cup Qualifier Setups (PR1): a cross-cutting product tag, SEPARATE from bucket/routing. Read only
     # by a UI badge — never by bucket_of / _rank_key / filters. `setup_family` = product area
     # ("wc_qualifier"); `setup_type` = the specific setup (qualifier_not_winner / qualifier_yes_basket /
@@ -192,10 +201,16 @@ def _finalize_unified(d: dict[str, Any], *, payout_floor_c: Any) -> dict[str, An
     # Bounded-Loss vertical/calendar split: default to the conservative "calendar" so dutch-book / synthetic
     # rows and pre-field snapshots stay safe (only risk-budget containment rows carry a real value).
     d.setdefault("resolution_mode", "calendar")
+    # Phase 2 E display-only fields default empty on non-containment shapes + pre-field snapshots.
+    for _k in ("child_node", "parent_node", "comp_quote_quality"):
+        d.setdefault(_k, "")
     # Exact-order top-two bundle two-tier economics — default on every row so old snapshots stay safe.
     for _k in ("opportunity_class", "worst_bundle_quote_quality", "comparator_quote_quality"):
         d.setdefault(_k, "")
     for _k in ("top2_net_if_top2_c", "top2_loss_if_not_top2_c", "top2_max_units", "wide_bundle_leg_count"):
+        d.setdefault(_k, None)
+    # Firm-quote passthrough (Phase 1): default None so pre-field snapshots + non-containment shapes stay safe.
+    for _k in ("parent_yes_bid_c", "child_yes_ask_c"):
         d.setdefault(_k, None)
     return d
 
@@ -233,6 +248,13 @@ def _to_unified_consistency(r: dict[str, Any], cfg) -> dict[str, Any]:
         "display_spread_c": _num(r.get("display_spread_c")),
         "spread_over_parent": _num(r.get("spread_over_parent")),
         "spread_over_child": _num(r.get("spread_over_child")),
+        # Firm-quote passthrough (Phase 1, display-only): parent YES bid + child YES ask for the conservative gap.
+        "parent_yes_bid_c": _num(r.get("parent_yes_bid_c")),
+        "child_yes_ask_c": _num(r.get("child_yes_ask_c")),
+        # Phase 2 E (display-only): the ladder rung labels (for "Wins if …") + the worst-leg quote quality
+        # (for "Quote health"). Read only by the speculative viewmodel; never by bucket_of / _rank_key.
+        "child_node": r.get("child_node") or "", "parent_node": r.get("parent_node") or "",
+        "comp_quote_quality": r.get("comp_quote_quality") or "",
     }
     d["participant_keys"], d["participant_labels"] = _participants([(r.get("player_key"), r.get("player"))])
     # WC Qualifier Setups (PR1): tag ONLY the soccer "Win group ⊆ Reach Round of 32" leaf — setup #1
@@ -306,6 +328,25 @@ def _to_unified_group_basket(r: dict[str, Any], cfg) -> dict[str, Any]:
     if cfg.sport_id == "soccer":
         d["setup_family"] = _WC_QUALIFIER_FAMILY
         d["setup_type"] = "qualifier_no_basket" if r.get("direction") == "no_basket" else "qualifier_yes_basket"
+    return d
+
+
+def _to_unified_stage_elim_book(r: dict[str, Any], cfg) -> dict[str, Any]:
+    """Map a standalone stage-of-elimination 7-way MECE book onto the unified schema. Shares the dutch-book
+    finding shape (clean executable edge), tagged ``source="stage_elim"``."""
+    d = _to_unified_dutchbook(r, cfg)
+    d["source"] = "stage_elim"
+    d["relationship_type"] = r.get("relationship_type") or stage_elim.BOOK_CHECK_TYPE
+    return d
+
+
+def _to_unified_stage_elim_synth(r: dict[str, Any], cfg) -> dict[str, Any]:
+    """Map a cross-family tail-sum (advance-rung replication) onto the unified schema. Review-only: carries
+    ``rule_flag="SETTLEMENT_CHECK_REQUIRED"`` and self-assigns its review_signal/blocked bucket."""
+    d = _to_unified_dutchbook(r, cfg)
+    d["source"] = "stage_elim_synth"
+    d["relationship_type"] = r.get("relationship_type") or stage_elim.SYNTH_CHECK_TYPE
+    d["rule_flag"] = r.get("rule_flag") or "SETTLEMENT_CHECK_REQUIRED"
     return d
 
 
@@ -479,6 +520,8 @@ def unified_opportunities(
             game_signals = game_support.find_game_support_signals(
                 records, strong_score_c=config.WC_SUPPORT_SCORE_STRONG_C,
                 qualifier_band_c=config.WC_QUALIFIER_BAND_C)
+            stage_books = stage_elim.find_stage_elim_books(records)
+            stage_synths = stage_elim.find_stage_elim_synthetics(records)
         except Exception as exc:
             errors.append({"sport": cfg.sport_id, "error": str(exc)})
             continue
@@ -488,6 +531,8 @@ def unified_opportunities(
         rows.extend(_to_unified_synthetic(r, cfg) for r in bundles)
         rows.extend(_to_unified_exact_order(r, cfg) for r in exact_orders)
         rows.extend(_to_unified_game_support(r, cfg) for r in game_signals)
+        rows.extend(_to_unified_stage_elim_book(r, cfg) for r in stage_books)
+        rows.extend(_to_unified_stage_elim_synth(r, cfg) for r in stage_synths)
         if frames_out is not None:
             for frame_type, frame_rows in (("contracts", records), ("checks", checks_records),
                                            ("dutchbook", books), ("group_basket", baskets)):
@@ -518,17 +563,44 @@ def run_scan(fetch_fn: Callable[[str], tuple], *, fetched_at: Any = None,
     no store, no network. A per-sport fetch failure is recorded and that sport contributes nothing.
     """
     before = request_count() if request_count else None
+    sport_cfgs = list(sports.all_sports())
+
+    def _fetch_one(sid: str) -> tuple[str, tuple | None, str | None, float]:
+        """Fetch one sport off the pool. Never raises — a failure is returned as the error string so the
+        pool can't blank the scan. Returns (sid, result_tuple_or_None, error_or_None, elapsed_seconds)."""
+        t0 = time.monotonic()
+        try:
+            return sid, fetch_fn(sid), None, time.monotonic() - t0
+        except Exception as exc:   # a single sport's fetch failure must not blank the scan
+            return sid, None, str(exc), time.monotonic() - t0
+
+    # Fetch sports CONCURRENTLY (PR perf/parallel-sport-fetch): each sport still fans out across its
+    # series internally and the process-wide MAX_RPS throttle still caps total issuance, so this only
+    # fills the idle gaps between sports (no extra Kalshi requests). `pool.map` preserves input order;
+    # we key results by sport and aggregate below in sports.all_sports() order, so output is
+    # DETERMINISTIC regardless of completion order. SPORT_FETCH_CONCURRENCY=1 == the old serial scan.
+    workers = max(1, min(len(sport_cfgs), config.SPORT_FETCH_CONCURRENCY))
+    if workers == 1:
+        fetched = [_fetch_one(cfg.sport_id) for cfg in sport_cfgs]
+    else:
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            fetched = list(pool.map(lambda c: _fetch_one(c.sport_id), sport_cfgs))
+    by_sport = {sid: (res, err, secs) for sid, res, err, secs in fetched}
+
     dfs: dict[str, Any] = {}
     scanned = loaded = skipped = excluded = 0
     series_errors: list[dict[str, Any]] = []
     fetch_errors: list[dict[str, Any]] = []
-    for cfg in sports.all_sports():
+    fetch_status_by_sport: dict[str, dict[str, Any]] = {}
+    for cfg in sport_cfgs:                       # aggregate in registered order -> deterministic
         sid = cfg.sport_id
-        try:
-            df, _fa, errors, n_scanned, n_loaded, skipped_no_name, n_excluded = fetch_fn(sid)
-        except Exception as exc:   # a single sport's fetch failure must not blank the scan
-            fetch_errors.append({"sport": sid, "error": str(exc)})
+        res, err, secs = by_sport[sid]
+        fetch_ms = round(secs * 1000, 1)
+        if err is not None:
+            fetch_errors.append({"sport": sid, "error": err})
+            fetch_status_by_sport[sid] = {"ok": False, "fetch_ms": fetch_ms, "error": err}
             continue
+        df, _fa, errors, n_scanned, n_loaded, skipped_no_name, n_excluded = res
         dfs[sid] = df
         scanned += n_scanned
         loaded += n_loaded
@@ -536,6 +608,7 @@ def run_scan(fetch_fn: Callable[[str], tuple], *, fetched_at: Any = None,
         excluded += n_excluded
         for s, msg in (errors or []):
             series_errors.append({"sport": sid, "series": s, "error": str(msg)})
+        fetch_status_by_sport[sid] = {"ok": True, "fetch_ms": fetch_ms}
 
     # Reuse the pure aggregator over the already-fetched per-sport frames (it adds its own
     # per-sport PROCESSING errors — build_checks/find_dutch_books failures — to the set).
@@ -553,6 +626,7 @@ def run_scan(fetch_fn: Callable[[str], tuple], *, fetched_at: Any = None,
         "contracts_scanned": contracts_scanned, "checks_tested": checks_tested,
         "sport_errors": fetch_errors + processing_errors,   # fetch-level + processing-level
         "series_errors": series_errors,
+        "fetch_status_by_sport": fetch_status_by_sport,      # per-sport {ok, fetch_ms[, error]} timing
     }
     if before is not None:
         coverage["kalshi_requests"] = request_count() - before

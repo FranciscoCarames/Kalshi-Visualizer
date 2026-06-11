@@ -56,6 +56,15 @@ RISK_BUDGET_DEFAULT_MAX_SPREAD_RATIO_HUNDREDTHS = 0  # max child display_spread/
 NEAR_MISS_MAX_OVER_C = 5                     # widest overpay persisted (¢ over the payout floor)
 NEAR_MISS_DEFAULT_OVER_C = 3                 # default UI max-overpay filter (¢)
 
+# Peer-relative cheapness flags (Phase 2 F) — a DISPLAY-ONLY badge, NOT a ranker and NEVER executable. Among
+# SAME-SPORT bounded-loss bets within PEER_BAND_TOLERANCE_C ¢ of the same implied-payoff band (parent−child
+# display gap), a bet is flagged "cheap" when its overpay (or its spread÷outright) sits at least
+# PEER_CHEAP_MAD_K robust z-scores (median/MAD) BELOW the peer median. Needs ≥ PEER_MIN_COUNT same-sport
+# peers, else it's left unflagged (insufficient peers). Gross, top-of-book, uncalibrated.
+PEER_BAND_TOLERANCE_C = 5                    # ± band window (¢) defining "similar implied chance" peers
+PEER_MIN_COUNT = 4                           # min same-sport in-band peers required to judge cheapness
+PEER_CHEAP_MAD_K = 1.5                       # robust z-score (below peer median) to flag cheap
+
 # World Cup game-support signal (#5): an ASK-IMPLIED support score (3·win_ask + draw_ask, summed over a
 # team's 3 group games) — NOT expected points / not a probability (vig-biased upward). A team is FLAGGED
 # (diagnostic-only) when its score is strong AND its qualify YES sits in a "moderately priced" band — i.e.
@@ -115,6 +124,12 @@ MAX_PAGES = 100
 # limiter, since each keeps its own and the aggregate rate is MAX_RPS x process_count (serve.py warns).
 MAX_RPS = 15                # max requests/second issued by this process (~75% of the ~20/s Basic ceiling)
 CONCURRENCY = 4             # thread-pool workers for the per-series fan-out (throttle paces them)
+# Per-SPORT fetch fan-out (scanner.run_scan): how many sports fetch concurrently. Each sport's fetch
+# already fans out across its series at CONCURRENCY, and the process-wide MAX_RPS throttle still caps
+# total issuance — this only fills the idle gaps between sports (no extra Kalshi requests). Kept
+# conservative (3) so nested fan-out stays under the HTTP connection pool; raise to 4 only after a
+# benchmark. SPORT_FETCH_CONCURRENCY=1 reproduces the original serial scan exactly.
+SPORT_FETCH_CONCURRENCY = 3
 MAX_RETRIES = 5             # attempts per request before raising
 BACKOFF_BASE = 1.0          # seconds; exponential backoff base for 429/5xx/network errors
 BACKOFF_MAX = 30.0          # seconds; cap on a single backoff sleep
@@ -242,6 +257,11 @@ UI_POLL_SECONDS = 1       # dashboard poll cadence (P2): a cheap `store.latest_s
                           # surfaces to every browser within ~1s. Idle ticks do almost nothing.
 UI_REFRESH_SECONDS = 10   # legacy heavy timed-rebuild cadence (pre-P2). Superseded by UI_POLL_SECONDS;
                           # kept for compatibility / any external reference.
+# Filter/threshold debounce (PR R): a burst of control changes (e.g. dragging "Max loss ¢") coalesces into
+# ONE re-render this many seconds after the LAST change, instead of one synchronous rebuild per keystroke
+# (which blocks the event loop → "connection lost"). A lightweight tick timer checks the idle deadline.
+UI_DEBOUNCE_SECONDS = 0.3
+UI_DEBOUNCE_TICK_SECONDS = 0.1
 
 # --- In-process auto-scan scheduler (scan_scheduler.py) -------------------------------
 # A single process-wide background loop that triggers the NON-force scan on a timer, so `python serve.py`

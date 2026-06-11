@@ -52,7 +52,7 @@ Stanley Cup" / default "Win the tournament").
 | NBA | `basketball_team` UUID | `match` (series) | Reach Playoffs ⊇ Win Conference ⊇ Win Championship; `KX*GAME` games |
 | WNBA | `basketball_team` UUID | `match` (series) | Reach Playoffs ⊇ Reach SF ⊇ Reach Finals ⊇ Win Championship; games |
 | Golf | `golf_competitor` UUID | `""` (no dutch books) | `exact_series` Top20 ⊇ Top10 ⊇ Top5 ⊇ Win |
-| Soccer | `soccer_team` UUID | `""` (3-way games) | `exact_series` `KXWCGAME` (Home/Away/Tie dutch books) + `KXWCROUND`/`KXWCGROUPQUAL` advance ladder Reach RO32 (=group qualifier) ⊇ RO16 ⊇ QF ⊇ SF ⊇ Final ⊇ Win the World Cup. `KXWC` outright = **dormant** winner ticker (guess; not live as of 2026-06, verify when it lists ~kickoff) |
+| Soccer | `soccer_team` UUID | `""` (3-way games) | `exact_series` `KXWCGAME` (Home/Away/Tie dutch books) + `KXWCROUND`/`KXWCGROUPQUAL` advance ladder Reach RO32 (=group qualifier) ⊇ RO16 ⊇ QF ⊇ SF ⊇ Final ⊇ Win the World Cup (outright = `KXMENWORLDCUP`, live-verified 2026-06-10; `KXWC`/`KXMWORLDCUP` have no open events). Plus `KXWCGROUPWIN` (win-group leaf), `KXWCGROUPQUAL`/`KXWCGROUPBOTTOM` cardinality baskets, `KXWCGROUPORDER` exact-order diagnostics, `KXWCSTAGEOFELIM` 7-bucket stage-of-elimination book (tail-sum layer Review-only), and 9 recognized-but-excluded `KXWC*` props (`_SOCCER_KNOWN_OTHER`) |
 | MLB | `baseball_team` UUID | `""` | Reach Playoffs ⊇ Win League ⊇ Win World Series; `KXMLBGAME` games. `KXMLBSERIES` excluded as non-MECE (can tie 2-2) |
 | NHL | `hockey_team` UUID | `match` | Reach Playoffs ⊇ Win Conference ⊇ Win Stanley Cup; `KXNHLSERIES` (clean bo7) + `KXNHLGAME` dutch books. Live series wording "1st/2nd Round" → no rung → `UNKNOWN_RELATIONSHIP` |
 | Motorsport | multi-path (driver UUID / team UUID / constructor NAME), role-namespaced `player_key` | `""` | **field sport like golf**; one-winner FIELDS → overround; Top-N/Podium → finishing-position ladder |
@@ -110,6 +110,7 @@ singleflight (shared with `webui.run_scan_now` → one upstream fetch); `?wait`/
 | Series | Meaning | kind | category |
 |---|---|---|---|
 | `KXATPMATCH`/`KXWTAMATCH` | match winner (head-to-head) | `match` | Match result |
+| `KXITFMATCH`/`KXITFWMATCH` | ITF lower-tour match winner (exact-owned) | `match` | Match result |
 | `KXATPADVANCE`/`KXWTAADVANCE` | reach a stage | `advance` | Stage advancement |
 | `KXFOMEN`/`KXFOWOMEN` | win the tournament | `winner` | Tournament winner |
 | `KXATPEXACTMATCH` | exact match score | `exact_score` | Exact score |
@@ -305,11 +306,15 @@ collapsed Diagnostics & debug expander. `viewmodel.py` + `diagnostics.py` are th
 
 ## Git workflow (strict — owner confirmed)
 
-- **Never commit or push to `main`.** The owner merges manually; you push branches and open PRs.
-- Branch off `main`. **Do not stack on unmerged branches** — one PR per change. Verify (`pytest -q`,
-  `serve.py` boot) before pushing.
+- **Never commit, push, or merge to `main`.** The owner merges manually.
+- **Branch-only delivery (near-term policy, owner 2026-06-09 — supersedes "one PR per change"):** do NOT
+  open a PR per change. Implement the **full scope** of a work item across **one or more feature branches**;
+  verify (`pytest -q`, `ruff check .`, `serve.py` boot); then hand the branch back. The owner **tests
+  manually** and **merges to `main` only when satisfied**. `main` stays frozen until then.
+- Branch off the latest `main` — or, since `main` is frozen, off the unmerged branch a feature depends on
+  (state the base in the handoff). Keep verifying before handing back; commits on the branch are fine.
 - Commit messages end with: `Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>`.
-  PR bodies end with the Claude Code footer.
+  If a PR is opened for review, its body ends with the Claude Code footer.
 
 ## Status & history
 

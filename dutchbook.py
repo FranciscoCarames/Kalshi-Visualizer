@@ -823,7 +823,7 @@ def _detect_group_basket(event_ticker: str, rows: list[dict[str, Any]], cfg: Any
     times = [t for t in (r.get("time_value") for r in rows) if t]
     pa = rows[0]
     pb = rows[1] if len(rows) > 1 else rows[0]
-    reason = (f"hard-floor {direction}: buy {settle_word} on all {n} {rule.label} qualifier legs costs "
+    reason = (f"hard-floor {direction}: buy {settle_word} on all {n} {rule.label} {rule.noun} legs costs "
               f"{cost}c < {floor}c floor -> {gap_c}c gross per unit (>= {settle_floor} legs settle "
               f"{settle_word} by tournament format)")
 
