@@ -638,7 +638,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             nm_switch = ui.switch("Near-miss books", value=True)  # PR A2: on (collapsed in PR C)
             nm_max_over = ui.number("Max overpay ¢", value=config.NEAR_MISS_DEFAULT_OVER_C,
                                     min=1, max=config.NEAR_MISS_MAX_OVER_C, format="%.0f").classes("w-28")
-            ns_switch = ui.switch("Cheap NO fades", value=False).tooltip(
+            ns_switch = ui.switch("Cheap NO fades", value=True).tooltip(  # on by default (promoted below Bounded-Loss)
                 "A speculative, opt-in fade: the cheapest Buy-NO you can take, optionally bounded by a Buy-YES "
                 "on the broader rung that contains it (a defined band). NOT an edge — a cheap NO is cheap "
                 "because the market thinks the YES is likely. Gross, top-of-book, uncalibrated.")
@@ -1065,26 +1065,9 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
     rb_vertical.on_select(_on_select(rb_vertical))
     rb_calendar.on_select(_on_select(rb_calendar))
 
-    # World Cup Qualifier Setups (PR3): a separate, default-on, opt-in DIAGNOSTIC section — kept out of the
-    # strict Actionable/Review/Blocked sections. Populated by the exact-order (#4) top-two bundles + game-
-    # support (#5) signals; the flagged baskets/spreads still live in their own sections (PR1 badge).
-    qs_hdr = _section_header(
-        "Qualifier setups — World Cup group-stage ideas & signals",
-        "Speculative top-two ideas (review-only) + diagnostic reference bundles + game-support signals — "
-        "gross, top-of-book, settlement-unverified; NOT arbitrage and never Actionable.")
-    qs_table = ui.table(columns=_QS_COLUMNS, rows=[], row_key="opportunity_id", selection="single",
-                        pagination=10).props("dense").classes("w-full overflow-x-auto opp-sel")
-    qs_table.on_select(_on_select(qs_table))
-
-    nm_expansion, nm_title, nm_cols_row = _expansion_header("Overpriced Books — flat guaranteed loss (watch-only)")
-    with nm_expansion:
-        ui.label("A complete (MECE) book priced just OVER its payout floor: it pays the floor in every "
-                 "outcome, so buying the whole bundle is a flat, guaranteed gross loss. Watch-only, in case a "
-                 "leg gets mispriced.").classes("text-xs text-gray-500")
-        nm_table = ui.table(columns=_NEARMISS_COLUMNS, rows=[], row_key="opportunity_id", selection="single",
-                            pagination=10).props("dense").classes("w-full overflow-x-auto opp-sel")
-    nm_table.on_select(_on_select(nm_table))
-
+    # Cheap NO fades (NO-anchored structures): promoted directly BELOW Bounded-Loss Bets and ON by default —
+    # it's the closest sibling (a cheap convex fade anchored on a Buy-NO leg). Collapsible + switch-gated like
+    # the other watch-only sections. A speculative watch-only fade, NOT an edge.
     ns_expansion, ns_title, ns_cols_row = _expansion_header("Cheap NO fades — bounded-loss NO anchor (watch-only)")
     with ns_expansion:
         ui.label("The cheapest Buy-NO you can take. A 'band' bounds it with a Buy-YES on the broader rung "
@@ -1098,6 +1081,29 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         # Grouped per-participant ladder cards (opt-in via ns_group) — rebuilt in refresh_no_structure.
         ns_cards = ui.column().classes("w-full gap-2")
     ns_table.on_select(_on_select(ns_table))
+
+    # World Cup Qualifier Setups (PR3): a separate, default-on, opt-in DIAGNOSTIC section — kept out of the
+    # strict Actionable/Review/Blocked sections. Populated by the exact-order (#4) top-two bundles + game-
+    # support (#5) signals; the flagged baskets/spreads still live in their own sections (PR1 badge).
+    # Collapsible like the other watch-only sections (switch-gated via qs_switch).
+    qs_expansion, qs_title, qs_cols_row = _expansion_header(
+        "Qualifier setups — World Cup group-stage ideas & signals")
+    with qs_expansion:
+        ui.label("Speculative top-two ideas (review-only) + diagnostic reference bundles + game-support "
+                 "signals — gross, top-of-book, settlement-unverified; NOT arbitrage and never "
+                 "Actionable.").classes("text-xs text-gray-500")
+        qs_table = ui.table(columns=_QS_COLUMNS, rows=[], row_key="opportunity_id", selection="single",
+                            pagination=10).props("dense").classes("w-full overflow-x-auto opp-sel")
+    qs_table.on_select(_on_select(qs_table))
+
+    nm_expansion, nm_title, nm_cols_row = _expansion_header("Overpriced Books — flat guaranteed loss (watch-only)")
+    with nm_expansion:
+        ui.label("A complete (MECE) book priced just OVER its payout floor: it pays the floor in every "
+                 "outcome, so buying the whole bundle is a flat, guaranteed gross loss. Watch-only, in case a "
+                 "leg gets mispriced.").classes("text-xs text-gray-500")
+        nm_table = ui.table(columns=_NEARMISS_COLUMNS, rows=[], row_key="opportunity_id", selection="single",
+                            pagination=10).props("dense").classes("w-full overflow-x-auto opp-sel")
+    nm_table.on_select(_on_select(nm_table))
 
     _sel_tables.extend([actionable, review, blocked, qs_table, rb_all, rb_vertical, rb_calendar, nm_table,
                         ns_table])
@@ -1175,7 +1181,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
     for _hdr, _tbl in ((act_hdr, actionable), (review_hdr, review), (blocked_hdr, blocked)):
         with _hdr:
             opp_menus.append(build_column_menu(_tbl, _OPP_COLUMNS, default_hidden=_NET_COLUMNS))
-    with qs_hdr:
+    with qs_cols_row:
         build_column_menu(qs_table, _QS_COLUMNS, default_hidden=_QS_HIDDEN)
     with rb_all_cols:
         build_column_menu(rb_all, _RISK_COLUMNS, default_hidden=_RISK_HIDDEN)            # combined: show Kind
@@ -1671,10 +1677,13 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                              for o in vm.order_qualifier_rows(qs_opps)]
         else:
             qs_table.rows = []
-        for hdr, tbl, sw in ((review_hdr, review, show_review_sw), (blocked_hdr, blocked, show_blocked_sw),
-                             (qs_hdr, qs_table, qs_switch)):
+        for hdr, tbl, sw in ((review_hdr, review, show_review_sw), (blocked_hdr, blocked, show_blocked_sw)):
             hdr.set_visibility(sw.value)
             tbl.set_visibility(sw.value)
+        # Qualifier setups is now a collapsible expansion (switch-gated): toggle the whole expansion + count.
+        qs_expansion.set_visibility(qs_switch.value)
+        qs_title.set_text(
+            f"Qualifier setups — World Cup group-stage ideas & signals ({len(qs_table.rows):,})")
 
     def _refresh_counts() -> None:
         """Update the per-bucket counts line from the full snapshot + current filters. Cheap O(n) filter —
