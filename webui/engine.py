@@ -129,6 +129,8 @@ def coverage(db_path: str | None = None) -> dict[str, Any]:
         # Volume counters + Kalshi requests (PR 21a) — distinct from the opportunity count.
         "contracts_scanned": meta.get("contracts_scanned", 0), "checks_tested": meta.get("checks_tested", 0),
         "kalshi_requests": meta.get("kalshi_requests"),
+        # Phase 0 instrumentation: retry-backoffs + seconds this scan spent retrying (429/5xx/network).
+        "retry_count": meta.get("retry_count"), "backoff_seconds_total": meta.get("backoff_seconds_total"),
     }
 
 

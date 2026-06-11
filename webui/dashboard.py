@@ -1321,7 +1321,8 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             ui.label(
                 f"render #{state.get('rerender_count') or 0} · total {state.get('last_total_rerender_ms')}ms"
                 f" (filter {state.get('last_filter_ms')} · cascade {state.get('last_cascade_ms')}"
-                f" · build {state.get('last_row_build_ms')} · apply {state.get('last_table_update_ms')})"
+                f" · build {state.get('last_row_build_ms')} · apply {state.get('last_table_update_ms')}"
+                f" · diag {state.get('last_diagnostics_ms')})"
                 f" · write {((state.get('scan_status') or {}).get('last_result') or {}).get('write_fn_ms')}ms"
             ).classes("text-xs text-gray-500 font-mono")
             ui.label(f"Sum of independent row maxima (actionable): ${vm.sum_row_maxima(view):,.2f}"
@@ -1749,10 +1750,15 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             for chip in vm.active_filter_chips(filters, state["options"]):
                 ui.badge(chip).props("color=grey-7")
         _sync_url(filters)
-        if force_diagnostics or diagnostics_expansion.value:   # heavy (store reads): snapshot change or open
-            render_diagnostics(view)
+        # Phase 0: stamp the render counters BEFORE the (heavy, optional) diagnostics build so the
+        # Diagnostics panel reads THIS render's total — not the previous render's (the build>total mix that
+        # made the old timings untrustworthy). Diagnostics is timed separately as `last_diagnostics_ms`.
         state["rerender_count"] = (state.get("rerender_count") or 0) + 1
         state["last_total_rerender_ms"] = round((time.monotonic() - _t_start) * 1000, 1)
+        if force_diagnostics or diagnostics_expansion.value:   # heavy (store reads): snapshot change or open
+            _t_diag = time.monotonic()
+            render_diagnostics(view)
+            state["last_diagnostics_ms"] = round((time.monotonic() - _t_diag) * 1000, 1)
 
     async def poll() -> None:
         """Cheap 1s tick: reload + rerender ONLY when a new snapshot id has landed. Otherwise this is a

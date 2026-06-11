@@ -72,6 +72,35 @@ def reset_request_count() -> None:
         _request_count = 0
 
 
+# --- Process-wide retry/backoff counter (Phase 0 instrumentation) -----------------------
+# Counts retry-backoffs (429 / 5xx / network) and the seconds slept on them, so a scan can report how much
+# retrying it did — the signal for whether MAX_RPS is too aggressive (a rising count after raising MAX_RPS
+# means revert). Process-wide, like the request counter; its own lock so it never contends with the others.
+_retry_lock = threading.Lock()
+_retry_count = 0
+_backoff_seconds_total = 0.0
+
+
+def _count_retry(seconds: float) -> None:
+    global _retry_count, _backoff_seconds_total
+    with _retry_lock:
+        _retry_count += 1
+        _backoff_seconds_total += max(0.0, seconds)
+
+
+def retry_stats() -> tuple[int, float]:
+    """(retry-backoffs, total backoff seconds) issued by this process since start / the last reset."""
+    with _retry_lock:
+        return _retry_count, round(_backoff_seconds_total, 2)
+
+
+def reset_retry_stats() -> None:
+    global _retry_count, _backoff_seconds_total
+    with _retry_lock:
+        _retry_count = 0
+        _backoff_seconds_total = 0.0
+
+
 # --- Process-wide request throttle ---------------------------------------------------
 # Hand every caller a time "slot" spaced 1/MAX_RPS apart, so aggregate issuance across all threads
 # in this process never exceeds MAX_RPS. NOTE: process-wide only (see module docstring).
@@ -125,12 +154,16 @@ def _get(path: str, params: dict[str, Any]) -> dict[str, Any]:
             resp = _session.get(url, params=params, timeout=REQUEST_TIMEOUT)
         except requests.RequestException as exc:
             last_error = exc or KalshiError("network error")
-            time.sleep(_backoff_seconds(None, attempt))
+            _delay = _backoff_seconds(None, attempt)
+            _count_retry(_delay)
+            time.sleep(_delay)
             continue
 
         if resp.status_code == 429 or resp.status_code >= 500:
             last_error = KalshiError(f"HTTP {resp.status_code} from {url}")
-            time.sleep(_backoff_seconds(resp, attempt))
+            _delay = _backoff_seconds(resp, attempt)
+            _count_retry(_delay)
+            time.sleep(_delay)
             continue
         if resp.status_code >= 400:
             raise KalshiError(f"HTTP {resp.status_code} from {url}: {resp.text[:200]}")

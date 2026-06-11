@@ -602,7 +602,8 @@ def unified_opportunities(
 
 
 def run_scan(fetch_fn: Callable[[str], tuple], *, fetched_at: Any = None,
-             request_count: Callable[[], int] | None = None
+             request_count: Callable[[], int] | None = None,
+             retry_stats: Callable[[], tuple[int, float]] | None = None
              ) -> tuple[pd.DataFrame, dict[str, Any], list[dict[str, Any]]]:
     """Fetch every sport, aggregate coverage, and produce the unified ranked frame — the service entry.
 
@@ -616,6 +617,7 @@ def run_scan(fetch_fn: Callable[[str], tuple], *, fetched_at: Any = None,
     no store, no network. A per-sport fetch failure is recorded and that sport contributes nothing.
     """
     before = request_count() if request_count else None
+    retry_before = retry_stats() if retry_stats else None   # Phase 0: (count, seconds) read before/after
     sport_cfgs = list(sports.all_sports())
 
     def _fetch_one(sid: str) -> tuple[str, tuple | None, str | None, float]:
@@ -683,4 +685,8 @@ def run_scan(fetch_fn: Callable[[str], tuple], *, fetched_at: Any = None,
     }
     if before is not None:
         coverage["kalshi_requests"] = request_count() - before
+    if retry_before is not None:
+        rc_now, bs_now = retry_stats()
+        coverage["retry_count"] = rc_now - retry_before[0]
+        coverage["backoff_seconds_total"] = round(bs_now - retry_before[1], 2)
     return unified, coverage, frames
