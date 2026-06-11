@@ -1648,6 +1648,56 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                      ).classes("text-sm text-gray-500")
         detail_expansion.close()
 
+    def _apply_gated_sections() -> None:
+        """Build + assign the toggle-gated tables (review / blocked / qualifier) from the cached view,
+        SKIPPING hidden sections (Phase 1a). The default view shows only Actionable, so this avoids
+        building the review/blocked/qualifier row-models (the bulk of the ~2k-row, ~5s build) that are
+        never seen. Sets each section's header+table visibility. Reused by rerender() and the
+        visibility-only section-toggle handler (Phase 1c)."""
+        view = state.get("view") or []
+        new_ids = state.get("new_ids") or set()
+        chg = state.get("changes") or {}
+        flash = state.get("flash_now") or set()
+        ls = pos_framing_sw.value
+        review.rows = ([vm.opp_row(o, new_ids, chg, flash, long_short=ls)
+                        for o in view if o.get("bucket") == "review_signal"] if show_review_sw.value else [])
+        blocked.rows = ([vm.opp_row(o, new_ids, chg, flash, long_short=ls)
+                         for o in view if o.get("bucket") == "blocked"] if show_blocked_sw.value else [])
+        if qs_switch.value:
+            qs_opps = [o for o in view if o.get("bucket") == "qualifier_setup"]
+            qs_table.rows = [vm.qualifier_row(o, new_ids, chg, flash,
+                                              leg_lookup=_contract_lookup_for(o),
+                                              comparator_contract=_comparator_contract_for(o))
+                             for o in vm.order_qualifier_rows(qs_opps)]
+        else:
+            qs_table.rows = []
+        for hdr, tbl, sw in ((review_hdr, review, show_review_sw), (blocked_hdr, blocked, show_blocked_sw),
+                             (qs_hdr, qs_table, qs_switch)):
+            hdr.set_visibility(sw.value)
+            tbl.set_visibility(sw.value)
+
+    def _refresh_counts() -> None:
+        """Update the per-bucket counts line from the full snapshot + current filters. Cheap O(n) filter —
+        the expensive ~5s part was the row-model build, which a section toggle now skips (Phase 1c)."""
+        opps = state.get("opps_list") or []
+        counts_line.set_text(vm.bucket_counts_line(
+            vm.bucket_counts(opps, _current_filters()),
+            {"review_signal": show_review_sw.value, "blocked": show_blocked_sw.value,
+             "risk_budget": rb_switch.value, "near_miss": nm_switch.value,
+             "qualifier_setup": qs_switch.value, "no_structure": ns_switch.value}))
+
+    def _on_section_toggle() -> None:
+        """Phase 1c: a section show/hide toggle rebuilds ONLY the affected sections + counts from the cached
+        view — no re-filter/re-rank and no actionable/liquidity/chips/diagnostics rebuild (the full
+        rerender). Skips the ~5s build that made these toggles feel frozen."""
+        if state.get("_suppress_cascade"):
+            return
+        _apply_gated_sections()        # review/blocked/qualifier: visibility + on-demand build
+        refresh_bounded_loss()         # rb/nm/ns are scoped + self-gating (set their own visibility)
+        refresh_near_miss()
+        refresh_no_structure()
+        _refresh_counts()
+
     def rerender(force_diagnostics: bool = False) -> None:
         """Pure in-memory re-render from `state` — NO store access. Re-filter + push only the VISIBLE
         tables; refresh empty-state / chips / URL / freshness. Diagnostics (heavy store reads) rebuild
@@ -1683,30 +1733,18 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         empty.set_visibility(msg is not None)
 
         ls = pos_framing_sw.value      # Long/Short YES display wording (default off → Buy YES/Buy NO)
-        _t_build = time.monotonic()    # build the row-models (Python), distinct from the widget-apply below
+        _t_build = time.monotonic()    # build the always-visible row-models (Actionable + backlog)
         act_rows = [vm.opp_row(o, new_ids, chg, flash, long_short=ls) for o in view if o.get("bucket") == "actionable"]
-        rev_rows = [vm.opp_row(o, new_ids, chg, flash, long_short=ls) for o in view if o.get("bucket") == "review_signal"]
-        blk_rows = [vm.opp_row(o, new_ids, chg, flash, long_short=ls) for o in view if o.get("bucket") == "blocked"]
-        qs_opps = [o for o in view if o.get("bucket") == "qualifier_setup"]
-        qs_rows = [vm.qualifier_row(o, new_ids, chg, flash,
-                                    leg_lookup=_contract_lookup_for(o),
-                                    comparator_contract=_comparator_contract_for(o))
-                   for o in vm.order_qualifier_rows(qs_opps)]
         bl_rows = [vm.backlog_row(b, tz) for b in (state.get("backlog") or [])]
         ble_rows = [vm.backlog_event_row(b, tz) for b in (state.get("backlog_events") or [])]
         state["last_row_build_ms"] = round((time.monotonic() - _t_build) * 1000, 1)
 
-        # Assign the built models to the Quasar tables + toggle section visibility — the widget-apply cost,
-        # measured separately from row construction (the PR1b row-diffing gate).
+        # Assign the built models to the Quasar tables. Gated sections (review/blocked/qualifier) are built
+        # ONLY when their switch is on (Phase 1a, via _apply_gated_sections); the watchlist sections
+        # (rb/nm/ns) are rebuilt via their scoped, self-gating refreshers.
         _t_apply = time.monotonic()
-        actionable.rows, review.rows, blocked.rows, qs_table.rows = act_rows, rev_rows, blk_rows, qs_rows
-        for hdr, tbl, sw in ((review_hdr, review, show_review_sw), (blocked_hdr, blocked, show_blocked_sw),
-                             (qs_hdr, qs_table, qs_switch)):
-            hdr.set_visibility(sw.value)
-            tbl.set_visibility(sw.value)
-
-        # Two watchlist sections (split) — rebuilt via the scoped refreshers so a bounded-loss/near-miss
-        # control change can call them directly (PR R) without re-running this full rerender.
+        actionable.rows = act_rows
+        _apply_gated_sections()
         refresh_bounded_loss()
         refresh_near_miss()
         refresh_no_structure()
@@ -1718,13 +1756,9 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         # scope banner (with the PR 21a counters) + per-bucket counts + filter chips + URL state
         _set_freshness(vm.scope_banner(cov, tz))
         # Per-bucket counts (PR 4): computed from the FULL snapshot + current filters (in-memory; no store
-        # read), reusing filter_opps so the numbers match the rendered tables. Toggle state -> "hidden by
-        # settings" wording. `opps` is the full snapshot list; `filters` are the membership+threshold values.
-        counts_line.set_text(vm.bucket_counts_line(
-            vm.bucket_counts(opps, filters),
-            {"review_signal": show_review_sw.value, "blocked": show_blocked_sw.value,
-             "risk_budget": rb_switch.value, "near_miss": nm_switch.value,
-             "qualifier_setup": qs_switch.value, "no_structure": ns_switch.value}))
+        # read) so the numbers match the rendered tables + reflect "hidden by settings". Shared with the
+        # Phase 1c section-toggle path via _refresh_counts.
+        _refresh_counts()
         # Market telemetry — fill the four liquidity columns (depth / contracts / tightest / most-traded).
         panel = state.get("liquidity_panel") or {}
         for _col in (liq_sports, liq_contracts, liq_tightest, liq_traded):
@@ -1913,9 +1947,13 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
     # re-renders mid-cascade. Single-interaction controls (selects/switches) fire once → full re-render now.
     # The NUMBER inputs fire per keystroke/spin → DEBOUNCED, and the bounded-loss/near-miss bands are SCOPED
     # to their own tables (a Max-loss change no longer rebuilds the other tables or reads the store).
-    for ctrl in (tz_select, rank_sel, show_ids, participant_sel, active_sw,
-                 show_review_sw, show_blocked_sw, qs_switch, rb_switch, nm_switch, ns_switch):
+    for ctrl in (tz_select, rank_sel, show_ids, participant_sel, active_sw):
         ctrl.on_value_change(lambda _=None: None if state.get("_suppress_cascade") else rerender())
+    # Phase 1c: section show/hide toggles rebuild ONLY their own section + counts from the cached view
+    # (cheap), never the full rerender — so toggling Review/Blocked/Qualifier/RB/NM/NO no longer pays the
+    # multi-second row-model build.
+    for ctrl in (show_review_sw, show_blocked_sw, qs_switch, rb_switch, nm_switch, ns_switch):
+        ctrl.on_value_change(lambda _=None: _on_section_toggle())
     min_size_in.on_value_change(lambda _=None: _request_refresh("full"))        # membership filter → view
     for ctrl in (rb_max_loss, rb_min_ratio, rb_min_outright, rb_max_ratio):
         ctrl.on_value_change(lambda _=None: _request_refresh("bounded_loss"))    # only the bounded-loss tables
