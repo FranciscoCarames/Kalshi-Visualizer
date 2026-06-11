@@ -477,7 +477,7 @@ def risk_budget_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str
         "firm_pct": _firm_success_pct(o),
         "midpoint_only": _optimistic_only(o),
         "wide_basis": "wide" in str(o.get("comp_quote_quality") or "").lower(),
-        "parent_over_cost": _parent_over_cost(o),
+        "parent_over_maxloss": _parent_over_maxloss(o),
         "flags": _rb_flags(o),
         # PR E — trader columns (display-only): resolution kind, the payoff zone in words, top-of-book
         # fillable size, worst-leg quote quality, and a $100 gross allocation's units / max loss $ / best
@@ -1162,17 +1162,19 @@ def _optimistic_only(o: dict[str, Any]) -> bool:
     return bool(gap is not None and gap > 0 and fs is not None and fs <= 0)
 
 
-def _parent_over_cost(o: dict[str, Any]) -> float | None:
-    """'Parent ÷ cost': the parent's implied probability (the in-the-money chance the broader outcome
-    happens, in ¢ = pp) divided by the gross bet cost (¢) — i.e. how much in-the-money probability you buy
-    per cent of cost. HIGHER = better (more likely-to-reach per unit of cost); deep-longshot parents sink
-    toward 0. Always < 1 (parent ≤ 100¢ < cost). Fail-closed: None when the parent outright or cost is
-    missing, or cost ≤ 0."""
+def _parent_over_maxloss(o: dict[str, Any]) -> float | None:
+    """'Parent ÷ max loss': the parent's implied probability (the in-the-money chance the broader outcome
+    happens, in ¢ = pp) divided by the MAX LOSS (= cost_c − 100, the overpay — the only at-risk capital).
+    HIGHER = better (more in-the-money probability per cent actually at risk); deep-longshot parents sink.
+    Fail-closed: None when the parent outright or cost is missing, or max loss (cost − 100) ≤ 0."""
     parent = _num_or_none(o.get("parent_display_c"))
     cost = _num_or_none(o.get("cost_c"))
-    if parent is None or cost is None or cost <= 0:
+    if parent is None or cost is None:
         return None
-    return round(parent / cost, 2)
+    max_loss = cost - 100
+    if max_loss <= 0:
+        return None
+    return round(parent / max_loss, 2)
 
 
 def _rb_flags(o: dict[str, Any]) -> list[dict[str, str]]:

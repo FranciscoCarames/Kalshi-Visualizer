@@ -299,11 +299,11 @@ _RISK_COLUMNS = [
     {"name": "cond_success", "label": "Chance if reached %", "field": "cond_success", "align": "center", "sortable": True},
     {"name": "firm_gap", "label": "Firm success gap ¢", "field": "firm_gap", "align": "center", "sortable": True},
     {"name": "gap_vs_be", "label": "Gap vs breakeven (pp)", "field": "gap_vs_be", "align": "center", "sortable": True},
-    # Phase 1 comparability (display-only): the parent's in-the-money probability per cent of cost
-    # (parent_display_c / cost_c). HIGHER = better (more likely-to-reach per unit cost); deep-longshot
-    # parents sink toward 0. (Breakeven % ≈ Max loss and Implied EV ¢ ≡ Gap vs breakeven were removed as
-    # redundant; the earlier "Cost per implied pp" was degenerate.)
-    {"name": "parent_over_cost", "label": "Parent ÷ cost", "field": "parent_over_cost", "align": "center", "sortable": True},
+    # Phase 1 comparability (display-only): the parent's in-the-money probability per cent of MAX LOSS
+    # (parent_display_c / (cost_c − 100), the at-risk overpay). HIGHER = better (more likely-to-reach per
+    # cent at risk); deep-longshot parents sink. (Breakeven % ≈ Max loss and Implied EV ¢ ≡ Gap vs breakeven
+    # were removed as redundant; the earlier "Cost per implied pp" was degenerate.)
+    {"name": "parent_over_maxloss", "label": "Parent ÷ max loss", "field": "parent_over_maxloss", "align": "center", "sortable": True},
     {"name": "roc", "label": "Worst-case ROC %", "field": "roc", "align": "center", "sortable": True},
     {"name": "spread_over_parent", "label": "Spread÷parent", "field": "spread_over_parent", "align": "center", "sortable": True},
     {"name": "spread_over_child", "label": "Spread÷child", "field": "spread_over_child", "align": "center", "sortable": True},
@@ -904,8 +904,9 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                  "(1 − child/parent). Firm success gap ¢ = the conservative parent-bid − child-ask gap; ≤ 0 "
                  "(the 'Midpoint-only' flag) means the display positive isn't confirmed by firm quotes. Gap "
                  "vs breakeven (pp) = implied chance minus the chance needed to clear the overpay. Parent ÷ "
-                 "cost = the parent's in-the-money probability per cent of cost (higher = more likely-to-reach "
-                 "per unit cost; deep longshots sink toward 0).").classes("text-xs text-gray-500")
+                 "max loss = the parent's in-the-money probability per cent of max loss (cost − 100, the "
+                 "at-risk overpay); higher = more likely-to-reach per cent at risk; deep longshots sink.").classes(
+                     "text-xs text-gray-500")
         ui.label("All gross, top-of-book, display-implied — comparison aids, NOT a guarantee or a calibrated "
                  "probability model. Fees, slippage, full-depth fill, latency, and settlement-rule edge "
                  "cases are not modeled. A negative gap means an inverted ladder (flagged 'Inverted / "
@@ -980,12 +981,12 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             "Conditional chance the success zone happens GIVEN the broader outcome is reached "
             "(1 − child/parent), display-implied. Less sensitive to common multiplicative vig; still "
             "quote-dependent, top-of-book, and uncalibrated.", "%"))
-        _rb.add_slot("body-cell-parent_over_cost", _num_tip_cell_slot(
-            "parent_over_cost",
+        _rb.add_slot("body-cell-parent_over_maxloss", _num_tip_cell_slot(
+            "parent_over_maxloss",
             "The parent's implied probability (the chance the broader, in-the-money outcome happens, in ¢ = "
-            "pp) divided by the gross bet cost (¢): parent_outright / cost_c. HIGHER = better — more "
-            "in-the-money probability per cent of cost; deep-longshot parents sink toward 0. Gross, "
-            "top-of-book, uncalibrated.", ""))
+            "pp) divided by the MAX LOSS (cost − 100, the at-risk overpay): parent_outright / (cost_c − 100). "
+            "HIGHER = better — more in-the-money probability per cent actually at risk; deep-longshot parents "
+            "sink. Gross, top-of-book, uncalibrated.", ""))
     nm_table.add_slot("body-cell-note", _NOTE_CELL_SLOT)    # readable wrapping note
     # Qualifier-setups: compact caveat chips + the full prose (hidden col); the two quote columns show the
     # label while sorting on their numeric rank.
