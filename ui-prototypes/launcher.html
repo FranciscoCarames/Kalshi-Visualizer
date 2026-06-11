@@ -1,0 +1,43 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Terminal Pro — framework bake-off</title>
+<style>
+:root{--bg:#0b0e14;--bg1:#10141c;--line:#222c3c;--tx:#e6edf6;--tx2:#9fb0c5;--tx3:#6b7c93;--amber:#ffb000;--green:#33ff7a;--violet:#b69bff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font-family:'Segoe UI',system-ui,sans-serif;background-image:radial-gradient(1100px 500px at 85% -5%,rgba(255,176,0,.07),transparent)}
+.wrap{max-width:1100px;margin:0 auto;padding:34px 24px 60px}
+h1{font-size:30px;margin:6px 0}.kick{font-family:'Consolas',monospace;font-size:11px;letter-spacing:2px;color:var(--amber)}
+.sub{color:var(--tx2);max-width:760px}.sub b{color:var(--tx)}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-top:24px}
+@media(max-width:820px){.grid{grid-template-columns:1fr}}
+.card{background:var(--bg1);border:1px solid var(--line);border-radius:12px;padding:16px 18px;transition:.14s}
+.card:hover{border-color:var(--amber);transform:translateY(-2px)}
+.card h2{margin:0 0 2px;font-size:18px}.tag{font-family:'Consolas',monospace;font-size:11px;color:var(--tx3)}
+.card p{color:var(--tx2);font-size:13px;min-height:38px}
+.card.canvas{border-color:var(--violet)}
+a.open{display:inline-block;margin-top:8px;background:var(--amber);color:#000;font-weight:700;text-decoration:none;padding:7px 15px;border-radius:8px;font-size:13px}
+a.open:hover{filter:brightness(1.1)}
+.run{font-family:'Consolas',monospace;font-size:11px;color:var(--tx3);margin-top:6px}
+.foot{margin-top:28px;border-top:1px solid var(--line);padding-top:16px;font-size:12px;color:var(--tx3)}.foot b{color:var(--tx2)}
+.bench{background:var(--bg1);border:1px solid var(--line);border-radius:10px;padding:12px 16px;margin-top:18px;font-size:13px;color:var(--tx2)}
+.bench b{color:var(--tx)}
+</style></head><body><div class="wrap">
+<div class="kick">KALSHI · TERMINAL PRO · FRAMEWORK BAKE-OFF</div>
+<h1>Five builds, one slice, measured for no-lag</h1>
+<p class="sub">Same Terminal Pro Opportunity surface, same dataset, same synthetic stress stream, same standardized grid (AG Grid; Glide for the canvas variant), same <b>perf overlay</b>. Open each, hit the stress presets in the bottom-right overlay (rows × updates/sec), and compare FPS + apply-latency. Each has a read-only <b>NO ORDERS</b> ladder and the gross/not-riskless disclaimer.</p>
+
+<div class="bench"><b>How to judge:</b> in each app's PERF overlay (bottom-right), click <b>10k rows</b> then <b>240 updates/sec</b>. Watch sustained <b>fps</b> (green ≥55) and <b>apply p95</b> (ms). Lower latency + steadier fps = less lag. Also feel scroll + row-select under load.</div>
+
+<div class="grid" id="grid"></div>
+
+<div class="foot"><b>Run:</b> from <code>ui-prototypes/</code> run <code>npm install</code> once, then a dev server per app (<code>npm run dev:react</code>, <code>dev:solid</code>, <code>dev:svelte</code>, <code>dev:vue</code>, <code>dev:canvas</code>). Ports are fixed below. "real (poll)" source needs a separate <code>serve.py</code> on :8000 (read-only). Throwaway evaluation prototypes — branch <code>feat/ui-prototype-bakeoff</code>, never <code>main</code>.</div>
+</div>
+<script>
+const A=[
+ {n:"React + AG Grid",port:5173,tag:"ecosystem benchmark",svc:"dev:react",d:"Virtual-DOM reference; AG Grid manages its own DOM + transactions/flash outside React."},
+ {n:"SolidJS + AG Grid",port:5174,tag:"fine-grained, no VDOM",svc:"dev:solid",d:"Signals update only what changed — the no-VDOM reactivity benchmark."},
+ {n:"Svelte + AG Grid",port:5175,tag:"compile-time",svc:"dev:svelte",d:"Compiled reactivity, minimal runtime; lean bundle."},
+ {n:"Vue 3 + AG Grid",port:5176,tag:"Quasar/NiceGUI lineage",svc:"dev:vue",d:"Proxy reactivity; closest to your current stack's underpinnings."},
+ {n:"React + Glide (canvas)",port:5177,tag:"perf ceiling",svc:"dev:canvas",cls:"canvas",d:"Canvas grid held against React+AG Grid — isolates grid-vs-framework + shows the no-lag ceiling at scale."},
+];
+document.getElementById('grid').innerHTML=A.map(a=>`<div class="card ${a.cls||''}"><h2>${a.n}</h2><div class="tag">${a.tag} · :${a.port}</div><p>${a.d}</p><a class="open" href="http://localhost:${a.port}">Open :${a.port} →</a><div class="run">npm run ${a.svc}</div></div>`).join("");
+</script>
+</body></html>
