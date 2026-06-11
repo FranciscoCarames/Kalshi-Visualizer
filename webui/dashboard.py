@@ -151,6 +151,40 @@ _QS_CAVEAT_CELL_SLOT = (
 )
 
 
+# Bounded-Loss honesty badges (Phase 1, display-only): "Midpoint-only" (amber — display positive but the
+# firm bid/ask basis doesn't confirm) / "Wide basis" (grey — a leg quote is Wide/Very-wide). Each with a
+# tooltip. Pure trader-caution chips; drive nothing executable. Mirrors the qualifier caveat-badge pattern.
+_RB_FLAGS_CELL_SLOT = (
+    '<q-td :props="props" class="text-left" style="white-space: normal; max-width: 16rem;">'
+    '<q-badge v-for="b in props.row.flags" :key="b.label" :color="b.color" '
+    'class="q-mr-xs q-mb-xs">{{ b.label }}'
+    '<q-tooltip max-width="22rem">{{ b.tooltip }}</q-tooltip></q-badge></q-td>'
+)
+
+
+def _num_tip_cell_slot(field: str, tip: str, suffix: str = "") -> str:
+    """Numeric cell (Quasar still SORTS on the raw numeric `field`) with a fixed basis tooltip + an optional
+    unit suffix; renders "—" for a null/non-finite value (distinct from a real 0). Display-only."""
+    return ('<q-td :props="props" class="text-center">'
+            '<span v-if="props.row.%s != null && isFinite(props.row.%s)">'
+            "{{ Number(props.row.%s).toLocaleString('en-US', {maximumFractionDigits: 2}) }}%s"
+            '<q-tooltip max-width="22rem">%s</q-tooltip></span>'
+            '<span v-else>—</span></q-td>') % (field, field, field, suffix, tip)
+
+
+# Firm success gap (¢): the conservative tradable-side gap, with the firm conditional % surfaced in the
+# tooltip ONLY when positive (a firm gap can be ≤0; a negative "chance" is never shown as a number).
+_RB_FIRM_GAP_CELL_SLOT = (
+    '<q-td :props="props" class="text-center">'
+    '<span v-if="props.row.firm_gap != null && isFinite(props.row.firm_gap)">'
+    "{{ Number(props.row.firm_gap).toLocaleString('en-US', {maximumFractionDigits: 2}) }}¢"
+    '<q-tooltip max-width="22rem">Conservative firm-side gap: parent YES bid − child YES ask. '
+    '<span v-if="props.row.firm_pct != null">Firm chance if reached ≈ {{ props.row.firm_pct }}%. </span>'
+    '≤ 0 ⇒ the display (midpoint) positive is not confirmed by firm quotes.</q-tooltip></span>'
+    '<span v-else>—</span></q-td>'
+)
+
+
 def _notify(message: str, *, type: str = "info", position: str = "top-right") -> None:
     """Single entry point for transient toasts (PR A2). Defaults to the top-right corner so toasts don't
     cover the controls/rows the user is reading. Call within a page context (like ui.notify itself)."""
@@ -236,6 +270,9 @@ _RISK_COLUMNS = [
     # Descriptive class (PR M): Candidate / Breakeven / Negative proxy / Inverted / Data quality — near the
     # left so junk rows are obvious at a glance.
     {"name": "signal", "label": "Signal", "field": "signal", "align": "left", "sortable": True},
+    # Phase 1 honesty badges (display-only): Midpoint-only / Wide basis. Near the left so a row whose
+    # display positive isn't confirmed by firm quotes is obvious at a glance.
+    {"name": "flags", "label": "Flags", "field": "flags", "align": "left"},
     # PR E — Kind (Vertical/Calendar) shown in the combined "All" table; redundant (constant) in the splits.
     {"name": "kind", "label": "Kind", "field": "resolution", "align": "center", "sortable": True},
     # PR F — cheap vs same-sport peers at a similar implied chance ("cost" / "ratio" / both); blank otherwise.
@@ -257,8 +294,15 @@ _RISK_COLUMNS = [
     # edge). Market gap (pp) = parent−child display gap; Breakeven % = the chance the payoff zone needs;
     # Gap vs breakeven (pp) = the two compared; Implied EV ¢ ≈ that gap (kept for one-number ranking).
     {"name": "display_spread", "label": "Market gap (pp)", "field": "display_spread", "align": "center", "sortable": True},
+    # Phase 1 likelihood (display-only): the CONDITIONAL chance if reached (1 − child/parent, vig-aware) and
+    # the conservative FIRM-side gap in ¢ (a sanity check, never a tradable %; firm % is tooltip-only).
+    {"name": "cond_success", "label": "Chance if reached %", "field": "cond_success", "align": "center", "sortable": True},
+    {"name": "firm_gap", "label": "Firm success gap ¢", "field": "firm_gap", "align": "center", "sortable": True},
     {"name": "breakeven", "label": "Breakeven %", "field": "breakeven", "align": "center", "sortable": True},
     {"name": "gap_vs_be", "label": "Gap vs breakeven (pp)", "field": "gap_vs_be", "align": "center", "sortable": True},
+    # Phase 1 comparability (display-only): capped cost per pp of conditional chance — ordered AFTER
+    # gap-vs-breakeven (its companion), never ahead of it.
+    {"name": "cost_per_pp", "label": "Cost per implied pp", "field": "cost_per_pp", "align": "center", "sortable": True},
     {"name": "ev", "label": "Implied EV ¢", "field": "ev", "align": "center", "sortable": True},
     {"name": "roc", "label": "Worst-case ROC %", "field": "roc", "align": "center", "sortable": True},
     {"name": "spread_over_parent", "label": "Spread÷parent", "field": "spread_over_parent", "align": "center", "sortable": True},
@@ -856,11 +900,17 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                  "overpay, with convex upside (the broader-but-not-deeper outcome pays about +$1). A bet, NOT "
                  "an edge — gross of fees.").classes("text-xs text-gray-500")
         ui.label("Market gap (pp) = parent−child display-price gap (the payoff zone's implied chance). "
-                 "Breakeven % = the chance that zone needs to clear the overpay (≈ max loss). "
-                 "Gap vs breakeven (pp) = the two compared; Implied EV ¢ ≈ the same number. All gross, "
-                 "top-of-book, market-implied — ranking aids, not a guarantee or a probability model. A "
-                 "negative gap means an inverted ladder (flagged 'Inverted / diagnostic'), never a chance.").classes(
+                 "Chance if reached % = the CONDITIONAL chance given the broader outcome happens "
+                 "(1 − child/parent). Firm success gap ¢ = the conservative parent-bid − child-ask gap; "
+                 "≤ 0 (the 'Midpoint-only' flag) means the display positive isn't confirmed by firm quotes. "
+                 "Breakeven % = the chance the zone needs to clear the overpay (≈ max loss). "
+                 "Gap vs breakeven (pp) = the two compared; Cost per implied pp = capped cost per pp of "
+                 "chance (read with Gap vs breakeven). Implied EV ¢ ≈ the same number.").classes(
                      "text-xs text-gray-500")
+        ui.label("All gross, top-of-book, display-implied — comparison aids, NOT a guarantee or a calibrated "
+                 "probability model. Fees, slippage, full-depth fill, latency, and settlement-rule edge "
+                 "cases are not modeled. A negative gap means an inverted ladder (flagged 'Inverted / "
+                 "diagnostic'), never a chance.").classes("text-xs text-gray-500")
 
         # Split by resolution shape (PR B): Vertical = both legs settle at one event (golf Top-N, a
         # match-alignment equivalence) so there's no carry between them; Calendar = the legs settle on
@@ -922,6 +972,20 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         _t.add_slot("body-cell-caveat", _CAVEAT_CELL_SLOT)  # compact severity chip
     for _rb in (rb_all, rb_vertical, rb_calendar):
         _rb.add_slot("body-cell-caveat", _CAVEAT_CELL_SLOT)
+        # Phase 1 likelihood/comparability cells (display-only): honesty badges, the conservative firm gap
+        # (¢, firm % in tooltip), and the two tooltip'd metrics. Numeric sort is preserved on the raw fields.
+        _rb.add_slot("body-cell-flags", _RB_FLAGS_CELL_SLOT)
+        _rb.add_slot("body-cell-firm_gap", _RB_FIRM_GAP_CELL_SLOT)
+        _rb.add_slot("body-cell-cond_success", _num_tip_cell_slot(
+            "cond_success",
+            "Conditional chance the success zone happens GIVEN the broader outcome is reached "
+            "(1 − child/parent), display-implied. Less sensitive to common multiplicative vig; still "
+            "quote-dependent, top-of-book, and uncalibrated.", "%"))
+        _rb.add_slot("body-cell-cost_per_pp", _num_tip_cell_slot(
+            "cost_per_pp",
+            "Capped cost (overpay) per percentage-point of conditional success chance. Read together WITH "
+            "Gap vs breakeven, not ahead of it — a low ratio can still sit below breakeven. Lower = cheaper "
+            "per unit of likelihood. Gross, top-of-book, uncalibrated.", "¢/pp"))
     nm_table.add_slot("body-cell-note", _NOTE_CELL_SLOT)    # readable wrapping note
     # Qualifier-setups: compact caveat chips + the full prose (hidden col); the two quote columns show the
     # label while sorting on their numeric rank.

@@ -822,3 +822,78 @@ def test_selection_left_view_selected_absent_clears():
 def test_selection_left_view_missing_id_keys_are_none_safe():
     # A selection lacking opportunity_id can't match a normal view -> treated as departed.
     assert vm.selection_left_view({"name": "x"}, [_opp("a")]) is True
+
+
+# --- Phase 1 likelihood / comparability metrics (display-only) -----------------------------------------
+def test_cond_success_pct_is_conditional_and_fails_closed():
+    # spread_over_parent = 1 - child/parent = P(success | reached); shown as a %.
+    assert vm._cond_success_pct({"spread_over_parent": 0.4}) == 40.0
+    # fail closed: missing / <= 0 -> None (never 0.0), so an inverted ladder never reads as a chance.
+    assert vm._cond_success_pct({"spread_over_parent": None}) is None
+    assert vm._cond_success_pct({"spread_over_parent": 0}) is None
+    assert vm._cond_success_pct({"spread_over_parent": -0.1}) is None
+
+
+def test_firm_spread_c_is_parent_bid_minus_child_ask():
+    assert vm._firm_spread_c({"parent_yes_bid_c": 48, "child_yes_ask_c": 22}) == 26
+    # a firm gap CAN be negative (that's the signal) -> returned as-is, not clamped
+    assert vm._firm_spread_c({"parent_yes_bid_c": 20, "child_yes_ask_c": 35}) == -15
+    # missing either firm quote -> None
+    assert vm._firm_spread_c({"parent_yes_bid_c": 48}) is None
+    assert vm._firm_spread_c({"child_yes_ask_c": 22}) is None
+
+
+def test_firm_success_pct_never_negative_only_positive_shown():
+    assert vm._firm_success_pct({"parent_yes_bid_c": 50, "child_yes_ask_c": 30}) == 40.0   # 20/50
+    # firm gap <= 0 -> None (a negative "chance" is nonsense, suppressed)
+    assert vm._firm_success_pct({"parent_yes_bid_c": 30, "child_yes_ask_c": 40}) is None
+    assert vm._firm_success_pct({"parent_yes_bid_c": 0, "child_yes_ask_c": 0}) is None
+
+
+def test_optimistic_only_flags_midpoint_only_rows():
+    # display positive but firm basis not -> Midpoint-only
+    assert vm._optimistic_only({"display_spread_c": 12, "parent_yes_bid_c": 20, "child_yes_ask_c": 25}) is True
+    # both bases positive -> not flagged
+    assert vm._optimistic_only({"display_spread_c": 12, "parent_yes_bid_c": 48, "child_yes_ask_c": 22}) is False
+    # firm basis missing -> can't claim a mismatch -> not flagged
+    assert vm._optimistic_only({"display_spread_c": 12}) is False
+
+
+def test_cost_per_implied_pp_overpay_over_conditional_chance():
+    # overpay 10¢ / 40% chance = 0.25 ¢/pp
+    assert vm._cost_per_implied_pp({"worst_case_profit_c": -10, "spread_over_parent": 0.4}) == 0.25
+    # equal overpay, higher chance -> lower (cheaper) ratio
+    a = vm._cost_per_implied_pp({"worst_case_profit_c": -10, "spread_over_parent": 0.2})
+    b = vm._cost_per_implied_pp({"worst_case_profit_c": -10, "spread_over_parent": 0.5})
+    assert a > b
+    # fail closed: missing overpay or chance <= 0 -> None
+    assert vm._cost_per_implied_pp({"spread_over_parent": 0.4}) is None
+    assert vm._cost_per_implied_pp({"worst_case_profit_c": -10, "spread_over_parent": 0}) is None
+
+
+def test_risk_budget_row_exposes_phase1_likelihood_fields_and_flags():
+    row = vm.risk_budget_row({
+        "opportunity_id": "x", "bucket": "risk_budget",
+        "display_spread_c": 12, "worst_case_profit_c": -10, "best_case_profit_c": 90,
+        "spread_over_parent": 0.4, "parent_yes_bid_c": 20, "child_yes_ask_c": 25,
+        "comp_quote_quality": "Very wide",
+    }, set())
+    assert row["cond_success"] == 40.0
+    assert row["firm_gap"] == -5            # 20 - 25
+    assert row["firm_pct"] is None          # not shown when gap <= 0
+    assert row["midpoint_only"] is True     # display + but firm -
+    assert row["cost_per_pp"] == 0.25
+    labels = {f["label"] for f in row["flags"]}
+    assert "Midpoint-only" in labels and "Wide basis" in labels
+
+
+def test_risk_budget_row_old_snapshot_missing_new_fields_renders_blank():
+    # An old snapshot row lacks every new key -> blank (None) cells, no flags, no crash.
+    row = vm.risk_budget_row({"opportunity_id": "old", "bucket": "risk_budget",
+                              "worst_case_profit_c": -10, "best_case_profit_c": 90}, set())
+    assert row["cond_success"] is None
+    assert row["firm_gap"] is None
+    assert row["firm_pct"] is None
+    assert row["midpoint_only"] is False
+    assert row["cost_per_pp"] is None
+    assert row["flags"] == []

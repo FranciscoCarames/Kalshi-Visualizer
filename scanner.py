@@ -77,6 +77,9 @@ UNIFIED_COLUMNS = [
     # Probability-context display outrights (risk-budget "spread / outright" view) — None for non-containment
     # shapes. display_c is the DISPLAY OUTRIGHT price (reasonable-quote midpoint, else last trade).
     "parent_display_c", "child_display_c", "display_spread_c", "spread_over_parent", "spread_over_child",
+    # Firm-quote passthrough (Phase 1, display-only honesty rail): parent YES bid + child YES ask drive the
+    # conservative tradable-side success gap + the "Midpoint-only" flag. Never read by bucket_of / _rank_key.
+    "parent_yes_bid_c", "child_yes_ask_c",
     # Phase 2 E (display-only, containment rows): ladder rung labels for "Wins if …" + worst-leg quote
     # quality for "Quote health". Never read by bucket_of / _rank_key.
     "child_node", "parent_node", "comp_quote_quality",
@@ -206,6 +209,9 @@ def _finalize_unified(d: dict[str, Any], *, payout_floor_c: Any) -> dict[str, An
         d.setdefault(_k, "")
     for _k in ("top2_net_if_top2_c", "top2_loss_if_not_top2_c", "top2_max_units", "wide_bundle_leg_count"):
         d.setdefault(_k, None)
+    # Firm-quote passthrough (Phase 1): default None so pre-field snapshots + non-containment shapes stay safe.
+    for _k in ("parent_yes_bid_c", "child_yes_ask_c"):
+        d.setdefault(_k, None)
     return d
 
 
@@ -242,6 +248,9 @@ def _to_unified_consistency(r: dict[str, Any], cfg) -> dict[str, Any]:
         "display_spread_c": _num(r.get("display_spread_c")),
         "spread_over_parent": _num(r.get("spread_over_parent")),
         "spread_over_child": _num(r.get("spread_over_child")),
+        # Firm-quote passthrough (Phase 1, display-only): parent YES bid + child YES ask for the conservative gap.
+        "parent_yes_bid_c": _num(r.get("parent_yes_bid_c")),
+        "child_yes_ask_c": _num(r.get("child_yes_ask_c")),
         # Phase 2 E (display-only): the ladder rung labels (for "Wins if …") + the worst-leg quote quality
         # (for "Quote health"). Read only by the speculative viewmodel; never by bucket_of / _rank_key.
         "child_node": r.get("child_node") or "", "parent_node": r.get("parent_node") or "",

@@ -467,6 +467,18 @@ def risk_budget_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str
         "breakeven": _breakeven_pct(o),
         "gap_vs_be": _gap_vs_breakeven_pp(o),
         "signal": _signal_class(o),
+        # Phase 1 likelihood + comparability (display-only; never read by bucket_of / _rank_key). The
+        # conditional chance is the headline likelihood; firm_gap is a conservative tradable-side GAP in ¢
+        # (NOT a % — a firm % reads as a tradable probability), with firm_pct surfaced only in the tooltip
+        # when positive; midpoint_only / wide_basis drive honesty badges; cost_per_pp pairs with gap_vs_be
+        # (ordered AFTER it in the table).
+        "cond_success": _cond_success_pct(o),
+        "firm_gap": _firm_spread_c(o),
+        "firm_pct": _firm_success_pct(o),
+        "midpoint_only": _optimistic_only(o),
+        "wide_basis": "wide" in str(o.get("comp_quote_quality") or "").lower(),
+        "cost_per_pp": _cost_per_implied_pp(o),
+        "flags": _rb_flags(o),
         # PR E — trader columns (display-only): resolution kind, the payoff zone in words, top-of-book
         # fillable size, worst-leg quote quality, and a $100 gross allocation's units / max loss $ / best
         # upside $ (capped by the book). All blank when their inputs are missing.
@@ -512,6 +524,11 @@ def speculative_explainer(o: dict[str, Any]) -> list[tuple[str, str]]:
     ]
     if wins:
         lines.append(("Wins big if", wins))
+    cond, firm_gap = _cond_success_pct(o), _firm_spread_c(o)
+    lines.append(("Chance of success (display-implied)",
+                  f"If reached: {'—' if cond is None else f'{cond:g}%'} (conditional, vig-aware, "
+                  f"uncalibrated). Firm success gap: {'—' if firm_gap is None else f'{firm_gap:g}¢'} "
+                  "(parent bid − child ask; ≤ 0 ⇒ not confirmed by firm quotes)."))
     lines.append(("Why ranked here",
                   f"Signal: {sig}. Market gap {'—' if gap is None else f'{gap:g}'}pp vs breakeven "
                   f"{'—' if be is None else f'{be:g}'}% → gap-vs-breakeven "
@@ -521,6 +538,12 @@ def speculative_explainer(o: dict[str, Any]) -> list[tuple[str, str]]:
         skip.append("the displayed prices are inverted or incomplete — treat as diagnostic, not a bet")
     elif gvb is not None and gvb <= 0:
         skip.append("the market prices the payoff zone at/below its breakeven — no quote-implied edge")
+    if _optimistic_only(o):
+        skip.append("positive only on DISPLAY (midpoint) prices — the firm bid/ask basis does not confirm a "
+                    "success zone (Midpoint-only); treat as review-only")
+    if "wide" in str(o.get("comp_quote_quality") or "").lower():
+        skip.append("at least one leg quote is Wide/Very-wide, so the displayed number may decay or be "
+                    "untradeable (Wide basis)")
     skip.append("metrics are gross & UNCALIBRATED (fees, full-depth fill, outcome calibration not modeled); "
                 "doing nothing avoids the capped loss")
     lines.append(("Why skip / doing nothing may be better", "; ".join(skip)))
@@ -1100,6 +1123,71 @@ def _gap_vs_breakeven_pp(o: dict[str, Any]) -> float | None:
     payoff zone than the bet needs. None when either input is missing."""
     gap, be = _num_or_none(o.get("display_spread_c")), _breakeven_pct(o)
     return None if (gap is None or be is None) else round(gap - be, 1)
+
+
+# --- Phase 1 likelihood / comparability metrics (display-only; never read by bucket_of / _rank_key) ------
+# Conditional success chance, a conservative firm-side gap, the midpoint-vs-firm basis flag, and the
+# "cost per implied pp" ratio. All None-safe and FAIL CLOSED (return None, never 0.0, on a degenerate book)
+# so a missing/inverted quote never renders as a real probability. "display-implied" = read off display
+# prices treated as-if true: gross, top-of-book, uncalibrated — a comparison aid, not a calibrated model.
+def _cond_success_pct(o: dict[str, Any]) -> float | None:
+    """Conditional success chance P(success zone | parent reached) = 1 − child/parent = spread_over_parent,
+    as a %. Less sensitive to common multiplicative vig (it cancels in the child/parent ratio) but still
+    quote-dependent and uncalibrated. Fail-closed: None when the ratio is missing or ≤ 0."""
+    sop = _num_or_none(o.get("spread_over_parent"))
+    return None if (sop is None or sop <= 0) else round(sop * 100, 1)
+
+
+def _firm_spread_c(o: dict[str, Any]) -> float | None:
+    """Conservative firm-side success gap in cents: parent YES bid − child YES ask (the exit/realize sides
+    the midpoint ignores). May be ≤ 0 — that IS the signal that a midpoint positive isn't tradable. None
+    when either firm quote is absent (e.g. a pre-field snapshot)."""
+    pb, ca = _num_or_none(o.get("parent_yes_bid_c")), _num_or_none(o.get("child_yes_ask_c"))
+    return None if (pb is None or ca is None) else pb - ca
+
+
+def _firm_success_pct(o: dict[str, Any]) -> float | None:
+    """Firm-side conditional chance % — TOOLTIP ONLY, shown only when STRICTLY POSITIVE (a firm gap can be
+    ≤ 0; a negative 'chance' is nonsense, so it's suppressed). None unless parent_yes_bid_c > 0 AND the firm
+    gap > 0."""
+    pb, fs = _num_or_none(o.get("parent_yes_bid_c")), _firm_spread_c(o)
+    return round(fs / pb * 100, 1) if (pb is not None and pb > 0 and fs is not None and fs > 0) else None
+
+
+def _optimistic_only(o: dict[str, Any]) -> bool:
+    """True when the DISPLAY (midpoint) basis implies a positive success zone but the FIRM bid/ask basis does
+    not (display_spread_c > 0 ≥ firm_spread_c) — drives the 'Midpoint-only' badge. False when the firm basis
+    is missing (can't claim a mismatch) or is also positive."""
+    gap, fs = _num_or_none(o.get("display_spread_c")), _firm_spread_c(o)
+    return bool(gap is not None and gap > 0 and fs is not None and fs <= 0)
+
+
+def _cost_per_implied_pp(o: dict[str, Any]) -> float | None:
+    """'Cost per implied pp': capped cost (overpay ¢ = −worst_case_profit_c) per percentage-point of the
+    conditional success chance. Lower = cheaper convexity per unit of likelihood. Read together WITH
+    gap-vs-breakeven (its companion), never ahead of it. Fail-closed: None when overpay or chance is
+    missing or ≤ 0."""
+    wc = _num_or_none(o.get("worst_case_profit_c"))
+    chance = _cond_success_pct(o)
+    if wc is None or chance is None or chance <= 0:
+        return None
+    return round(max(0.0, -wc) / chance, 2)
+
+
+def _rb_flags(o: dict[str, Any]) -> list[dict[str, str]]:
+    """Display-only honesty badges for a bounded-loss row: 'Midpoint-only' (the display basis implies a
+    success zone the firm bid/ask basis does not) and 'Wide basis' (a leg quote is Wide/Very-wide). Pure
+    caution chips — never read by bucket_of / _rank_key."""
+    flags: list[dict[str, str]] = []
+    if _optimistic_only(o):
+        flags.append({"label": "Midpoint-only", "color": "warning",
+                      "tooltip": "Positive on display (midpoint) prices, but the firm bid/ask basis does "
+                                 "not confirm a success zone — treat as review-only."})
+    if "wide" in str(o.get("comp_quote_quality") or "").lower():
+        flags.append({"label": "Wide basis", "color": "grey-7",
+                      "tooltip": "At least one leg quote is Wide/Very-wide; the displayed number may decay "
+                                 "or be untradeable."})
+    return flags
 
 
 def _signal_class(o: dict[str, Any]) -> str:

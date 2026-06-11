@@ -599,6 +599,12 @@ def _row(player: str, player_key: str, chain: str, child: dict | None, parent: d
         "spread_over_child": _disp_ratio(parent, child, "child"),
         "child_bid_pct": child.get("yes_bid_pct") if child else None,
         "parent_ask_pct": parent.get("yes_ask_pct") if parent else None,
+        # Firm-quote passthrough for the conservative tradable-side success gap (display-only, Phase 1).
+        # The midpoint `display_spread_c` is read off mids; the conservative gap exits/realizes on the
+        # parent YES BID and child YES ASK — the sides the midpoint ignores. None-safe; never read by
+        # bucket_of / _rank_key (a display-only honesty rail).
+        "parent_yes_bid_c": _num(parent.get("yes_bid_c")) if parent else None,
+        "child_yes_ask_c": _num(child.get("yes_ask_c")) if child else None,
         "executable_gap": comp.get("executable_gap"),
         "display_gap": comp.get("display_gap"),
         "status": comp["status"],
@@ -677,6 +683,8 @@ def build_checks(df: pd.DataFrame, *, risk_budget_max_loss_c: int = 0) -> pd.Dat
         "child_event_ticker", "parent_event_ticker", "layers",
         "child_contract", "parent_contract", "child_display_pct",
         "parent_display_pct", "child_bid_pct", "parent_ask_pct", "executable_gap",
+        # Firm-quote passthrough (display-only conservative success gap, Phase 1).
+        "parent_yes_bid_c", "child_yes_ask_c",
         # Probability-context display outrights for the risk-budget spread/outright view.
         "parent_display_c", "child_display_c", "display_spread_c", "spread_over_parent", "spread_over_child",
         "display_gap", "status", "status_group", "rule_flag", "reason", "volume",
