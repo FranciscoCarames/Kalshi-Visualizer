@@ -859,16 +859,16 @@ def test_optimistic_only_flags_midpoint_only_rows():
     assert vm._optimistic_only({"display_spread_c": 12}) is False
 
 
-def test_cost_per_implied_pp_overpay_over_conditional_chance():
-    # overpay 10¢ / 40% chance = 0.25 ¢/pp
-    assert vm._cost_per_implied_pp({"worst_case_profit_c": -10, "spread_over_parent": 0.4}) == 0.25
-    # equal overpay, higher chance -> lower (cheaper) ratio
-    a = vm._cost_per_implied_pp({"worst_case_profit_c": -10, "spread_over_parent": 0.2})
-    b = vm._cost_per_implied_pp({"worst_case_profit_c": -10, "spread_over_parent": 0.5})
-    assert a > b
-    # fail closed: missing overpay or chance <= 0 -> None
-    assert vm._cost_per_implied_pp({"spread_over_parent": 0.4}) is None
-    assert vm._cost_per_implied_pp({"worst_case_profit_c": -10, "spread_over_parent": 0}) is None
+def test_parent_over_cost():
+    # parent's in-the-money probability (¢) ÷ gross cost (¢); higher = better.
+    assert vm._parent_over_cost({"cost_c": 107, "parent_display_c": 35}) == round(35 / 107, 2)   # 0.33
+    # a likely-to-reach parent scores HIGHER than a deep-longshot parent at the same cost
+    live = vm._parent_over_cost({"cost_c": 102, "parent_display_c": 50})
+    longshot = vm._parent_over_cost({"cost_c": 102, "parent_display_c": 2})
+    assert live > longshot
+    # fail closed: missing cost/outright or cost <= 0 -> None
+    assert vm._parent_over_cost({"parent_display_c": 35}) is None
+    assert vm._parent_over_cost({"cost_c": 0, "parent_display_c": 35}) is None
 
 
 def test_risk_budget_row_exposes_phase1_likelihood_fields_and_flags():
@@ -876,13 +876,14 @@ def test_risk_budget_row_exposes_phase1_likelihood_fields_and_flags():
         "opportunity_id": "x", "bucket": "risk_budget",
         "display_spread_c": 12, "worst_case_profit_c": -10, "best_case_profit_c": 90,
         "spread_over_parent": 0.4, "parent_yes_bid_c": 20, "child_yes_ask_c": 25,
+        "cost_c": 107, "parent_display_c": 35, "child_display_c": 30,
         "comp_quote_quality": "Very wide",
     }, set())
     assert row["cond_success"] == 40.0
     assert row["firm_gap"] == -5            # 20 - 25
     assert row["firm_pct"] is None          # not shown when gap <= 0
     assert row["midpoint_only"] is True     # display + but firm -
-    assert row["cost_per_pp"] == 0.25
+    assert row["parent_over_cost"] == round(35 / 107, 2)
     labels = {f["label"] for f in row["flags"]}
     assert "Midpoint-only" in labels and "Wide basis" in labels
 
@@ -895,5 +896,5 @@ def test_risk_budget_row_old_snapshot_missing_new_fields_renders_blank():
     assert row["firm_gap"] is None
     assert row["firm_pct"] is None
     assert row["midpoint_only"] is False
-    assert row["cost_per_pp"] is None
+    assert row["parent_over_cost"] is None
     assert row["flags"] == []

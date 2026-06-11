@@ -290,20 +290,20 @@ _RISK_COLUMNS = [
     {"name": "upside_100", "label": "Best upside @ $100 ($)", "field": "upside_100", "align": "center", "sortable": True},
     {"name": "quote_health", "label": "Quote health", "field": "quote_health", "align": "center", "sortable": True},
     {"name": "ratio", "label": "Upside:risk", "field": "ratio", "align": "center", "sortable": True},
-    # PR M — the implied metric, shown as its legible decomposition (gross, top-of-book ranking aids; never an
-    # edge). Market gap (pp) = parent−child display gap; Breakeven % = the chance the payoff zone needs;
-    # Gap vs breakeven (pp) = the two compared; Implied EV ¢ ≈ that gap (kept for one-number ranking).
+    # Likelihood block (gross, top-of-book display aids; never an edge). Market gap (pp) = the UNCONDITIONAL
+    # parent−child display gap. (Breakeven % and Implied EV ¢ were removed — redundant with Max loss / Gap
+    # vs breakeven.)
     {"name": "display_spread", "label": "Market gap (pp)", "field": "display_spread", "align": "center", "sortable": True},
     # Phase 1 likelihood (display-only): the CONDITIONAL chance if reached (1 − child/parent, vig-aware) and
     # the conservative FIRM-side gap in ¢ (a sanity check, never a tradable %; firm % is tooltip-only).
     {"name": "cond_success", "label": "Chance if reached %", "field": "cond_success", "align": "center", "sortable": True},
     {"name": "firm_gap", "label": "Firm success gap ¢", "field": "firm_gap", "align": "center", "sortable": True},
-    {"name": "breakeven", "label": "Breakeven %", "field": "breakeven", "align": "center", "sortable": True},
     {"name": "gap_vs_be", "label": "Gap vs breakeven (pp)", "field": "gap_vs_be", "align": "center", "sortable": True},
-    # Phase 1 comparability (display-only): capped cost per pp of conditional chance — ordered AFTER
-    # gap-vs-breakeven (its companion), never ahead of it.
-    {"name": "cost_per_pp", "label": "Cost per implied pp", "field": "cost_per_pp", "align": "center", "sortable": True},
-    {"name": "ev", "label": "Implied EV ¢", "field": "ev", "align": "center", "sortable": True},
+    # Phase 1 comparability (display-only): the parent's in-the-money probability per cent of cost
+    # (parent_display_c / cost_c). HIGHER = better (more likely-to-reach per unit cost); deep-longshot
+    # parents sink toward 0. (Breakeven % ≈ Max loss and Implied EV ¢ ≡ Gap vs breakeven were removed as
+    # redundant; the earlier "Cost per implied pp" was degenerate.)
+    {"name": "parent_over_cost", "label": "Parent ÷ cost", "field": "parent_over_cost", "align": "center", "sortable": True},
     {"name": "roc", "label": "Worst-case ROC %", "field": "roc", "align": "center", "sortable": True},
     {"name": "spread_over_parent", "label": "Spread÷parent", "field": "spread_over_parent", "align": "center", "sortable": True},
     {"name": "spread_over_child", "label": "Spread÷child", "field": "spread_over_child", "align": "center", "sortable": True},
@@ -899,14 +899,13 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         ui.label("Buy the broader YES + the deeper NO for just over 100¢: your loss is capped at the small "
                  "overpay, with convex upside (the broader-but-not-deeper outcome pays about +$1). A bet, NOT "
                  "an edge — gross of fees.").classes("text-xs text-gray-500")
-        ui.label("Market gap (pp) = parent−child display-price gap (the payoff zone's implied chance). "
-                 "Chance if reached % = the CONDITIONAL chance given the broader outcome happens "
-                 "(1 − child/parent). Firm success gap ¢ = the conservative parent-bid − child-ask gap; "
-                 "≤ 0 (the 'Midpoint-only' flag) means the display positive isn't confirmed by firm quotes. "
-                 "Breakeven % = the chance the zone needs to clear the overpay (≈ max loss). "
-                 "Gap vs breakeven (pp) = the two compared; Cost per implied pp = capped cost per pp of "
-                 "chance (read with Gap vs breakeven). Implied EV ¢ ≈ the same number.").classes(
-                     "text-xs text-gray-500")
+        ui.label("Market gap (pp) = parent−child display-price gap (the UNCONDITIONAL implied chance of the "
+                 "payoff zone). Chance if reached % = the CONDITIONAL chance given the broader outcome happens "
+                 "(1 − child/parent). Firm success gap ¢ = the conservative parent-bid − child-ask gap; ≤ 0 "
+                 "(the 'Midpoint-only' flag) means the display positive isn't confirmed by firm quotes. Gap "
+                 "vs breakeven (pp) = implied chance minus the chance needed to clear the overpay. Parent ÷ "
+                 "cost = the parent's in-the-money probability per cent of cost (higher = more likely-to-reach "
+                 "per unit cost; deep longshots sink toward 0).").classes("text-xs text-gray-500")
         ui.label("All gross, top-of-book, display-implied — comparison aids, NOT a guarantee or a calibrated "
                  "probability model. Fees, slippage, full-depth fill, latency, and settlement-rule edge "
                  "cases are not modeled. A negative gap means an inverted ladder (flagged 'Inverted / "
@@ -981,11 +980,12 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             "Conditional chance the success zone happens GIVEN the broader outcome is reached "
             "(1 − child/parent), display-implied. Less sensitive to common multiplicative vig; still "
             "quote-dependent, top-of-book, and uncalibrated.", "%"))
-        _rb.add_slot("body-cell-cost_per_pp", _num_tip_cell_slot(
-            "cost_per_pp",
-            "Capped cost (overpay) per percentage-point of conditional success chance. Read together WITH "
-            "Gap vs breakeven, not ahead of it — a low ratio can still sit below breakeven. Lower = cheaper "
-            "per unit of likelihood. Gross, top-of-book, uncalibrated.", "¢/pp"))
+        _rb.add_slot("body-cell-parent_over_cost", _num_tip_cell_slot(
+            "parent_over_cost",
+            "The parent's implied probability (the chance the broader, in-the-money outcome happens, in ¢ = "
+            "pp) divided by the gross bet cost (¢): parent_outright / cost_c. HIGHER = better — more "
+            "in-the-money probability per cent of cost; deep-longshot parents sink toward 0. Gross, "
+            "top-of-book, uncalibrated.", ""))
     nm_table.add_slot("body-cell-note", _NOTE_CELL_SLOT)    # readable wrapping note
     # Qualifier-setups: compact caveat chips + the full prose (hidden col); the two quote columns show the
     # label while sorting on their numeric rank.
@@ -997,8 +997,8 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
     for _t in (actionable, review, blocked):
         for _f in ("roi", "units", "profit", "net_edge", "net_profit", "fees"):
             _t.add_slot(f"body-cell-{_f}", _num_cell_slot(_f))
-    for _f in ("cost", "max_loss", "max_profit", "max_units", "loss_100", "upside_100", "ratio", "ev",
-               "breakeven", "gap_vs_be", "roc", "spread_over_parent", "spread_over_child",
+    for _f in ("cost", "max_loss", "max_profit", "max_units", "loss_100", "upside_100", "ratio",
+               "gap_vs_be", "roc", "spread_over_parent", "spread_over_child",
                "parent_outright", "child_outright", "display_spread"):
         for _rb in (rb_all, rb_vertical, rb_calendar):
             _rb.add_slot(f"body-cell-{_f}", _num_cell_slot(_f))

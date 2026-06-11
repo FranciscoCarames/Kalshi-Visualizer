@@ -30,7 +30,7 @@ SPECULATIVE_FIELDS = {
     # fields) + every viewmodel-derived metric. bucket_of / _rank_key / peer cheapness must ignore ALL.
     "parent_yes_bid_c": 20, "child_yes_ask_c": 25,
     "cond_success": 40.0, "firm_gap": -5, "firm_pct": None, "midpoint_only": True,
-    "wide_basis": True, "cost_per_pp": 0.25, "flags": [{"label": "Midpoint-only"}],
+    "wide_basis": True, "parent_over_cost": 0.33, "flags": [{"label": "Midpoint-only"}],
 }
 
 # The executable fields the invariant protects (the per-row fingerprint).

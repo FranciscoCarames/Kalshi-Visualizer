@@ -477,7 +477,7 @@ def risk_budget_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str
         "firm_pct": _firm_success_pct(o),
         "midpoint_only": _optimistic_only(o),
         "wide_basis": "wide" in str(o.get("comp_quote_quality") or "").lower(),
-        "cost_per_pp": _cost_per_implied_pp(o),
+        "parent_over_cost": _parent_over_cost(o),
         "flags": _rb_flags(o),
         # PR E — trader columns (display-only): resolution kind, the payoff zone in words, top-of-book
         # fillable size, worst-leg quote quality, and a $100 gross allocation's units / max loss $ / best
@@ -1162,16 +1162,17 @@ def _optimistic_only(o: dict[str, Any]) -> bool:
     return bool(gap is not None and gap > 0 and fs is not None and fs <= 0)
 
 
-def _cost_per_implied_pp(o: dict[str, Any]) -> float | None:
-    """'Cost per implied pp': capped cost (overpay ¢ = −worst_case_profit_c) per percentage-point of the
-    conditional success chance. Lower = cheaper convexity per unit of likelihood. Read together WITH
-    gap-vs-breakeven (its companion), never ahead of it. Fail-closed: None when overpay or chance is
-    missing or ≤ 0."""
-    wc = _num_or_none(o.get("worst_case_profit_c"))
-    chance = _cond_success_pct(o)
-    if wc is None or chance is None or chance <= 0:
+def _parent_over_cost(o: dict[str, Any]) -> float | None:
+    """'Parent ÷ cost': the parent's implied probability (the in-the-money chance the broader outcome
+    happens, in ¢ = pp) divided by the gross bet cost (¢) — i.e. how much in-the-money probability you buy
+    per cent of cost. HIGHER = better (more likely-to-reach per unit of cost); deep-longshot parents sink
+    toward 0. Always < 1 (parent ≤ 100¢ < cost). Fail-closed: None when the parent outright or cost is
+    missing, or cost ≤ 0."""
+    parent = _num_or_none(o.get("parent_display_c"))
+    cost = _num_or_none(o.get("cost_c"))
+    if parent is None or cost is None or cost <= 0:
         return None
-    return round(max(0.0, -wc) / chance, 2)
+    return round(parent / cost, 2)
 
 
 def _rb_flags(o: dict[str, Any]) -> list[dict[str, str]]:
