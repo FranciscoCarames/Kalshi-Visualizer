@@ -22,6 +22,7 @@ from typing import Any, Iterable
 import config
 import consistency
 import data
+import no_structures
 import scanner
 import sports
 import viz
@@ -701,6 +702,111 @@ def no_structure_explainer(o: dict[str, Any]) -> list[tuple[str, str]]:
                 pc = s.get("profit_c")
                 lines.append((f"  · {s['label']}", "—" if pc is None else f"{pc:+.0f}¢/unit"))
     return lines
+
+
+# --- NO-fade ladder (per-participant) + cascade upside score (DISPLAY-ONLY) ---------------------------
+# A participant's path to a deep outcome is a chain of YES events; a single NO (one elimination) cascades —
+# every deeper outcome reverts to NO. So a cheap NO at a BROAD rung is a maximally-leveraged longshot fade.
+# `cascade_score = (max-win ÷ cost) × (deeper rungs dominated)` is an ORDINAL longshot-upside/consequence
+# score — NOT EV, probability, fair value, or mispricing; a higher score usually means a LOWER implied
+# chance. Pure + display-only: never read by classify / bucket_of / _rank_key.
+def no_fade_ladder(prows: list[dict[str, Any]], sport: str, *,
+                   oid_by_ticker: dict[str, str] | None = None) -> dict[str, Any] | None:
+    """One participant's full NO-fade ladder card from their stored contract rows, or None when there is
+    no ≥2-node ladder / no rows / no scorable cheap rung (fail-closed). Reuses
+    `consistency.build_player_nodes` + `representative`, `cfg.ladder_for`, `consistency._buy_no_c`, and
+    `no_structures._firm`. `oid_by_ticker` maps a cheap-NO opp's NO-leg `market_ticker` → opportunity_id
+    (purely structural — no label parsing); a rung is `cheap` iff its representative ticker is in that map."""
+    cfg = sports.get_sport(sport)
+    rows = list(prows or [])
+    if not rows:
+        return None                                          # fail-closed: no frames → no card
+    spec = cfg.ladder_for(rows) if cfg else None
+    order = tuple(getattr(spec, "node_order", ()) or ()) if spec else ()
+    if len(order) < 2:
+        return None
+    oid_by_ticker = oid_by_ticker or {}
+    nodes = consistency.build_player_nodes(rows)
+    n = len(order)
+    rungs: list[dict[str, Any]] = []
+    prev_no: float | None = None
+    inverted = False
+    for i, node in enumerate(order):
+        rep = consistency.representative(nodes.get(node))
+        firm = bool(rep) and no_structures._firm(rep)
+        no_c = consistency._buy_no_c(rep) if firm else None
+        ticker = str(rep.get("market_ticker") or "") if rep else ""
+        cheap = bool(ticker) and ticker in oid_by_ticker
+        dominated = (n - 1) - i                               # strictly-deeper rungs this NO collapses
+        zero_cost = no_c is not None and no_c <= 0
+        if no_c is not None and no_c > 0:
+            max_win: float | None = 100 - no_c
+            leverage: float | None = round(max_win / no_c, 2)
+            cascade_score: float | None = round(leverage * dominated, 1)
+            if prev_no is not None and no_c < prev_no:       # NO cost should rise broad→deep
+                inverted = True
+            prev_no = no_c
+        else:
+            max_win = (100 - no_c) if no_c is not None else None
+            leverage = cascade_score = None
+        rungs.append({
+            "rung": node, "reach_pct": _num(rep.get("display_pct")) if rep else None,
+            "no_c": no_c, "max_win": max_win, "leverage": leverage, "dominated": dominated,
+            "cascade_score": cascade_score, "cheap": cheap, "zero_cost": zero_cost,
+            "opportunity_id": oid_by_ticker.get(ticker) if cheap else None,
+            "quote": (rep.get("quote_quality") or "") if rep else "",
+            "size": _num(rep.get("yes_bid_size")) if rep else None,
+            "market_ticker": ticker,
+        })
+    scorable = [r for r in rungs if r["cheap"] and r["cascade_score"] is not None]
+    if not scorable:
+        return None                  # gated but no scorable cheap LADDER rung (e.g. cheap NO is a prop)
+    top = max(scorable, key=lambda r: r["cascade_score"])
+    win_rep = consistency.representative(nodes.get(order[-1]))
+    return {
+        "sport": sport, "sport_label": getattr(cfg, "label", sport) if cfg else sport,
+        "player": next((r.get("player") for r in rows if r.get("player")), ""),
+        "player_key": next((r.get("player_key") for r in rows if r.get("player_key")), ""),
+        "tournament": next((r.get("tournament") for r in rows if r.get("tournament")), ""),
+        "win_label": order[-1],
+        "implied_win_pct": _num(win_rep.get("display_pct")) if win_rep else None,
+        "card_score": top["cascade_score"], "top_rung": top["rung"],
+        "safe_key": min(r["no_c"] for r in scorable),        # cheapest cheap-rung NO = lowest max-loss
+        "inverted": inverted,
+        "rungs": rungs,
+    }
+
+
+def no_fade_ladder_view(opps: Iterable[dict[str, Any]] | None, prows_for, *, max_loss_c: float,
+                        max_buy_no_c: float = 0, kind: str = "all",
+                        sort: str = "safe") -> list[dict[str, Any]]:
+    """Per-participant NO-fade ladder cards. Participants are GATED by the cheap-NO opps (reuse
+    `no_structure_view`) grouped by the opp's structured `(sport, player_key, tournament)`; each card's
+    full ladder is rebuilt from `prows_for(sport, player_key, tournament)` (the dashboard injects stored
+    contract rows — keeps this pure). `sort="cascade"` → highest card cascade score first (longshot
+    upside); `sort="safe"` → lowest cheap-rung max-loss first (default)."""
+    gated = no_structure_view(opps, max_loss_c=max_loss_c, max_buy_no_c=max_buy_no_c, kind=kind)
+    groups: dict[tuple[str, str, str], list[dict[str, Any]]] = {}
+    for o in gated:
+        key = (str(o.get("sport") or ""), str(o.get("player_key") or ""), str(o.get("tournament") or ""))
+        if not key[1]:
+            continue
+        groups.setdefault(key, []).append(o)
+    cards: list[dict[str, Any]] = []
+    for (sport, pkey, tournament), gopps in groups.items():
+        oid_by_ticker: dict[str, str] = {}
+        for o in gopps:                                       # NO-leg ticker → opp id (outright + band child)
+            for t in (o.get("ticker"), o.get("child_ticker")):
+                if t:
+                    oid_by_ticker[str(t)] = o.get("opportunity_id")
+        card = no_fade_ladder(prows_for(sport, pkey, tournament), sport, oid_by_ticker=oid_by_ticker)
+        if card is not None:
+            cards.append(card)
+    if sort == "cascade":
+        cards.sort(key=lambda c: (-(c["card_score"]), c.get("player") or "", c["player_key"]))
+    else:
+        cards.sort(key=lambda c: (c["safe_key"], c.get("player") or "", c["player_key"]))
+    return cards
 
 
 # World Cup Qualifier Setups — human labels for the setup types (two exact-order tiers + game support).

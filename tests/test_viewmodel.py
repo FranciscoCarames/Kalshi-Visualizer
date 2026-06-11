@@ -1004,3 +1004,86 @@ def test_conditional_fields_isolated_from_executable_schema():
     opp_fields = set(getattr(api.Opportunity, "model_fields", None)
                      or api.Opportunity.__fields__)                       # ...nor the API model
     assert leaky.isdisjoint(opp_fields)
+
+
+# --- NO-fade ladder + cascade upside score (DISPLAY-ONLY) -----------------------------
+def _lr(pk, player, node, no_c, tkr, tournament="X", series="KXATPADVANCE"):
+    """A firm ladder-rung contract row: reach price = 100 - no_c."""
+    return {"player_key": pk, "player": player, "tournament": tournament, "series": series,
+            "ladder_node": node, "kind": "advance", "market_ticker": tkr,
+            "display_pct": 100 - no_c, "no_ask_c": no_c, "yes_bid_c": 100 - no_c, "yes_bid_size": 500,
+            "quote_quality": "Tight", "status": "active", "subpenny": False}
+
+
+def _nsopp(oid, pk, tkr, no_c, *, sport="tennis", tournament="X"):
+    """A cheap-NO outright opportunity (the gate the ladder view reads)."""
+    return {"opportunity_id": oid, "bucket": "no_structure", "relationship_type": "no_structure_outright",
+            "sport": sport, "player_key": pk, "tournament": tournament, "ticker": tkr,
+            "worst_case_profit_c": -no_c, "action_2_price_c": no_c, "comp_quote_quality": "Tight"}
+
+
+def test_no_fade_ladder_cascade_score_and_dominated():
+    # France-style ladder: broadest cheap NO has the highest cascade score; win rung scores 0.
+    order = [("Reach Semifinal", 10, "SF"), ("Reach Final", 50, "FIN"), ("Win Tournament", 80, "WIN")]
+    rows = [_lr("FRA", "France", n, c, t) for n, c, t in order]
+    card = vm.no_fade_ladder(rows, "tennis", oid_by_ticker={"SF": "op_sf", "FIN": "op_fin"})
+    by = {r["rung"]: r for r in card["rungs"]}
+    assert by["Reach Semifinal"]["dominated"] == 2 and by["Win Tournament"]["dominated"] == 0
+    assert by["Reach Semifinal"]["cascade_score"] == 18.0          # (90/10) * 2
+    assert by["Win Tournament"]["cascade_score"] == 0.0            # dominated 0
+    assert card["card_score"] == 18.0 and card["top_rung"] == "Reach Semifinal"
+    assert card["inverted"] is False and by["Win Tournament"]["cheap"] is False
+
+
+def test_no_fade_ladder_zero_cost_rung_visible_and_unscored():
+    rows = [_lr("A", "A", "Reach Semifinal", 0, "SF"), _lr("A", "A", "Reach Final", 20, "FIN"),
+            _lr("A", "A", "Win Tournament", 60, "WIN")]
+    card = vm.no_fade_ladder(rows, "tennis", oid_by_ticker={"SF": "z", "FIN": "f"})
+    sf = next(r for r in card["rungs"] if r["rung"] == "Reach Semifinal")
+    assert sf["zero_cost"] is True and sf["cascade_score"] is None   # free NO → flagged, not scored
+    assert card["card_score"] is not None                            # still scored off the Final cheap rung
+
+
+def test_no_fade_ladder_fail_closed_on_missing_rows():
+    assert vm.no_fade_ladder([], "tennis") is None                  # no frames → no card
+    assert vm.no_fade_ladder([_lr("A", "A", "Reach Semifinal", 10, "SF")], "tennis",
+                             oid_by_ticker={"SF": "x"}) is not None  # 3-node ladder, 1 rung present is OK
+
+
+def test_no_fade_ladder_view_cascade_vs_safe_ordering():
+    # A: only the DEEP (Final) rung is a cheap fade → lower cascade, cheaper absolute NO.
+    a_rows = [_lr("ALC", "Alcaraz", "Reach Final", 10, "A_FIN"),
+              _lr("ALC", "Alcaraz", "Win Tournament", 70, "A_WIN")]
+    # B: the BROAD (SF) rung is the cheap fade → higher cascade (dominates more), pricier absolute NO.
+    b_rows = [_lr("SIN", "Sinner", "Reach Semifinal", 15, "B_SF"),
+              _lr("SIN", "Sinner", "Reach Final", 40, "B_FIN"),
+              _lr("SIN", "Sinner", "Win Tournament", 75, "B_WIN")]
+    opps = [_nsopp("opA", "ALC", "A_FIN", 10), _nsopp("opB", "SIN", "B_SF", 15)]
+    prows = {"ALC": a_rows, "SIN": b_rows}
+
+    def prows_for(sport, pk, tour):
+        return prows.get(pk, [])
+
+    casc = vm.no_fade_ladder_view(opps, prows_for, max_loss_c=100, sort="cascade")
+    safe = vm.no_fade_ladder_view(opps, prows_for, max_loss_c=100, sort="safe")
+    assert casc[0]["player_key"] == "SIN"        # broad fade dominates more rungs → higher cascade
+    assert safe[0]["player_key"] == "ALC"        # cheapest absolute NO → safest first
+    assert {c["player_key"] for c in casc} == {"ALC", "SIN"}
+
+
+def test_no_fade_ladder_view_fail_closed_when_frames_empty():
+    opps = [_nsopp("opA", "ALC", "A_FIN", 10)]
+    assert vm.no_fade_ladder_view(opps, lambda *a: [], max_loss_c=100) == []   # no frames → no cards
+
+
+def test_no_fade_ladder_fields_isolated_from_executable_schema():
+    import api
+    import scanner
+    rows = [_lr("A", "A", "Reach Semifinal", 10, "SF"), _lr("A", "A", "Win Tournament", 80, "WIN")]
+    card = vm.no_fade_ladder(rows, "tennis", oid_by_ticker={"SF": "x"})
+    rung_fields = set(card["rungs"][0].keys()) | {"card_score"}
+    leaky = {"cascade_score", "dominated", "card_score", "leverage"}
+    assert leaky & rung_fields == leaky                              # the builder DOES emit them
+    assert leaky.isdisjoint(set(scanner.UNIFIED_COLUMNS))            # ...but never the unified schema
+    opp_fields = set(getattr(api.Opportunity, "model_fields", None) or api.Opportunity.__fields__)
+    assert leaky.isdisjoint(opp_fields)                              # ...nor the API model

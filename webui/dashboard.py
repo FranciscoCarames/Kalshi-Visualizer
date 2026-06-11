@@ -361,6 +361,22 @@ _NO_STRUCTURE_NUMS = ("buy_no", "parent_yes", "cost", "max_loss", "breakeven", "
                       "convexity", "max_units", "loss_100", "upside_100")
 # Kind filter options for the Cheap-NO-fades section.
 _NO_STRUCTURE_KINDS = {"all": "All", "band": "Bounded bands", "outright": "Single NO"}
+# Per-participant NO-fade LADDER (grouped view): one row per rung, broad→deep. "Cascade score" is an
+# ORDINAL longshot-upside score (max-win÷cost × deeper rungs dominated) — never EV/probability/fair value.
+_NO_FADE_LADDER_COLUMNS = [
+    {"name": "rung", "label": "Rung (broad → deep)", "field": "rung", "align": "left"},
+    {"name": "reach_pct", "label": "Reach %", "field": "reach_pct", "align": "right"},
+    {"name": "buy_no", "label": "Buy NO ¢", "field": "buy_no", "align": "right"},
+    {"name": "max_win", "label": "Max win ¢", "field": "max_win", "align": "right"},
+    {"name": "leverage", "label": "Leverage ×", "field": "leverage", "align": "right"},
+    {"name": "dominated", "label": "Dominates (deeper)", "field": "dominated", "align": "right"},
+    {"name": "cascade", "label": "Cascade score", "field": "cascade", "align": "right", "sortable": True},
+    {"name": "quote", "label": "Quote", "field": "quote", "align": "center"},
+    {"name": "size", "label": "Size", "field": "size", "align": "right"},
+    {"name": "tag", "label": "", "field": "tag", "align": "left"},
+]
+_NO_FADE_SORTS = {"safe": "Safest first", "cascade": "Cascade upside (longshot)"}
+_NO_FADE_LADDER_MAX_CARDS = 50          # cap rebuilt expansion cards per refresh (no silent truncation)
 
 # Qualifier-setups table (#4/#5). NO gross-edge / ROI / size / profit columns (those are blank for a
 # non-Actionable signal and would imply tradability). Default-visible columns are the exact-order top-two
@@ -633,6 +649,14 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             ns_max_buy_no = ui.number("Max Buy-NO ¢", value=config.NO_STRUCTURE_DEFAULT_MAX_BUY_NO_C,
                                       min=0, max=config.NO_STRUCTURE_OUTRIGHT_MAX_C, format="%.0f").classes(
                 "w-32").tooltip("Cap the Buy-NO anchor cost — the 'cheapest NO' gate. 0 = off.")
+            ns_group = ui.switch("Group by participant (ladder)", value=False).tooltip(
+                "Group the cheap NOs into each participant's containment ladder (broad → deep). A single NO "
+                "anywhere cascades — one elimination = no-win — so a cheap NO at a broad rung is a "
+                "maximally-leveraged longshot fade.")
+            ns_sort = ui.select(_NO_FADE_SORTS, value="safe", label="Ladder sort").props(
+                "stack-label").classes("min-w-[12rem]").tooltip(
+                "Cascade score is an ORDINAL longshot-upside score — NOT EV, probability, fair value, or "
+                "mispricing. A higher score usually means a LOWER implied chance.")
         ui.label("Filters & thresholds").classes("text-sm font-bold mt-2")
         with ui.row().classes("items-end gap-4 flex-wrap"):
             active_sw = ui.switch("Active only").tooltip("Hide non-active (finalized/settled) markets.")
@@ -1071,6 +1095,8 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                      "text-xs text-gray-500")
         ns_table = ui.table(columns=_NO_STRUCTURE_COLUMNS, rows=[], row_key="opportunity_id", selection="single",
                             pagination=10).props("dense").classes("w-full overflow-x-auto opp-sel")
+        # Grouped per-participant ladder cards (opt-in via ns_group) — rebuilt in refresh_no_structure.
+        ns_cards = ui.column().classes("w-full gap-2")
     ns_table.on_select(_on_select(ns_table))
 
     _sel_tables.extend([actionable, review, blocked, qs_table, rb_all, rb_vertical, rb_calendar, nm_table,
@@ -1516,19 +1542,88 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         nm_max_over.set_enabled(include_nm)
 
     def refresh_no_structure() -> None:
-        """Scoped path: rebuild ONLY the Cheap-NO-fades table from the cached view."""
+        """Scoped path: rebuild ONLY the Cheap-NO-fades section from the cached view. Flat table by default;
+        the opt-in 'Group by participant' view renders per-participant ladder cards (cascade-scored)."""
         view = state.get("view") or []
         new_ids, chg = state.get("new_ids") or set(), state.get("changes") or {}
         flash = state.get("flash_now") or set()
         include_ns = ns_switch.value
-        nsv = vm.no_structure_view(view, max_loss_c=int(ns_max_loss.value or 0),
-                                   max_buy_no_c=int(ns_max_buy_no.value or 0),
-                                   kind=ns_kind.value) if include_ns else []
-        ns_table.rows = [vm.no_structure_row(o, new_ids, chg, flash) for o in nsv]
-        ns_title.set_text(f"Cheap NO fades — bounded-loss NO anchor, watch-only ({len(nsv):,})")
+        grouped = include_ns and ns_group.value
         ns_expansion.set_visibility(include_ns)
-        for _c in (ns_kind, ns_max_loss, ns_max_buy_no):
+        for _c in (ns_kind, ns_max_loss, ns_max_buy_no, ns_group):
             _c.set_enabled(include_ns)
+        ns_sort.set_enabled(grouped)
+        ns_table.set_visibility(include_ns and not grouped)
+        ns_cards.set_visibility(grouped)
+        if not include_ns:
+            ns_table.rows = []
+            ns_cards.clear()
+            ns_title.set_text("Cheap NO fades — bounded-loss NO anchor, watch-only (0)")
+            return
+        if not grouped:                                       # flat table path (unchanged behaviour)
+            nsv = vm.no_structure_view(view, max_loss_c=int(ns_max_loss.value or 0),
+                                       max_buy_no_c=int(ns_max_buy_no.value or 0), kind=ns_kind.value)
+            ns_table.rows = [vm.no_structure_row(o, new_ids, chg, flash) for o in nsv]
+            ns_cards.clear()
+            ns_title.set_text(f"Cheap NO fades — bounded-loss NO anchor, watch-only ({len(nsv):,})")
+            return
+        # Grouped per-participant ladder cards.
+        ns_cards.clear()
+        ns_table.rows = []
+        if engine.frame_availability() != "present":          # fail-closed: no frames → no partial ladders
+            with ns_cards:
+                ui.label("Evidence frames not captured for this snapshot — grouped ladder unavailable. "
+                         "Use the flat view (toggle off) or Scan now.").classes("text-orange-700")
+            ns_title.set_text("Cheap NO fades — grouped ladder (frames unavailable)")
+            return
+
+        def _prows_for(sport: str, pkey: str, tournament: str) -> list[dict[str, Any]]:
+            return [r for r in engine.participant_contracts(sport, pkey)
+                    if str(r.get("tournament") or "") == tournament]
+
+        cards = vm.no_fade_ladder_view(view, _prows_for, max_loss_c=int(ns_max_loss.value or 0),
+                                       max_buy_no_c=int(ns_max_buy_no.value or 0), kind=ns_kind.value,
+                                       sort=ns_sort.value)
+        ns_title.set_text(f"Cheap NO fades — grouped ladder, watch-only ({len(cards):,})")
+        shown = cards[:_NO_FADE_LADDER_MAX_CARDS]
+        with ns_cards:
+            if not shown:
+                ui.label("No cheap NO fades with a ladder rung in the current filters.").classes(
+                    "text-gray-500")
+            for card in shown:
+                _render_fade_card(card)
+            if len(cards) > len(shown):
+                ui.label(f"Showing top {len(shown)} of {len(cards):,} by {('cascade upside' if ns_sort.value == 'cascade' else 'safest')} "
+                         "— narrow filters to see more.").classes("text-xs text-amber-700")
+
+    def _render_fade_card(card: dict[str, Any]) -> None:
+        """One participant's NO-fade ladder as a collapsible card (rungs broad→deep, components + score)."""
+        def _f(v: Any) -> str:
+            return "—" if v is None else (f"{v:g}" if isinstance(v, (int, float)) else str(v))
+        crows = []
+        for r in card["rungs"]:
+            crows.append({
+                "rung": r["rung"], "reach_pct": _f(r["reach_pct"]),
+                "buy_no": "0¢ — inspect quote" if r["zero_cost"] else _f(r["no_c"]),
+                "max_win": _f(r["max_win"]),
+                "leverage": "—" if r["leverage"] is None else f"{r['leverage']:g}×",
+                "dominated": r["dominated"],
+                "cascade": _f(r["cascade_score"]),
+                "quote": r["quote"], "size": _f(r["size"]),
+                "tag": "● cheap" if r["cheap"] else "",
+            })
+        title = f"{card['sport_label']} · {card['player'] or card['player_key']} — cascade {card['card_score']:g}"
+        if card.get("implied_win_pct") is not None:
+            title += f" · implied win {card['implied_win_pct']:g}%"
+        if card.get("inverted"):
+            title += " · ⚠ inverted ladder"
+        with ui.expansion(title).classes("w-full border rounded"):
+            ui.table(columns=_NO_FADE_LADDER_COLUMNS, rows=crows, row_key="rung").props(
+                "dense").classes("w-full overflow-x-auto")
+            ui.label("Cascade score is an ordinal longshot-upside score — NOT EV, probability, fair "
+                     "value, or mispricing; a higher score usually means a LOWER implied chance. A single "
+                     "NO collapses the whole ladder to no-win. Gross, top-of-book, uncalibrated; not an "
+                     "edge.").classes("text-xs text-gray-500")
 
     def _set_freshness(text: str) -> None:
         """Set the freshness/scope banner only when its text actually changed — the 1s tick and every
@@ -1759,6 +1854,8 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         (ns_switch, "Show cheap NO fades"), (ns_kind, "Cheap NO fade kind"),
         (ns_max_loss, "Cheap NO fade max loss in cents"), (ns_max_buy_no, "Cheap NO fade max Buy-NO cost in cents"),
         (ns_table, "Cheap NO fades"), (ns_expansion, "Cheap NO fades section"),
+        (ns_group, "Group cheap NO fades by participant ladder"), (ns_sort, "NO-fade ladder sort"),
+        (ns_cards, "NO-fade ladder cards"),
         (show_net_sw, "Show estimated net-of-fees columns"),
         (actionable, "Actionable opportunities"), (review, "Review-required opportunities"),
         (blocked, "Blocked opportunities"), (qs_table, "Qualifier setups"),
@@ -1817,8 +1914,8 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
     for ctrl in (rb_max_loss, rb_min_ratio, rb_min_outright, rb_max_ratio):
         ctrl.on_value_change(lambda _=None: _request_refresh("bounded_loss"))    # only the bounded-loss tables
     nm_max_over.on_value_change(lambda _=None: _request_refresh("near_miss"))     # only the near-miss table
-    for ctrl in (ns_kind, ns_max_loss, ns_max_buy_no):
-        ctrl.on_value_change(lambda _=None: _request_refresh("no_structure"))     # only the cheap-NO-fades table
+    for ctrl in (ns_kind, ns_max_loss, ns_max_buy_no, ns_group, ns_sort):
+        ctrl.on_value_change(lambda _=None: _request_refresh("no_structure"))     # only the cheap-NO-fades section
 
     # Sport / Tournament are the cascade drivers: changing one re-narrows the downstream option lists
     # (and prunes now-invalid picks) BEFORE a single rerender. participant_sel (the leaf) drives no
