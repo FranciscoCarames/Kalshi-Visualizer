@@ -976,27 +976,6 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             ui.label(subtitle).classes("text-xs text-gray-500")
         return hdr
 
-    # `dense` tables + `overflow-x-auto` so many rows fit and wide tables scroll instead of overflowing.
-    act_hdr = _section_header("Actionable — executable gross edges",
-                              "Firm, sized, currently-tradable gross pricing discrepancies. Gross of fees.")
-    actionable = ui.table(columns=_OPP_COLUMNS, rows=[], row_key="opportunity_id", selection="single",
-                          pagination=15).props("dense").classes("w-full overflow-x-auto opp-sel")
-    actionable.on_select(_on_select(actionable))
-
-    review_hdr = _section_header(
-        "Review Required — settlement-dependent",
-        "Real, executable-looking edges whose legs may not settle together (e.g. an exact-score bundle vs the "
-        "match winner) — verify the settlement rules first; never auto-tradable.")
-    review = ui.table(columns=_OPP_COLUMNS, rows=[], row_key="opportunity_id", selection="single",
-                      pagination=10).props("dense").classes("w-full overflow-x-auto opp-sel")
-    review.on_select(_on_select(review))
-
-    blocked_hdr = _section_header("Blocked — not currently executable",
-                                  "Discrepancies that exist but aren't tradable now (no firm size / an inactive leg).")
-    blocked = ui.table(columns=_OPP_COLUMNS, rows=[], row_key="opportunity_id", selection="single",
-                       pagination=10).props("dense").classes("w-full overflow-x-auto opp-sel")
-    blocked.on_select(_on_select(blocked))
-
     # Watchlist-style section header helper — a custom expansion header slot so the "Columns" button sits
     # beside the title (added after the table exists); the title label is kept in a ref so rerender can
     # update its live count. `expanded` opens the section on load (Bounded-Loss is promoted + default-open).
@@ -1008,6 +987,34 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             ui.space()
             cols_holder = ui.row().classes("items-center")     # Columns button dropped in here later
         return exp, title_label, cols_holder
+
+    # `dense` tables + `overflow-x-auto` so many rows fit and wide tables scroll instead of overflowing.
+    # Actionable + Review Required are collapsible (open by default), matching the watch-only sections: the
+    # title carries a live count and the "Columns" button sits in the expansion header slot.
+    act_expansion, act_title, act_cols_row = _expansion_header(
+        "Actionable — executable gross edges", expanded=True)
+    with act_expansion:
+        ui.label("Firm, sized, currently-tradable gross pricing discrepancies. Gross of fees.").classes(
+            "text-xs text-gray-500")
+        actionable = ui.table(columns=_OPP_COLUMNS, rows=[], row_key="opportunity_id", selection="single",
+                              pagination=15).props("dense").classes("w-full overflow-x-auto opp-sel")
+    actionable.on_select(_on_select(actionable))
+
+    review_expansion, review_title, review_cols_row = _expansion_header(
+        "Review Required — settlement-dependent", expanded=True)
+    with review_expansion:
+        ui.label("Real, executable-looking edges whose legs may not settle together (e.g. an exact-score "
+                 "bundle vs the match winner) — verify the settlement rules first; never "
+                 "auto-tradable.").classes("text-xs text-gray-500")
+        review = ui.table(columns=_OPP_COLUMNS, rows=[], row_key="opportunity_id", selection="single",
+                          pagination=10).props("dense").classes("w-full overflow-x-auto opp-sel")
+    review.on_select(_on_select(review))
+
+    blocked_hdr = _section_header("Blocked — not currently executable",
+                                  "Discrepancies that exist but aren't tradable now (no firm size / an inactive leg).")
+    blocked = ui.table(columns=_OPP_COLUMNS, rows=[], row_key="opportunity_id", selection="single",
+                       pagination=10).props("dense").classes("w-full overflow-x-auto opp-sel")
+    blocked.on_select(_on_select(blocked))
 
     # Bounded-Loss Bets — promoted ABOVE the Qualifier setups section and OPEN by default: a real placeable
     # bet (capped loss, convex upside) and the trader's primary cross-sport comparison surface. A bet, NOT
@@ -1178,7 +1185,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
     # Opp tables hide the net-of-fees columns by default; Bounded-Loss hides the outright/display-spread
     # context (spread÷parent/child stay visible). Buttons are placed into each section's header / row.
     opp_menus = []
-    for _hdr, _tbl in ((act_hdr, actionable), (review_hdr, review), (blocked_hdr, blocked)):
+    for _hdr, _tbl in ((act_cols_row, actionable), (review_cols_row, review), (blocked_hdr, blocked)):
         with _hdr:
             opp_menus.append(build_column_menu(_tbl, _OPP_COLUMNS, default_hidden=_NET_COLUMNS))
     with qs_cols_row:
@@ -1677,9 +1684,12 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                              for o in vm.order_qualifier_rows(qs_opps)]
         else:
             qs_table.rows = []
-        for hdr, tbl, sw in ((review_hdr, review, show_review_sw), (blocked_hdr, blocked, show_blocked_sw)):
+        for hdr, tbl, sw in ((blocked_hdr, blocked, show_blocked_sw),):
             hdr.set_visibility(sw.value)
             tbl.set_visibility(sw.value)
+        # Review Required is now a collapsible expansion (switch-gated): toggle the whole expansion + count.
+        review_expansion.set_visibility(show_review_sw.value)
+        review_title.set_text(f"Review Required — settlement-dependent ({len(review.rows):,})")
         # Qualifier setups is now a collapsible expansion (switch-gated): toggle the whole expansion + count.
         qs_expansion.set_visibility(qs_switch.value)
         qs_title.set_text(
@@ -1753,6 +1763,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         # (rb/nm/ns) are rebuilt via their scoped, self-gating refreshers.
         _t_apply = time.monotonic()
         actionable.rows = act_rows
+        act_title.set_text(f"Actionable — executable gross edges ({len(act_rows):,})")
         _apply_gated_sections()
         refresh_bounded_loss()
         refresh_near_miss()
