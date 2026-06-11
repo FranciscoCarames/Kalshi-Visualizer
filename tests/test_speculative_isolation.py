@@ -29,7 +29,7 @@ SPECULATIVE_FIELDS = {
     # Phase 1 likelihood / comparability (display-only): the firm-quote passthrough (the only persisted new
     # fields) + every viewmodel-derived metric. bucket_of / _rank_key / peer cheapness must ignore ALL.
     "parent_yes_bid_c": 20, "child_yes_ask_c": 25,
-    "cond_success": 40.0, "firm_gap": -5, "firm_pct": None, "midpoint_only": True,
+    "cond_success": 40.0, "cond_child": 60.0, "firm_gap": -5, "firm_pct": None, "midpoint_only": True,
     "wide_basis": True, "parent_over_maxloss": 5.0, "flags": [{"label": "Midpoint-only"}],
 }
 

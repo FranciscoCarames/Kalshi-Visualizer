@@ -834,6 +834,37 @@ def test_cond_success_pct_is_conditional_and_fails_closed():
     assert vm._cond_success_pct({"spread_over_parent": -0.1}) is None
 
 
+def test_cond_child_pct_is_complement_and_fails_closed():
+    # P(child | parent) = child/parent, as a %. SF: 4/8 -> 50.0; Spain: 42/58 -> 72.4.
+    assert vm._cond_child_pct({"parent_display_c": 8, "child_display_c": 4}) == 50.0
+    assert vm._cond_child_pct({"parent_display_c": 58, "child_display_c": 42}) == 72.4
+    # complementary: cond_child + cond_success ~= 100 on a CONSISTENT row (0.1 rounding tolerance), so a
+    # later change to one helper but not the other is caught.
+    o = {"parent_display_c": 58, "child_display_c": 42, "spread_over_parent": 1 - 42 / 58}
+    assert abs(vm._cond_child_pct(o) + vm._cond_success_pct(o) - 100.0) <= 0.1
+    # fail closed: missing leg, parent <= 0, or inverted (child > parent) -> None (never 0.0)
+    assert vm._cond_child_pct({"parent_display_c": 8}) is None
+    assert vm._cond_child_pct({"child_display_c": 4}) is None
+    assert vm._cond_child_pct({"parent_display_c": 0, "child_display_c": 0}) is None
+    assert vm._cond_child_pct({"parent_display_c": 4, "child_display_c": 8}) is None
+
+
+def test_explanation_lines_conditional_for_containment_only():
+    # Spain: parent (Reach QF) 58¢, child (Reach SF) 42¢ -> deeper 72.4%, success 27.6%, raw gap 16.0pp.
+    spain = {"sport": "Soccer", "name": "Spain", "source": "containment",
+             "detail": "Reach SF ≤ Reach QF", "tournament": "World Cup", "bucket": "risk_budget",
+             "parent_display_c": 58, "child_display_c": 42}
+    blob = "\n".join(vm.explanation_lines(spain))
+    assert "Conditional (market-implied)" in blob
+    assert "72.4%" in blob and "27.6%" in blob and "16pp" in blob   # 42/58, complement, raw gap 58−42
+    # audit: NOT a future-price promise, and flags quote health
+    assert "not a promise about the future traded price" in blob
+    assert "wide / stale / one-sided books" in blob
+    # gated off when the outrights are absent (dutch / synthetic rows) — no conditional line
+    dutch = {"sport": "NFL", "name": "x", "source": "dutch_book", "detail": "", "tournament": "t"}
+    assert "Conditional (market-implied)" not in "\n".join(vm.explanation_lines(dutch))
+
+
 def test_firm_spread_c_is_parent_bid_minus_child_ask():
     assert vm._firm_spread_c({"parent_yes_bid_c": 48, "child_yes_ask_c": 22}) == 26
     # a firm gap CAN be negative (that's the signal) -> returned as-is, not clamped
@@ -881,6 +912,7 @@ def test_risk_budget_row_exposes_phase1_likelihood_fields_and_flags():
         "comp_quote_quality": "Very wide",
     }, set())
     assert row["cond_success"] == 40.0
+    assert row["cond_child"] == round(30 / 35 * 100, 1)   # child 30 ÷ parent 35 = 85.7
     assert row["firm_gap"] == -5            # 20 - 25
     assert row["firm_pct"] is None          # not shown when gap <= 0
     assert row["midpoint_only"] is True     # display + but firm -
@@ -894,6 +926,7 @@ def test_risk_budget_row_old_snapshot_missing_new_fields_renders_blank():
     row = vm.risk_budget_row({"opportunity_id": "old", "bucket": "risk_budget",
                               "worst_case_profit_c": -10, "best_case_profit_c": 90}, set())
     assert row["cond_success"] is None
+    assert row["cond_child"] is None
     assert row["firm_gap"] is None
     assert row["firm_pct"] is None
     assert row["midpoint_only"] is False

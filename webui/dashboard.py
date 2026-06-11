@@ -294,9 +294,13 @@ _RISK_COLUMNS = [
     # parent−child display gap. (Breakeven % and Implied EV ¢ were removed — redundant with Max loss / Gap
     # vs breakeven.)
     {"name": "display_spread", "label": "Market gap (pp)", "field": "display_spread", "align": "center", "sortable": True},
-    # Phase 1 likelihood (display-only): the CONDITIONAL chance if reached (1 − child/parent, vig-aware) and
-    # the conservative FIRM-side gap in ¢ (a sanity check, never a tradable %; firm % is tooltip-only).
-    {"name": "cond_success", "label": "Chance if reached %", "field": "cond_success", "align": "center", "sortable": True},
+    # Phase 1 likelihood (display-only): a COMPLEMENTARY conditional pair, given the broader outcome is
+    # reached — Success given reached % = 1 − child/parent, Deeper given reached % = child/parent (they sum
+    # to 100). Market-implied / uncalibrated, less sensitive to a common overround but NOT de-vigged and NOT
+    # fair value. Plus the conservative FIRM-side gap in ¢ (a sanity check, never a tradable %; firm % is
+    # tooltip-only).
+    {"name": "cond_success", "label": "Success given reached %", "field": "cond_success", "align": "center", "sortable": True},
+    {"name": "cond_child", "label": "Deeper given reached %", "field": "cond_child", "align": "center", "sortable": True},
     {"name": "firm_gap", "label": "Firm success gap ¢", "field": "firm_gap", "align": "center", "sortable": True},
     {"name": "gap_vs_be", "label": "Gap vs breakeven (pp)", "field": "gap_vs_be", "align": "center", "sortable": True},
     # Phase 1 comparability (display-only): the parent's in-the-money probability per cent of MAX LOSS
@@ -900,8 +904,11 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                  "overpay, with convex upside (the broader-but-not-deeper outcome pays about +$1). A bet, NOT "
                  "an edge — gross of fees.").classes("text-xs text-gray-500")
         ui.label("Market gap (pp) = parent−child display-price gap (the UNCONDITIONAL implied chance of the "
-                 "payoff zone). Chance if reached % = the CONDITIONAL chance given the broader outcome happens "
-                 "(1 − child/parent). Firm success gap ¢ = the conservative parent-bid − child-ask gap; ≤ 0 "
+                 "payoff zone). Success given reached % = the CONDITIONAL chance the payoff zone hits given "
+                 "the broader outcome happens (1 − child/parent); Deeper given reached % = its complement "
+                 "child/parent (the chance the deeper outcome also occurs) — a market-implied / uncalibrated "
+                 "pair, less sensitive to a common overround but NOT de-vigged. Firm success gap ¢ = the "
+                 "conservative parent-bid − child-ask gap; ≤ 0 "
                  "(the 'Midpoint-only' flag) means the display positive isn't confirmed by firm quotes. Gap "
                  "vs breakeven (pp) = implied chance minus the chance needed to clear the overpay. Parent ÷ "
                  "max loss = the parent's in-the-money probability per cent of max loss (cost − 100, the "
@@ -979,8 +986,14 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         _rb.add_slot("body-cell-cond_success", _num_tip_cell_slot(
             "cond_success",
             "Conditional chance the success zone happens GIVEN the broader outcome is reached "
-            "(1 − child/parent), display-implied. Less sensitive to common multiplicative vig; still "
-            "quote-dependent, top-of-book, and uncalibrated.", "%"))
+            "(1 − child/parent), display-implied. Less sensitive to a common overround; still "
+            "quote-dependent, top-of-book, and uncalibrated — NOT de-vigged or fair value.", "%"))
+        _rb.add_slot("body-cell-cond_child", _num_tip_cell_slot(
+            "cond_child",
+            "Conditional chance the DEEPER outcome ALSO occurs GIVEN the broader is reached (child/parent) "
+            "— the complement of 'Success given reached %' (the two sum to 100). Market-implied / "
+            "uncalibrated, display-price based; less sensitive to a common overround but NOT de-vigged or "
+            "fair value.", "%"))
         _rb.add_slot("body-cell-parent_over_maxloss", _num_tip_cell_slot(
             "parent_over_maxloss",
             "The parent's implied probability (the chance the broader, in-the-money outcome happens, in ¢ = "

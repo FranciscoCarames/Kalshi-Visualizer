@@ -473,6 +473,9 @@ def risk_budget_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str
         # when positive; midpoint_only / wide_basis drive honesty badges; cost_per_pp pairs with gap_vs_be
         # (ordered AFTER it in the table).
         "cond_success": _cond_success_pct(o),
+        # P(child | parent) = child/parent — the complement of cond_success (the two sum to 100); the
+        # market-implied chance the deeper outcome ALSO happens given the broader is reached. Display-only.
+        "cond_child": _cond_child_pct(o),
         "firm_gap": _firm_spread_c(o),
         "firm_pct": _firm_success_pct(o),
         "midpoint_only": _optimistic_only(o),
@@ -890,6 +893,21 @@ def explanation_lines(opp: dict[str, Any], *, show_ids: bool = False,
             f"Est. net of fees: fees ${nf['total_fees_c'] / 100:.2f}   ·   net edge {nf['net_edge_c']}¢"
             f"   ·   net max profit ${nf['net_profit_dollars']}"
             "   (general taker-fee estimate — display only; does not affect ranking)")
+    # Containment conditional (display-only, market-implied): given the broader outcome is reached, what
+    # the market prices the deeper outcome at TODAY. Gated on both display outrights present, parent > 0,
+    # and a non-inverted pair — so it appears only for containment rows (dutch/synthetic carry no parent/
+    # child outrights). A current implied conditional, NOT a promise about the future traded price.
+    _pc, _cc = _num_or_none(opp.get("parent_display_c")), _num_or_none(opp.get("child_display_c"))
+    if _pc is not None and _cc is not None and _pc > 0 and _cc <= _pc:
+        _deeper = round(_cc / _pc * 100, 1)
+        lines.append(
+            f"Conditional (market-implied): given the broader outcome is reached, the market prices the "
+            f"deeper outcome at about {_deeper}% today, and the success zone (broader-but-not-deeper) at "
+            f"{round(100 - _deeper, 1)}%. Unconditional success chance = the raw gap {round(_pc - _cc, 1)}pp.")
+        lines.append(
+            "A current implied conditional from display prices — not de-vigged, not fair value, not "
+            "executable fills, and not a promise about the future traded price; information, time, and "
+            "book width move it, and wide / stale / one-sided books make it misleading.")
     if opp.get("bucket") == "risk_budget":
         wc, bc = opp.get("worst_case_profit_c"), opp.get("best_case_profit_c")
         loss = "—" if _isna(wc) else -wc
@@ -1136,6 +1154,20 @@ def _cond_success_pct(o: dict[str, Any]) -> float | None:
     quote-dependent and uncalibrated. Fail-closed: None when the ratio is missing or ≤ 0."""
     sop = _num_or_none(o.get("spread_over_parent"))
     return None if (sop is None or sop <= 0) else round(sop * 100, 1)
+
+
+def _cond_child_pct(o: dict[str, Any]) -> float | None:
+    """P(child | parent) = child/parent, as a % — the market-implied chance the DEEPER outcome occurs
+    GIVEN the broader one is reached (the complement of `_cond_success_pct`; the two sum to 100). Read off
+    DISPLAY prices: market-implied, gross, top-of-book, NOT de-vigged and NOT fair value — the ratio is
+    only LESS sensitive to a common proportional overround, not free of it. Fail-closed: None when the
+    parent outright is missing / ≤ 0 or the pair is inverted (child > parent → not a valid conditional;
+    that's a display inconsistency, never shown as a chance)."""
+    p = _num_or_none(o.get("parent_display_c"))
+    c = _num_or_none(o.get("child_display_c"))
+    if p is None or c is None or p <= 0 or c > p:
+        return None
+    return round(c / p * 100, 1)
 
 
 def _firm_spread_c(o: dict[str, Any]) -> float | None:
