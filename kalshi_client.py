@@ -320,12 +320,18 @@ def get_events_for_series(
             except Exception:  # noqa: BLE001 - retry sequentially below before reporting
                 failed.append(ticker)
 
-    # Sequential retry pass: most failures are transient (rate limit / dropped connection
-    # under load). Anything still failing here is reported to the caller, never dropped.
+    # Retry the failures ONCE MORE, in PARALLEL (Phase 2). The old pass retried one-at-a-time, so under a
+    # rate-limit each failed series could climb the full backoff ladder in series — N failures × ladder
+    # serialized into minutes. A single capped parallel round bounds the retry to ~one more fan-out (the
+    # process-wide throttle still paces issuance). Anything still failing is reported, never dropped.
     errors: list[tuple[str, str]] = []
-    for ticker in failed:
-        try:
-            results.append((ticker, get_events(ticker, status)))
-        except Exception as exc:  # noqa: BLE001
-            errors.append((ticker, str(exc)))
+    if failed:
+        with ThreadPoolExecutor(max_workers=max_workers) as pool:
+            retry_futures = {pool.submit(get_events, t, status): t for t in failed}
+            for future in as_completed(retry_futures):
+                ticker = retry_futures[future]
+                try:
+                    results.append((ticker, future.result()))
+                except Exception as exc:  # noqa: BLE001
+                    errors.append((ticker, str(exc)))
     return results, errors

@@ -2012,10 +2012,21 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         # empty-state "Scanning..." branch (vm.empty_state) is live instead of one-snapshot stale.
         st = engine.scan_status()
         in_prog = (st or {}).get("status") == "in_progress"
-        if in_prog != state.get("scan_indicator"):
+        # Phase 2: show a live budget-cooldown countdown so a stalled auto-scan is legible, not a silently
+        # stale snapshot. Scanning takes priority; then a cooling-down countdown; else blank.
+        cooldown = round((st or {}).get("cooldown_seconds_left") or 0.0)
+        if in_prog:
+            label = "Scanning — new data shortly…"
+        elif cooldown > 0:
+            label = f"Auto-scan cooling down ({cooldown}s) — data may be stale; use Scan now to force."
+        else:
+            label = ""
+        if label != state.get("scan_indicator_text"):   # push on any text change (incl. each countdown tick)
+            state["scan_indicator_text"] = label
+            scanning_lbl.set_text(label)
+        if in_prog != state.get("scan_indicator"):       # refresh cached scan_status on a scan-state change
             state["scan_indicator"] = in_prog
             state["scan_status"] = st
-            scanning_lbl.set_text("Scanning — new data shortly…" if in_prog else "")
 
     tick_age()     # paint the scan indicator on first load if a scan is already in flight (scheduler / other viewer)
     ui.timer(config.UI_POLL_SECONDS, poll)        # snapshot-change watcher (cheap; reloads only on a new id)
