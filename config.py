@@ -56,6 +56,21 @@ RISK_BUDGET_DEFAULT_MAX_SPREAD_RATIO_HUNDREDTHS = 0  # max child display_spread/
 NEAR_MISS_MAX_OVER_C = 5                     # widest overpay persisted (¢ over the payout floor)
 NEAR_MISS_DEFAULT_OVER_C = 3                 # default UI max-overpay filter (¢)
 
+# NO-anchored structures ("Cheap bounded-loss NO fades") — a SPECULATIVE, opt-in, never-actionable section.
+# Two tiers, both cheap convex fades (NOT edge, NOT arbitrage; gross, top-of-book, uncalibrated):
+#   - BAND   : Buy NO on the deeper (child) rung + Buy YES on the broader (parent) rung that contains it —
+#              a defined-risk band paying an extra $1 in the "reaches broader, not deeper" window. Emitted
+#              only when cost ≥ 100¢ (cost < 100 is a STRICT executable cross owned by the consistency
+#              checker) and the bounded max-loss (cost − 100) ≤ NO_STRUCTURE_BAND_MAX_LOSS_C — so storage
+#              and the table stay focused on genuinely CHEAP bounded bets.
+#   - OUTRIGHT: a single Buy NO (directional fade watchlist), emitted only when the Buy-NO cost ≤
+#              NO_STRUCTURE_OUTRIGHT_MAX_C, so all-sport cheap NOs don't flood the store.
+# The detector caps emission; the NiceGUI UI filters live (max-loss / max Buy-NO / quote / size).
+NO_STRUCTURE_BAND_MAX_LOSS_C = 40           # widest band max-loss persisted (¢; cost ≤ 140¢)
+NO_STRUCTURE_OUTRIGHT_MAX_C = 25            # dearest Buy-NO persisted for the outright watchlist (¢)
+NO_STRUCTURE_DEFAULT_MAX_LOSS_C = 15        # default UI band max-loss filter (¢)
+NO_STRUCTURE_DEFAULT_MAX_BUY_NO_C = 15      # default UI max Buy-NO cost filter (¢, outright + band child leg)
+
 # Peer-relative cheapness flags (Phase 2 F) — a DISPLAY-ONLY badge, NOT a ranker and NEVER executable. Among
 # SAME-SPORT bounded-loss bets within PEER_BAND_TOLERANCE_C ¢ of the same implied-payoff band (parent−child
 # display gap), a bet is flagged "cheap" when its overpay (or its spread÷outright) sits at least

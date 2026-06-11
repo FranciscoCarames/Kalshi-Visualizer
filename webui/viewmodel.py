@@ -573,6 +573,136 @@ def near_miss_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str] 
     }
 
 
+# --- NO-anchored structures ("Cheap bounded-loss NO fades") — opt-in, speculative, never actionable -----
+# A cheap convex fade anchored on a Buy-NO leg: a single Buy NO (OUTRIGHT, a directional fade watchlist) or
+# a Buy NO deeper + Buy YES broader band (BAND, bounded loss = cost − 100). Pure band-filter + display-row
+# builders over the membership/threshold-filtered `view`. Ranking leads with the BOUNDED DOWNSIDE and the
+# BREAKEVEN chance (not convexity — convexity alone overranks 1¢ longshots); cheapness stays a filter + a
+# column + the final tiebreak. Integer cents throughout. NEVER read by bucket_of / _rank_key.
+def _is_band(o: dict[str, Any]) -> bool:
+    return o.get("relationship_type") == "no_structure_band"
+
+
+def no_structure_view(opps: Iterable[dict[str, Any]] | None, *, max_loss_c: float,
+                      max_buy_no_c: float = 0, kind: str = "all",
+                      good_quote_only: bool = True) -> list[dict[str, Any]]:
+    """NO-anchored structures whose bounded max-loss ≤ `max_loss_c` ¢. `kind` ∈ {all, band, outright}
+    (band == the ladder-bounded structures; outright == single Buy-NO watchlist). `max_buy_no_c` (0 = off)
+    caps the Buy-NO leg cost — the "cheapest NO" gate. `good_quote_only` keeps only Tight/OK books (the
+    default; the wide/one-sided cheap NOs are usually stale, not opportunities). A row missing a gated field
+    is hidden only when that filter is active."""
+    out: list[dict[str, Any]] = []
+    for o in (opps or []):
+        if o.get("bucket") != "no_structure":
+            continue
+        if kind == "band" and not _is_band(o):
+            continue
+        if kind == "outright" and _is_band(o):
+            continue
+        wc = o.get("worst_case_profit_c")
+        if _isna(wc):
+            continue
+        if max(0.0, -wc) > max_loss_c:                # bounded max-loss ¢ (band: cost−100; outright: cost)
+            continue
+        if max_buy_no_c:
+            no = _num_or_none(o.get("action_2_price_c"))   # the Buy-NO leg cost
+            if no is None or no > max_buy_no_c:
+                continue
+        if good_quote_only and str(o.get("comp_quote_quality") or "") not in ("Tight", "OK"):
+            continue
+        out.append(o)
+    return out
+
+
+def _no_structure_order(group: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Within-section order (improves on convexity-first, which overranks tiny longshots): lowest bounded
+    max-loss first, then lowest breakeven chance, then highest bonus profit, then cheapest Buy-NO, then a
+    stable id tiebreak. Cheapness leads the FILTER + the column; the SORT leads with downside/plausibility."""
+    def key(o: dict[str, Any]) -> tuple:
+        wc = _num_or_none(o.get("worst_case_profit_c"))
+        max_loss = max(0.0, -wc) if wc is not None else float("inf")
+        be = _breakeven_pct(o)
+        be = be if be is not None else float("inf")
+        bonus = _num_or_none(o.get("best_case_profit_c"))
+        bonus = bonus if bonus is not None else float("-inf")
+        no = _num_or_none(o.get("action_2_price_c"))
+        no = no if no is not None else float("inf")
+        return (max_loss, be, -bonus, no, o.get("opportunity_id") or "")
+    return sorted(group, key=key)
+
+
+def no_structure_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str] | None = None,
+                     flash_ids: set[str] | None = None) -> dict[str, Any]:
+    """Display row for the NO-fades table: leads with the Buy-NO cost + bounded max-loss + breakeven chance;
+    convexity is a visible-but-secondary column. Honest: a cheap bounded fade, NOT an edge."""
+    band = _is_band(o)
+    cost = _num_or_none(o.get("cost_c"))
+    bc = _num_or_none(o.get("best_case_profit_c"))
+    wc = _num_or_none(o.get("worst_case_profit_c"))
+    best_payout = (bc + cost) if (bc is not None and cost is not None) else None
+    convexity = round(best_payout / cost, 2) if (best_payout is not None and cost) else None
+    no_c = _num_or_none(o.get("action_2_price_c"))
+    parent_c = _num_or_none(o.get("action_1_price_c"))
+    wins = _wins_if(o) if band else (f"{o.get('detail') or 'the outcome'} does NOT happen")
+    _sized = _sized_at_budget(o)
+    return _stamp_severity({
+        "opportunity_id": o.get("opportunity_id"),
+        "new": o.get("opportunity_id") in new_ids,
+        "_change": (changes or {}).get(o.get("opportunity_id"), ""),
+        "_flash": o.get("opportunity_id") in (flash_ids or set()),
+        "kind": "Band" if band else "Outright",
+        "sport": o.get("sport_label") or o.get("sport") or "",
+        "name": o.get("name") or "", "detail": o.get("detail") or "",
+        "wins_if": wins,
+        "buy_no": no_c,                                # the cheap-NO anchor cost
+        "parent_yes": parent_c,                        # the bounding Buy-YES cost (blank for an outright)
+        "cost": cost,
+        "max_loss": None if wc is None else max(0.0, -wc),
+        "breakeven": _breakeven_pct(o),                # min payoff chance % the bounded loss needs (gross)
+        "bonus_profit": bc,                            # net gain in the win state (band: 200−cost)
+        "convexity": convexity,                        # best payout ÷ cost — secondary, not the headline
+        "max_units": _num_or_none(o.get("exec_min_size")),
+        "loss_100": round(_sized[1] / 100, 1) if _sized else None,
+        "upside_100": round(_sized[2] / 100, 1) if _sized else None,
+        "quote_health": str(o.get("comp_quote_quality") or ""),
+        "caveat": "; ".join(p for p in (o.get("settlement_caveat"), o.get("blocked_reason"))
+                            if isinstance(p, str) and p),
+    }, o)
+
+
+def no_structure_explainer(o: dict[str, Any]) -> list[tuple[str, str]]:
+    """Plain-English decision lines for the detail panel of a NO-anchored structure. For a band, the 3-state
+    payoff is reused from `consistency.scenario_payoffs` (the same enumeration the risk-budget panel uses)."""
+    if o.get("bucket") != "no_structure":
+        return []
+    band = _is_band(o)
+    wc = _num_or_none(o.get("worst_case_profit_c"))
+    be = _breakeven_pct(o)
+    wins = _wins_if(o) if band else f"{o.get('detail') or 'the outcome'} does not happen"
+    lines: list[tuple[str, str]] = [
+        ("What is this?", ("A cheap bounded fade — Buy NO the deeper rung, Buy YES the broader rung that "
+                           "contains it, so you win the band 'reaches the broader stage but not the deeper "
+                           "one'. NOT an edge, not arbitrage.") if band else
+                          ("A single cheap Buy NO — a directional fade (you win if the outcome does NOT "
+                           "happen). A watchlist idea, NOT an edge: it's cheap because the market thinks "
+                           "the YES is very likely.")),
+        ("Can I lose money?", f"Yes — capped at {'—' if wc is None else f'{max(0.0, -wc):.0f}¢/unit'} "
+                              f"(the Buy-NO {'overpay' if band else 'cost'}). You lose it unless the fade "
+                              "pays."),
+        ("Wins if", wins),
+        ("Breakeven chance", f"{'—' if be is None else f'{be:g}%'} — the minimum chance the win state needs "
+                             "before fees/slippage (gross, top-of-book, uncalibrated)."),
+    ]
+    if band:
+        payoff = consistency.scenario_payoffs({**o, "status": "RISK_BUDGET_CANDIDATE"},
+                                              units=o.get("exec_min_size"))
+        if payoff:
+            for s in payoff["scenarios"]:
+                pc = s.get("profit_c")
+                lines.append((f"  · {s['label']}", "—" if pc is None else f"{pc:+.0f}¢/unit"))
+    return lines
+
+
 # World Cup Qualifier Setups — human labels for the setup types (two exact-order tiers + game support).
 _SETUP_TYPE_LABEL = {
     "exact_order_top2_bundle": "Diagnostic top-two bundle",
@@ -977,8 +1107,10 @@ def filter_opps(opps: Iterable[dict[str, Any]], *, sports: Iterable[str] | None 
 # dashboard). Thresholds spare Actionable / dutch-book, so for those shown == in_scope by construction.
 _MEMBERSHIP_KEYS = ("sports", "tournaments", "participant")
 _BUCKET_LABEL = {"actionable": "Actionable", "review_signal": "Review", "blocked": "Blocked",
-                 "risk_budget": "Speculative", "near_miss": "Near-miss", "qualifier_setup": "Qualifier setups"}
-_BUCKET_ORDER = ["actionable", "review_signal", "blocked", "risk_budget", "near_miss", "qualifier_setup"]
+                 "risk_budget": "Speculative", "near_miss": "Near-miss", "qualifier_setup": "Qualifier setups",
+                 "no_structure": "Cheap NO fades"}
+_BUCKET_ORDER = ["actionable", "review_signal", "blocked", "risk_budget", "near_miss", "qualifier_setup",
+                 "no_structure"]
 
 
 def _count_by_bucket(rows: Iterable[dict[str, Any]]) -> dict[str, int]:
@@ -1342,6 +1474,11 @@ def rank_opps(opps: Iterable[dict[str, Any]] | None, mode: str = RANK_MODE_DEFAU
     for bucket in sorted(by_bucket, key=lambda b: scanner.BUCKET_PRIORITY.get(b, 99)):
         group = by_bucket[bucket]
         is_risk = bucket == "risk_budget"
+        if bucket == "no_structure":
+            # Independent of the global rank mode: a cheap-NO fade is ordered by bounded downside +
+            # breakeven (see _no_structure_order), never by the executable-edge modes.
+            out.extend(_no_structure_order(group))
+            continue
         if mode == "spread_upside":
             out.extend(_spread_upside_order(group, is_risk))
         elif mode == "spread_ratio":

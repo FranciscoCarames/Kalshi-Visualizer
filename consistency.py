@@ -77,6 +77,10 @@ STATUS_GROUP = {
     # are "beyond the strict rule" — past the actionable line, so a distinct Watchlist group.
     "RISK_BUDGET_CANDIDATE": "Risk-budget",
     "NEAR_MISS_DUTCH_BOOK": "Watchlist",
+    # NO-anchored structures (sibling `no_structures` module; literals kept here to avoid an import). A
+    # speculative, opt-in, NEVER-actionable cheap-fade family — its own "NO fade" group.
+    "NO_STRUCTURE_BAND": "NO fade",
+    "NO_STRUCTURE_OUTRIGHT": "NO fade",
     # World Cup Qualifier Setups (sibling detectors `exact_order` / `game_support`; literals kept here to
     # avoid an import). Heuristic / review-only — never Actionable — so a distinct Qualifier-setup group.
     # EXACT_ORDER_DIAGNOSTIC = the reference top-two bundle tier (also stale snapshots);
@@ -933,8 +937,8 @@ def scenario_payoffs(check_row: dict[str, Any], units: Any = None) -> dict[str, 
 # Trader-dashboard buckets. Pure mapping from one consistency-check row to the dashboard section it
 # belongs in — reads only fields already produced by build_checks; no math, no side effects.
 DASHBOARD_BUCKETS = (
-    "actionable", "review_signal", "blocked", "risk_budget", "near_miss", "qualifier_setup", "near_edge",
-    "display_signal", "wide_signal", "data_quality", "clean",
+    "actionable", "review_signal", "blocked", "risk_budget", "near_miss", "qualifier_setup", "no_structure",
+    "near_edge", "display_signal", "wide_signal", "data_quality", "clean",
 )
 
 
@@ -973,6 +977,11 @@ def bucket_of(check_row: dict[str, Any]) -> str:
         # dutch book / hard-floor basket carries no rule caveat (plain Yes/No); the basket's group-settlement
         # caveat is advisory only. (Basket findings self-assign `bucket`; this keeps the router complete.)
         return "actionable" if str(check_row.get("tradable_now") or "").startswith("Yes") else "blocked"
+    if status in ("NO_STRUCTURE_BAND", "NO_STRUCTURE_OUTRIGHT"):
+        # NO-anchored cheap fades (sibling `no_structures` module): speculative / opt-in, NEVER actionable.
+        # Its own section, like the qualifier setups. The detector also self-assigns this bucket; this keeps
+        # the router complete + the isolation guard honest.
+        return "no_structure"
     if status in ("EXACT_ORDER_DIAGNOSTIC", "SPECULATIVE_TOP2_RELATIVE_VALUE", "GAME_SUPPORT_SIGNAL"):
         # World Cup Qualifier Setups: heuristic / review-only, NEVER Actionable. Their own opt-in section
         # (the detectors also self-assign this bucket; this keeps the router complete + the guard test

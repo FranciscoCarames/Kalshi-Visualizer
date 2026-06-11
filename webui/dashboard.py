@@ -332,6 +332,36 @@ _NEARMISS_COLUMNS = [
     {"name": "note", "label": "Note", "field": "note", "align": "left"},
 ]
 
+# Cheap NO fades (NO-anchored structures) table — leads with the Buy-NO anchor cost + bounded max-loss +
+# breakeven chance; convexity is a visible-but-secondary column (it overranks tiny longshots if it leads).
+# A speculative, opt-in, never-actionable fade — NOT an edge.
+_NO_STRUCTURE_COLUMNS = [
+    {"name": "new", "label": "", "field": "new", "align": "center", "required": True},
+    {"name": "kind", "label": "Kind", "field": "kind", "align": "center", "sortable": True},
+    {"name": "sport", "label": "Sport", "field": "sport", "align": "center", "sortable": True},
+    {"name": "name", "label": "Participant", "field": "name", "align": "left", "sortable": True},
+    {"name": "wins_if", "label": "Wins if…", "field": "wins_if", "align": "left", "sortable": True},
+    {"name": "buy_no", "label": "Buy NO ¢", "field": "buy_no", "align": "center", "sortable": True},
+    {"name": "cost", "label": "Cost ¢", "field": "cost", "align": "center", "sortable": True},
+    {"name": "max_loss", "label": "Max loss ¢", "field": "max_loss", "align": "center", "sortable": True},
+    {"name": "breakeven", "label": "Breakeven %", "field": "breakeven", "align": "center", "sortable": True},
+    {"name": "bonus_profit", "label": "Win profit ¢", "field": "bonus_profit", "align": "center", "sortable": True},
+    {"name": "convexity", "label": "Payout÷cost", "field": "convexity", "align": "center", "sortable": True},
+    {"name": "quote_health", "label": "Quote health", "field": "quote_health", "align": "center", "sortable": True},
+    {"name": "caveat", "label": "Caveat", "field": "caveat", "align": "left"},
+    # --- default-hidden context ---
+    {"name": "detail", "label": "Detail", "field": "detail", "align": "left"},
+    {"name": "parent_yes", "label": "Buy YES (bound) ¢", "field": "parent_yes", "align": "center", "sortable": True},
+    {"name": "max_units", "label": "Max units", "field": "max_units", "align": "center", "sortable": True},
+    {"name": "loss_100", "label": "Max loss @ $100 ($)", "field": "loss_100", "align": "center", "sortable": True},
+    {"name": "upside_100", "label": "Best upside @ $100 ($)", "field": "upside_100", "align": "center", "sortable": True},
+]
+_NO_STRUCTURE_HIDDEN = ("detail", "parent_yes", "max_units", "loss_100", "upside_100")
+_NO_STRUCTURE_NUMS = ("buy_no", "parent_yes", "cost", "max_loss", "breakeven", "bonus_profit",
+                      "convexity", "max_units", "loss_100", "upside_100")
+# Kind filter options for the Cheap-NO-fades section.
+_NO_STRUCTURE_KINDS = {"all": "All", "band": "Bounded bands", "outright": "Single NO"}
+
 # Qualifier-setups table (#4/#5). NO gross-edge / ROI / size / profit columns (those are blank for a
 # non-Actionable signal and would imply tradability). Default-visible columns are the exact-order top-two
 # economics; the rest start hidden behind the column chooser. Numeric columns hold RAW numbers (cell slots
@@ -580,6 +610,17 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             nm_switch = ui.switch("Near-miss books", value=True)  # PR A2: on (collapsed in PR C)
             nm_max_over = ui.number("Max overpay ¢", value=config.NEAR_MISS_DEFAULT_OVER_C,
                                     min=1, max=config.NEAR_MISS_MAX_OVER_C, format="%.0f").classes("w-28")
+            ns_switch = ui.switch("Cheap NO fades", value=False).tooltip(
+                "A speculative, opt-in fade: the cheapest Buy-NO you can take, optionally bounded by a Buy-YES "
+                "on the broader rung that contains it (a defined band). NOT an edge — a cheap NO is cheap "
+                "because the market thinks the YES is likely. Gross, top-of-book, uncalibrated.")
+            ns_kind = ui.select(_NO_STRUCTURE_KINDS, value="all", label="NO-fade kind").props(
+                "stack-label").classes("min-w-[9rem]")
+            ns_max_loss = ui.number("Max loss ¢", value=config.NO_STRUCTURE_DEFAULT_MAX_LOSS_C,
+                                    min=0, max=config.NO_STRUCTURE_BAND_MAX_LOSS_C, format="%.0f").classes("w-28")
+            ns_max_buy_no = ui.number("Max Buy-NO ¢", value=config.NO_STRUCTURE_DEFAULT_MAX_BUY_NO_C,
+                                      min=0, max=config.NO_STRUCTURE_OUTRIGHT_MAX_C, format="%.0f").classes(
+                "w-32").tooltip("Cap the Buy-NO anchor cost — the 'cheapest NO' gate. 0 = off.")
         ui.label("Filters & thresholds").classes("text-sm font-bold mt-2")
         with ui.row().classes("items-end gap-4 flex-wrap"):
             active_sw = ui.switch("Active only").tooltip("Hide non-active (finalized/settled) markets.")
@@ -745,6 +786,9 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                 ui.label(line).classes("text-sm")
             # PR E — bounded-loss decision block (Can I lose money? / Wins big if / Why ranked / Why skip).
             for _lbl, _txt in vm.speculative_explainer(opp):
+                ui.label(f"{_lbl}: {_txt}").classes("text-sm text-gray-700")
+            # Cheap-NO-fade decision block (what is this / can I lose money / wins if / breakeven / payoff).
+            for _lbl, _txt in vm.no_structure_explainer(opp):
                 ui.label(f"{_lbl}: {_txt}").classes("text-sm text-gray-700")
             avail = engine.frame_availability()
             if avail != "present" or not pkey:
@@ -970,7 +1014,20 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                             pagination=10).props("dense").classes("w-full overflow-x-auto opp-sel")
     nm_table.on_select(_on_select(nm_table))
 
-    _sel_tables.extend([actionable, review, blocked, qs_table, rb_all, rb_vertical, rb_calendar, nm_table])
+    ns_expansion, ns_title, ns_cols_row = _expansion_header("Cheap NO fades — bounded-loss NO anchor (watch-only)")
+    with ns_expansion:
+        ui.label("The cheapest Buy-NO you can take. A 'band' bounds it with a Buy-YES on the broader rung "
+                 "that contains it, so loss is capped at the small overpay (cost − 100¢) and the "
+                 "'reaches broader, not deeper' window pays about +$1; a 'single NO' is an unbounded "
+                 "directional fade watchlist. A cheap NO is cheap because the market thinks the YES is "
+                 "likely — this is NOT an edge. Gross, top-of-book, uncalibrated.").classes(
+                     "text-xs text-gray-500")
+        ns_table = ui.table(columns=_NO_STRUCTURE_COLUMNS, rows=[], row_key="opportunity_id", selection="single",
+                            pagination=10).props("dense").classes("w-full overflow-x-auto opp-sel")
+    ns_table.on_select(_on_select(ns_table))
+
+    _sel_tables.extend([actionable, review, blocked, qs_table, rb_all, rb_vertical, rb_calendar, nm_table,
+                        ns_table])
     for _t in _sel_tables:                 # the change-signal / NEW-badge indicator column on every table
         _t.add_slot("body-cell-new", _CHANGE_CELL_SLOT)
     for _t in (actionable, review, blocked):
@@ -1001,6 +1058,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             "HIGHER = better — more in-the-money probability per cent actually at risk; deep-longshot parents "
             "sink. Gross, top-of-book, uncalibrated.", ""))
     nm_table.add_slot("body-cell-note", _NOTE_CELL_SLOT)    # readable wrapping note
+    ns_table.add_slot("body-cell-caveat", _CAVEAT_CELL_SLOT)   # compact severity chip (same as the rb tables)
     # Qualifier-setups: compact caveat chips + the full prose (hidden col); the two quote columns show the
     # label while sorting on their numeric rank.
     qs_table.add_slot("body-cell-caveat", _QS_CAVEAT_CELL_SLOT)
@@ -1018,6 +1076,8 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             _rb.add_slot(f"body-cell-{_f}", _num_cell_slot(_f))
     for _f in ("cost", "overpay"):
         nm_table.add_slot(f"body-cell-{_f}", _num_cell_slot(_f))
+    for _f in _NO_STRUCTURE_NUMS:
+        ns_table.add_slot(f"body-cell-{_f}", _num_cell_slot(_f))
     for _f in ("qualifier", "cost", "if_top2", "if_not_top2", "max_units", "support", "legs",
                "highest_leg", "median_leg", "range_leg", "inactive_legs", "no_quote_legs", "wide_legs",
                "comparator_spread", "worst_leg_spread"):
@@ -1031,7 +1091,8 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                      (rb_all, "No bounded-loss bets in the current filters."),
                      (rb_vertical, "No vertical (same-event) bounded-loss bets in the current filters."),
                      (rb_calendar, "No calendar (multi-day) bounded-loss bets in the current filters."),
-                     (nm_table, "No overpriced books in the current filters.")):
+                     (nm_table, "No overpriced books in the current filters."),
+                     (ns_table, "No cheap NO fades in the current filters.")):
         _t.props(f'no-data-label="{_msg}"')
 
     # Per-table column menus (redesigned) — a "Columns" button by each table opening labeled checkboxes.
@@ -1051,6 +1112,8 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         build_column_menu(rb_calendar, _RISK_COLUMNS, default_hidden=_RISK_HIDDEN_SPLIT)
     with nm_cols_row:
         build_column_menu(nm_table, _NEARMISS_COLUMNS)
+    with ns_cols_row:
+        build_column_menu(ns_table, _NO_STRUCTURE_COLUMNS, default_hidden=_NO_STRUCTURE_HIDDEN)
 
     # "Show net of fees" — reveal/hide the net columns across the opp tables at once (drives their menus).
     def _toggle_net(show: bool) -> None:
@@ -1405,6 +1468,21 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         nm_expansion.set_visibility(include_nm)
         nm_max_over.set_enabled(include_nm)
 
+    def refresh_no_structure() -> None:
+        """Scoped path: rebuild ONLY the Cheap-NO-fades table from the cached view."""
+        view = state.get("view") or []
+        new_ids, chg = state.get("new_ids") or set(), state.get("changes") or {}
+        flash = state.get("flash_now") or set()
+        include_ns = ns_switch.value
+        nsv = vm.no_structure_view(view, max_loss_c=int(ns_max_loss.value or 0),
+                                   max_buy_no_c=int(ns_max_buy_no.value or 0),
+                                   kind=ns_kind.value) if include_ns else []
+        ns_table.rows = [vm.no_structure_row(o, new_ids, chg, flash) for o in nsv]
+        ns_title.set_text(f"Cheap NO fades — bounded-loss NO anchor, watch-only ({len(nsv):,})")
+        ns_expansion.set_visibility(include_ns)
+        for _c in (ns_kind, ns_max_loss, ns_max_buy_no):
+            _c.set_enabled(include_ns)
+
     def _set_freshness(text: str) -> None:
         """Set the freshness/scope banner only when its text actually changed — the 1s tick and every
         rerender call this, so the guard avoids a needless text push (Branch 2)."""
@@ -1488,6 +1566,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         # control change can call them directly (PR R) without re-running this full rerender.
         refresh_bounded_loss()
         refresh_near_miss()
+        refresh_no_structure()
 
         backlog.rows = bl_rows
         backlog_events_table.rows = ble_rows
@@ -1502,7 +1581,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             vm.bucket_counts(opps, filters),
             {"review_signal": show_review_sw.value, "blocked": show_blocked_sw.value,
              "risk_budget": rb_switch.value, "near_miss": nm_switch.value,
-             "qualifier_setup": qs_switch.value}))
+             "qualifier_setup": qs_switch.value, "no_structure": ns_switch.value}))
         # Market telemetry — fill the four liquidity columns (depth / contracts / tightest / most-traded).
         panel = state.get("liquidity_panel") or {}
         for _col in (liq_sports, liq_contracts, liq_tightest, liq_traded):
@@ -1630,6 +1709,9 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         (rb_min_outright, "Speculative minimum child display outright in cents"),
         (rb_max_ratio, "Speculative maximum child display spread-to-outright ratio"),
         (nm_switch, "Show overpriced books (near-miss)"), (nm_max_over, "Near-miss max overpay in cents"),
+        (ns_switch, "Show cheap NO fades"), (ns_kind, "Cheap NO fade kind"),
+        (ns_max_loss, "Cheap NO fade max loss in cents"), (ns_max_buy_no, "Cheap NO fade max Buy-NO cost in cents"),
+        (ns_table, "Cheap NO fades"), (ns_expansion, "Cheap NO fades section"),
         (show_net_sw, "Show estimated net-of-fees columns"),
         (actionable, "Actionable opportunities"), (review, "Review-required opportunities"),
         (blocked, "Blocked opportunities"), (qs_table, "Qualifier setups"),
@@ -1671,6 +1753,8 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             refresh_bounded_loss()
         elif kind == "near_miss":
             refresh_near_miss()
+        elif kind == "no_structure":
+            refresh_no_structure()
         else:
             rerender()
 
@@ -1680,12 +1764,14 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
     # The NUMBER inputs fire per keystroke/spin → DEBOUNCED, and the bounded-loss/near-miss bands are SCOPED
     # to their own tables (a Max-loss change no longer rebuilds the other tables or reads the store).
     for ctrl in (tz_select, rank_sel, show_ids, participant_sel, active_sw,
-                 show_review_sw, show_blocked_sw, qs_switch, rb_switch, nm_switch):
+                 show_review_sw, show_blocked_sw, qs_switch, rb_switch, nm_switch, ns_switch):
         ctrl.on_value_change(lambda _=None: None if state.get("_suppress_cascade") else rerender())
     min_size_in.on_value_change(lambda _=None: _request_refresh("full"))        # membership filter → view
     for ctrl in (rb_max_loss, rb_min_ratio, rb_min_outright, rb_max_ratio):
         ctrl.on_value_change(lambda _=None: _request_refresh("bounded_loss"))    # only the bounded-loss tables
     nm_max_over.on_value_change(lambda _=None: _request_refresh("near_miss"))     # only the near-miss table
+    for ctrl in (ns_kind, ns_max_loss, ns_max_buy_no):
+        ctrl.on_value_change(lambda _=None: _request_refresh("no_structure"))     # only the cheap-NO-fades table
 
     # Sport / Tournament are the cascade drivers: changing one re-narrows the downstream option lists
     # (and prunes now-invalid picks) BEFORE a single rerender. participant_sel (the leaf) drives no
