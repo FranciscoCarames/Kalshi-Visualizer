@@ -619,6 +619,8 @@ def no_structure_view(opps: Iterable[dict[str, Any]] | None, *, max_loss_c: floa
 
 # Settlement-LEVEL tables for the NO-fades section (display-only; see `no_structures.scope_for`).
 _NO_SCOPES = ("event", "tournament", "championship")
+# Human label for the "Level" column on the combined All table (where rows of every scope are merged).
+_NO_SCOPE_LABEL = {"event": "Event", "tournament": "Tournament", "championship": "Championship"}
 # Retired values from the previous (fixture-based) taxonomy. A snapshot still carrying these predates the
 # Event/Tournament/Championship update → treat as legacy and prompt a rescan rather than trust stale rows.
 _RETIRED_NO_SCOPES = frozenset({"series", "match_game"})
@@ -644,9 +646,9 @@ def no_structure_scoped_views(opps: Iterable[dict[str, Any]] | None, *, max_loss
                               good_quote_only: bool = True) -> dict[str, Any]:
     """Partition the filtered NO-fades into the three settlement-scope tables. `kind` is the existing
     BAND/OUTRIGHT filter (passed through to `no_structure_view`), NOT the scope. Returns
-    ``{"championship": [...], "series": [...], "match_game": [...], "_excluded_count": N}``; each list is
-    ordered by `_no_structure_order`, and N counts gated rows whose scope is excluded/legacy/unmapped
-    (these stay in the API/export audit paths — they are only summarised here, never silently rebucketed)."""
+    ``{"event": [...], "tournament": [...], "championship": [...], "_excluded_count": N}`` (keys ==
+    `_NO_SCOPES`); each list is ordered by `_no_structure_order`, and N counts gated rows whose scope is
+    excluded/unmapped (these stay in the API/export audit paths — only summarised here, never rebucketed)."""
     gated = no_structure_view(opps, max_loss_c=max_loss_c, max_buy_no_c=max_buy_no_c, kind=kind,
                               good_quote_only=good_quote_only)
     buckets: dict[str, list[dict[str, Any]]] = {s: [] for s in _NO_SCOPES}
@@ -699,6 +701,7 @@ def no_structure_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, st
         "_change": (changes or {}).get(o.get("opportunity_id"), ""),
         "_flash": o.get("opportunity_id") in (flash_ids or set()),
         "kind": "Band" if band else "Outright",
+        "scope_label": _NO_SCOPE_LABEL.get(_scope_of(o), ""),   # settlement level — shown on the All table
         "sport": o.get("sport_label") or o.get("sport") or "",
         "name": o.get("name") or "", "detail": o.get("detail") or "",
         "wins_if": wins,
@@ -849,12 +852,16 @@ def ladder_metrics_for(prows: list[dict[str, Any]], sport: str,
 def _ladder_metrics(rungs: list[dict[str, Any]], order: tuple) -> dict[str, Any]:
     """Descriptive shape diagnostics over a participant's FULL NO-fade ladder — DISPLAY-ONLY, NOT EV,
     probability, net-of-fees, or an actionability score. Computed over the FIRM rungs (firm two-sided
-    book, `no_c` > 0), broad→deep. All ratio/gradient fields are None-safe (a <2-firm-rung ladder yields
-    the depth + Nones, never a divide-by-zero). `total_fade_c` is Σ NO over rungs = the cost to Buy NO on
-    EVERY rung (a portfolio), not a single trade."""
+    book, `no_c` > 0), broad→deep. `depth`/`steps` describe the FULL ladder; the per-step normalizers
+    (`deepest_per_step`, `gradient_c_per_step`) use the FIRM endpoints and so divide by `firm_steps`
+    (= firm rungs − 1), NOT the full-ladder step count — otherwise a firm-only spread would be normalized
+    by phantom non-firm steps. All ratio/gradient fields are None-safe (a <2-firm-rung ladder yields the
+    depth + Nones, never a divide-by-zero). `total_fade_c` is Σ NO over the FIRM rungs = the cost to Buy NO
+    on every firm rung (a portfolio), not a single trade."""
     firm = [r for r in rungs if r.get("no_c") is not None and r["no_c"] > 0]
     depth = len(rungs)                                       # how deep the ladder is (rungs/nodes)
     steps = max(0, depth - 1)
+    firm_steps = max(0, len(firm) - 1)                       # steps BETWEEN firm endpoints (the honest divisor)
     n_cheap = sum(1 for r in rungs if r.get("cheap"))
     base = {"depth": depth, "steps": steps, "n_cheap": n_cheap,
             "avg_no_c": None, "deepest_no_c": None, "deepest_per_step": None, "total_fade_c": None,
@@ -867,9 +874,9 @@ def _ladder_metrics(rungs: list[dict[str, Any]], order: tuple) -> dict[str, Any]
     base.update({
         "avg_no_c": round(sum(nos) / len(nos), 1),
         "deepest_no_c": deepest,
-        "deepest_per_step": round(deepest / steps, 1) if steps else None,
+        "deepest_per_step": round(deepest / firm_steps, 1) if firm_steps else None,
         "total_fade_c": round(sum(nos), 1),
-        "gradient_c_per_step": round((deepest - broadest) / steps, 1) if steps else None,
+        "gradient_c_per_step": round((deepest - broadest) / firm_steps, 1) if firm_steps else None,
         "cheapest_no_c": cheapest["no_c"], "cheapest_rung": cheapest["rung"],
         "span_c": round(deepest - broadest, 1),
     })
@@ -946,6 +953,19 @@ def no_fade_ladder_view(opps: Iterable[dict[str, Any]] | None, prows_for, *, max
     return cards
 
 
+def no_fade_omitted_count(all_rows: list[dict[str, Any]], cards: list[dict[str, Any]]) -> int:
+    """How many of the (scope-gated) flat-table NO fades `all_rows` are NOT represented as a cheap rung in
+    any displayed ladder `card` — i.e. single-contest / field outrights that can't appear in the grouped
+    view. Matches on the NO-leg ticker (structural, no label parsing), so BOTH sides are the same
+    scope-gated set (the old `len(all_rows) − Σ cheap rungs` mixed a scoped count with an unscoped one and
+    could clamp to a wrong 0). Never negative."""
+    cheap_tickers = {str(r.get("market_ticker") or "")
+                     for c in (cards or []) for r in c.get("rungs", []) if r.get("cheap")}
+    cheap_tickers.discard("")
+    represented = sum(1 for o in (all_rows or []) if _no_leg_ticker(o) in cheap_tickers)
+    return max(0, len(all_rows or []) - represented)
+
+
 # Flat Championship table: ladder-shape metric columns annotated onto each row (display-only). Field names
 # are distinct from the per-structure columns so they merge cleanly into `no_structure_row` output.
 _LADDER_METRIC_FIELDS = ("depth", "avg_no", "deepest_no", "deepest_step", "total_fade", "gradient",
@@ -977,7 +997,8 @@ def ladder_metric_cells(metrics: dict[str, Any] | None) -> dict[str, Any]:
     }
 
 
-_BLANK_TITLE_PATH = {"title_tournaments": None, "title_events_label": None, "title_events_max": None}
+_BLANK_TITLE_PATH = {"title_tournaments": None, "title_tournaments_max": None,
+                     "title_events_label": None, "title_events_max": None}
 
 
 def title_path_cells_for(o: dict[str, Any]) -> dict[str, Any]:

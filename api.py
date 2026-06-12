@@ -106,7 +106,7 @@ class Opportunity(BaseModel):
     # Bounded-Loss vertical (simultaneous resolution) vs calendar (sequential). Optional → old stored rows
     # without it read as None and the dashboard treats a missing value as "calendar" (the safe default).
     resolution_mode: str | None = None
-    # NO-fade settlement scope (display-only): "championship" | "series" | "match_game" | None. Must be
+    # NO-fade settlement scope (display-only): "event" | "tournament" | "championship" | None. Must be
     # DECLARED — extra="ignore" would drop it, creating dashboard/REST drift. None on every non-NO-fade row
     # (and on excluded prop/other NO fades, which stay in the API audit path but out of the display tables).
     no_structure_scope: str | None = None

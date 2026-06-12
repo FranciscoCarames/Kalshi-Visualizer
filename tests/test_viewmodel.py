@@ -1061,6 +1061,46 @@ def test_group_key_of_uses_participant_key():
     assert vm.group_key_of({"sport": "tennis", "participant_key": "k", "tournament": "X"}) == ("tennis", "k", "X")
 
 
+# --- Phase 0 review fixes ----------------------------------------------------------------
+def test_ladder_metrics_normalize_by_firm_steps_not_full_steps():
+    # 3-node tennis ladder but the MIDDLE rung (Reach Final) is absent → non-firm; only SF + WIN are firm.
+    rows = [_lr("A", "A", "Reach Semifinal", 10, "SF"), _lr("A", "A", "Win Tournament", 40, "WIN")]
+    m = vm.ladder_metrics_for(rows, "tennis", oid_by_ticker={"SF": "x"})
+    assert m["depth"] >= 3 and m["steps"] == m["depth"] - 1       # FULL-ladder shape is reported unchanged
+    # The per-step normalizers use the FIRM endpoints over firm_steps (=1), NOT the full step count (=2):
+    assert m["gradient_c_per_step"] == 30.0                       # (40−10)/1, not /2 = 15
+    assert m["deepest_per_step"] == 40.0                          # 40/1, not /2 = 20
+
+
+def test_no_fade_omitted_count_uses_scoped_basis():
+    a_rows = [_lr("ALC", "Alcaraz", "Reach Final", 10, "A_FIN"),
+              _lr("ALC", "Alcaraz", "Win Tournament", 70, "A_WIN")]
+    card = vm.no_fade_ladder(a_rows, "tennis", oid_by_ticker={"A_FIN": "opA"})
+    laddered = _nsopp("opA", "ALC", "A_FIN", 10)         # NO-leg ticker == a cheap rung → represented
+    non_laddered = _nsopp("opP", "TM", "PROP1", 8)       # not on any card → omitted
+    assert vm.no_fade_omitted_count([laddered, non_laddered], [card]) == 1
+    assert vm.no_fade_omitted_count([laddered], [card]) == 0
+    assert vm.no_fade_omitted_count([non_laddered], []) == 1
+    assert vm.no_fade_omitted_count([], [card]) == 0     # never negative
+
+
+def test_no_structure_row_scope_label():
+    champ = _nsopp("c", "ALC", "T", 10)                  # _nsopp sets no_structure_scope="championship"
+    assert vm.no_structure_row(champ, set())["scope_label"] == "Championship"
+    none_scope = {**champ, "no_structure_scope": None}
+    assert vm.no_structure_row(none_scope, set())["scope_label"] == ""
+
+
+def test_title_path_cells_expose_numeric_tournament_sort():
+    import sports
+    nba = sports.get_sport("nba").title_path_cells()
+    assert nba["title_tournaments"] == "4" and nba["title_tournaments_max"] == 4
+    mlb = sports.get_sport("mlb").title_path_cells()
+    assert mlb["title_tournaments"] == "3–4" and mlb["title_tournaments_max"] == 4   # label range, numeric max
+    blank = sports.get_sport("golf").title_path_cells()                              # no Championship title path
+    assert blank["title_tournaments"] is None and blank["title_tournaments_max"] is None
+
+
 def test_no_fade_ladder_cascade_score_and_dominated():
     # France-style ladder: broadest cheap NO has the highest cascade score; win rung scores 0.
     order = [("Reach Semifinal", 10, "SF"), ("Reach Final", 50, "FIN"), ("Win Tournament", 80, "WIN")]

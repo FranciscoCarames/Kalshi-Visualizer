@@ -252,11 +252,12 @@ class SportConfig:
         "16–28" or "28" (min==max → single number) and sorts on ``title_events_max``. Display-only."""
         s = self.title_path
         if not s:
-            return {"title_tournaments": None, "title_events_label": None, "title_events_max": None}
+            return {"title_tournaments": None, "title_tournaments_max": None,
+                    "title_events_label": None, "title_events_max": None}
         t_min, t_max, e_min, e_max = s
         def _rng(a, b):
             return str(a) if a == b else f"{a}–{b}"
-        return {"title_tournaments": _rng(t_min, t_max),
+        return {"title_tournaments": _rng(t_min, t_max), "title_tournaments_max": t_max,
                 "title_events_label": _rng(e_min, e_max), "title_events_max": e_max}
 
     def family_of(self, series_ticker: str) -> str:

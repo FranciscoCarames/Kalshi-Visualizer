@@ -338,6 +338,7 @@ _NEARMISS_COLUMNS = [
 _NO_STRUCTURE_COLUMNS = [
     {"name": "new", "label": "", "field": "new", "align": "center", "required": True},
     {"name": "kind", "label": "Kind", "field": "kind", "align": "center", "sortable": True},
+    {"name": "scope_label", "label": "Level", "field": "scope_label", "align": "center", "sortable": True},
     {"name": "sport", "label": "Sport", "field": "sport", "align": "center", "sortable": True},
     {"name": "name", "label": "Participant", "field": "name", "align": "left", "sortable": True},
     {"name": "wins_if", "label": "Wins if…", "field": "wins_if", "align": "left", "sortable": True},
@@ -356,7 +357,9 @@ _NO_STRUCTURE_COLUMNS = [
     {"name": "loss_100", "label": "Max loss @ $100 ($)", "field": "loss_100", "align": "center", "sortable": True},
     {"name": "upside_100", "label": "Best upside @ $100 ($)", "field": "upside_100", "align": "center", "sortable": True},
 ]
-_NO_STRUCTURE_HIDDEN = ("detail", "parent_yes", "max_units", "loss_100", "upside_100")
+# `scope_label` (settlement Level) is redundant on the single-scope Event/Tournament/Championship tables →
+# hidden by default there; the combined All table re-shows it via `_NO_ALL_HIDDEN` below.
+_NO_STRUCTURE_HIDDEN = ("detail", "parent_yes", "max_units", "loss_100", "upside_100", "scope_label")
 _NO_STRUCTURE_NUMS = ("buy_no", "parent_yes", "cost", "max_loss", "breakeven", "bonus_profit",
                       "convexity", "max_units", "loss_100", "upside_100")
 # Kind filter options for the Cheap-NO-fades section.
@@ -392,7 +395,7 @@ _LADDER_METRIC_COLS = [
     {"name": "deepest_step", "label": "Deepest ÷ steps", "field": "deepest_step", "align": "right", "sortable": True},
     {"name": "gradient", "label": "Gradient ¢/step", "field": "gradient", "align": "right", "sortable": True},
     {"name": "deepest_no", "label": "Deepest NO ¢", "field": "deepest_no", "align": "right", "sortable": True},
-    {"name": "total_fade", "label": "Cost to NO every rung ¢", "field": "total_fade", "align": "right", "sortable": True},
+    {"name": "total_fade", "label": "Cost to NO firm rungs ¢", "field": "total_fade", "align": "right", "sortable": True},
     {"name": "cheapest_no", "label": "Cheapest NO ¢", "field": "cheapest_no", "align": "right", "sortable": True},
     {"name": "n_cheap", "label": "# cheap rungs", "field": "n_cheap", "align": "right", "sortable": True},
     {"name": "span", "label": "Span ¢", "field": "span", "align": "right", "sortable": True},
@@ -401,7 +404,7 @@ _LADDER_METRIC_COLS = [
 # events" displays the "min–max" label but sorts on the numeric `title_events_max`. Shown by default ONLY on
 # the Championship table; populated only on championship-scope rows (blank everywhere else).
 _TITLE_PATH_COLS = [
-    {"name": "title_tournaments", "label": "Title-path tournaments", "field": "title_tournaments",
+    {"name": "title_tournaments", "label": "Title-path tournaments", "field": "title_tournaments_max",
      "align": "right", "sortable": True},
     {"name": "title_events", "label": "Title-path events", "field": "title_events_max",
      "align": "right", "sortable": True},
@@ -414,7 +417,9 @@ _TITLE_PATH_COL_NAMES = tuple(c["name"] for c in _TITLE_PATH_COLS)
 # it isn't a wall of blank cells (the Columns button still reveals them for golf/motorsport field ladders).
 # Title-path columns are championship-only, so hide them on Event/Tournament/All by default.
 _NO_EVENT_HIDDEN = _NO_STRUCTURE_HIDDEN + tuple(c["name"] for c in _LADDER_METRIC_COLS) + _TITLE_PATH_COL_NAMES
-_NO_NONCHAMP_HIDDEN = _NO_CHAMP_HIDDEN + _TITLE_PATH_COL_NAMES   # Tournament + All hide title-path by default
+_NO_NONCHAMP_HIDDEN = _NO_CHAMP_HIDDEN + _TITLE_PATH_COL_NAMES   # Tournament hides title-path by default
+# The combined All table merges every scope, so it RE-SHOWS the Level column (drop it from the hidden set).
+_NO_ALL_HIDDEN = tuple(n for n in _NO_NONCHAMP_HIDDEN if n != "scope_label")
 # Per-participant ladder SUMMARY (grouped Championship view): descriptive ladder-shape diagnostics, one
 # row per participant ladder, numeric columns sortable. NOT EV / probability / edge (see table caption).
 _LADDER_SUMMARY_COLUMNS = [
@@ -424,7 +429,7 @@ _LADDER_SUMMARY_COLUMNS = [
     {"name": "avg_no", "label": "Avg NO ¢", "field": "avg_no", "align": "right", "sortable": True},
     {"name": "deepest_no", "label": "Deepest NO ¢", "field": "deepest_no", "align": "right", "sortable": True},
     {"name": "deepest_per_step", "label": "Deepest ÷ steps", "field": "deepest_per_step", "align": "right", "sortable": True},
-    {"name": "total_fade", "label": "Cost to NO every rung ¢", "field": "total_fade", "align": "right", "sortable": True},
+    {"name": "total_fade", "label": "Cost to NO firm rungs ¢", "field": "total_fade", "align": "right", "sortable": True},
     {"name": "gradient", "label": "Gradient ¢/step", "field": "gradient", "align": "right", "sortable": True},
     {"name": "cheapest_no", "label": "Cheapest NO ¢", "field": "cheapest_no", "align": "right", "sortable": True},
     {"name": "cheapest_rung", "label": "Cheapest rung", "field": "cheapest_rung", "align": "left"},
@@ -1178,7 +1183,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         ns_event_label, ns_event_table = _ns_level_table(_NO_EVENT_HIDDEN)
         ns_tournament_label, ns_tournament_table = _ns_level_table(_NO_NONCHAMP_HIDDEN)
         ns_championship_label, ns_championship_table = _ns_level_table(_NO_CHAMP_HIDDEN)
-        ns_all_label, ns_all_table = _ns_level_table(_NO_NONCHAMP_HIDDEN)
+        ns_all_label, ns_all_table = _ns_level_table(_NO_ALL_HIDDEN)
         # Grouped view (participant-ladder, level-agnostic): a sortable summary table + cascade cards.
         ns_summary_label = ui.label().classes("text-sm font-medium mt-1")
         ns_summary_table = ui.table(columns=_LADDER_SUMMARY_COLUMNS, rows=[], row_key="player_key",
@@ -1276,6 +1281,8 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             _t.add_slot(f"body-cell-{_f}", _num_cell_slot(_f))
     for _t in _ns_tables:                                  # title-path events: show "min–max" label, sort on max
         _t.add_slot("body-cell-title_events", _label_cell_slot("title_events_label"))
+    for _t in _ns_tables:                                  # title-path tournaments: show "min–max", sort on max
+        _t.add_slot("body-cell-title_tournaments", _label_cell_slot("title_tournaments"))
     for _f in ("qualifier", "cost", "if_top2", "if_not_top2", "max_units", "support", "legs",
                "highest_leg", "median_leg", "range_leg", "inactive_legs", "no_quote_legs", "wide_legs",
                "comparator_spread", "worst_leg_spread"):
@@ -1756,6 +1763,8 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                 ns_summary_table.set_visibility(bool(cards))
                 ns_summary_cap.set_visibility(bool(cards))
                 ns_summary_label.set_text(f"Participant ladders · {len(cards):,} (sortable summary)")
+                # Grouped mode counts LADDERS, not flat fades — keep the section title consistent with it.
+                ns_title.set_text(f"Cheap NO fades — grouped ladder, watch-only ({len(cards):,})")
                 shown = cards[:_NO_FADE_LADDER_MAX_CARDS]
                 with ns_cards:
                     if not shown:
@@ -1768,9 +1777,9 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                                  f"{('cascade upside' if ns_sort.value == 'cascade' else 'safest')} — narrow "
                                  "filters to see more.").classes("text-xs text-amber-700")
                     # Honest, quantitative omission note: cheap NOs not on a ladder (single contests / field
-                    # outrights) can't appear here — only the flat view shows them.
-                    represented = sum(1 for c in cards for r in c["rungs"] if r.get("cheap"))
-                    omitted = max(0, len(all_rows) - represented)
+                    # outrights) can't appear here — only the flat view shows them. Both sides use the same
+                    # scope-gated `all_rows` (matched on NO-leg ticker) so the count can't be skewed.
+                    omitted = vm.no_fade_omitted_count(all_rows, cards)
                     if omitted:
                         ui.label(f"Showing laddered participant paths only — {omitted:,} cheap-NO fade(s) "
                                  "aren't on a ladder (single contests / field outrights). Switch to the flat "
@@ -1808,7 +1817,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
 
         ns_excluded_label.set_text(
             f"{excluded:,} NO-fade row(s) excluded from these tables because their settlement scope is "
-            "legacy, unsupported, or unmapped." if excluded else "")
+            "unsupported or unmapped." if excluded else "")
         ns_excluded_label.set_visibility(bool(excluded))
 
     def _render_fade_card(card: dict[str, Any]) -> None:

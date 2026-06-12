@@ -85,7 +85,7 @@ UNIFIED_COLUMNS = [
     # Phase 2 E (display-only, containment rows): ladder rung labels for "Wins if …" + worst-leg quote
     # quality for "Quote health". Never read by bucket_of / _rank_key.
     "child_node", "parent_node", "comp_quote_quality",
-    # NO-fade settlement scope (display-only): "championship" | "series" | "match_game" | None. Splits the
+    # NO-fade settlement scope (display-only): "event" | "tournament" | "championship" | None. Splits the
     # Cheap-NO-fades section into three tables; never read by bucket_of / _rank_key.
     "no_structure_scope",
     # World Cup Qualifier Setups (PR1): a cross-cutting product tag, SEPARATE from bucket/routing. Read only
@@ -513,7 +513,7 @@ def _to_unified_no_structure(r: dict[str, Any], cfg) -> dict[str, Any]:
         "parent_yes_bid_c": _num(r.get("parent_yes_bid_c")), "child_yes_ask_c": _num(r.get("child_yes_ask_c")),
         "child_node": r.get("child_node") or "", "parent_node": r.get("parent_node") or "",
         "comp_quote_quality": r.get("comp_quote_quality") or "",
-        # Settlement-scope tag (display-only): "championship" | "series" | "match_game", or None when the
+        # Settlement-scope tag (display-only): "event" | "tournament" | "championship", or None when the
         # faded contract's family is excluded (prop/other) / unknown. Drives the dashboard's NO-fade split;
         # NEVER read by classify / bucket_of / _rank_key. None rows stay in the API/export audit paths.
         "no_structure_scope": r.get("scope"),
