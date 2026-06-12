@@ -88,6 +88,8 @@ UNIFIED_COLUMNS = [
     # NO-fade settlement scope (display-only): "event" | "tournament" | "championship" | None. Splits the
     # Cheap-NO-fades section into three tables; never read by bucket_of / _rank_key.
     "no_structure_scope",
+    # NO-fade faded-leg raw ISO close time (display-only) → "Days to close" / "Best-case mult/day".
+    "no_structure_close_time",
     # World Cup Qualifier Setups (PR1): a cross-cutting product tag, SEPARATE from bucket/routing. Read only
     # by a UI badge — never by bucket_of / _rank_key / filters. `setup_family` = product area
     # ("wc_qualifier"); `setup_type` = the specific setup (qualifier_not_winner / qualifier_yes_basket /
@@ -517,6 +519,9 @@ def _to_unified_no_structure(r: dict[str, Any], cfg) -> dict[str, Any]:
         # faded contract's family is excluded (prop/other) / unknown. Drives the dashboard's NO-fade split;
         # NEVER read by classify / bucket_of / _rank_key. None rows stay in the API/export audit paths.
         "no_structure_scope": r.get("scope"),
+        # Display-only raw ISO close time of the faded leg (band: the later leg) → "Days to close" /
+        # "Best-case mult/day" columns. NEVER read by classify / bucket_of / _rank_key.
+        "no_structure_close_time": r.get("close_time") or "",
     }
     d["participant_keys"], d["participant_labels"] = _participants([(r.get("player_key"), r.get("player"))])
     # A band's broader-YES + deeper-NO guarantees ≥100¢ in every settled state (floor 100); an outright NO

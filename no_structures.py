@@ -32,7 +32,7 @@ from typing import Any
 import config
 import consistency
 import sports
-from data import opportunity_id
+from data import opportunity_id, parse_fetched_at
 
 NO_STRUCTURE_BAND = "NO_STRUCTURE_BAND"
 NO_STRUCTURE_OUTRIGHT = "NO_STRUCTURE_OUTRIGHT"
@@ -189,6 +189,8 @@ def _build_band(cfg, player_key: str, tournament: str, child_node: str, parent_n
         "child_yes_ask_c": _num(child.get("yes_ask_c")),
         "settlement_caveat": caveat,
         "market_status": "active",
+        # Display-only: the band's full hold resolves at the LATER of its two legs (capital-lock-up horizon).
+        "close_time": _later_close(parent.get("close_time"), child.get("close_time")),
         "parent_ticker": parent.get("market_ticker") or "", "child_ticker": child.get("market_ticker") or "",
         "parent_url": parent.get("kalshi_url") or "", "child_url": child.get("kalshi_url") or "",
         "opportunity_id": opportunity_id("no_structure_band", player_key, tournament, child_node, parent_node),
@@ -230,6 +232,7 @@ def _outright_findings(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
             "exec_min_size": _num(r.get("yes_bid_size")),
             "comp_quote_quality": str(r.get("quote_quality") or ""),
             "market_status": "active",
+            "close_time": r.get("close_time") or "",       # display-only capital-lock-up horizon
             "ticker": ticker, "url": r.get("kalshi_url") or "",
             "opportunity_id": opportunity_id("no_structure_outright", ticker),
         })
@@ -240,6 +243,20 @@ def _outright_findings(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
 def _min_size(a: Any, b: Any) -> Any:
     a, b = _num(a), _num(b)
     return min(a, b) if (a is not None and b is not None) else None
+
+
+def _later_close(a: Any, b: Any) -> str:
+    """The LATER of two raw ISO close-time strings (a band's full capital-lock-up horizon resolves at the
+    later leg). Parses both via ``data.parse_fetched_at``; returns the later parseable one's ORIGINAL
+    string, the only parseable one, or "" when neither parses. Display-only metadata, never a comparison."""
+    da, db = parse_fetched_at(a), parse_fetched_at(b)
+    if da and db:
+        return str(a) if da >= db else str(b)
+    if da:
+        return str(a)
+    if db:
+        return str(b)
+    return ""
 
 
 def _buy_text(side: str, contract: Any, price_c: Any) -> str:

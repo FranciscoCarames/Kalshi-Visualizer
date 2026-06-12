@@ -681,10 +681,41 @@ def _no_structure_order(group: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return sorted(group, key=key)
 
 
+def days_until(close_iso: Any, ref_dt: datetime | None) -> float | None:
+    """Calendar days from `ref_dt` (the snapshot's `fetched_at`) to a raw ISO close time. None when either
+    is missing/unparseable. May be negative (already closed) — the caller blanks the derived ratio then.
+    Pure + deterministic (keyed off the snapshot stamp, NOT wall-clock), so it is unit-testable."""
+    close = data.parse_fetched_at(close_iso)
+    if close is None or ref_dt is None:
+        return None
+    return (close - ref_dt).total_seconds() / 86400.0
+
+
+def return_per_day(o: dict[str, Any], days: float | None) -> float | None:
+    """A gross BEST-CASE PROFIT MULTIPLE per day — NOT expected value, NOT annualized return. Outright:
+    best-case profit ÷ cost ÷ days; band: best-case profit ÷ bounded max-loss ÷ days. None when days ≤ 0,
+    the denominator is missing/zero (e.g. the zero-loss band), or the close is unknown. Display-only; it
+    explodes for short-dated low-cost longshots, which is exactly why it is hidden by default."""
+    if days is None or days <= 0:
+        return None
+    bc = _num_or_none(o.get("best_case_profit_c"))
+    if bc is None:
+        return None
+    if _is_band(o):
+        wc = _num_or_none(o.get("worst_case_profit_c"))
+        denom = max(0.0, -wc) if wc is not None else None     # bounded max-loss
+    else:
+        denom = _num_or_none(o.get("cost_c"))
+    if not denom:                                             # None or 0 → undefined, blank (never ∞)
+        return None
+    return (bc / denom) / days
+
+
 def no_structure_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str] | None = None,
-                     flash_ids: set[str] | None = None) -> dict[str, Any]:
+                     flash_ids: set[str] | None = None, ref_dt: datetime | None = None) -> dict[str, Any]:
     """Display row for the NO-fades table: leads with the Buy-NO cost + bounded max-loss + breakeven chance;
-    convexity is a visible-but-secondary column. Honest: a cheap bounded fade, NOT an edge."""
+    convexity is a visible-but-secondary column. Honest: a cheap bounded fade, NOT an edge. `ref_dt` (the
+    snapshot `fetched_at`, parsed) drives the display-only "Days to close" / "Best-case mult/day" cells."""
     band = _is_band(o)
     cost = _num_or_none(o.get("cost_c"))
     bc = _num_or_none(o.get("best_case_profit_c"))
@@ -695,6 +726,8 @@ def no_structure_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, st
     parent_c = _num_or_none(o.get("action_1_price_c"))
     wins = _wins_if(o) if band else (f"{o.get('detail') or 'the outcome'} does NOT happen")
     _sized = _sized_at_budget(o)
+    days = days_until(o.get("no_structure_close_time"), ref_dt)
+    rpd = return_per_day(o, days)
     return _stamp_severity({
         "opportunity_id": o.get("opportunity_id"),
         "new": o.get("opportunity_id") in new_ids,
@@ -716,6 +749,8 @@ def no_structure_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, st
         "loss_100": round(_sized[1] / 100, 1) if _sized else None,
         "upside_100": round(_sized[2] / 100, 1) if _sized else None,
         "quote_health": str(o.get("comp_quote_quality") or ""),
+        "days_to_close": None if days is None else round(days, 1),   # capital-lock-up horizon (display-only)
+        "return_per_day": None if rpd is None else round(rpd, 4),    # best-case MULTIPLE/day, NOT EV (hidden by default)
         "caveat": "; ".join(p for p in (o.get("settlement_caveat"), o.get("blocked_reason"))
                             if isinstance(p, str) and p),
     }, o)

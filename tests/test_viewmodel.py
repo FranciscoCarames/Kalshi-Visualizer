@@ -1061,6 +1061,47 @@ def test_group_key_of_uses_participant_key():
     assert vm.group_key_of({"sport": "tennis", "participant_key": "k", "tournament": "X"}) == ("tennis", "k", "X")
 
 
+# --- Phase 1: days-to-close + best-case multiple/day -------------------------------------
+def test_days_until_deterministic_off_snapshot_stamp():
+    import data
+    ref = data.parse_fetched_at("2026-06-01 00:00:00 UTC")
+    assert vm.days_until("2026-06-06T00:00:00Z", ref) == 5.0
+    assert vm.days_until("2026-05-30T00:00:00Z", ref) < 0          # already closed → negative
+    assert vm.days_until("not-a-date", ref) is None
+    assert vm.days_until("2026-06-06T00:00:00Z", None) is None     # no snapshot stamp → blank
+
+
+def test_return_per_day_is_best_case_multiple_not_ev():
+    out = {"relationship_type": "no_structure_outright", "best_case_profit_c": 90, "cost_c": 10}
+    assert vm.return_per_day(out, 30) == 0.3                       # (90/10)/30
+    band = {"relationship_type": "no_structure_band", "best_case_profit_c": 95,
+            "worst_case_profit_c": -5, "cost_c": 105}
+    assert vm.return_per_day(band, 10) == 1.9                      # (95/max_loss 5)/10
+    assert vm.return_per_day(out, 0) is None                       # days ≤ 0 → blank
+    assert vm.return_per_day(out, None) is None                    # unknown close → blank
+    zero_loss = {"relationship_type": "no_structure_band", "best_case_profit_c": 100,
+                 "worst_case_profit_c": 0, "cost_c": 100}
+    assert vm.return_per_day(zero_loss, 10) is None                # zero-loss band denom → blank, never ∞
+
+
+def test_no_structure_row_days_and_return_cells():
+    import data
+    ref = data.parse_fetched_at("2026-06-01 00:00:00 UTC")
+    o = {**_nsopp("o1", "ALC", "T", 10), "cost_c": 10, "best_case_profit_c": 90,
+         "no_structure_close_time": "2026-06-21T00:00:00Z"}
+    row = vm.no_structure_row(o, set(), ref_dt=ref)
+    assert row["days_to_close"] == 20.0 and row["return_per_day"] == round((90 / 10) / 20, 4)
+    # No ref_dt (old caller) → both blank, no crash.
+    blank = vm.no_structure_row(o, set())
+    assert blank["days_to_close"] is None and blank["return_per_day"] is None
+
+
+def test_no_structure_close_time_in_api_model():
+    import api
+    fields = set(getattr(api.Opportunity, "model_fields", None) or api.Opportunity.__fields__)
+    assert "no_structure_close_time" in fields                     # declared → no REST drift
+
+
 # --- Phase 0 review fixes ----------------------------------------------------------------
 def test_ladder_metrics_normalize_by_firm_steps_not_full_steps():
     # 3-node tennis ladder but the MIDDLE rung (Reach Final) is absent → non-firm; only SF + WIN are firm.

@@ -89,6 +89,31 @@ def test_band_breakeven_equals_max_loss():
     assert vm._breakeven_pct(band) == 6.0          # == max loss ¢, by the containment band identity
 
 
+# --- Phase 1: close time → days-to-close threading ----------------------------------------------------
+def test_later_close_picks_max_iso_none_safe():
+    assert no_structures._later_close("2026-07-01T00:00:00Z", "2026-06-20T00:00:00Z") == "2026-07-01T00:00:00Z"
+    assert no_structures._later_close("2026-06-20T00:00:00Z", "2026-07-01T00:00:00Z") == "2026-07-01T00:00:00Z"
+    assert no_structures._later_close("2026-07-01T00:00:00Z", "") == "2026-07-01T00:00:00Z"   # only one parses
+    assert no_structures._later_close("", None) == ""                                          # neither parses
+
+
+def test_close_time_carries_to_finding_and_unified():
+    parent = market(_PARENT, yes_ask_c=96, yes_bid_c=94, no_ask_c=6, display_c=95)
+    child = market(_CHILD, yes_ask_c=90, yes_bid_c=88, no_ask_c=10, display_c=89)
+    parent["close_time"], child["close_time"] = "2026-07-01T00:00:00Z", "2026-06-20T00:00:00Z"
+    band = _bands(no_structures.find_no_structures([parent, child]))[0]
+    assert band["close_time"] == "2026-07-01T00:00:00Z"          # band = the LATER (full-hold) leg
+    u = scanner._to_unified_no_structure(band, sports.TENNIS)
+    assert u["no_structure_close_time"] == "2026-07-01T00:00:00Z"
+    cheap = market(_CHILD, yes_ask_c=92, yes_bid_c=90, no_ask_c=10)
+    cheap["close_time"] = "2026-06-15T00:00:00Z"
+    out = _outrights(no_structures.find_no_structures([cheap]))[0]
+    assert out["close_time"] == "2026-06-15T00:00:00Z"
+    uo = scanner._to_unified_no_structure(out, sports.TENNIS)
+    assert uo["no_structure_close_time"] == "2026-06-15T00:00:00Z"
+    assert "no_structure_close_time" in scanner.UNIFIED_COLUMNS
+
+
 # --- outright economics ------------------------------------------------------------------------------
 def test_outright_cheap_no_emitted_dear_no_skipped():
     cheap = market(_CHILD, yes_ask_c=92, yes_bid_c=90, no_ask_c=10)   # buy NO 10 ≤ 25 → emitted

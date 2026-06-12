@@ -110,6 +110,8 @@ class Opportunity(BaseModel):
     # DECLARED — extra="ignore" would drop it, creating dashboard/REST drift. None on every non-NO-fade row
     # (and on excluded prop/other NO fades, which stay in the API audit path but out of the display tables).
     no_structure_scope: str | None = None
+    # NO-fade faded-leg raw ISO close time (display-only; band = later leg). Declared to avoid REST drift.
+    no_structure_close_time: str | None = None
     # Per-leg tickers + the second leg's link (the panel surfaces both legs).
     ticker_1: str | None = None
     ticker_2: str | None = None

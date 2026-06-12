@@ -15,6 +15,7 @@ from typing import Any
 from nicegui import app, run, ui
 
 import config
+import data
 import presence
 import scan_scheduler
 from webui import engine, export
@@ -349,8 +350,11 @@ _NO_STRUCTURE_COLUMNS = [
     {"name": "bonus_profit", "label": "Win profit ¢", "field": "bonus_profit", "align": "center", "sortable": True},
     {"name": "convexity", "label": "Payout÷cost", "field": "convexity", "align": "center", "sortable": True},
     {"name": "quote_health", "label": "Quote health", "field": "quote_health", "align": "center", "sortable": True},
+    {"name": "days_to_close", "label": "Days to close", "field": "days_to_close", "align": "right", "sortable": True},
     {"name": "caveat", "label": "Caveat", "field": "caveat", "align": "left"},
     # --- default-hidden context ---
+    # Best-case profit MULTIPLE per day (NOT EV / annualized) — hidden by default; explodes for short-dated longshots.
+    {"name": "return_per_day", "label": "Best-case mult/day", "field": "return_per_day", "align": "right", "sortable": True},
     {"name": "detail", "label": "Detail", "field": "detail", "align": "left"},
     {"name": "parent_yes", "label": "Buy YES (bound) ¢", "field": "parent_yes", "align": "center", "sortable": True},
     {"name": "max_units", "label": "Max units", "field": "max_units", "align": "center", "sortable": True},
@@ -359,9 +363,10 @@ _NO_STRUCTURE_COLUMNS = [
 ]
 # `scope_label` (settlement Level) is redundant on the single-scope Event/Tournament/Championship tables →
 # hidden by default there; the combined All table re-shows it via `_NO_ALL_HIDDEN` below.
-_NO_STRUCTURE_HIDDEN = ("detail", "parent_yes", "max_units", "loss_100", "upside_100", "scope_label")
+_NO_STRUCTURE_HIDDEN = ("detail", "parent_yes", "max_units", "loss_100", "upside_100", "scope_label",
+                        "return_per_day")
 _NO_STRUCTURE_NUMS = ("buy_no", "parent_yes", "cost", "max_loss", "breakeven", "bonus_profit",
-                      "convexity", "max_units", "loss_100", "upside_100")
+                      "convexity", "max_units", "loss_100", "upside_100", "days_to_close", "return_per_day")
 # Kind filter options for the Cheap-NO-fades section.
 _NO_STRUCTURE_KINDS = {"all": "All", "band": "Bounded bands", "outright": "Single NO"}
 # Per-participant NO-fade LADDER (grouped view): one row per rung, broad→deep. "Cascade score" is an
@@ -1161,6 +1166,11 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                  "path to the title (the constituent series/majors and possible games; byes/play-in shorten "
                  "it for top seeds). Display-only — not this row's remaining path, not a probability or EV.").classes(
                      "text-xs text-gray-500")
+        ui.label("Days to close = calendar days from this snapshot to the faded contract's close (the later "
+                 "leg for bands — the full hold). 'Best-case mult/day' (hidden by default) = best-case profit "
+                 "÷ cost (outright) or ÷ max loss (band), per day — a gross, top-of-book MULTIPLE, NOT "
+                 "expected value and NOT annualized return. Blank when the close is unknown or already "
+                 "passed.").classes("text-xs text-gray-500")
         ns_legacy_label = ui.label().classes("text-sm text-amber-700")
         with ui.row().classes("items-center gap-2 mt-1"):
             ui.label("View:").classes("text-xs text-gray-500")
@@ -1729,9 +1739,11 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         # Ladder-shape metric cells, merged onto each row by its (sport, participant_key, tournament) ladder.
         all_rows = [o for s in ns_scope_tables for o in scoped[s]]
         metrics_by_group = vm.ladder_metrics_view(all_rows, _prows_for) if frames_present else {}
+        # Snapshot stamp drives deterministic "Days to close" (NOT wall-clock).
+        ref_dt = data.parse_fetched_at((state.get("cov") or {}).get("fetched_at"))
 
         def _row(o: dict[str, Any]) -> dict[str, Any]:
-            return {**vm.no_structure_row(o, new_ids, chg, flash),
+            return {**vm.no_structure_row(o, new_ids, chg, flash, ref_dt=ref_dt),
                     **vm.ladder_metric_cells(metrics_by_group.get(vm.group_key_of(o))),
                     **vm.title_path_cells_for(o)}            # championship title-path (blank otherwise)
 
