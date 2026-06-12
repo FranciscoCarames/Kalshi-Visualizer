@@ -68,8 +68,10 @@ NEAR_MISS_DEFAULT_OVER_C = 3                 # default UI max-overpay filter (¢
 # The detector caps emission; the NiceGUI UI filters live (max-loss / max Buy-NO / quote / size).
 NO_STRUCTURE_BAND_MAX_LOSS_C = 40           # widest band max-loss persisted (¢; cost ≤ 140¢)
 NO_STRUCTURE_OUTRIGHT_MAX_C = 25            # dearest Buy-NO persisted for the outright watchlist (¢)
-NO_STRUCTURE_DEFAULT_MAX_LOSS_C = 15        # default UI band max-loss filter (¢)
-NO_STRUCTURE_DEFAULT_MAX_BUY_NO_C = 15      # default UI max Buy-NO cost filter (¢, outright + band child leg)
+# Defaults sit at the persisted caps so the section shows every stored NO fade by default (still
+# quote-gated to Tight/OK unless "Include wide quotes" is on); narrow via the UI controls.
+NO_STRUCTURE_DEFAULT_MAX_LOSS_C = NO_STRUCTURE_BAND_MAX_LOSS_C    # default UI band max-loss filter (¢) = 40
+NO_STRUCTURE_DEFAULT_MAX_BUY_NO_C = NO_STRUCTURE_OUTRIGHT_MAX_C   # default UI max Buy-NO cost filter (¢) = 25
 
 # Peer-relative cheapness flags (Phase 2 F) — a DISPLAY-ONLY badge, NOT a ranker and NEVER executable. Among
 # SAME-SPORT bounded-loss bets within PEER_BAND_TOLERANCE_C ¢ of the same implied-payoff band (parent−child

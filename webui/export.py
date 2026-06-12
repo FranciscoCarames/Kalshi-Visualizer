@@ -65,6 +65,13 @@ def _safe(name: Any) -> str:
     return "".join(ch if (ch.isalnum() or ch in "-_") else "_" for ch in str(name or "x")) or "x"
 
 
+def build_basket_csv(opps: Iterable[dict[str, Any]]) -> bytes:
+    """A standalone CSV (UTF-8 bytes) of a hand-picked NO-fade basket, in the stable `UNIFIED_COLUMNS`
+    order. Pure + stdlib-only — the dashboard passes the basket's unified opp rows and downloads the bytes.
+    Same column shape as `opportunities.csv` so the basket round-trips through the same tooling."""
+    return _rows_to_csv(opps, columns=UNIFIED_COLUMNS).encode("utf-8")
+
+
 def build_export_zip(*, snapshot_id: Any, fetched_at: Any, opportunities: Iterable[dict[str, Any]],
                      coverage: dict[str, Any] | None, frames: Iterable[dict[str, Any]] | None,
                      backlog: Iterable[dict[str, Any]] | None, backlog_window: Any = None,

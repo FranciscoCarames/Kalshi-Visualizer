@@ -199,6 +199,17 @@ class SportConfig:
     # Default {"winner"} preserves every existing sport; a field sport can add pole/fastest_lap/constructor/
     # team/race_winner so those one-winner fields are detected too.
     field_families: frozenset[str] = field(default_factory=lambda: frozenset({"winner"}))
+    # NO-fade SETTLEMENT LEVEL per family (display-only; consumed by no_structures.scope_for): how many
+    # "grouping" levels a market sits above a single contest — 0=Event, 1=Tournament, 2=Championship. Keyed
+    # on family because the same name differs per sport (tennis "match"=a match=0; NBA "match"=the bo7
+    # series=1). A family absent here is EXCLUDED from the NO-fade tables (fail-closed; registry-guard-tested).
+    # A value may be a ``dict[stage,int]`` (with a ``"*"`` default) when one family spans levels by stage —
+    # e.g. team ``advance``: "Reach Playoffs"=tournament, conference/title=championship.
+    family_levels: dict[str, int | dict[str, int]] = field(default_factory=dict)
+    # Championship TITLE-PATH decomposition (display-only): the CANONICAL longest path to the title as
+    # ``(tournaments_min, tournaments_max, events_min, events_max)``. None for sports with no
+    # Championship-scope market. STATIC sport-format data — re-verify on format changes (see per-sport comment).
+    title_path: tuple[int, int, int, int] | None = None
     # Optional per-sport grouping key, computed ONCE PER EVENT (data.tournament_of). Returns (key, source)
     # or None to fall back to the default competition-based key. Lets a sport build an event-instance key
     # (e.g. motorsport: competition + race/session + season) instead of the broad competition string.
@@ -235,6 +246,20 @@ class SportConfig:
     derived_indicators_fn: Callable[["SportConfig", dict[str, "float | None"]], list[dict[str, Any]]] | None = None
 
     # ---- convenience API (engine calls these) --------------------------------------------
+    def title_path_cells(self) -> dict[str, Any]:
+        """Display cells for the Championship title-path columns (or all-None when the sport has no
+        Championship market). ``title_tournaments`` shows "4" or "3–4"; ``title_events_label`` shows
+        "16–28" or "28" (min==max → single number) and sorts on ``title_events_max``. Display-only."""
+        s = self.title_path
+        if not s:
+            return {"title_tournaments": None, "title_tournaments_max": None,
+                    "title_events_label": None, "title_events_max": None}
+        t_min, t_max, e_min, e_max = s
+        def _rng(a, b):
+            return str(a) if a == b else f"{a}–{b}"
+        return {"title_tournaments": _rng(t_min, t_max), "title_tournaments_max": t_max,
+                "title_events_label": _rng(e_min, e_max), "title_events_max": e_max}
+
     def family_of(self, series_ticker: str) -> str:
         return self.family_fn(self, series_ticker)
 
@@ -530,6 +555,12 @@ TENNIS = register(SportConfig(
     divisions={"Women": ["WTA"], "Men": ["ATP"], "Both": ["ATP", "WTA"]},
     division_label="Tour",
     family_fn=_tennis_family,
+    # Settlement level: a match/set/score is one contest (0); reach-a-stage / win the tournament is one
+    # level up (1); the Grand Slam spans multiple tournaments (2).
+    family_levels={"match": 0, "set_winner": 0, "exact_score": 0, "advance": 1, "winner": 1, "grand_slam": 2},
+    # Title path (only on a grand-slam-scope row, never an ordinary major): 4 majors × 7 single-elim rounds
+    # → 4 tournaments, 28 matches (deterministic).
+    title_path=(4, 4, 28, 28),
     stage_fn=_tennis_stage,
     node_fn=_tennis_node,
     division_fn=_tennis_division,
@@ -633,6 +664,14 @@ NBA = register(SportConfig(
     divisions={},
     division_label="",
     family_fn=_nba_family,
+    # Settlement level: a game (0); the best-of-7 series (1); winning the conference / title spans
+    # "match" == KXNBASERIES = the bo7 series (1). `advance` SPANS levels by stage: "Reach Playoffs"
+    # (regular-season qualification = a group of games) = tournament (1); "Win Conference" (a chain of
+    # series = a group of tournaments) = championship (2). winner (title) = championship.
+    family_levels={"game": 0, "match": 1, "advance": {"Playoffs": 1, "Conference": 2, "*": 2}, "winner": 2},
+    # Title path (current 4-round bracket, each best-of-7): First Round, Conf Semis, Conf Finals, Finals.
+    # Play-in excluded (title teams don't all pass it). VERIFY on format changes.
+    title_path=(4, 4, 16, 28),
     stage_fn=_nba_stage,
     node_fn=_nba_node,
     division_fn=_nba_division,
@@ -742,6 +781,10 @@ WNBA = register(SportConfig(
     divisions={},
     division_label="",
     family_fn=_wnba_family,
+    # advance spans levels by stage: Playoffs (qualify) = tournament; Semifinals/Finals (won a series) = championship.
+    family_levels={"game": 0, "match": 1, "advance": {"Playoffs": 1, "Semifinals": 2, "Finals": 2, "*": 2}, "winner": 2},
+    # Title path: First Round(bo3) + Semifinals(bo5) + Finals(bo7, EFFECTIVE 2025) → 3 series, 9–15 games. VERIFY.
+    title_path=(3, 3, 9, 15),
     stage_fn=_wnba_stage,
     node_fn=_wnba_node,
     division_fn=_wnba_division,
@@ -836,6 +879,9 @@ GOLF = register(SportConfig(
     division_label="",
     derived_indicators_fn=_golf_make_cut_indicator,
     family_fn=_golf_family,
+    # A golf tournament is a single FIELD event (no sub-contests), so Top-N / win = Event (0) — same shape
+    # as a motorsport race result. Golf appears only in the Event table.
+    family_levels={"advance": 0, "winner": 0},
     stage_fn=_golf_stage,
     node_fn=_golf_node,
     division_fn=_golf_division,
@@ -1003,6 +1049,9 @@ SOCCER = register(SportConfig(
     divisions={},
     division_label="",
     family_fn=_soccer_family,
+    # A game (0); advancing / winning the group / winning the World Cup are all within the one tournament
+    # (1). exact_order/group_bottom/stage_of_elim are diagnostic-only → absent here → excluded.
+    family_levels={"game": 0, "advance": 1, "group_winner": 1, "winner": 1},
     stage_fn=_soccer_stage,
     node_fn=_soccer_node,
     division_fn=_soccer_division,
@@ -1108,6 +1157,13 @@ MLB = register(SportConfig(
     divisions={},
     division_label="",
     family_fn=_mlb_family,
+    # A game (0); the pennant / World Series are won across multiple series (2). MLB has no in-app series
+    # advance spans levels by stage: Playoffs (regular-season qualification) = tournament; League (pennant,
+    # a chain of series) = championship. (KXMLBSERIES excluded, so MLB has no bo-N series Tournament row.)
+    family_levels={"game": 0, "advance": {"Playoffs": 1, "League": 2, "*": 2}, "winner": 2},
+    # Title path: WC(bo3, TOP SEEDS BYE) + LDS(bo5) + LCS(bo7) + WS(bo7) → 3–4 series, 11–22 games (a
+    # wild-card team plays all 4; a bye team plays 3). Canonical longest path. VERIFY on format changes.
+    title_path=(3, 4, 11, 22),
     stage_fn=_mlb_stage,
     node_fn=_mlb_node,
     division_fn=lambda cfg, t: "",
@@ -1208,6 +1264,9 @@ NHL = register(SportConfig(
     divisions={},
     division_label="",
     family_fn=_nhl_family,
+    # advance spans levels by stage: Playoffs (qualify) = tournament; Conference (series chain) = championship.
+    family_levels={"game": 0, "match": 1, "advance": {"Playoffs": 1, "Conference": 2, "*": 2}, "winner": 2},
+    title_path=(4, 4, 16, 28),   # 4 rounds × best-of-7 (First/Second/Conf Finals/Stanley Cup Final). VERIFY.
     stage_fn=_nhl_stage,
     node_fn=_nhl_node,
     division_fn=_nhl_division,
@@ -1294,6 +1353,11 @@ NFL = register(SportConfig(
     divisions={},
     division_label="",
     family_fn=_nfl_family,
+    # Single-elimination (no series layer): a game (0); reach playoffs / win conference / win the Super
+    # Bowl are all one level above a game (1). NFL is SINGLE-ELIMINATION (no bo-N series layer) → the whole
+    # playoffs is ONE tournament, so `advance` does NOT span levels (no stage dict needed) and NFL has no
+    # Championship-scope rows.
+    family_levels={"game": 0, "advance": 1, "winner": 1},
     stage_fn=_nfl_stage,
     node_fn=_nfl_node,
     division_fn=_nfl_division,
@@ -1477,6 +1541,10 @@ MOTORSPORT = register(SportConfig(
                "All": ["F1", "NASCAR", "IndyCar", "MotoGP"]},
     division_label="Series",
     family_fn=_motor_family,
+    # A race result is one contest: race winner / pole / fastest lap / Top-N finish = Event (0). The
+    # season champion / top constructor / top team are won across the whole season = Tournament (1).
+    family_levels={"race_winner": 0, "pole": 0, "fastest_lap": 0, "advance": 0,
+                   "winner": 1, "constructor": 1, "team": 1},
     stage_fn=_motor_stage,
     node_fn=_motor_node,
     division_fn=_motor_division,
@@ -1589,6 +1657,8 @@ ESPORTS = register(SportConfig(
     divisions={t: [t] for t in _ESPORTS_TITLES} | {"All": list(_ESPORTS_TITLES)},
     division_label="Title",
     family_fn=_esports_family,
+    # A map/game is one contest (0); a per-title event winner is won across a bracket of matches (1).
+    family_levels={"game": 0, "winner": 1},
     stage_fn=_esports_stage,
     node_fn=_esports_node,
     division_fn=_esports_division,

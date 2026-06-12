@@ -106,6 +106,15 @@ class Opportunity(BaseModel):
     # Bounded-Loss vertical (simultaneous resolution) vs calendar (sequential). Optional → old stored rows
     # without it read as None and the dashboard treats a missing value as "calendar" (the safe default).
     resolution_mode: str | None = None
+    # NO-fade settlement scope (display-only): "event" | "tournament" | "championship" | None. Must be
+    # DECLARED — extra="ignore" would drop it, creating dashboard/REST drift. None on every non-NO-fade row
+    # (and on excluded prop/other NO fades, which stay in the API audit path but out of the display tables).
+    no_structure_scope: str | None = None
+    # NO-fade faded-leg raw ISO close time (display-only; band = later leg). Declared to avoid REST drift.
+    no_structure_close_time: str | None = None
+    # NO-fade faded-leg ladder node + display price (display-only) for the "Cheapness vs field" comparison.
+    no_structure_faded_node: str | None = None
+    no_structure_faded_display_c: int | None = None
     # Per-leg tickers + the second leg's link (the panel surfaces both legs).
     ticker_1: str | None = None
     ticker_2: str | None = None
