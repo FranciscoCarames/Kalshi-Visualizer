@@ -968,6 +968,18 @@ def ladder_metric_cells(metrics: dict[str, Any] | None) -> dict[str, Any]:
     }
 
 
+_BLANK_TITLE_PATH = {"title_tournaments": None, "title_events_label": None, "title_events_max": None}
+
+
+def title_path_cells_for(o: dict[str, Any]) -> dict[str, Any]:
+    """Championship title-path display cells for a NO-fade row (the sport's canonical title-path
+    decomposition). Blank for any non-championship-scope row — so a "Win French Open" (tournament) or an
+    Event/Tournament row shows nothing. The domain math lives in `SportConfig.title_path_cells`."""
+    if _scope_of(o) != "championship":
+        return dict(_BLANK_TITLE_PATH)
+    return sports.get_sport(str(o.get("sport") or "")).title_path_cells()
+
+
 def group_key_of(o: dict[str, Any]) -> tuple:
     """The `(sport, participant_key, tournament)` ladder key for a unified NO-fade opp — the merge key
     between a Championship row and its `ladder_metrics_view` entry."""

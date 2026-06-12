@@ -51,11 +51,16 @@ _BAD_QUOTES = ("No quote", "Crossed", "One-sided")
 _LEVEL_SCOPE = {0: "event", 1: "tournament", 2: "championship"}
 
 
-def scope_for(cfg, family: Any) -> str | None:
+def scope_for(cfg, family: Any, stage: Any = None) -> str | None:
     """Settlement scope of a cheap-NO finding: ``"event" | "tournament" | "championship"``, or ``None``
     when the family is excluded/unmapped. Level = ``cfg.family_levels[family]`` (0=event, 1=tournament,
-    2=championship). A band passes its DEEPER child rung's family (it fades that rung → inherits its level)."""
+    2=championship). When a family SPANS levels by stage (team-sport ``advance``: "Reach Playoffs" is a
+    regular-season qualification = tournament, but conference/title rungs = championship) its value is a
+    ``dict[stage, level]`` with a ``"*"`` default; the ``stage`` is whitespace-normalised before lookup. A
+    band passes its DEEPER child rung's family + stage (it fades that rung → inherits its level)."""
     lvl = (getattr(cfg, "family_levels", None) or {}).get(str(family or ""))
+    if isinstance(lvl, dict):
+        lvl = lvl.get(str(stage or "").strip(), lvl.get("*"))
     return _LEVEL_SCOPE.get(lvl)
 
 
@@ -153,7 +158,9 @@ def _build_band(cfg, player_key: str, tournament: str, child_node: str, parent_n
         caveat = "also surfaced as a risk-budget near-miss (the same bounded-loss trade, another lens)"
     return {
         "kind": "band",
-        "scope": scope_for(cfg, child.get("kind")),      # a band fades the deeper child rung → its level
+        # A NO-fade band is classified by its faded DEEPER (child) NO leg — that rung is the risk thesis.
+        # Pass the child's stage too so a team "Reach Playoffs" child → tournament, "Win Conference" → championship.
+        "scope": scope_for(cfg, child.get("kind"), child.get("stage")),
         "status": NO_STRUCTURE_BAND,
         "player": parent.get("player") or child.get("player") or "",
         "player_key": player_key,
@@ -203,7 +210,7 @@ def _outright_findings(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
         # Settlement scope from the faded contract's family (None for excluded prop/other — the row still
         # EMITS so audit/API/export keep the evidence; only the display tables drop scope-None rows).
         cfg = sports.sport_for_series(r.get("series"))
-        scope = scope_for(cfg, r.get("kind"))
+        scope = scope_for(cfg, r.get("kind"), r.get("stage"))
         out.append({
             "kind": "outright",
             "scope": scope,

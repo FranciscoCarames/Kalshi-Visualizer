@@ -397,12 +397,24 @@ _LADDER_METRIC_COLS = [
     {"name": "n_cheap", "label": "# cheap rungs", "field": "n_cheap", "align": "right", "sortable": True},
     {"name": "span", "label": "Span ¢", "field": "span", "align": "right", "sortable": True},
 ]
-_NO_CHAMP_COLUMNS = _NO_STRUCTURE_COLUMNS + _LADDER_METRIC_COLS
+# Championship title-path columns (display-only; CANONICAL longest path, sport constant). "Title-path
+# events" displays the "min–max" label but sorts on the numeric `title_events_max`. Shown by default ONLY on
+# the Championship table; populated only on championship-scope rows (blank everywhere else).
+_TITLE_PATH_COLS = [
+    {"name": "title_tournaments", "label": "Title-path tournaments", "field": "title_tournaments",
+     "align": "right", "sortable": True},
+    {"name": "title_events", "label": "Title-path events", "field": "title_events_max",
+     "align": "right", "sortable": True},
+]
+_NO_CHAMP_COLUMNS = _NO_STRUCTURE_COLUMNS + _LADDER_METRIC_COLS + _TITLE_PATH_COLS
 _NO_CHAMP_HIDDEN = _NO_STRUCTURE_HIDDEN + ("deepest_no", "total_fade", "cheapest_no", "n_cheap", "span")
 _NO_CHAMP_NUMS = _NO_STRUCTURE_NUMS + tuple(c["name"] for c in _LADDER_METRIC_COLS)
+_TITLE_PATH_COL_NAMES = tuple(c["name"] for c in _TITLE_PATH_COLS)
 # The Event table is dominated by non-laddered games/matches → start ALL ladder-metric columns hidden so
 # it isn't a wall of blank cells (the Columns button still reveals them for golf/motorsport field ladders).
-_NO_EVENT_HIDDEN = _NO_STRUCTURE_HIDDEN + tuple(c["name"] for c in _LADDER_METRIC_COLS)
+# Title-path columns are championship-only, so hide them on Event/Tournament/All by default.
+_NO_EVENT_HIDDEN = _NO_STRUCTURE_HIDDEN + tuple(c["name"] for c in _LADDER_METRIC_COLS) + _TITLE_PATH_COL_NAMES
+_NO_NONCHAMP_HIDDEN = _NO_CHAMP_HIDDEN + _TITLE_PATH_COL_NAMES   # Tournament + All hide title-path by default
 # Per-participant ladder SUMMARY (grouped Championship view): descriptive ladder-shape diagnostics, one
 # row per participant ladder, numeric columns sortable. NOT EV / probability / edge (see table caption).
 _LADDER_SUMMARY_COLUMNS = [
@@ -1138,6 +1150,10 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                  "Championship = two levels up (NBA/NHL/MLB titles, which sit above a best-of-7 series "
                  "layer; the tennis Grand Slam). So 'win the NBA title' is Championship, but 'win the "
                  "World Cup' is Tournament.").classes("text-xs text-gray-500")
+        ui.label("Championship 'Title-path tournaments / events' columns = the sport's CANONICAL longest "
+                 "path to the title (the constituent series/majors and possible games; byes/play-in shorten "
+                 "it for top seeds). Display-only — not this row's remaining path, not a probability or EV.").classes(
+                     "text-xs text-gray-500")
         ns_legacy_label = ui.label().classes("text-sm text-amber-700")
         with ui.row().classes("items-center gap-2 mt-1"):
             ui.label("View:").classes("text-xs text-gray-500")
@@ -1158,9 +1174,9 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             return lbl, tbl
 
         ns_event_label, ns_event_table = _ns_level_table(_NO_EVENT_HIDDEN)
-        ns_tournament_label, ns_tournament_table = _ns_level_table(_NO_CHAMP_HIDDEN)
+        ns_tournament_label, ns_tournament_table = _ns_level_table(_NO_NONCHAMP_HIDDEN)
         ns_championship_label, ns_championship_table = _ns_level_table(_NO_CHAMP_HIDDEN)
-        ns_all_label, ns_all_table = _ns_level_table(_NO_CHAMP_HIDDEN)
+        ns_all_label, ns_all_table = _ns_level_table(_NO_NONCHAMP_HIDDEN)
         # Grouped view (participant-ladder, level-agnostic): a sortable summary table + cascade cards.
         ns_summary_label = ui.label().classes("text-sm font-medium mt-1")
         ns_summary_table = ui.table(columns=_LADDER_SUMMARY_COLUMNS, rows=[], row_key="player_key",
@@ -1256,6 +1272,8 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
     for _f in _NO_CHAMP_NUMS:                               # all four NO-fade tables: per-structure + metric nums
         for _t in _ns_tables:
             _t.add_slot(f"body-cell-{_f}", _num_cell_slot(_f))
+    for _t in _ns_tables:                                  # title-path events: show "min–max" label, sort on max
+        _t.add_slot("body-cell-title_events", _label_cell_slot("title_events_label"))
     for _f in ("qualifier", "cost", "if_top2", "if_not_top2", "max_units", "support", "legs",
                "highest_leg", "median_leg", "range_leg", "inactive_legs", "no_quote_legs", "wide_legs",
                "comparator_spread", "worst_leg_spread"):
@@ -1705,7 +1723,8 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
 
         def _row(o: dict[str, Any]) -> dict[str, Any]:
             return {**vm.no_structure_row(o, new_ids, chg, flash),
-                    **vm.ladder_metric_cells(metrics_by_group.get(vm.group_key_of(o)))}
+                    **vm.ladder_metric_cells(metrics_by_group.get(vm.group_key_of(o))),
+                    **vm.title_path_cells_for(o)}            # championship title-path (blank otherwise)
 
         ns_legacy_label.set_visibility(False)
         ns_cards.clear()

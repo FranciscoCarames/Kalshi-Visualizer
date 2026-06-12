@@ -184,8 +184,8 @@ def test_bucket_sets_in_sync():
 
 
 # --- settlement-LEVEL taxonomy (Event / Tournament / Championship split) ------------------------------
-def _sc(cfg, family):
-    return no_structures.scope_for(cfg, family)
+def _sc(cfg, family, stage=None):
+    return no_structures.scope_for(cfg, family, stage)
 
 
 # Families that family_fn can emit but the NO-fade taxonomy intentionally excludes.
@@ -226,6 +226,41 @@ def test_scope_for_classification_matrix():
     assert _sc(sports.SOCCER, "exact_order") is None and _sc(sports.SOCCER, "stage_of_elim") is None
 
 
+def test_scope_stage_aware_reach_playoffs():
+    """The "Reach Playoffs" fix: team `advance` SPANS levels by stage. Regular-season qualification
+    (stage "Playoffs") = tournament; the series-chain rungs (conference/league/semis/finals) = championship."""
+    assert _sc(sports.NBA, "advance", "Playoffs") == "tournament"
+    assert _sc(sports.NBA, "advance", "Conference") == "championship"
+    assert _sc(sports.NHL, "advance", "Playoffs") == "tournament"
+    assert _sc(sports.NHL, "advance", "Conference") == "championship"
+    assert _sc(sports.MLB, "advance", "Playoffs") == "tournament"
+    assert _sc(sports.MLB, "advance", "League") == "championship"
+    assert _sc(sports.WNBA, "advance", "Playoffs") == "tournament"
+    assert _sc(sports.WNBA, "advance", "Semifinals") == "championship"
+    assert _sc(sports.WNBA, "advance", "Finals") == "championship"
+    # winner (the title) is always championship for these.
+    assert _sc(sports.NBA, "winner") == "championship" and _sc(sports.MLB, "winner") == "championship"
+    # Stage normalisation (whitespace) + unknown stage → the "*" default (championship), intentionally.
+    assert _sc(sports.NBA, "advance", " Playoffs ") == "tournament"
+    assert _sc(sports.NBA, "advance", "Some-New-Round") == "championship"
+    # NFL is single-elimination → `advance` does NOT span levels: every stage is tournament.
+    assert _sc(sports.NFL, "advance", "Playoffs") == "tournament"
+    assert _sc(sports.NFL, "advance", "Conference") == "tournament"
+
+
+def test_reach_playoffs_tickers_classify_as_tournament():
+    """Live ticker → family/stage/scope, so a casing/string drift in a stage_fn is caught (audit #10)."""
+    cases = [(sports.NBA, "KXNBAPLAYOFF"), (sports.WNBA, "KXWNBAPLAYOFF"), (sports.NHL, "KXNHLPLAYOFF"),
+             (sports.MLB, "KXMLBPLAYOFFS"), (sports.NFL, "KXNFLPLAYOFF")]
+    for cfg, ticker in cases:
+        mc = cfg.classify(ticker, {"ticker": f"{ticker}-26X"})
+        assert mc.family == "advance" and mc.stage == "Playoffs", f"{ticker} → {mc.family}/{mc.stage}"
+        assert no_structures.scope_for(cfg, mc.family, mc.stage) == "tournament"
+    # the conference/league rungs are the deeper (championship) stage for the series-layer sports
+    assert sports.NBA.classify("KXNBAEAST", {"ticker": "KXNBAEAST-26"}).stage == "Conference"
+    assert sports.MLB.classify("KXMLBAL", {"ticker": "KXMLBAL-26"}).stage == "League"
+
+
 def test_scope_registry_guard_every_owned_family_is_mapped_or_excluded():
     """Fail-closed: every family any sport's family_fn emits over its OWNED tickers
     (default_series + winner_tickers + exact_series) is either in that sport's `family_levels` or an
@@ -233,7 +268,9 @@ def test_scope_registry_guard_every_owned_family_is_mapped_or_excluded():
     never raises, returns only event/tournament/championship/None, and every level is 0/1/2."""
     for cfg in sports._REGISTRY.values():
         for fam, lvl in (cfg.family_levels or {}).items():
-            assert lvl in (0, 1, 2), f"{cfg.sport_id}: family {fam!r} has invalid level {lvl}"
+            vals = lvl.values() if isinstance(lvl, dict) else (lvl,)   # a family may span levels by stage
+            for v in vals:
+                assert v in (0, 1, 2), f"{cfg.sport_id}: family {fam!r} has invalid level {v}"
         for t in set(cfg.default_series) | set(cfg.winner_tickers) | set(cfg.exact_series):
             fam = cfg.family_of(t)
             assert fam in (cfg.family_levels or {}) or fam in _ACCEPTED_EXCLUDED, (
@@ -254,6 +291,31 @@ def test_band_scope_is_its_child_rung_level():
     parent = market(_PARENT, yes_ask_c=96, yes_bid_c=94, no_ask_c=6, display_c=95)
     child = market(_CHILD, yes_ask_c=90, yes_bid_c=88, no_ask_c=10, display_c=89)
     assert _bands(no_structures.find_no_structures([parent, child]))[0]["scope"] == "tournament"
+
+
+def _nba_row(node, stage, no_ask, series, ticker):
+    """One NBA advance-ladder row (Reach Playoffs / Win Conference …) for the stage-aware fix tests."""
+    return {"player": "Lakers", "player_key": "uuid-lal", "tournament": "NBA · 2026", "tour": "",
+            "series": series, "kind": "advance", "ladder_node": node, "stage": stage, "stage_rank": 0,
+            "category": "", "quote_quality": "Tight", "status": "active", "subpenny": False,
+            "yes_bid_c": 100 - no_ask - 2, "yes_ask_c": 100 - no_ask, "no_ask_c": no_ask,
+            "yes_bid_size": 500, "yes_ask_size": 500, "display_c": 100 - no_ask, "display_pct": 100 - no_ask,
+            "contract": node, "market_ticker": ticker, "kalshi_url": "x"}
+
+
+def test_outright_reach_playoffs_is_tournament():
+    # THE FIX: an outright NO on "Reach Playoffs" (regular-season qualification) → Tournament, not Championship.
+    r = _nba_row("Reach Playoffs", "Playoffs", 10, "KXNBAPLAYOFF", "KXNBAPLAYOFF-26-LAL")
+    outs = _outrights(no_structures.find_no_structures([r]))
+    assert len(outs) == 1 and outs[0]["scope"] == "tournament"
+
+
+def test_band_team_child_conference_is_championship():
+    # A team band fades the deeper rung (Win Conference) → its stage governs → Championship.
+    parent = _nba_row("Reach Playoffs", "Playoffs", 7, "KXNBAPLAYOFF", "KXNBAPLAYOFF-26-LAL")   # Buy YES ask 93
+    child = _nba_row("Win Conference", "Conference", 12, "KXNBAEAST", "KXNBAEAST-26-LAL")        # Buy NO 12
+    bands = _bands(no_structures.find_no_structures([parent, child]))
+    assert len(bands) == 1 and bands[0]["scope"] == "championship"
 
 
 def test_scope_survives_unified_pipeline():
@@ -321,6 +383,57 @@ def test_no_structure_scope_declared_in_api_and_export_schema():
     assert "no_structure_scope" in api.Opportunity.model_fields            # extra="ignore" would drop it
     assert api.Opportunity(no_structure_scope="event").no_structure_scope == "event"
     assert "no_structure_scope" in scanner.UNIFIED_COLUMNS                 # export pins it in opportunities.csv
+
+
+def test_championship_columns_are_display_only():
+    """HARD isolation (audit #4): scope + title-path cells must NEVER change executable classification,
+    bucketing, or ranking. The full executable projection is identical with vs without those display fields."""
+    rows = [market(_PARENT, yes_ask_c=96, yes_bid_c=94, no_ask_c=6, display_c=95),
+            market(_CHILD, yes_ask_c=90, yes_bid_c=88, no_ask_c=10, display_c=89)]
+    opps = _unified(rows)
+
+    def proj(o):
+        return (o.get("opportunity_id"), o.get("bucket"), o.get("status"), o.get("tradable_now"),
+                o.get("exec_gap_c"), scanner._rank_key(o))
+    before = [proj(o) for o in opps]
+    # Attach the display-only fields the way the dashboard would, then re-project — nothing executable moves.
+    polluted = [{**o, "no_structure_scope": "championship",
+                 "title_tournaments": "4", "title_events_label": "16–28", "title_events_max": 28} for o in opps]
+    assert [proj(o) for o in polluted] == before
+    # bucket_of ignores them too.
+    for o in opps:
+        assert consistency.bucket_of(o) == consistency.bucket_of(
+            {**o, "no_structure_scope": "championship", "title_events_max": 28})
+
+
+def test_title_path_fields_not_in_unified_or_api_schema():
+    """No schema leak: the title-path cells are render-time only — never in the stored opp / REST model."""
+    for f in ("title_tournaments", "title_events_label", "title_events_max"):
+        assert f not in scanner.UNIFIED_COLUMNS
+        assert f not in api.Opportunity.model_fields
+
+
+def test_title_path_cells_for_only_championship_rows():
+    champ_nba = {"bucket": "no_structure", "no_structure_scope": "championship", "sport": "nba"}
+    cells = vm.title_path_cells_for(champ_nba)
+    assert cells["title_tournaments"] == "4" and cells["title_events_label"] == "16–28" and cells["title_events_max"] == 28
+    champ_mlb = vm.title_path_cells_for({"no_structure_scope": "championship", "sport": "mlb"})
+    assert champ_mlb["title_tournaments"] == "3–4" and champ_mlb["title_events_label"] == "11–22"
+    # tennis grand slam → 28 (min==max → single number, no en-dash)
+    gs = vm.title_path_cells_for({"no_structure_scope": "championship", "sport": "tennis"})
+    assert gs["title_tournaments"] == "4" and gs["title_events_label"] == "28"
+    # An ordinary "Win French Open" is TOURNAMENT scope → no title-path cells (audit #9/#42).
+    assert vm.title_path_cells_for({"no_structure_scope": "tournament", "sport": "tennis"})["title_tournaments"] is None
+    # A non-championship sport (golf=Event, soccer=Tournament) → blank even if mis-tagged championship.
+    assert vm.title_path_cells_for({"no_structure_scope": "championship", "sport": "golf"})["title_events_max"] is None
+
+
+def test_sportconfig_title_path_cells():
+    assert sports.NBA.title_path_cells()["title_events_max"] == 28
+    assert sports.MLB.title_path_cells()["title_tournaments"] == "3–4"
+    assert sports.WNBA.title_path_cells()["title_events_label"] == "9–15"
+    assert sports.NFL.title_path_cells()["title_tournaments"] is None       # single-elim → no title_path
+    assert all(v in (0, 1, 2) for v in sports.NBA.family_levels["advance"].values())   # dict-valued advance
 
 
 # --- ladder-depth metrics (display-only diagnostics) -------------------------------------------------
