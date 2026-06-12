@@ -1222,11 +1222,13 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         ns_basket_card = ui.card().classes("w-full mt-2 bg-amber-50")
         with ns_basket_card:
             with ui.row().classes("items-center justify-between w-full"):
-                ns_basket_label = ui.label().classes("text-sm font-bold")
+                # Force DARK text — the card has a light amber bg, so the theme's default (white in dark mode)
+                # would be invisible. The gray caption + outlined buttons already read fine.
+                ns_basket_label = ui.label().classes("text-sm font-bold text-gray-900")
                 with ui.row().classes("items-center gap-2"):
                     ns_basket_export_btn = ui.button("Export basket CSV").props("dense outline")
                     ns_basket_clear_btn = ui.button("Clear").props("dense outline color=grey")
-            ns_basket_stats = ui.label().classes("text-sm")
+            ns_basket_stats = ui.label().classes("text-sm text-gray-800")
             ns_basket_warn = ui.label().classes("text-xs text-amber-800")
             ui.label("A hand-picked what-if — gross, top-of-book. NOT a portfolio model, not EV, not net of "
                      "fees. Max simultaneous loss assumes every fade loses at once; same-ladder and "
