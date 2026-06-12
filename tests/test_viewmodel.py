@@ -1107,6 +1107,54 @@ def test_cheapness_cells_blank_safe():
     assert vm.cheapness_cells({"cheapness_vs_field": 3.0})["cheapness_vs_field"] == 3.0
 
 
+# --- Phase 3: hand-picked basket what-if -------------------------------------------------
+def _bopp(oid, pk, *, cost, worst, best, sport="tennis", tournament="X", close=""):
+    return {"opportunity_id": oid, "bucket": "no_structure", "sport": sport, "tournament": tournament,
+            "participant_key": pk, "name": pk, "cost_c": cost, "worst_case_profit_c": worst,
+            "best_case_profit_c": best, "no_structure_close_time": close}
+
+
+def test_basket_summary_sums_and_no_overlap():
+    s = vm.basket_summary([_bopp("a", "ALC", cost=10, worst=-10, best=90),
+                           _bopp("b", "SIN", cost=8, worst=-8, best=92)])
+    assert s["n"] == 2 and s["total_cost_dollars"] == 0.18
+    assert s["max_simultaneous_loss_dollars"] == 0.18 and s["best_case_if_all_hit_dollars"] == 1.82
+    assert s["ladder_overlaps"] == [] and s["tournament_concentration"]   # same tournament X → concentration
+    assert s["overlap_oids"] == set()
+
+
+def test_basket_summary_flags_same_ladder_overlap():
+    # Two rungs of the SAME participant ladder (same sport+participant+tournament) → not independent.
+    s = vm.basket_summary([_bopp("a", "ALC", cost=10, worst=-10, best=90),
+                           _bopp("b", "ALC", cost=40, worst=-40, best=60)])
+    assert len(s["ladder_overlaps"]) == 1 and s["ladder_overlaps"][0]["count"] == 2
+    assert s["overlap_oids"] == {"a", "b"}
+
+
+def test_basket_summary_tournament_concentration_without_ladder_overlap():
+    # Different participants, same tournament → concentration line but NO ladder overlap.
+    s = vm.basket_summary([_bopp("a", "ALC", cost=10, worst=-10, best=90),
+                           _bopp("b", "SIN", cost=8, worst=-8, best=92)])
+    assert s["ladder_overlaps"] == []
+    assert s["tournament_concentration"] == [{"sport": "tennis", "tournament": "X", "count": 2}]
+
+
+def test_basket_summary_avg_days_needs_ref_dt():
+    import data
+    ref = data.parse_fetched_at("2026-06-01 00:00:00 UTC")
+    opps = [_bopp("a", "ALC", cost=10, worst=-10, best=90, close="2026-06-11T00:00:00Z"),
+            _bopp("b", "SIN", cost=8, worst=-8, best=92, close="2026-06-21T00:00:00Z")]
+    assert vm.basket_summary(opps, ref_dt=ref)["avg_days_to_close"] == 15.0     # (10 + 20)/2
+    assert vm.basket_summary(opps)["avg_days_to_close"] is None                 # no stamp → blank
+    assert vm.basket_summary([])["n"] == 0                                      # empty basket safe
+
+
+def test_prune_basket_drops_absent_ids():
+    assert vm.prune_basket({"a", "b", "gone"}, {"a", "b", "c"}) == {"a", "b"}
+    assert vm.prune_basket(set(), {"a"}) == set()
+    assert vm.prune_basket({"x"}, []) == set()
+
+
 # --- Phase 1: days-to-close + best-case multiple/day -------------------------------------
 def test_days_until_deterministic_off_snapshot_stamp():
     import data

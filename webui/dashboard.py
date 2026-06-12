@@ -338,6 +338,7 @@ _NEARMISS_COLUMNS = [
 # A speculative, opt-in, never-actionable fade — NOT an edge.
 _NO_STRUCTURE_COLUMNS = [
     {"name": "new", "label": "", "field": "new", "align": "center", "required": True},
+    {"name": "basket", "label": "★", "field": "basket", "align": "center", "required": True},
     {"name": "kind", "label": "Kind", "field": "kind", "align": "center", "sortable": True},
     {"name": "scope_label", "label": "Level", "field": "scope_label", "align": "center", "sortable": True},
     {"name": "sport", "label": "Sport", "field": "sport", "align": "center", "sortable": True},
@@ -609,6 +610,9 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                              # rebuilding the other tables. `scan_status` cached so the hot path never reads
                              # the store. `pending_refresh` = (kind, monotonic deadline) for the debounce.
                              "view": [], "scan_status": None, "pending_refresh": None,
+                             # Phase 3: hand-picked NO-fade basket (opportunity_ids). Persists across the
+                             # NO-fade tables + filter changes; pruned to live ids on each rescan.
+                             "basket": set(),
                              # Branch 2 render telemetry (shown in Diagnostics): the last rerender's phase
                              # durations, so any further UI tuning (e.g. PR1b table-row diffing) is gated on
                              # measurement, not guesswork. `freshness_text` caches the last banner string so
@@ -1213,14 +1217,97 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                                       "text-xs text-gray-500")
         ns_cards = ui.column().classes("w-full gap-2")
         ns_excluded_label = ui.label().classes("text-xs text-gray-500")
+        # Phase 3: hand-picked basket — tick the ★ box on any row to add a fade. A what-if aggregate, gross
+        # and top-of-book; NOT a portfolio model / EV / net of fees.
+        ns_basket_card = ui.card().classes("w-full mt-2 bg-amber-50")
+        with ns_basket_card:
+            with ui.row().classes("items-center justify-between w-full"):
+                ns_basket_label = ui.label().classes("text-sm font-bold")
+                with ui.row().classes("items-center gap-2"):
+                    ns_basket_export_btn = ui.button("Export basket CSV").props("dense outline")
+                    ns_basket_clear_btn = ui.button("Clear").props("dense outline color=grey")
+            ns_basket_stats = ui.label().classes("text-sm")
+            ns_basket_warn = ui.label().classes("text-xs text-amber-800")
+            ui.label("A hand-picked what-if — gross, top-of-book. NOT a portfolio model, not EV, not net of "
+                     "fees. Max simultaneous loss assumes every fade loses at once; same-ladder and "
+                     "same-tournament fades are correlated.").classes("text-xs text-gray-500")
     # Event / Tournament / Championship (in display order) + the combined All table.
     ns_scope_tables = {"event": ns_event_table, "tournament": ns_tournament_table,
                        "championship": ns_championship_table}
     ns_scope_labels = {"event": ns_event_label, "tournament": ns_tournament_label,
                        "championship": ns_championship_label}
     _ns_tables = (*ns_scope_tables.values(), ns_all_table)
+
+    # Basket toggle: a STANDALONE star q-btn per row emitting its OWN 'basket' event via the canonical
+    # NiceGUI body-cell-slot idiom (`@click="$parent.$emit(...)"` + `table.on(...)`). Independent of Quasar
+    # row-selection, so it never disturbs the click-to-open detail panel (and _on_select's cross-table
+    # selection-clear never resets it). The icon reflects `props.row.basket`; the server flips state and the
+    # next rebuild re-stamps the row, so the star updates.
+    _BASKET_CELL_SLOT = (
+        '<q-td :props="props">'
+        '<q-btn flat dense round size="sm" '
+        ':icon="props.row.basket ? \'star\' : \'star_border\'" '
+        ':color="props.row.basket ? \'amber\' : \'grey-5\'" '
+        '@click="() => $parent.$emit(\'basket\', {id: props.row.opportunity_id, on: !props.row.basket})" />'
+        '</q-td>')
+
+    def _on_basket_toggle(e: Any) -> None:
+        args = e.args or {}
+        oid, on = args.get("id"), args.get("on")
+        if not oid:
+            return
+        if on:
+            state["basket"].add(oid)
+        else:
+            state["basket"].discard(oid)
+        refresh_no_structure()                 # re-stamp rows (checkbox sticks) + redraw the basket panel
+
     for _t in _ns_tables:
         _t.on_select(_on_select(_t))
+        _t.add_slot("body-cell-basket", _BASKET_CELL_SLOT)
+        _t.on("basket", _on_basket_toggle)
+
+    def _basket_opps() -> list[dict[str, Any]]:
+        """The picked NO-fade unified opps, in basket-add order, dropping any no longer in the snapshot."""
+        return [state["opps"][i] for i in state["basket"] if i in state["opps"]]
+
+    def _render_basket_summary() -> None:
+        """Redraw the basket card from `state["basket"]` ∩ the live snapshot (called after every NO-fade
+        rebuild). Hidden when the basket is empty."""
+        opps = _basket_opps()
+        ns_basket_card.set_visibility(bool(opps))
+        if not opps:
+            return
+        ref_dt = data.parse_fetched_at((state.get("cov") or {}).get("fetched_at"))
+        s = vm.basket_summary(opps, ref_dt=ref_dt)
+        ns_basket_label.set_text(f"★ Basket ({s['n']})")
+        avg = s["avg_days_to_close"]
+        ns_basket_stats.set_text(
+            f"Total cost ${s['total_cost_dollars']:,.2f}  ·  max simultaneous loss "
+            f"${s['max_simultaneous_loss_dollars']:,.2f}  ·  best case if all hit "
+            f"${s['best_case_if_all_hit_dollars']:,.2f}"
+            + (f"  ·  avg {avg:g} days to close" if avg is not None else ""))
+        warns = [f"⚠ {ov['participant']} — {ov['count']} rungs of the same ladder "
+                 f"({ov['tournament']}); not independent" for ov in s["ladder_overlaps"]]
+        warns += [f"Concentration: {c['count']} fades in {c['tournament']}"
+                  for c in s["tournament_concentration"]]
+        ns_basket_warn.set_text("   ·   ".join(warns))
+        ns_basket_warn.set_visibility(bool(warns))
+
+    def _export_basket() -> None:
+        opps = _basket_opps()
+        if not opps:
+            ui.notify("Basket is empty", type="warning")
+            return
+        sid = (state.get("cov") or {}).get("snapshot_id") or "x"
+        ui.download.content(export.build_basket_csv(opps), f"kalshi-basket-{sid}.csv", "text/csv")
+
+    def _clear_basket() -> None:
+        state["basket"].clear()
+        refresh_no_structure()
+
+    ns_basket_export_btn.on_click(_export_basket)
+    ns_basket_clear_btn.on_click(_clear_basket)
 
     # World Cup Qualifier Setups (PR3): a separate, default-on, opt-in DIAGNOSTIC section — kept out of the
     # strict Actionable/Review/Blocked sections. Populated by the exact-order (#4) top-two bundles + game-
@@ -1609,6 +1696,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         state["cov"] = cov
         state["opps_list"] = opps
         state["opps"] = {o.get("opportunity_id"): o for o in opps}
+        state["basket"] = vm.prune_basket(state["basket"], state["opps"])   # drop picks gone since last scan
         state["ever_seen"].update(state["opps"].keys())     # after classify, so 'returned' detection works
         state["options"] = vm.derive_options(opps)
         state["backlog"] = bundle["backlog"]
@@ -1719,6 +1807,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             ns_cards.clear()
             for _l in _all_labels:
                 _l.set_visibility(False)
+            ns_basket_card.set_visibility(False)
 
         if not include_ns:
             _hide_all()
@@ -1759,7 +1848,8 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             return {**vm.no_structure_row(o, new_ids, chg, flash, ref_dt=ref_dt),
                     **vm.cheapness_cells(cheapness_by_oid.get(o.get("opportunity_id"))),
                     **vm.ladder_metric_cells(metrics_by_group.get(vm.group_key_of(o))),
-                    **vm.title_path_cells_for(o)}            # championship title-path (blank otherwise)
+                    **vm.title_path_cells_for(o),            # championship title-path (blank otherwise)
+                    "basket": o.get("opportunity_id") in state["basket"]}   # ★ basket checkbox state
 
         ns_legacy_label.set_visibility(False)
         ns_cards.clear()
@@ -1845,6 +1935,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             f"{excluded:,} NO-fade row(s) excluded from these tables because their settlement scope is "
             "unsupported or unmapped." if excluded else "")
         ns_excluded_label.set_visibility(bool(excluded))
+        _render_basket_summary()                 # redraw the hand-picked basket aggregate
 
     def _render_fade_card(card: dict[str, Any]) -> None:
         """One participant's NO-fade ladder as a collapsible card (rungs broad→deep, components + score)."""

@@ -1103,6 +1103,56 @@ def group_key_of(o: dict[str, Any]) -> tuple:
     return (str(o.get("sport") or ""), str(o.get("participant_key") or ""), str(o.get("tournament") or ""))
 
 
+# --- NO-fade basket (Phase 3): a hand-picked what-if, gross/top-of-book — NOT a portfolio model / EV / fees.
+def prune_basket(basket: Iterable[str] | None, present_ids: Iterable[str] | None) -> set[str]:
+    """Drop basket opportunity_ids that no longer exist in the latest snapshot (so a rescan never leaves a
+    stale pick). Pure set intersection."""
+    present = set(present_ids or [])
+    return {i for i in (basket or set()) if i in present}
+
+
+def basket_summary(selected_opps: Iterable[dict[str, Any]] | None,
+                   ref_dt: datetime | None = None) -> dict[str, Any]:
+    """Aggregate what-if over a hand-picked NO-fade basket — GROSS, top-of-book; NOT a portfolio model, NOT
+    EV, NOT net of fees. `max_simultaneous_loss_dollars` assumes EVERY fade loses at once.
+    `ladder_overlaps` are participants picked on ≥2 rungs of the SAME `(sport, participant_key, tournament)`
+    ladder (not independent — one elimination settles them together); `tournament_concentration` are
+    `(sport, tournament)` groups with ≥2 picks (correlated even across different participants). `overlap_oids`
+    flags the per-row badge set. Avg days-to-close needs `ref_dt` (the snapshot stamp)."""
+    opps = list(selected_opps or [])
+    def _c(o, k):
+        v = _num_or_none(o.get(k))
+        return v if v is not None else 0
+    total_cost = sum(_c(o, "cost_c") for o in opps) / 100.0
+    max_loss = sum(max(0.0, -_c(o, "worst_case_profit_c")) for o in opps) / 100.0
+    best = sum(_c(o, "best_case_profit_c") for o in opps) / 100.0
+    day_vals = [d for o in opps if (d := days_until(o.get("no_structure_close_time"), ref_dt)) is not None]
+    # Ladder overlap (same participant ladder) + tournament concentration (same sport+tournament).
+    by_ladder: dict[tuple, list[dict[str, Any]]] = {}
+    by_tournament: dict[tuple, list[dict[str, Any]]] = {}
+    for o in opps:
+        by_ladder.setdefault(group_key_of(o), []).append(o)
+        by_tournament.setdefault((str(o.get("sport") or ""), str(o.get("tournament") or "")), []).append(o)
+    overlaps, overlap_oids = [], set()
+    for (sport, pkey, tournament), grp in by_ladder.items():
+        if pkey and len(grp) >= 2:
+            overlaps.append({"participant": grp[0].get("name") or pkey, "tournament": tournament,
+                             "count": len(grp)})
+            overlap_oids.update(o.get("opportunity_id") for o in grp)
+    concentration = [{"sport": s, "tournament": t, "count": len(grp)}
+                     for (s, t), grp in by_tournament.items() if t and len(grp) >= 2]
+    return {
+        "n": len(opps),
+        "total_cost_dollars": round(total_cost, 2),
+        "max_simultaneous_loss_dollars": round(max_loss, 2),
+        "best_case_if_all_hit_dollars": round(best, 2),
+        "avg_days_to_close": round(sum(day_vals) / len(day_vals), 1) if day_vals else None,
+        "ladder_overlaps": overlaps,
+        "overlap_oids": overlap_oids,
+        "tournament_concentration": concentration,
+    }
+
+
 # World Cup Qualifier Setups — human labels for the setup types (two exact-order tiers + game support).
 _SETUP_TYPE_LABEL = {
     "exact_order_top2_bundle": "Diagnostic top-two bundle",

@@ -25,6 +25,15 @@ def _csv_rows(z: zipfile.ZipFile, name: str) -> list[dict]:
     return list(csv.DictReader(io.StringIO(z.read(name).decode("utf-8"))))
 
 
+def test_build_basket_csv_round_trips_unified_columns():
+    opps = [_opp("a", cost_c=10), _opp("b", cost_c=8)]
+    blob = export.build_basket_csv(opps)
+    assert isinstance(blob, bytes)
+    rows = list(csv.DictReader(io.StringIO(blob.decode("utf-8"))))
+    assert [r["opportunity_id"] for r in rows] == ["a", "b"]      # only the basket rows, in order
+    assert "cost_c" in rows[0]                                    # UNIFIED_COLUMNS shape preserved
+
+
 def test_zip_has_all_members():
     blob = export.build_export_zip(
         snapshot_id=5, fetched_at="2026-06-04 12:00:00 UTC", opportunities=[_opp("a"), _opp("b")],
