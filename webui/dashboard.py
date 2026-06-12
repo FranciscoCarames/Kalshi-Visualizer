@@ -338,7 +338,7 @@ _NEARMISS_COLUMNS = [
 # A speculative, opt-in, never-actionable fade — NOT an edge.
 _NO_STRUCTURE_COLUMNS = [
     {"name": "new", "label": "", "field": "new", "align": "center", "required": True},
-    {"name": "basket", "label": "★", "field": "basket", "align": "center", "required": True},
+    {"name": "basket", "label": "Basket", "field": "basket", "align": "center", "required": True},
     {"name": "kind", "label": "Kind", "field": "kind", "align": "center", "sortable": True},
     {"name": "scope_label", "label": "Level", "field": "scope_label", "align": "center", "sortable": True},
     {"name": "sport", "label": "Sport", "field": "sport", "align": "center", "sortable": True},
@@ -1217,8 +1217,8 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                                       "text-xs text-gray-500")
         ns_cards = ui.column().classes("w-full gap-2")
         ns_excluded_label = ui.label().classes("text-xs text-gray-500")
-        # Phase 3: hand-picked basket — tick the ★ box on any row to add a fade. A what-if aggregate, gross
-        # and top-of-book; NOT a portfolio model / EV / net of fees.
+        # Phase 3: hand-picked basket — click a row's "Add to basket" icon to add a fade. A what-if
+        # aggregate, gross and top-of-book; NOT a portfolio model / EV / net of fees.
         ns_basket_card = ui.card().classes("w-full mt-2 bg-amber-50")
         with ns_basket_card:
             with ui.row().classes("items-center justify-between w-full"):
@@ -1233,7 +1233,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             ui.label("A hand-picked what-if — gross, top-of-book. NOT a portfolio model, not EV, not net of "
                      "fees. Max simultaneous loss assumes every fade loses at once; same-ladder and "
                      "same-tournament fades are correlated.").classes("text-xs text-gray-500")
-        # Hidden until the first ★ is ticked — `_render_basket_summary` shows it when the basket is non-empty
+        # Hidden until the first fade is added — `_render_basket_summary` shows it when the basket is non-empty
         # (a card created visible would otherwise flash an empty disclaimer bar before any refresh runs).
         ns_basket_card.set_visibility(False)
     # Event / Tournament / Championship (in display order) + the combined All table.
@@ -1243,17 +1243,20 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                        "championship": ns_championship_label}
     _ns_tables = (*ns_scope_tables.values(), ns_all_table)
 
-    # Basket toggle: a STANDALONE star q-btn per row emitting its OWN 'basket' event via the canonical
+    # Basket toggle: a STANDALONE add-to-list q-btn per row emitting its OWN 'basket' event via the canonical
     # NiceGUI body-cell-slot idiom (`@click="$parent.$emit(...)"` + `table.on(...)`). Independent of Quasar
     # row-selection, so it never disturbs the click-to-open detail panel (and _on_select's cross-table
-    # selection-clear never resets it). The icon reflects `props.row.basket`; the server flips state and the
-    # next rebuild re-stamps the row, so the star updates.
+    # selection-clear never resets it). A neutral list-add icon (NOT a checkbox — avoids confusion with the
+    # row-select checkbox) that turns primary when in the basket; the server flips state and the next rebuild
+    # re-stamps the row, so the icon updates.
     _BASKET_CELL_SLOT = (
         '<q-td :props="props">'
         '<q-btn flat dense round size="sm" '
-        ':icon="props.row.basket ? \'star\' : \'star_border\'" '
-        ':color="props.row.basket ? \'amber\' : \'grey-5\'" '
-        '@click="() => $parent.$emit(\'basket\', {id: props.row.opportunity_id, on: !props.row.basket})" />'
+        ':icon="props.row.basket ? \'playlist_add_check\' : \'playlist_add\'" '
+        ':color="props.row.basket ? \'primary\' : \'grey-6\'" '
+        '@click="() => $parent.$emit(\'basket\', {id: props.row.opportunity_id, on: !props.row.basket})">'
+        '<q-tooltip>{{ props.row.basket ? \'Remove from basket\' : \'Add to basket\' }}</q-tooltip>'
+        '</q-btn>'
         '</q-td>')
 
     def _on_basket_toggle(e: Any) -> None:
@@ -1285,7 +1288,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             return
         ref_dt = data.parse_fetched_at((state.get("cov") or {}).get("fetched_at"))
         s = vm.basket_summary(opps, ref_dt=ref_dt)
-        ns_basket_label.set_text(f"★ Basket ({s['n']})")
+        ns_basket_label.set_text(f"Basket — {s['n']} fade(s)")
         avg = s["avg_days_to_close"]
         ns_basket_stats.set_text(
             f"Total cost ${s['total_cost_dollars']:,.2f}  ·  max simultaneous loss "
@@ -1854,7 +1857,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                     **vm.cheapness_cells(cheapness_by_oid.get(o.get("opportunity_id"))),
                     **vm.ladder_metric_cells(metrics_by_group.get(vm.group_key_of(o))),
                     **vm.title_path_cells_for(o),            # championship title-path (blank otherwise)
-                    "basket": o.get("opportunity_id") in state["basket"]}   # ★ basket checkbox state
+                    "basket": o.get("opportunity_id") in state["basket"]}   # basket add-toggle state
 
         ns_legacy_label.set_visibility(False)
         ns_cards.clear()
