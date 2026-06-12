@@ -699,7 +699,9 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                 "A speculative, opt-in fade: the cheapest Buy-NO you can take, optionally bounded by a Buy-YES "
                 "on the broader rung that contains it (a defined band). NOT an edge — a cheap NO is cheap "
                 "because the market thinks the YES is likely. Gross, top-of-book, uncalibrated.")
-            ns_kind = ui.select(_NO_STRUCTURE_KINDS, value="all", label="NO-fade kind").props(
+            # Default to single cheap-NO legs (outrights); the 2-leg bounded bands stay recoverable via this
+            # filter ("Bounded bands" / "All"). The goal for now is to signal cheap NO legs, not YES+NO bands.
+            ns_kind = ui.select(_NO_STRUCTURE_KINDS, value="outright", label="NO-fade kind").props(
                 "stack-label").classes("min-w-[9rem]")
             ns_max_loss = ui.number("Max loss ¢", value=config.NO_STRUCTURE_DEFAULT_MAX_LOSS_C,
                                     min=0, max=config.NO_STRUCTURE_BAND_MAX_LOSS_C, format="%.0f").classes("w-28")
@@ -1136,14 +1138,12 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
     # Cheap NO fades (NO-anchored structures): promoted directly BELOW Bounded-Loss Bets and ON by default —
     # it's the closest sibling (a cheap convex fade anchored on a Buy-NO leg). Collapsible + switch-gated like
     # the other watch-only sections. A speculative watch-only fade, NOT an edge.
-    ns_expansion, ns_title, ns_cols_row = _expansion_header("Cheap NO fades — bounded-loss NO anchor (watch-only)")
+    ns_expansion, ns_title, ns_cols_row = _expansion_header("Cheap NO fades — single Buy-NO watchlist (watch-only)")
     with ns_expansion:
-        ui.label("The cheapest Buy-NO you can take. A 'band' bounds it with a Buy-YES on the broader rung "
-                 "that contains it, so loss is capped at the small overpay (cost − 100¢) and the "
-                 "'reaches broader, not deeper' window pays about +$1; a 'single NO' is an unbounded "
-                 "directional fade watchlist. A cheap NO is cheap because the market thinks the YES is "
-                 "likely — this is NOT an edge. Gross, top-of-book, uncalibrated.").classes(
-                     "text-xs text-gray-500")
+        ui.label("The cheapest Buy-NO you can take — a single directional fade (you win if the outcome does "
+                 "NOT happen). A cheap NO is cheap because the market thinks the YES is likely — this is NOT "
+                 "an edge. Gross, top-of-book, uncalibrated. (The 2-leg bounded 'bands' are off by default; "
+                 "switch the 'NO-fade kind' filter to see them.)").classes("text-xs text-gray-500")
         ui.label("Split by SETTLEMENT LEVEL — how the contract settles, NOT the sport's naming. "
                  "Event = a single contest (game/match/race; incl. a golf or motorsport field result — a "
                  "single field outcome, not a bracket above another contest). Tournament = one level up "
