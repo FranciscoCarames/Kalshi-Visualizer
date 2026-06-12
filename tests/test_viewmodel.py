@@ -1124,6 +1124,40 @@ def test_no_fade_ladder_view_keeps_high_child_no_bands():
     assert len(cards) == 1 and cards[0]["player_key"] == "X"
 
 
+def test_ladder_breadcrumb_full_names_broad_to_deep():
+    assert vm.ladder_breadcrumb(
+        [{"rung": "Reach Semifinal"}, {"rung": "Reach Final"}, {"rung": "Win Tournament"}]
+    ) == "Reach Semifinal › Reach Final › Win Tournament"
+    # FULL names — "Win Conference" is NOT abbreviated (it would be ambiguous otherwise).
+    assert vm.ladder_breadcrumb(
+        [{"rung": "Reach Playoffs"}, {"rung": "Win Conference"}, {"rung": "Win Championship"}]
+    ) == "Reach Playoffs › Win Conference › Win Championship"
+    assert vm.ladder_breadcrumb(
+        [{"rung": "Top 20"}, {"rung": "Top 10"}, {"rung": "Top 5"}, {"rung": "Win Tournament"}]
+    ) == "Top 20 › Top 10 › Top 5 › Win Tournament"
+    assert vm.ladder_breadcrumb([]) == ""
+    assert vm.ladder_breadcrumb(None) == ""
+    assert vm.ladder_breadcrumb([{"rung": "Win Tournament"}]) == "Win Tournament"
+    # Blank/None rung entries are skipped, not rendered as empty segments.
+    assert vm.ladder_breadcrumb([{"rung": "A"}, {"rung": ""}, {"rung": None}, {"rung": "B"}]) == "A › B"
+
+
+def test_flat_default_keeps_non_laddered_fade_that_ladder_lens_omits():
+    # Regression for the audit-revised decision: the flat scoped views (the DEFAULT) must keep a
+    # single-contest / field-outright cheap NO that the participant-ladder lens can't show. An esports
+    # title-winner outright has no ≥2-node containment ladder → it produces NO ladder card, but it MUST
+    # still appear in the flat default view.
+    opp = {"opportunity_id": "e1", "bucket": "no_structure",
+           "relationship_type": "no_structure_outright", "sport": "esports",
+           "participant_key": "team1", "tournament": "IEM", "ticker_1": "KXCS2-X",
+           "no_structure_scope": "tournament", "worst_case_profit_c": -10,
+           "action_2_price_c": 10, "comp_quote_quality": "Tight"}
+    flat = vm.no_structure_scoped_views([opp], max_loss_c=100)
+    assert any(o["opportunity_id"] == "e1" for o in flat["tournament"])   # present in the flat default
+    # The ladder lens omits it (no frames / no ladder → no card) — so the flat view is the only place it shows.
+    assert vm.no_fade_ladder_view([opp], lambda s, pk, t: [], max_loss_c=100) == []
+
+
 def test_no_fade_ladder_view_fail_closed_when_frames_empty():
     opps = [_nsopp("opA", "ALC", "A_FIN", 10)]
     assert vm.no_fade_ladder_view(opps, lambda *a: [], max_loss_c=100) == []   # no frames → no cards

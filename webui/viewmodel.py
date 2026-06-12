@@ -895,6 +895,13 @@ def ladder_summary_row(card: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def ladder_breadcrumb(rungs: Iterable[dict[str, Any]] | None) -> str:
+    """Compact path summary for a NO-fade ladder card title: the FULL rung names broad→deep joined by
+    ' › ' (no abbreviation — e.g. 'Win Conference' stays unambiguous). Display-only; '' for an empty
+    ladder."""
+    return " › ".join(str(r.get("rung") or "") for r in (rungs or []) if r.get("rung"))
+
+
 def _no_leg_ticker(o: dict[str, Any]) -> str:
     """Market ticker of the cheap Buy-NO leg on a UNIFIED NO-fade opp: a band's NO leg is the deeper child
     (`ticker_2`); an outright's single leg is `ticker_1`."""

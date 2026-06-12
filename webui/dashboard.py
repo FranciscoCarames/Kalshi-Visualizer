@@ -709,10 +709,11 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                                       min=0, max=config.NO_STRUCTURE_OUTRIGHT_MAX_C, format="%.0f").classes(
                 "w-32").tooltip("Cap the Buy-NO cost for single-NO (outright) fades only. 0 = off. "
                                 "Bands use 'Max loss ¢' plus the normal quote/status filters.")
-            ns_group = ui.switch("Group by participant (ladder)", value=False).tooltip(
-                "Group the cheap NOs into each participant's containment ladder (broad → deep). A single NO "
-                "anywhere cascades — one elimination = no-win — so a cheap NO at a broad rung is a "
-                "maximally-leveraged longshot fade.")
+            ns_group = ui.switch("Group by participant — ladder path", value=False).tooltip(
+                "Group the cheap NOs into each participant's containment ladder (broad → deep) so the path "
+                "(e.g. Reach SF › Reach Final › Win) reads as one nested unit. A single NO anywhere cascades "
+                "— one elimination = no-win. Shows laddered participants only; single-contest / field-outright "
+                "fades stay in the flat view.")
             ns_sort = ui.select(_NO_FADE_SORTS, value="safe", label="Ladder sort").props(
                 "stack-label").classes("min-w-[12rem]").tooltip(
                 "Cascade score is an ORDINAL longshot-upside score — NOT EV, probability, fair value, or "
@@ -1766,6 +1767,14 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                         ui.label(f"Showing top {len(shown)} of {len(cards):,} ladders by "
                                  f"{('cascade upside' if ns_sort.value == 'cascade' else 'safest')} — narrow "
                                  "filters to see more.").classes("text-xs text-amber-700")
+                    # Honest, quantitative omission note: cheap NOs not on a ladder (single contests / field
+                    # outrights) can't appear here — only the flat view shows them.
+                    represented = sum(1 for c in cards for r in c["rungs"] if r.get("cheap"))
+                    omitted = max(0, len(all_rows) - represented)
+                    if omitted:
+                        ui.label(f"Showing laddered participant paths only — {omitted:,} cheap-NO fade(s) "
+                                 "aren't on a ladder (single contests / field outrights). Switch to the flat "
+                                 "view to see them.").classes("text-xs text-gray-500")
         else:
             # Flat: either the three level tables, or one combined All table.
             for _x in _grouped_only:
@@ -1807,9 +1816,10 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         def _f(v: Any) -> str:
             return "—" if v is None else (f"{v:g}" if isinstance(v, (int, float)) else str(v))
         crows = []
-        for r in card["rungs"]:
+        for i, r in enumerate(card["rungs"]):
             crows.append({
-                "rung": r["rung"], "reach_pct": _f(r["reach_pct"]),
+                "rung": r["rung"], "rung_depth": i,           # raw name + broad→deep depth for indentation
+                "reach_pct": _f(r["reach_pct"]),
                 "buy_no": "0¢ — inspect quote" if r["zero_cost"] else _f(r["no_c"]),
                 "max_win": _f(r["max_win"]),
                 "leverage": "—" if r["leverage"] is None else f"{r['leverage']:g}×",
@@ -1818,14 +1828,21 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                 "quote": r["quote"], "size": _f(r["size"]),
                 "tag": "● cheap" if r["cheap"] else "",
             })
-        title = f"{card['sport_label']} · {card['player'] or card['player_key']} — cascade {card['card_score']:g}"
+        # Title carries the containment PATH (full rung names broad→deep) so the collapsed card shows it.
+        bc = vm.ladder_breadcrumb(card["rungs"])
+        title = f"{card['sport_label']} · {card['player'] or card['player_key']}"
+        title += (f" — {bc}" if bc else "") + f"  ·  cascade {card['card_score']:g}"
         if card.get("implied_win_pct") is not None:
             title += f" · implied win {card['implied_win_pct']:g}%"
         if card.get("inverted"):
             title += " · ⚠ inverted ladder"
         with ui.expansion(title).classes("w-full border rounded"):
-            ui.table(columns=_NO_FADE_LADDER_COLUMNS, rows=crows, row_key="rung").props(
+            tbl = ui.table(columns=_NO_FADE_LADDER_COLUMNS, rows=crows, row_key="rung").props(
                 "dense").classes("w-full overflow-x-auto")
+            # Indent each deeper rung (CSS only — the `rung` field stays the raw name for sort/copy/export).
+            tbl.add_slot("body-cell-rung",
+                         '<q-td :props="props" :style="\'padding-left:\' + '
+                         '((Number(props.row.rung_depth)||0)*1.25 + 0.5) + \'em\'">{{ props.row.rung }}</q-td>')
             ui.label("Cascade score is an ordinal longshot-upside score — NOT EV, probability, fair "
                      "value, or mispricing; a higher score usually means a LOWER implied chance. A single "
                      "NO collapses the whole ladder to no-win. Gross, top-of-book, uncalibrated; not an "
