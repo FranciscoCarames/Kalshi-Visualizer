@@ -1231,6 +1231,9 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             ui.label("A hand-picked what-if — gross, top-of-book. NOT a portfolio model, not EV, not net of "
                      "fees. Max simultaneous loss assumes every fade loses at once; same-ladder and "
                      "same-tournament fades are correlated.").classes("text-xs text-gray-500")
+        # Hidden until the first ★ is ticked — `_render_basket_summary` shows it when the basket is non-empty
+        # (a card created visible would otherwise flash an empty disclaimer bar before any refresh runs).
+        ns_basket_card.set_visibility(False)
     # Event / Tournament / Championship (in display order) + the combined All table.
     ns_scope_tables = {"event": ns_event_table, "tournament": ns_tournament_table,
                        "championship": ns_championship_table}
