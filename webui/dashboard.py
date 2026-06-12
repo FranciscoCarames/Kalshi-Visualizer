@@ -691,6 +691,30 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             export_btn = ui.button("Export (ZIP)")
             ui.button("Close", on_click=settings_dialog.close)
     settings_btn.on_click(settings_dialog.open)
+
+    # Persist per-user UI preferences across page reloads / server restarts. `app.storage.user` is a
+    # server-side dict keyed per browser (the `storage_secret` in serve.py is the prerequisite). `bind_value`
+    # syncs the STORED value into the control first (backward binding wins the initial sync), falling back to
+    # the control's `value=` default the first time a key is absent — so first-ever load keeps the intended
+    # defaults, every reload restores the last choice. This runs NOW, before the on_value_change handlers are
+    # wired below, so restoring a stored value never fires a handler mid-build. Deliberately EXCLUDED: the
+    # cascade Sport/Tournament/Participant selects (URL-driven + cascade-pruned — a stale pick could be invalid
+    # against freshly-built option lists) and the Auto-refresh switch/interval (they mirror the SERVER-WIDE
+    # scan scheduler, not a per-user choice).
+    for _ctrl, _key in (
+        (larger_sw, "pref_larger_text"), (rules_sw, "pref_rules"),
+        (pos_framing_sw, "pref_position_framing"), (show_net_sw, "pref_show_net"),
+        (show_review_sw, "pref_show_review"), (show_blocked_sw, "pref_show_blocked"),
+        (qs_switch, "pref_qualifier_setups"), (rb_switch, "pref_bounded_loss"),
+        (nm_switch, "pref_near_miss"), (ns_switch, "pref_cheap_no"), (ns_group, "pref_no_group"),
+        (rb_max_loss, "pref_rb_max_loss"), (rb_min_ratio, "pref_rb_min_ratio"),
+        (rb_min_outright, "pref_rb_min_outright"), (rb_max_ratio, "pref_rb_max_ratio"),
+        (nm_max_over, "pref_nm_max_over"), (ns_kind, "pref_ns_kind"),
+        (ns_max_loss, "pref_ns_max_loss"), (ns_max_buy_no, "pref_ns_max_buy_no"),
+        (ns_sort, "pref_ns_sort"), (rank_sel, "pref_rank"), (active_sw, "pref_active_only"),
+        (tz_select, "pref_tz"), (window_select, "pref_backlog_window"),
+    ):
+        _ctrl.bind_value(app.storage.user, _key)
     chips = ui.row().classes("gap-2 flex-wrap")
 
     # `tabular-nums` keeps the live age digits a constant width so the per-second tick doesn't reflow (PR 4).

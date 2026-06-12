@@ -15,8 +15,11 @@ import importlib
 
 from nicegui import ui
 
+import config
 import webui.dashboard
 
 importlib.reload(webui.dashboard)
 
-ui.run()
+# A storage_secret is required for the dashboard's `app.storage.user`-backed UI-preference persistence
+# (serve.py passes one in production); the dev-only fallback is fine for the headless simulation.
+ui.run(storage_secret=config.NICEGUI_STORAGE_SECRET_FALLBACK)
