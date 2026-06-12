@@ -1110,6 +1110,20 @@ def test_no_fade_ladder_view_cascade_vs_safe_ordering():
     assert {c["player_key"] for c in casc} == {"ALC", "SIN"}
 
 
+def test_no_fade_ladder_view_keeps_high_child_no_bands():
+    # The Buy-NO cap is outright-only: a band whose deep child-NO leg is 90¢ (bounded max-loss small) must
+    # still reach the grouped cascade view at Max Buy-NO 15¢ — regression for the second consumer of the gate.
+    rows = [_lr("X", "Xavier", "Reach Final", 10, "X_FIN"),
+            _lr("X", "Xavier", "Win Tournament", 90, "X_WIN")]
+    band = {"opportunity_id": "bx", "bucket": "no_structure", "relationship_type": "no_structure_band",
+            "sport": "tennis", "participant_key": "X", "tournament": "X",
+            "ticker_1": "X_FIN", "ticker_2": "X_WIN",          # band's NO leg = the deeper child = ticker_2
+            "worst_case_profit_c": -15, "action_2_price_c": 90, "comp_quote_quality": "Tight"}
+    cards = vm.no_fade_ladder_view([band], lambda s, pk, t: rows if pk == "X" else [],
+                                   max_loss_c=100, max_buy_no_c=15)
+    assert len(cards) == 1 and cards[0]["player_key"] == "X"
+
+
 def test_no_fade_ladder_view_fail_closed_when_frames_empty():
     opps = [_nsopp("opA", "ALC", "A_FIN", 10)]
     assert vm.no_fade_ladder_view(opps, lambda *a: [], max_loss_c=100) == []   # no frames → no cards

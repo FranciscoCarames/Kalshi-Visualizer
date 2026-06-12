@@ -589,9 +589,11 @@ def no_structure_view(opps: Iterable[dict[str, Any]] | None, *, max_loss_c: floa
                       good_quote_only: bool = True) -> list[dict[str, Any]]:
     """NO-anchored structures whose bounded max-loss ≤ `max_loss_c` ¢. `kind` ∈ {all, band, outright}
     (band == the ladder-bounded structures; outright == single Buy-NO watchlist). `max_buy_no_c` (0 = off)
-    caps the Buy-NO leg cost — the "cheapest NO" gate. `good_quote_only` keeps only Tight/OK books (the
-    default; the wide/one-sided cheap NOs are usually stale, not opportunities). A row missing a gated field
-    is hidden only when that filter is active."""
+    caps the Buy-NO leg cost — the "cheapest NO" gate — for OUTRIGHTS ONLY: a band's risk is its bounded
+    max-loss (already gated by `max_loss_c`), not its deep child-NO price, so gating bands by Buy-NO would
+    wrongly hide bounded-loss bands on expensive deep rungs. `good_quote_only` keeps only Tight/OK books
+    (the default; wide/one-sided cheap NOs are usually stale). A row missing a gated field is hidden only
+    when that filter is active."""
     out: list[dict[str, Any]] = []
     for o in (opps or []):
         if o.get("bucket") != "no_structure":
@@ -605,7 +607,7 @@ def no_structure_view(opps: Iterable[dict[str, Any]] | None, *, max_loss_c: floa
             continue
         if max(0.0, -wc) > max_loss_c:                # bounded max-loss ¢ (band: cost−100; outright: cost)
             continue
-        if max_buy_no_c:
+        if max_buy_no_c and not _is_band(o):           # cheapness cap is an OUTRIGHT gate; bands → max_loss
             no = _num_or_none(o.get("action_2_price_c"))   # the Buy-NO leg cost
             if no is None or no > max_buy_no_c:
                 continue

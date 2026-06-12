@@ -705,7 +705,8 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                                     min=0, max=config.NO_STRUCTURE_BAND_MAX_LOSS_C, format="%.0f").classes("w-28")
             ns_max_buy_no = ui.number("Max Buy-NO ¢", value=config.NO_STRUCTURE_DEFAULT_MAX_BUY_NO_C,
                                       min=0, max=config.NO_STRUCTURE_OUTRIGHT_MAX_C, format="%.0f").classes(
-                "w-32").tooltip("Cap the Buy-NO anchor cost — the 'cheapest NO' gate. 0 = off.")
+                "w-32").tooltip("Cap the Buy-NO cost for single-NO (outright) fades only. 0 = off. "
+                                "Bands use 'Max loss ¢' plus the normal quote/status filters.")
             ns_group = ui.switch("Group by participant (ladder)", value=False).tooltip(
                 "Group the cheap NOs into each participant's containment ladder (broad → deep). A single NO "
                 "anywhere cascades — one elimination = no-win — so a cheap NO at a broad rung is a "

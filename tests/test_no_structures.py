@@ -148,6 +148,22 @@ def test_view_filters_kind_maxloss_and_buy_no():
     assert {o["action_2_price_c"] for o in capped} == {6}
 
 
+def test_max_buy_no_caps_outrights_only_not_bands():
+    """The Buy-NO cheapness cap is an OUTRIGHT gate. A band's deep child-NO leg can be expensive (≈90¢)
+    while its bounded max-loss is small, so the cap must NOT hide it — bands are governed by max-loss."""
+    band = _ns_opp("b1", "championship", relationship_type="no_structure_band",
+                   worst_case_profit_c=-15, action_2_price_c=90)    # child NO 90¢, bounded max-loss 15¢
+    out = _ns_opp("o1", "match_game", relationship_type="no_structure_outright",
+                  worst_case_profit_c=-30, action_2_price_c=30)     # single NO 30¢
+    # cap 15: the band is KEPT (max-loss 15 ≤ 100), the outright is DROPPED (Buy-NO 30 > 15).
+    kept = {o["opportunity_id"] for o in vm.no_structure_view([band, out], max_loss_c=100, max_buy_no_c=15)}
+    assert kept == {"b1"}
+    # the band STILL respects the max-loss gate: tightening max_loss to 10 drops it (max-loss 15 > 10).
+    assert vm.no_structure_view([band], max_loss_c=10, max_buy_no_c=15) == []
+    # cap off (0): the high-NO outright is kept (the Buy-NO gate is disabled).
+    assert {o["opportunity_id"] for o in vm.no_structure_view([out], max_loss_c=100, max_buy_no_c=0)} == {"o1"}
+
+
 def test_view_good_quote_only_default_filters_wide():
     parent = market(_PARENT, yes_ask_c=96, yes_bid_c=94, no_ask_c=6, display_c=95, quality="Wide")
     child = market(_CHILD, yes_ask_c=90, yes_bid_c=88, no_ask_c=10, display_c=89, quality="Wide")
