@@ -114,6 +114,20 @@ def test_close_time_carries_to_finding_and_unified():
     assert "no_structure_close_time" in scanner.UNIFIED_COLUMNS
 
 
+def test_faded_node_and_display_carry_to_unified():
+    parent = market(_PARENT, yes_ask_c=96, yes_bid_c=94, no_ask_c=6, display_c=95)
+    child = market(_CHILD, yes_ask_c=90, yes_bid_c=88, no_ask_c=10, display_c=89)
+    band = _bands(no_structures.find_no_structures([parent, child]))[0]
+    assert band["faded_node"] == _CHILD and band["faded_display_c"] == 89   # band fades the child rung
+    ub = scanner._to_unified_no_structure(band, sports.TENNIS)
+    assert ub["no_structure_faded_node"] == _CHILD and ub["no_structure_faded_display_c"] == 89
+    cheap = market(_CHILD, yes_ask_c=92, yes_bid_c=90, no_ask_c=10, display_c=88)
+    out = _outrights(no_structures.find_no_structures([cheap]))[0]
+    assert out["faded_node"] == _CHILD and out["faded_display_c"] == 88
+    for col in ("no_structure_faded_node", "no_structure_faded_display_c"):
+        assert col in scanner.UNIFIED_COLUMNS
+
+
 # --- outright economics ------------------------------------------------------------------------------
 def test_outright_cheap_no_emitted_dear_no_skipped():
     cheap = market(_CHILD, yes_ask_c=92, yes_bid_c=90, no_ask_c=10)   # buy NO 10 ≤ 25 → emitted

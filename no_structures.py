@@ -161,6 +161,9 @@ def _build_band(cfg, player_key: str, tournament: str, child_node: str, parent_n
         # A NO-fade band is classified by its faded DEEPER (child) NO leg — that rung is the risk thesis.
         # Pass the child's stage too so a team "Reach Playoffs" child → tournament, "Win Conference" → championship.
         "scope": scope_for(cfg, child.get("kind"), child.get("stage")),
+        # Faded leg's ladder node + display price → "Cheapness vs field" (compares this leg vs the field
+        # de-vig at the same node). The band fades the child, so its node/display is the child's.
+        "faded_node": child_node, "faded_display_c": consistency._disp_c(child),
         "status": NO_STRUCTURE_BAND,
         "player": parent.get("player") or child.get("player") or "",
         "player_key": player_key,
@@ -216,6 +219,8 @@ def _outright_findings(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
         out.append({
             "kind": "outright",
             "scope": scope,
+            # Faded leg's ladder node + display price → "Cheapness vs field" (None node when non-laddered).
+            "faded_node": consistency.node_of(r) or "", "faded_display_c": consistency._disp_c(r),
             "status": NO_STRUCTURE_OUTRIGHT,
             "player": r.get("player") or "", "player_key": str(r.get("player_key") or ""),
             "tournament": str(r.get("tournament") or ""), "tour": r.get("tour") or "",

@@ -1045,6 +1045,58 @@ def title_path_cells_for(o: dict[str, Any]) -> dict[str, Any]:
     return sports.get_sport(str(o.get("sport") or "")).title_path_cells()
 
 
+# --- Cheapness vs field (Phase 2): a field-de-vigged GAP, NOT an edge / fair value / independent estimate.
+# The faded leg's market-implied chance minus the field de-vig at its ladder node (positive = the NO looks
+# cheap vs the de-vigged field). The participant's OWN price is INCLUDED in the field (self-inclusive), so
+# it is a rough peer-relative comparison only. DISPLAY-ONLY — never read by classify / bucket_of / _rank_key.
+def cheapness_vs_field_view(opps: Iterable[dict[str, Any]] | None,
+                            field_rows_for) -> dict[str, dict[str, Any]]:
+    """Map `opportunity_id → {"cheapness_vs_field": pp}` for NO fades whose faded node has a mapped survivor
+    count and a priceable field. `field_rows_for(sport, tournament)` injects the tournament's stored contract
+    rows (keeps this pure; dashboard wraps `engine.tournament_field`). De-vig is computed ONCE per
+    `(sport, tournament)` via `consistency.devig_field_by_node`. A row is BLANK (absent from the map) when:
+    the faded leg's quote isn't Tight/OK (no signal off a stale/wide/one-sided book), the node is unmapped /
+    unpriceable, the de-vig is a sparse floor (`partial`), the field has <2 priceable participants
+    (self-only is meaningless), or the participant/display price is missing."""
+    out: dict[str, dict[str, Any]] = {}
+    groups: dict[tuple[str, str], list[dict[str, Any]]] = {}
+    for o in (opps or []):
+        if o.get("bucket") != "no_structure":
+            continue
+        sport, tournament = str(o.get("sport") or ""), str(o.get("tournament") or "")
+        if sport and tournament:
+            groups.setdefault((sport, tournament), []).append(o)
+    for (sport, tournament), gopps in groups.items():
+        field_rows = field_rows_for(sport, tournament) or []
+        if not field_rows:
+            continue
+        cfg = sports.get_sport(sport)
+        spec = cfg.ladder_for(field_rows) if cfg else None
+        field = consistency.devig_field_by_node(field_rows, cfg, ladder=spec)
+        for o in gopps:
+            if str(o.get("comp_quote_quality") or "") not in ("Tight", "OK"):
+                continue
+            entry = field.get(str(o.get("no_structure_faded_node") or ""))
+            if entry is None or entry.get("partial"):
+                continue
+            probs = entry.get("probs") or {}
+            if len(probs) < 2:                                   # self-only field → no comparison
+                continue
+            field_p = probs.get(str(o.get("participant_key") or ""))
+            disp_c = _num_or_none(o.get("no_structure_faded_display_c"))
+            if field_p is None or disp_c is None:
+                continue
+            # market-implied P(happens) − field de-vig P(happens), in pp; + = NO cheap vs field.
+            out[o.get("opportunity_id")] = {"cheapness_vs_field": round((disp_c / 100.0 - field_p) * 100.0, 1)}
+    return out
+
+
+def cheapness_cells(entry: dict[str, Any] | None) -> dict[str, Any]:
+    """Flat-row cell for the Cheapness-vs-field column. Blank (None) when unavailable (frames absent, node
+    unmapped, sparse field, non-Tight/OK quote) so the cell reads "—", never a fabricated 0."""
+    return {"cheapness_vs_field": (entry or {}).get("cheapness_vs_field")}
+
+
 def group_key_of(o: dict[str, Any]) -> tuple:
     """The `(sport, participant_key, tournament)` ladder key for a unified NO-fade opp — the merge key
     between a Championship row and its `ladder_metrics_view` entry."""

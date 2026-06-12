@@ -112,6 +112,9 @@ class Opportunity(BaseModel):
     no_structure_scope: str | None = None
     # NO-fade faded-leg raw ISO close time (display-only; band = later leg). Declared to avoid REST drift.
     no_structure_close_time: str | None = None
+    # NO-fade faded-leg ladder node + display price (display-only) for the "Cheapness vs field" comparison.
+    no_structure_faded_node: str | None = None
+    no_structure_faded_display_c: int | None = None
     # Per-leg tickers + the second leg's link (the panel surfaces both legs).
     ticker_1: str | None = None
     ticker_2: str | None = None

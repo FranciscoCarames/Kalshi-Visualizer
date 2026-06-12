@@ -1061,6 +1061,52 @@ def test_group_key_of_uses_participant_key():
     assert vm.group_key_of({"sport": "tennis", "participant_key": "k", "tournament": "X"}) == ("tennis", "k", "X")
 
 
+# --- Phase 2: cheapness vs field (field-de-vigged gap, display-only) ----------------------
+def _fr(pk, node, disp_c):
+    """A tournament-field contract row the de-vig reads (player_key + stamped node + display_c)."""
+    return {"player_key": pk, "ladder_node": node, "kind": "advance", "series": "KXATPADVANCE",
+            "display_c": disp_c, "market_ticker": f"{pk}-{node}", "tournament": "X"}
+
+
+def _cvf_opp(oid, pk, node, disp_c, *, quote="Tight", tournament="X", band=False):
+    return {"opportunity_id": oid, "bucket": "no_structure",
+            "relationship_type": "no_structure_band" if band else "no_structure_outright",
+            "sport": "tennis", "tournament": tournament, "participant_key": pk,
+            "no_structure_faded_node": node, "no_structure_faded_display_c": disp_c,
+            "comp_quote_quality": quote}
+
+
+def test_cheapness_vs_field_signed_gap_keyed_by_oid():
+    # Reach Final k=2; field 90/80/70 (Σ implied 2.4 ≥ k → normalized, not a floor). A → 0.9/2.4*2 = 0.75.
+    field = [_fr("A", "Reach Final", 90), _fr("B", "Reach Final", 80), _fr("C", "Reach Final", 70)]
+    out = vm.cheapness_vs_field_view([_cvf_opp("o1", "A", "Reach Final", 90)], lambda s, t: field)
+    assert set(out) == {"o1"}
+    assert out["o1"]["cheapness_vs_field"] == 15.0           # (0.90 market − 0.75 field) * 100
+    # A band resolves the same way via its (child) faded node.
+    band = vm.cheapness_vs_field_view([_cvf_opp("b1", "A", "Reach Final", 90, band=True)], lambda s, t: field)
+    assert band["b1"]["cheapness_vs_field"] == 15.0
+
+
+def test_cheapness_vs_field_blank_conditions():
+    field3 = [_fr("A", "Reach Final", 90), _fr("B", "Reach Final", 80), _fr("C", "Reach Final", 70)]
+    f = lambda s, t: field3                                   # noqa: E731 (test-local)
+    assert vm.cheapness_vs_field_view([_cvf_opp("q", "A", "Reach Final", 90, quote="Wide")], f) == {}   # stale/wide
+    assert vm.cheapness_vs_field_view([_cvf_opp("n", "A", "No Such Node", 90)], f) == {}                # node absent/unmapped
+    assert vm.cheapness_vs_field_view([_cvf_opp("d", "A", "Reach Final", None)], f) == {}               # no display price
+    assert vm.cheapness_vs_field_view(
+        [{**_cvf_opp("t", "A", "Reach Final", 90), "tournament": ""}], f) == {}                         # no tournament
+    sparse = [_fr("A", "Reach Final", 90), _fr("B", "Reach Final", 80)]    # Σ implied 1.7 < k=2 → floor
+    assert vm.cheapness_vs_field_view([_cvf_opp("p", "A", "Reach Final", 90)], lambda s, t: sparse) == {}
+    assert vm.cheapness_vs_field_view(                                                                  # self-only (<2)
+        [_cvf_opp("s", "A", "Reach Final", 90)], lambda s, t: [_fr("A", "Reach Final", 90)]) == {}
+    assert vm.cheapness_vs_field_view([_cvf_opp("f", "A", "Reach Final", 90)], lambda s, t: []) == {}   # no frames
+
+
+def test_cheapness_cells_blank_safe():
+    assert vm.cheapness_cells(None)["cheapness_vs_field"] is None
+    assert vm.cheapness_cells({"cheapness_vs_field": 3.0})["cheapness_vs_field"] == 3.0
+
+
 # --- Phase 1: days-to-close + best-case multiple/day -------------------------------------
 def test_days_until_deterministic_off_snapshot_stamp():
     import data
