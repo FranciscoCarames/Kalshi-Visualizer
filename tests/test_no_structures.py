@@ -114,6 +114,30 @@ def test_close_time_carries_to_finding_and_unified():
     assert "no_structure_close_time" in scanner.UNIFIED_COLUMNS
 
 
+def test_outright_synthesized_leg_carries_market_link():
+    # Regression: an outright's single Buy-NO is action_2, so legs_of pairs it with ticker_2/url_2 — those
+    # must carry the outright's market or the detail-panel "Leg 1 market ↗" link is blank.
+    cheap = market(_CHILD, yes_ask_c=92, yes_bid_c=90, no_ask_c=10)   # has market_ticker + kalshi_url
+    u = scanner._to_unified_no_structure(_outrights(no_structures.find_no_structures([cheap]))[0], sports.TENNIS)
+    assert u["n_legs"] == 1
+    leg = u["legs"][0]
+    assert leg["url"] == cheap["kalshi_url"] and leg["ticker"] == cheap["market_ticker"]
+    assert leg["side"] == "buy_no" and leg["contract"] == _CHILD     # complete leg, not blank side/contract
+    # Primary link + the ladder-grouping key (_no_leg_ticker reads ticker_1) stay set.
+    assert u["url"] == cheap["kalshi_url"] and u["ticker_1"] == cheap["market_ticker"]
+
+
+def test_band_legs_keep_distinct_parent_child_links():
+    parent = market(_PARENT, yes_ask_c=96, yes_bid_c=94, no_ask_c=6, display_c=95)
+    child = market(_CHILD, yes_ask_c=90, yes_bid_c=88, no_ask_c=10, display_c=89)
+    u = scanner._to_unified_no_structure(_bands(no_structures.find_no_structures([parent, child]))[0], sports.TENNIS)
+    legs = u["legs"]
+    assert len(legs) == 2
+    assert legs[0]["side"] == "buy_yes" and legs[0]["ticker"] == parent["market_ticker"]   # leg 1 = parent
+    assert legs[1]["side"] == "buy_no" and legs[1]["ticker"] == child["market_ticker"]      # leg 2 = child
+    assert u["url"] == parent["kalshi_url"] and u["url_2"] == child["kalshi_url"]            # distinct links
+
+
 def test_faded_node_and_display_carry_to_unified():
     parent = market(_PARENT, yes_ask_c=96, yes_bid_c=94, no_ask_c=6, display_c=95)
     child = market(_CHILD, yes_ask_c=90, yes_bid_c=88, no_ask_c=10, display_c=89)

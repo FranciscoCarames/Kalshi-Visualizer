@@ -490,6 +490,10 @@ def _to_unified_no_structure(r: dict[str, Any], cfg) -> dict[str, Any]:
         "tournament": r.get("tournament") or "", "tour": r.get("tour") or "",
         "action_1_text": r.get("action_1_text") or "", "action_2_text": r.get("action_2_text") or "",
         "action_1_price_c": _num(r.get("action_1_price_c")), "action_2_price_c": _num(r.get("action_2_price_c")),
+        # Side + contract per leg so `legs_of` (run at scan time below) builds a COMPLETE leg — without
+        # these the synthesized leg's side/contract are blank in the detail panel's leg table.
+        "action_1_side": r.get("action_1_side"), "action_2_side": r.get("action_2_side"),
+        "action_1_contract": r.get("action_1_contract") or "", "action_2_contract": r.get("action_2_contract") or "",
         "cost_c": _num(r.get("cost_c")),
         # NEVER an executable edge — exec_gap_c=None floors it within its own opt-in section.
         "exec_gap_c": None, "exec_min_size": _num(r.get("exec_min_size")), "exec_max_profit_dollars": None,
@@ -502,10 +506,13 @@ def _to_unified_no_structure(r: dict[str, Any], cfg) -> dict[str, Any]:
         # A band is a sequential broader→deeper pair (Calendar); an outright is a single leg (Calendar).
         "resolution_mode": "calendar",
         "opportunity_id": r.get("opportunity_id") or "",
+        # An outright's single Buy-NO leg lives at action_2 (mirroring the band's child leg), so `legs_of`
+        # pairs it with ticker_2/url_2 — they MUST carry the outright's market or the detail-panel link is
+        # blank. ticker_1/url ALSO keep it (the primary link + `_no_leg_ticker`'s ladder-grouping key).
         "ticker_1": (r.get("parent_ticker") if is_band else r.get("ticker")) or "",
-        "ticker_2": (r.get("child_ticker") if is_band else "") or "",
+        "ticker_2": (r.get("child_ticker") if is_band else r.get("ticker")) or "",
         "url": (r.get("parent_url") if is_band else r.get("url")) or "",
-        "url_2": (r.get("child_url") if is_band else "") or "",
+        "url_2": (r.get("child_url") if is_band else r.get("url")) or "",
         "legs": None, "n_legs": None,                  # synthesized into a leg list by _finalize_unified
         # Convex payoff bounds (drive max-loss / breakeven / upside columns); not a risk-budget edge_class.
         "edge_class": "", "worst_case_profit_c": _num(r.get("worst_case_profit_c")),
