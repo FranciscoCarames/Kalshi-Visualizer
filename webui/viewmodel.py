@@ -615,6 +615,51 @@ def no_structure_view(opps: Iterable[dict[str, Any]] | None, *, max_loss_c: floa
     return out
 
 
+# Settlement-LEVEL tables for the NO-fades section (display-only; see `no_structures.scope_for`).
+_NO_SCOPES = ("event", "tournament", "championship")
+# Retired values from the previous (fixture-based) taxonomy. A snapshot still carrying these predates the
+# Event/Tournament/Championship update → treat as legacy and prompt a rescan rather than trust stale rows.
+_RETIRED_NO_SCOPES = frozenset({"series", "match_game"})
+
+
+def no_scope_taxonomy_is_legacy(opps: Iterable[dict[str, Any]] | None) -> bool:
+    """True if any NO-fade row carries a RETIRED scope value (`series`/`match_game`) — i.e. the snapshot
+    was scanned before the settlement-level taxonomy. (Old `championship` is indistinguishable from the
+    new value, so the retired-only values are the reliable legacy signal.) Clears on the next scan."""
+    return any(o.get("bucket") == "no_structure" and o.get("no_structure_scope") in _RETIRED_NO_SCOPES
+               for o in (opps or []))
+
+
+def _scope_of(o: dict[str, Any]) -> str | None:
+    """The NO-fade's settlement scope, or None when excluded/legacy/unmapped (a stored row missing the
+    field — a pre-split snapshot — reads as None, NOT a silent championship default)."""
+    s = o.get("no_structure_scope")
+    return s if s in _NO_SCOPES else None
+
+
+def no_structure_scoped_views(opps: Iterable[dict[str, Any]] | None, *, max_loss_c: float,
+                              max_buy_no_c: float = 0, kind: str = "all",
+                              good_quote_only: bool = True) -> dict[str, Any]:
+    """Partition the filtered NO-fades into the three settlement-scope tables. `kind` is the existing
+    BAND/OUTRIGHT filter (passed through to `no_structure_view`), NOT the scope. Returns
+    ``{"championship": [...], "series": [...], "match_game": [...], "_excluded_count": N}``; each list is
+    ordered by `_no_structure_order`, and N counts gated rows whose scope is excluded/legacy/unmapped
+    (these stay in the API/export audit paths — they are only summarised here, never silently rebucketed)."""
+    gated = no_structure_view(opps, max_loss_c=max_loss_c, max_buy_no_c=max_buy_no_c, kind=kind,
+                              good_quote_only=good_quote_only)
+    buckets: dict[str, list[dict[str, Any]]] = {s: [] for s in _NO_SCOPES}
+    excluded = 0
+    for o in gated:
+        s = _scope_of(o)
+        if s is None:
+            excluded += 1
+            continue
+        buckets[s].append(o)
+    result: dict[str, Any] = {s: _no_structure_order(rows) for s, rows in buckets.items()}
+    result["_excluded_count"] = excluded
+    return result
+
+
 def _no_structure_order(group: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Within-section order (improves on convexity-first, which overranks tiny longshots): lowest bounded
     max-loss first, then lowest breakeven chance, then highest bonus profit, then cheapest Buy-NO, then a
@@ -710,22 +755,21 @@ def no_structure_explainer(o: dict[str, Any]) -> list[tuple[str, str]]:
 # `cascade_score = (max-win ÷ cost) × (deeper rungs dominated)` is an ORDINAL longshot-upside/consequence
 # score — NOT EV, probability, fair value, or mispricing; a higher score usually means a LOWER implied
 # chance. Pure + display-only: never read by classify / bucket_of / _rank_key.
-def no_fade_ladder(prows: list[dict[str, Any]], sport: str, *,
-                   oid_by_ticker: dict[str, str] | None = None) -> dict[str, Any] | None:
-    """One participant's full NO-fade ladder card from their stored contract rows, or None when there is
-    no ≥2-node ladder / no rows / no scorable cheap rung (fail-closed). Reuses
-    `consistency.build_player_nodes` + `representative`, `cfg.ladder_for`, `consistency._buy_no_c`, and
-    `no_structures._firm`. `oid_by_ticker` maps a cheap-NO opp's NO-leg `market_ticker` → opportunity_id
-    (purely structural — no label parsing); a rung is `cheap` iff its representative ticker is in that map."""
+def _ladder_rungs(prows: list[dict[str, Any]], sport: str,
+                  oid_by_ticker: dict[str, str]) -> tuple[Any, tuple, dict, list[dict[str, Any]], bool]:
+    """Build a participant's full NO-fade ladder rungs (broad→deep) from stored contract rows. Returns
+    (cfg, order, nodes, rungs, inverted); `order` is () when there is no ≥2-node ladder / no rows. Shared by
+    `no_fade_ladder` (cascade card) and `ladder_metrics_for` (flat-table metric columns). Reuses
+    `consistency.build_player_nodes` + `representative`, `cfg.ladder_for`, `consistency._buy_no_c`,
+    `no_structures._firm`. A rung is `cheap` iff its representative ticker is in `oid_by_ticker`."""
     cfg = sports.get_sport(sport)
     rows = list(prows or [])
     if not rows:
-        return None                                          # fail-closed: no frames → no card
+        return cfg, (), {}, [], False
     spec = cfg.ladder_for(rows) if cfg else None
     order = tuple(getattr(spec, "node_order", ()) or ()) if spec else ()
     if len(order) < 2:
-        return None
-    oid_by_ticker = oid_by_ticker or {}
+        return cfg, (), {}, [], False
     nodes = consistency.build_player_nodes(rows)
     n = len(order)
     rungs: list[dict[str, Any]] = []
@@ -758,9 +802,20 @@ def no_fade_ladder(prows: list[dict[str, Any]], sport: str, *,
             "size": _num(rep.get("yes_bid_size")) if rep else None,
             "market_ticker": ticker,
         })
+    return cfg, order, nodes, rungs, inverted
+
+
+def no_fade_ladder(prows: list[dict[str, Any]], sport: str, *,
+                   oid_by_ticker: dict[str, str] | None = None) -> dict[str, Any] | None:
+    """One participant's full NO-fade ladder card, or None when there is no ≥2-node ladder / no rows / no
+    scorable cheap rung (fail-closed)."""
+    cfg, order, nodes, rungs, inverted = _ladder_rungs(prows, sport, oid_by_ticker or {})
+    if not order:
+        return None
     scorable = [r for r in rungs if r["cheap"] and r["cascade_score"] is not None]
     if not scorable:
         return None                  # gated but no scorable cheap LADDER rung (e.g. cheap NO is a prop)
+    rows = list(prows or [])
     top = max(scorable, key=lambda r: r["cascade_score"])
     win_rep = consistency.representative(nodes.get(order[-1]))
     return {
@@ -774,32 +829,105 @@ def no_fade_ladder(prows: list[dict[str, Any]], sport: str, *,
         "safe_key": min(r["no_c"] for r in scorable),        # cheapest cheap-rung NO = lowest max-loss
         "inverted": inverted,
         "rungs": rungs,
+        "metrics": _ladder_metrics(rungs, order),            # descriptive ladder-shape diagnostics
     }
 
 
-def no_fade_ladder_view(opps: Iterable[dict[str, Any]] | None, prows_for, *, max_loss_c: float,
-                        max_buy_no_c: float = 0, kind: str = "all",
-                        sort: str = "safe") -> list[dict[str, Any]]:
-    """Per-participant NO-fade ladder cards. Participants are GATED by the cheap-NO opps (reuse
-    `no_structure_view`) grouped by the opp's structured `(sport, player_key, tournament)`; each card's
-    full ladder is rebuilt from `prows_for(sport, player_key, tournament)` (the dashboard injects stored
-    contract rows — keeps this pure). `sort="cascade"` → highest card cascade score first (longshot
-    upside); `sort="safe"` → lowest cheap-rung max-loss first (default)."""
-    gated = no_structure_view(opps, max_loss_c=max_loss_c, max_buy_no_c=max_buy_no_c, kind=kind)
-    groups: dict[tuple[str, str, str], list[dict[str, Any]]] = {}
+def ladder_metrics_for(prows: list[dict[str, Any]], sport: str,
+                       oid_by_ticker: dict[str, str] | None = None) -> dict[str, Any] | None:
+    """Ladder-shape metrics for a participant's FULL ladder, independent of whether any rung is a cheap-NO
+    finding — so the flat Championship table can show depth/avg-NO/etc. on every row. None when there is no
+    ≥2-node ladder / no rows. `oid_by_ticker` only affects `n_cheap` (the count of cheap-NO rungs)."""
+    _cfg, order, _nodes, rungs, _inv = _ladder_rungs(prows, sport, oid_by_ticker or {})
+    if not order:
+        return None
+    return _ladder_metrics(rungs, order)
+
+
+def _ladder_metrics(rungs: list[dict[str, Any]], order: tuple) -> dict[str, Any]:
+    """Descriptive shape diagnostics over a participant's FULL NO-fade ladder — DISPLAY-ONLY, NOT EV,
+    probability, net-of-fees, or an actionability score. Computed over the FIRM rungs (firm two-sided
+    book, `no_c` > 0), broad→deep. All ratio/gradient fields are None-safe (a <2-firm-rung ladder yields
+    the depth + Nones, never a divide-by-zero). `total_fade_c` is Σ NO over rungs = the cost to Buy NO on
+    EVERY rung (a portfolio), not a single trade."""
+    firm = [r for r in rungs if r.get("no_c") is not None and r["no_c"] > 0]
+    depth = len(rungs)                                       # how deep the ladder is (rungs/nodes)
+    steps = max(0, depth - 1)
+    n_cheap = sum(1 for r in rungs if r.get("cheap"))
+    base = {"depth": depth, "steps": steps, "n_cheap": n_cheap,
+            "avg_no_c": None, "deepest_no_c": None, "deepest_per_step": None, "total_fade_c": None,
+            "gradient_c_per_step": None, "cheapest_no_c": None, "cheapest_rung": None, "span_c": None}
+    if not firm:
+        return base
+    nos = [r["no_c"] for r in firm]
+    broadest, deepest = firm[0]["no_c"], firm[-1]["no_c"]    # firm rungs keep broad→deep order
+    cheapest = min(firm, key=lambda r: r["no_c"])
+    base.update({
+        "avg_no_c": round(sum(nos) / len(nos), 1),
+        "deepest_no_c": deepest,
+        "deepest_per_step": round(deepest / steps, 1) if steps else None,
+        "total_fade_c": round(sum(nos), 1),
+        "gradient_c_per_step": round((deepest - broadest) / steps, 1) if steps else None,
+        "cheapest_no_c": cheapest["no_c"], "cheapest_rung": cheapest["rung"],
+        "span_c": round(deepest - broadest, 1),
+    })
+    return base
+
+
+def ladder_summary_row(card: dict[str, Any]) -> dict[str, Any]:
+    """One row of the per-participant ladder summary table from a `no_fade_ladder` card. Numeric fields
+    hold RAW numbers so NiceGUI client-side column sort works; the cell slots format display only."""
+    m = card.get("metrics") or {}
+    return {
+        "player": card.get("player") or card.get("player_key") or "",
+        "player_key": card.get("player_key") or "",         # row_key uniqueness
+        "sport": card.get("sport_label") or card.get("sport") or "",
+        "win_label": card.get("win_label") or "",
+        "depth": m.get("depth"), "avg_no": m.get("avg_no_c"), "deepest_no": m.get("deepest_no_c"),
+        "deepest_per_step": m.get("deepest_per_step"), "total_fade": m.get("total_fade_c"),
+        "gradient": m.get("gradient_c_per_step"), "cheapest_no": m.get("cheapest_no_c"),
+        "cheapest_rung": m.get("cheapest_rung") or "", "n_cheap": m.get("n_cheap"),
+        "span": m.get("span_c"), "max_cascade": card.get("card_score"),
+        "implied_yes": card.get("implied_win_pct"),
+        "inverted": "⚠" if card.get("inverted") else "",
+    }
+
+
+def _no_leg_ticker(o: dict[str, Any]) -> str:
+    """Market ticker of the cheap Buy-NO leg on a UNIFIED NO-fade opp: a band's NO leg is the deeper child
+    (`ticker_2`); an outright's single leg is `ticker_1`."""
+    return str((o.get("ticker_2") if _is_band(o) else o.get("ticker_1")) or "")
+
+
+def _group_no_opps(gated: Iterable[dict[str, Any]]) -> dict[tuple[str, str, str], dict[str, Any]]:
+    """Group gated NO-fade opps by the UNIFIED `(sport, participant_key, tournament)` (NOT `player_key` —
+    the unified row carries `participant_key`), collecting each group's NO-leg ticker → opportunity_id map."""
+    groups: dict[tuple[str, str, str], dict[str, Any]] = {}
     for o in gated:
-        key = (str(o.get("sport") or ""), str(o.get("player_key") or ""), str(o.get("tournament") or ""))
+        key = (str(o.get("sport") or ""), str(o.get("participant_key") or ""), str(o.get("tournament") or ""))
         if not key[1]:
             continue
-        groups.setdefault(key, []).append(o)
+        g = groups.setdefault(key, {"opps": [], "oids": {}})
+        g["opps"].append(o)
+        t = _no_leg_ticker(o)
+        if t:
+            g["oids"][t] = o.get("opportunity_id")
+    return groups
+
+
+def no_fade_ladder_view(opps: Iterable[dict[str, Any]] | None, prows_for, *, max_loss_c: float,
+                        max_buy_no_c: float = 0, kind: str = "all", good_quote_only: bool = True,
+                        sort: str = "safe") -> list[dict[str, Any]]:
+    """Per-participant NO-fade ladder cards. Participants are GATED by the cheap-NO opps (reuse
+    `no_structure_view`) grouped by the unified `(sport, participant_key, tournament)`; each card's full
+    ladder is rebuilt from `prows_for(sport, participant_key, tournament)` (the dashboard injects stored
+    contract rows — keeps this pure). `sort="cascade"` → highest card cascade score first (longshot
+    upside); `sort="safe"` → lowest cheap-rung max-loss first (default)."""
+    gated = no_structure_view(opps, max_loss_c=max_loss_c, max_buy_no_c=max_buy_no_c, kind=kind,
+                              good_quote_only=good_quote_only)
     cards: list[dict[str, Any]] = []
-    for (sport, pkey, tournament), gopps in groups.items():
-        oid_by_ticker: dict[str, str] = {}
-        for o in gopps:                                       # NO-leg ticker → opp id (outright + band child)
-            for t in (o.get("ticker"), o.get("child_ticker")):
-                if t:
-                    oid_by_ticker[str(t)] = o.get("opportunity_id")
-        card = no_fade_ladder(prows_for(sport, pkey, tournament), sport, oid_by_ticker=oid_by_ticker)
+    for (sport, pkey, tournament), g in _group_no_opps(gated).items():
+        card = no_fade_ladder(prows_for(sport, pkey, tournament), sport, oid_by_ticker=g["oids"])
         if card is not None:
             cards.append(card)
     if sort == "cascade":
@@ -807,6 +935,43 @@ def no_fade_ladder_view(opps: Iterable[dict[str, Any]] | None, prows_for, *, max
     else:
         cards.sort(key=lambda c: (c["safe_key"], c.get("player") or "", c["player_key"]))
     return cards
+
+
+# Flat Championship table: ladder-shape metric columns annotated onto each row (display-only). Field names
+# are distinct from the per-structure columns so they merge cleanly into `no_structure_row` output.
+_LADDER_METRIC_FIELDS = ("depth", "avg_no", "deepest_no", "deepest_step", "total_fade", "gradient",
+                         "cheapest_no", "n_cheap", "span")
+
+
+def ladder_metrics_view(champ_opps: Iterable[dict[str, Any]] | None, prows_for) -> dict[tuple, dict[str, Any]]:
+    """Map `(sport, participant_key, tournament)` → ladder metrics for the CHAMPIONSHIP flat-table columns.
+    `champ_opps` is the already-scoped/gated championship list; metrics are rebuilt from
+    `prows_for(...)` (frame-backed — empty when frames absent), so every laddered participant gets metrics
+    even when no single rung is a cheap finding (only `n_cheap` depends on the findings)."""
+    out: dict[tuple, dict[str, Any]] = {}
+    for (sport, pkey, tournament), g in _group_no_opps(champ_opps or []).items():
+        m = ladder_metrics_for(prows_for(sport, pkey, tournament), sport, oid_by_ticker=g["oids"])
+        if m is not None:
+            out[(sport, pkey, tournament)] = m
+    return out
+
+
+def ladder_metric_cells(metrics: dict[str, Any] | None) -> dict[str, Any]:
+    """Flat-row cells for the Championship ladder-metric columns. Blank (None) when metrics are
+    unavailable (e.g. evidence frames not captured) so the cells read "—", never a fabricated value."""
+    m = metrics or {}
+    return {
+        "depth": m.get("depth"), "avg_no": m.get("avg_no_c"), "deepest_no": m.get("deepest_no_c"),
+        "deepest_step": m.get("deepest_per_step"), "total_fade": m.get("total_fade_c"),
+        "gradient": m.get("gradient_c_per_step"), "cheapest_no": m.get("cheapest_no_c"),
+        "n_cheap": m.get("n_cheap"), "span": m.get("span_c"),
+    }
+
+
+def group_key_of(o: dict[str, Any]) -> tuple:
+    """The `(sport, participant_key, tournament)` ladder key for a unified NO-fade opp — the merge key
+    between a Championship row and its `ladder_metrics_view` entry."""
+    return (str(o.get("sport") or ""), str(o.get("participant_key") or ""), str(o.get("tournament") or ""))
 
 
 # World Cup Qualifier Setups — human labels for the setup types (two exact-order tiers + game support).

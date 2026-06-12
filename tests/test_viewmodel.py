@@ -1016,10 +1016,49 @@ def _lr(pk, player, node, no_c, tkr, tournament="X", series="KXATPADVANCE"):
 
 
 def _nsopp(oid, pk, tkr, no_c, *, sport="tennis", tournament="X"):
-    """A cheap-NO outright opportunity (the gate the ladder view reads)."""
+    """A cheap-NO outright opportunity as the UNIFIED scanner row shapes it (participant_key + ticker_1 —
+    NOT the finding-internal player_key/ticker), i.e. exactly what the dashboard feeds the ladder view."""
     return {"opportunity_id": oid, "bucket": "no_structure", "relationship_type": "no_structure_outright",
-            "sport": sport, "player_key": pk, "tournament": tournament, "ticker": tkr,
+            "sport": sport, "participant_key": pk, "tournament": tournament, "ticker_1": tkr,
+            "no_structure_scope": "championship",
             "worst_case_profit_c": -no_c, "action_2_price_c": no_c, "comp_quote_quality": "Tight"}
+
+
+def test_ladder_metrics_for_full_ladder_independent_of_cheap_findings():
+    # depth/steps follow the SPORT's full ladder length (node_order), so assert the length-independent
+    # firm-rung aggregates exactly (the exact-value math is locked by test_ladder_metrics_values).
+    rows = [_lr("A", "A", "Reach Semifinal", 10, "SF"), _lr("A", "A", "Reach Final", 20, "FIN"),
+            _lr("A", "A", "Win Tournament", 40, "WIN")]
+    m = vm.ladder_metrics_for(rows, "tennis", oid_by_ticker={"SF": "x"})
+    assert m is not None and m["depth"] >= 3 and m["steps"] == m["depth"] - 1
+    assert m["avg_no_c"] == round((10 + 20 + 40) / 3, 1)          # mean of the 3 FIRM rungs
+    assert m["deepest_no_c"] == 40 and m["cheapest_no_c"] == 10 and m["cheapest_rung"] == "Reach Semifinal"
+    assert m["span_c"] == 30.0 and m["n_cheap"] == 1
+    # Metrics exist even with NO cheap rung flagged (the flat table needs them on every championship row).
+    assert vm.ladder_metrics_for(rows, "tennis")["n_cheap"] == 0
+    # A sport with no containment ladder (esports) yields None (fail-closed).
+    assert vm.ladder_metrics_for(rows, "esports") is None
+
+
+def test_ladder_metrics_view_groups_by_participant_key():
+    a_rows = [_lr("ALC", "Alcaraz", "Reach Final", 10, "A_FIN"),
+              _lr("ALC", "Alcaraz", "Win Tournament", 70, "A_WIN")]
+    out = vm.ladder_metrics_view([_nsopp("opA", "ALC", "A_FIN", 10)],
+                                 lambda s, pk, t: a_rows if pk == "ALC" else [])
+    assert ("tennis", "ALC", "X") in out
+    m = out[("tennis", "ALC", "X")]
+    assert m["avg_no_c"] == round((10 + 70) / 2, 1) and m["deepest_no_c"] == 70 and m["n_cheap"] == 1
+
+
+def test_ladder_metric_cells_blank_when_unavailable():
+    blank = vm.ladder_metric_cells(None)
+    assert blank["depth"] is None and blank["avg_no"] is None and blank["span"] is None
+    filled = vm.ladder_metric_cells({"depth": 3, "avg_no_c": 20.0, "span_c": 30.0, "n_cheap": 1})
+    assert filled["depth"] == 3 and filled["avg_no"] == 20.0 and filled["span"] == 30.0 and filled["n_cheap"] == 1
+
+
+def test_group_key_of_uses_participant_key():
+    assert vm.group_key_of({"sport": "tennis", "participant_key": "k", "tournament": "X"}) == ("tennis", "k", "X")
 
 
 def test_no_fade_ladder_cascade_score_and_dominated():

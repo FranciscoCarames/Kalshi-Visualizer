@@ -199,6 +199,11 @@ class SportConfig:
     # Default {"winner"} preserves every existing sport; a field sport can add pole/fastest_lap/constructor/
     # team/race_winner so those one-winner fields are detected too.
     field_families: frozenset[str] = field(default_factory=lambda: frozenset({"winner"}))
+    # NO-fade SETTLEMENT LEVEL per family (display-only; consumed by no_structures.scope_for): how many
+    # "grouping" levels a market sits above a single contest — 0=Event, 1=Tournament, 2=Championship. Keyed
+    # on family because the same name differs per sport (tennis "match"=a match=0; NBA "match"=the bo7
+    # series=1). A family absent here is EXCLUDED from the NO-fade tables (fail-closed; registry-guard-tested).
+    family_levels: dict[str, int] = field(default_factory=dict)
     # Optional per-sport grouping key, computed ONCE PER EVENT (data.tournament_of). Returns (key, source)
     # or None to fall back to the default competition-based key. Lets a sport build an event-instance key
     # (e.g. motorsport: competition + race/session + season) instead of the broad competition string.
@@ -530,6 +535,9 @@ TENNIS = register(SportConfig(
     divisions={"Women": ["WTA"], "Men": ["ATP"], "Both": ["ATP", "WTA"]},
     division_label="Tour",
     family_fn=_tennis_family,
+    # Settlement level: a match/set/score is one contest (0); reach-a-stage / win the tournament is one
+    # level up (1); the Grand Slam spans multiple tournaments (2).
+    family_levels={"match": 0, "set_winner": 0, "exact_score": 0, "advance": 1, "winner": 1, "grand_slam": 2},
     stage_fn=_tennis_stage,
     node_fn=_tennis_node,
     division_fn=_tennis_division,
@@ -633,6 +641,9 @@ NBA = register(SportConfig(
     divisions={},
     division_label="",
     family_fn=_nba_family,
+    # Settlement level: a game (0); the best-of-7 series (1); winning the conference / title spans
+    # multiple series (2). "match" == KXNBASERIES here, so it is the series (1), not a single game.
+    family_levels={"game": 0, "match": 1, "advance": 2, "winner": 2},
     stage_fn=_nba_stage,
     node_fn=_nba_node,
     division_fn=_nba_division,
@@ -742,6 +753,7 @@ WNBA = register(SportConfig(
     divisions={},
     division_label="",
     family_fn=_wnba_family,
+    family_levels={"game": 0, "match": 1, "advance": 2, "winner": 2},   # game / bo7 series / title path
     stage_fn=_wnba_stage,
     node_fn=_wnba_node,
     division_fn=_wnba_division,
@@ -836,6 +848,9 @@ GOLF = register(SportConfig(
     division_label="",
     derived_indicators_fn=_golf_make_cut_indicator,
     family_fn=_golf_family,
+    # A golf tournament is a single FIELD event (no sub-contests), so Top-N / win = Event (0) — same shape
+    # as a motorsport race result. Golf appears only in the Event table.
+    family_levels={"advance": 0, "winner": 0},
     stage_fn=_golf_stage,
     node_fn=_golf_node,
     division_fn=_golf_division,
@@ -1003,6 +1018,9 @@ SOCCER = register(SportConfig(
     divisions={},
     division_label="",
     family_fn=_soccer_family,
+    # A game (0); advancing / winning the group / winning the World Cup are all within the one tournament
+    # (1). exact_order/group_bottom/stage_of_elim are diagnostic-only → absent here → excluded.
+    family_levels={"game": 0, "advance": 1, "group_winner": 1, "winner": 1},
     stage_fn=_soccer_stage,
     node_fn=_soccer_node,
     division_fn=_soccer_division,
@@ -1108,6 +1126,9 @@ MLB = register(SportConfig(
     divisions={},
     division_label="",
     family_fn=_mlb_family,
+    # A game (0); the pennant / World Series are won across multiple series (2). MLB has no in-app series
+    # market (KXMLBSERIES is excluded), so nothing lands in Tournament (1).
+    family_levels={"game": 0, "advance": 2, "winner": 2},
     stage_fn=_mlb_stage,
     node_fn=_mlb_node,
     division_fn=lambda cfg, t: "",
@@ -1208,6 +1229,7 @@ NHL = register(SportConfig(
     divisions={},
     division_label="",
     family_fn=_nhl_family,
+    family_levels={"game": 0, "match": 1, "advance": 2, "winner": 2},   # game / bo7 series / Cup path
     stage_fn=_nhl_stage,
     node_fn=_nhl_node,
     division_fn=_nhl_division,
@@ -1294,6 +1316,9 @@ NFL = register(SportConfig(
     divisions={},
     division_label="",
     family_fn=_nfl_family,
+    # Single-elimination (no series layer): a game (0); reach playoffs / win conference / win the Super
+    # Bowl are all one level above a game (1).
+    family_levels={"game": 0, "advance": 1, "winner": 1},
     stage_fn=_nfl_stage,
     node_fn=_nfl_node,
     division_fn=_nfl_division,
@@ -1477,6 +1502,10 @@ MOTORSPORT = register(SportConfig(
                "All": ["F1", "NASCAR", "IndyCar", "MotoGP"]},
     division_label="Series",
     family_fn=_motor_family,
+    # A race result is one contest: race winner / pole / fastest lap / Top-N finish = Event (0). The
+    # season champion / top constructor / top team are won across the whole season = Tournament (1).
+    family_levels={"race_winner": 0, "pole": 0, "fastest_lap": 0, "advance": 0,
+                   "winner": 1, "constructor": 1, "team": 1},
     stage_fn=_motor_stage,
     node_fn=_motor_node,
     division_fn=_motor_division,
@@ -1589,6 +1618,8 @@ ESPORTS = register(SportConfig(
     divisions={t: [t] for t in _ESPORTS_TITLES} | {"All": list(_ESPORTS_TITLES)},
     division_label="Title",
     family_fn=_esports_family,
+    # A map/game is one contest (0); a per-title event winner is won across a bracket of matches (1).
+    family_levels={"game": 0, "winner": 1},
     stage_fn=_esports_stage,
     node_fn=_esports_node,
     division_fn=_esports_division,

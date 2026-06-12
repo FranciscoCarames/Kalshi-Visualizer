@@ -378,6 +378,51 @@ _NO_FADE_LADDER_COLUMNS = [
 _NO_FADE_SORTS = {"safe": "Safest first", "cascade": "Cascade upside (longshot)"}
 _NO_FADE_LADDER_MAX_CARDS = 50          # cap rebuilt expansion cards per refresh (no silent truncation)
 
+# Series + Match·Game tables are OUTRIGHT-only (no bounding Buy-YES), so the band-only "Buy YES (bound)"
+# column is dropped; everything else matches the Championship table (kept in sync by filtering).
+_NO_OUTRIGHT_COLUMNS = [c for c in _NO_STRUCTURE_COLUMNS if c["name"] != "parent_yes"]
+_NO_OUTRIGHT_HIDDEN = tuple(n for n in _NO_STRUCTURE_HIDDEN if n != "parent_yes")
+# Championship table adds per-LADDER shape metrics as columns (display-only; descriptive, NOT EV/edge —
+# the same numbers as the grouped ladder summary, annotated onto each row of that participant's ladder).
+# `depth` = how deep the ladder is (rungs); see viewmodel._ladder_metrics. Frame-backed → blank ("—") when
+# evidence frames aren't captured. depth/avg/deepest÷steps/gradient lead; the rest start hidden.
+_LADDER_METRIC_COLS = [
+    {"name": "depth", "label": "Ladder depth", "field": "depth", "align": "right", "sortable": True},
+    {"name": "avg_no", "label": "Avg NO ¢", "field": "avg_no", "align": "right", "sortable": True},
+    {"name": "deepest_step", "label": "Deepest ÷ steps", "field": "deepest_step", "align": "right", "sortable": True},
+    {"name": "gradient", "label": "Gradient ¢/step", "field": "gradient", "align": "right", "sortable": True},
+    {"name": "deepest_no", "label": "Deepest NO ¢", "field": "deepest_no", "align": "right", "sortable": True},
+    {"name": "total_fade", "label": "Cost to NO every rung ¢", "field": "total_fade", "align": "right", "sortable": True},
+    {"name": "cheapest_no", "label": "Cheapest NO ¢", "field": "cheapest_no", "align": "right", "sortable": True},
+    {"name": "n_cheap", "label": "# cheap rungs", "field": "n_cheap", "align": "right", "sortable": True},
+    {"name": "span", "label": "Span ¢", "field": "span", "align": "right", "sortable": True},
+]
+_NO_CHAMP_COLUMNS = _NO_STRUCTURE_COLUMNS + _LADDER_METRIC_COLS
+_NO_CHAMP_HIDDEN = _NO_STRUCTURE_HIDDEN + ("deepest_no", "total_fade", "cheapest_no", "n_cheap", "span")
+_NO_CHAMP_NUMS = _NO_STRUCTURE_NUMS + tuple(c["name"] for c in _LADDER_METRIC_COLS)
+# The Event table is dominated by non-laddered games/matches → start ALL ladder-metric columns hidden so
+# it isn't a wall of blank cells (the Columns button still reveals them for golf/motorsport field ladders).
+_NO_EVENT_HIDDEN = _NO_STRUCTURE_HIDDEN + tuple(c["name"] for c in _LADDER_METRIC_COLS)
+# Per-participant ladder SUMMARY (grouped Championship view): descriptive ladder-shape diagnostics, one
+# row per participant ladder, numeric columns sortable. NOT EV / probability / edge (see table caption).
+_LADDER_SUMMARY_COLUMNS = [
+    {"name": "player", "label": "Participant", "field": "player", "align": "left", "sortable": True},
+    {"name": "sport", "label": "Sport", "field": "sport", "align": "center", "sortable": True},
+    {"name": "depth", "label": "Depth (rungs)", "field": "depth", "align": "right", "sortable": True},
+    {"name": "avg_no", "label": "Avg NO ¢", "field": "avg_no", "align": "right", "sortable": True},
+    {"name": "deepest_no", "label": "Deepest NO ¢", "field": "deepest_no", "align": "right", "sortable": True},
+    {"name": "deepest_per_step", "label": "Deepest ÷ steps", "field": "deepest_per_step", "align": "right", "sortable": True},
+    {"name": "total_fade", "label": "Cost to NO every rung ¢", "field": "total_fade", "align": "right", "sortable": True},
+    {"name": "gradient", "label": "Gradient ¢/step", "field": "gradient", "align": "right", "sortable": True},
+    {"name": "cheapest_no", "label": "Cheapest NO ¢", "field": "cheapest_no", "align": "right", "sortable": True},
+    {"name": "cheapest_rung", "label": "Cheapest rung", "field": "cheapest_rung", "align": "left"},
+    {"name": "n_cheap", "label": "# cheap", "field": "n_cheap", "align": "right", "sortable": True},
+    {"name": "span", "label": "Span ¢", "field": "span", "align": "right", "sortable": True},
+    {"name": "max_cascade", "label": "Max cascade", "field": "max_cascade", "align": "right", "sortable": True},
+    {"name": "implied_yes", "label": "Market-implied YES %", "field": "implied_yes", "align": "right", "sortable": True},
+    {"name": "inverted", "label": "Inv", "field": "inverted", "align": "center"},
+]
+
 # Qualifier-setups table (#4/#5). NO gross-edge / ROI / size / profit columns (those are blank for a
 # non-Actionable signal and would imply tradability). Default-visible columns are the exact-order top-two
 # economics; the rest start hidden behind the column chooser. Numeric columns hold RAW numbers (cell slots
@@ -657,6 +702,9 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                 "stack-label").classes("min-w-[12rem]").tooltip(
                 "Cascade score is an ORDINAL longshot-upside score — NOT EV, probability, fair value, or "
                 "mispricing. A higher score usually means a LOWER implied chance.")
+            ns_wide = ui.switch("Include wide quotes", value=False).tooltip(
+                "Off (default) keeps only Tight/OK books — a cheap NO on a wide/one-sided book is usually a "
+                "stale quote, not a real fade. On widens the tables to every stored NO fade.")
         ui.label("Filters & thresholds").classes("text-sm font-bold mt-2")
         with ui.row().classes("items-end gap-4 flex-wrap"):
             active_sw = ui.switch("Active only").tooltip("Hide non-active (finalized/settled) markets.")
@@ -1083,11 +1131,53 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                  "directional fade watchlist. A cheap NO is cheap because the market thinks the YES is "
                  "likely — this is NOT an edge. Gross, top-of-book, uncalibrated.").classes(
                      "text-xs text-gray-500")
-        ns_table = ui.table(columns=_NO_STRUCTURE_COLUMNS, rows=[], row_key="opportunity_id", selection="single",
-                            pagination=10).props("dense").classes("w-full overflow-x-auto opp-sel")
-        # Grouped per-participant ladder cards (opt-in via ns_group) — rebuilt in refresh_no_structure.
+        ui.label("Split by SETTLEMENT LEVEL — how the contract settles, NOT the sport's naming. "
+                 "Event = a single contest (game/match/race; incl. a golf or motorsport field result — a "
+                 "single field outcome, not a bracket above another contest). Tournament = one level up "
+                 "(a best-of-7 series, win the French Open / World Cup / Super Bowl, an F1 season). "
+                 "Championship = two levels up (NBA/NHL/MLB titles, which sit above a best-of-7 series "
+                 "layer; the tennis Grand Slam). So 'win the NBA title' is Championship, but 'win the "
+                 "World Cup' is Tournament.").classes("text-xs text-gray-500")
+        ns_legacy_label = ui.label().classes("text-sm text-amber-700")
+        with ui.row().classes("items-center gap-2 mt-1"):
+            ui.label("View:").classes("text-xs text-gray-500")
+            ns_view = ui.toggle({"by_level": "By level", "all": "All"}, value="by_level").props("dense")
+        # Four flat tables (Event → Tournament → Championship, then a combined All). All share the full
+        # column set incl. ladder-metric columns; a band's level = its child rung's level, so bands can
+        # appear in any table. Each gets its own inline "Columns" button — Event starts with the metric
+        # columns hidden (mostly non-laddered games), the rest start with them visible.
+        def _ns_level_table(default_hidden: tuple[str, ...]) -> tuple[Any, Any]:
+            hdr = ui.row().classes("items-center gap-3 mt-1")
+            with hdr:
+                lbl = ui.label().classes("text-sm font-medium")
+            tbl = ui.table(columns=_NO_CHAMP_COLUMNS, rows=[], row_key="opportunity_id",
+                           selection="single", pagination=10).props("dense").classes(
+                               "w-full overflow-x-auto opp-sel")
+            with hdr:
+                build_column_menu(tbl, _NO_CHAMP_COLUMNS, default_hidden=default_hidden)
+            return lbl, tbl
+
+        ns_event_label, ns_event_table = _ns_level_table(_NO_EVENT_HIDDEN)
+        ns_tournament_label, ns_tournament_table = _ns_level_table(_NO_CHAMP_HIDDEN)
+        ns_championship_label, ns_championship_table = _ns_level_table(_NO_CHAMP_HIDDEN)
+        ns_all_label, ns_all_table = _ns_level_table(_NO_CHAMP_HIDDEN)
+        # Grouped view (participant-ladder, level-agnostic): a sortable summary table + cascade cards.
+        ns_summary_label = ui.label().classes("text-sm font-medium mt-1")
+        ns_summary_table = ui.table(columns=_LADDER_SUMMARY_COLUMNS, rows=[], row_key="player_key",
+                                    pagination=10).props("dense").classes("w-full overflow-x-auto")
+        ns_summary_cap = ui.label("These are ladder-shape diagnostics from top-of-book prices — NOT EV, "
+                                  "model probability, net of fees, or an actionability score.").classes(
+                                      "text-xs text-gray-500")
         ns_cards = ui.column().classes("w-full gap-2")
-    ns_table.on_select(_on_select(ns_table))
+        ns_excluded_label = ui.label().classes("text-xs text-gray-500")
+    # Event / Tournament / Championship (in display order) + the combined All table.
+    ns_scope_tables = {"event": ns_event_table, "tournament": ns_tournament_table,
+                       "championship": ns_championship_table}
+    ns_scope_labels = {"event": ns_event_label, "tournament": ns_tournament_label,
+                       "championship": ns_championship_label}
+    _ns_tables = (*ns_scope_tables.values(), ns_all_table)
+    for _t in _ns_tables:
+        _t.on_select(_on_select(_t))
 
     # World Cup Qualifier Setups (PR3): a separate, default-on, opt-in DIAGNOSTIC section — kept out of the
     # strict Actionable/Review/Blocked sections. Populated by the exact-order (#4) top-two bundles + game-
@@ -1113,7 +1203,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
     nm_table.on_select(_on_select(nm_table))
 
     _sel_tables.extend([actionable, review, blocked, qs_table, rb_all, rb_vertical, rb_calendar, nm_table,
-                        ns_table])
+                        *_ns_tables])
     for _t in _sel_tables:                 # the change-signal / NEW-badge indicator column on every table
         _t.add_slot("body-cell-new", _CHANGE_CELL_SLOT)
     for _t in (actionable, review, blocked):
@@ -1144,7 +1234,8 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             "HIGHER = better — more in-the-money probability per cent actually at risk; deep-longshot parents "
             "sink. Gross, top-of-book, uncalibrated.", ""))
     nm_table.add_slot("body-cell-note", _NOTE_CELL_SLOT)    # readable wrapping note
-    ns_table.add_slot("body-cell-caveat", _CAVEAT_CELL_SLOT)   # compact severity chip (same as the rb tables)
+    for _t in _ns_tables:                                   # compact severity chip (same as the rb tables)
+        _t.add_slot("body-cell-caveat", _CAVEAT_CELL_SLOT)
     # Qualifier-setups: compact caveat chips + the full prose (hidden col); the two quote columns show the
     # label while sorting on their numeric rank.
     qs_table.add_slot("body-cell-caveat", _QS_CAVEAT_CELL_SLOT)
@@ -1162,8 +1253,9 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             _rb.add_slot(f"body-cell-{_f}", _num_cell_slot(_f))
     for _f in ("cost", "overpay"):
         nm_table.add_slot(f"body-cell-{_f}", _num_cell_slot(_f))
-    for _f in _NO_STRUCTURE_NUMS:
-        ns_table.add_slot(f"body-cell-{_f}", _num_cell_slot(_f))
+    for _f in _NO_CHAMP_NUMS:                               # all four NO-fade tables: per-structure + metric nums
+        for _t in _ns_tables:
+            _t.add_slot(f"body-cell-{_f}", _num_cell_slot(_f))
     for _f in ("qualifier", "cost", "if_top2", "if_not_top2", "max_units", "support", "legs",
                "highest_leg", "median_leg", "range_leg", "inactive_legs", "no_quote_legs", "wide_legs",
                "comparator_spread", "worst_leg_spread"):
@@ -1178,7 +1270,10 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
                      (rb_vertical, "No vertical (same-event) bounded-loss bets in the current filters."),
                      (rb_calendar, "No calendar (multi-day) bounded-loss bets in the current filters."),
                      (nm_table, "No overpriced books in the current filters."),
-                     (ns_table, "No cheap NO fades in the current filters.")):
+                     (ns_event_table, "No Event cheap NO fades in the current filters."),
+                     (ns_tournament_table, "No Tournament cheap NO fades in the current filters."),
+                     (ns_championship_table, "No Championship cheap NO fades in the current filters."),
+                     (ns_all_table, "No cheap NO fades in the current filters.")):
         _t.props(f'no-data-label="{_msg}"')
 
     # Per-table column menus (redesigned) — a "Columns" button by each table opening labeled checkboxes.
@@ -1198,8 +1293,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         build_column_menu(rb_calendar, _RISK_COLUMNS, default_hidden=_RISK_HIDDEN_SPLIT)
     with nm_cols_row:
         build_column_menu(nm_table, _NEARMISS_COLUMNS)
-    with ns_cols_row:
-        build_column_menu(ns_table, _NO_STRUCTURE_COLUMNS, default_hidden=_NO_STRUCTURE_HIDDEN)
+    # (NO-fade column menus are created inline per table in `_ns_level_table` above.)
 
     # "Show net of fees" — reveal/hide the net columns across the opp tables at once (drives their menus).
     def _toggle_net(show: bool) -> None:
@@ -1556,59 +1650,137 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         nm_max_over.set_enabled(include_nm)
 
     def refresh_no_structure() -> None:
-        """Scoped path: rebuild ONLY the Cheap-NO-fades section from the cached view. Flat table by default;
-        the opt-in 'Group by participant' view renders per-participant ladder cards (cascade-scored)."""
+        """Scoped path: rebuild ONLY the Cheap-NO-fades section from the cached view. Three settlement-LEVEL
+        tables (Event / Tournament / Championship) or one combined 'All' table (the View toggle). 'Group by
+        participant' overrides both → a level-agnostic ladder-summary table + cascade cards."""
         view = state.get("view") or []
         new_ids, chg = state.get("new_ids") or set(), state.get("changes") or {}
         flash = state.get("flash_now") or set()
         include_ns = ns_switch.value
         grouped = include_ns and ns_group.value
         ns_expansion.set_visibility(include_ns)
-        for _c in (ns_kind, ns_max_loss, ns_max_buy_no, ns_group):
+        for _c in (ns_kind, ns_max_loss, ns_max_buy_no, ns_group, ns_wide, ns_view):
             _c.set_enabled(include_ns)
         ns_sort.set_enabled(grouped)
-        ns_table.set_visibility(include_ns and not grouped)
-        ns_cards.set_visibility(grouped)
-        if not include_ns:
-            ns_table.rows = []
+        _grouped_only = (ns_summary_label, ns_summary_table, ns_summary_cap)
+        _all_labels = (*ns_scope_labels.values(), ns_all_label, ns_excluded_label, ns_legacy_label, *_grouped_only)
+
+        def _hide_all() -> None:
+            for _t in (*_ns_tables, ns_summary_table):
+                _t.rows = []
+                _t.set_visibility(False)
             ns_cards.clear()
+            for _l in _all_labels:
+                _l.set_visibility(False)
+
+        if not include_ns:
+            _hide_all()
             ns_title.set_text("Cheap NO fades — bounded-loss NO anchor, watch-only (0)")
             return
-        if not grouped:                                       # flat table path (unchanged behaviour)
-            nsv = vm.no_structure_view(view, max_loss_c=int(ns_max_loss.value or 0),
-                                       max_buy_no_c=int(ns_max_buy_no.value or 0), kind=ns_kind.value)
-            ns_table.rows = [vm.no_structure_row(o, new_ids, chg, flash) for o in nsv]
-            ns_cards.clear()
-            ns_title.set_text(f"Cheap NO fades — bounded-loss NO anchor, watch-only ({len(nsv):,})")
+
+        # Legacy snapshot (pre settlement-level taxonomy) → don't trust stale rows; prompt a rescan.
+        if vm.no_scope_taxonomy_is_legacy(view):
+            _hide_all()
+            ns_legacy_label.set_text("This snapshot predates the Event / Tournament / Championship update "
+                                     "— rescan (Scan now) to recategorise the cheap NO fades.")
+            ns_legacy_label.set_visibility(True)
+            ns_title.set_text("Cheap NO fades — rescan needed")
             return
-        # Grouped per-participant ladder cards.
-        ns_cards.clear()
-        ns_table.rows = []
-        if engine.frame_availability() != "present":          # fail-closed: no frames → no partial ladders
-            with ns_cards:
-                ui.label("Evidence frames not captured for this snapshot — grouped ladder unavailable. "
-                         "Use the flat view (toggle off) or Scan now.").classes("text-orange-700")
-            ns_title.set_text("Cheap NO fades — grouped ladder (frames unavailable)")
-            return
+
+        scoped = vm.no_structure_scoped_views(view, max_loss_c=int(ns_max_loss.value or 0),
+                                              max_buy_no_c=int(ns_max_buy_no.value or 0), kind=ns_kind.value,
+                                              good_quote_only=not ns_wide.value)
+        excluded = int(scoped.get("_excluded_count") or 0)
+        total = sum(len(scoped[s]) for s in ns_scope_tables)
+        ns_title.set_text(f"Cheap NO fades — bounded-loss NO anchor, watch-only ({total:,})")
+        frames_present = engine.frame_availability() == "present"
 
         def _prows_for(sport: str, pkey: str, tournament: str) -> list[dict[str, Any]]:
             return [r for r in engine.participant_contracts(sport, pkey)
                     if str(r.get("tournament") or "") == tournament]
 
-        cards = vm.no_fade_ladder_view(view, _prows_for, max_loss_c=int(ns_max_loss.value or 0),
-                                       max_buy_no_c=int(ns_max_buy_no.value or 0), kind=ns_kind.value,
-                                       sort=ns_sort.value)
-        ns_title.set_text(f"Cheap NO fades — grouped ladder, watch-only ({len(cards):,})")
-        shown = cards[:_NO_FADE_LADDER_MAX_CARDS]
-        with ns_cards:
-            if not shown:
-                ui.label("No cheap NO fades with a ladder rung in the current filters.").classes(
-                    "text-gray-500")
-            for card in shown:
-                _render_fade_card(card)
-            if len(cards) > len(shown):
-                ui.label(f"Showing top {len(shown)} of {len(cards):,} by {('cascade upside' if ns_sort.value == 'cascade' else 'safest')} "
-                         "— narrow filters to see more.").classes("text-xs text-amber-700")
+        # Ladder-shape metric cells, merged onto each row by its (sport, participant_key, tournament) ladder.
+        all_rows = [o for s in ns_scope_tables for o in scoped[s]]
+        metrics_by_group = vm.ladder_metrics_view(all_rows, _prows_for) if frames_present else {}
+
+        def _row(o: dict[str, Any]) -> dict[str, Any]:
+            return {**vm.no_structure_row(o, new_ids, chg, flash),
+                    **vm.ladder_metric_cells(metrics_by_group.get(vm.group_key_of(o)))}
+
+        ns_legacy_label.set_visibility(False)
+        ns_cards.clear()
+        if grouped:
+            # Grouping overrides the level/All split → one participant-ladder summary + cascade cards.
+            for _t in _ns_tables:
+                _t.rows = []
+                _t.set_visibility(False)
+            for _l in (*ns_scope_labels.values(), ns_all_label):
+                _l.set_visibility(False)
+            ns_cards.set_visibility(True)
+            for _x in _grouped_only:
+                _x.set_visibility(True)
+            if not frames_present:                            # fail-closed: no frames → no partial ladders
+                ns_summary_table.rows = []
+                ns_summary_table.set_visibility(False)
+                ns_summary_cap.set_visibility(False)
+                ns_summary_label.set_text("Grouped ladder — evidence frames not captured for this snapshot. "
+                                          "Use a flat view (toggle off) or Scan now.")
+                with ns_cards:
+                    ui.label("Grouped ladder unavailable (no evidence frames).").classes("text-orange-700")
+            else:
+                cards = vm.no_fade_ladder_view(view, _prows_for, max_loss_c=int(ns_max_loss.value or 0),
+                                               max_buy_no_c=int(ns_max_buy_no.value or 0), kind=ns_kind.value,
+                                               good_quote_only=not ns_wide.value, sort=ns_sort.value)
+                ns_summary_table.rows = [vm.ladder_summary_row(c) for c in cards]
+                ns_summary_table.set_visibility(bool(cards))
+                ns_summary_cap.set_visibility(bool(cards))
+                ns_summary_label.set_text(f"Participant ladders · {len(cards):,} (sortable summary)")
+                shown = cards[:_NO_FADE_LADDER_MAX_CARDS]
+                with ns_cards:
+                    if not shown:
+                        ui.label("No cheap NO fades with a ladder rung in the current filters.").classes(
+                            "text-gray-500")
+                    for card in shown:
+                        _render_fade_card(card)
+                    if len(cards) > len(shown):
+                        ui.label(f"Showing top {len(shown)} of {len(cards):,} ladders by "
+                                 f"{('cascade upside' if ns_sort.value == 'cascade' else 'safest')} — narrow "
+                                 "filters to see more.").classes("text-xs text-amber-700")
+        else:
+            # Flat: either the three level tables, or one combined All table.
+            for _x in _grouped_only:
+                _x.set_visibility(False)
+            ns_summary_table.set_visibility(False)
+            ns_cards.set_visibility(False)
+            show_all = ns_view.value == "all"
+            for scope, table in ns_scope_tables.items():
+                label = ns_scope_labels[scope]
+                if show_all:
+                    table.rows = []
+                    table.set_visibility(False)
+                    label.set_visibility(False)
+                else:
+                    rows = scoped[scope]
+                    table.rows = [_row(o) for o in rows]
+                    table.set_visibility(bool(rows))
+                    label.set_text(f"{scope.capitalize()} · {len(rows):,}" if rows
+                                   else f"{scope.capitalize()} — none right now")
+                    label.set_visibility(True)
+            if show_all:
+                ns_all_table.rows = [_row(o) for o in all_rows]
+                ns_all_table.set_visibility(bool(all_rows))
+                ns_all_label.set_text(f"All NO fades · {len(all_rows):,}" if all_rows
+                                      else "All NO fades — none right now")
+                ns_all_label.set_visibility(True)
+            else:
+                ns_all_table.rows = []
+                ns_all_table.set_visibility(False)
+                ns_all_label.set_visibility(False)
+
+        ns_excluded_label.set_text(
+            f"{excluded:,} NO-fade row(s) excluded from these tables because their settlement scope is "
+            "legacy, unsupported, or unmapped." if excluded else "")
+        ns_excluded_label.set_visibility(bool(excluded))
 
     def _render_fade_card(card: dict[str, Any]) -> None:
         """One participant's NO-fade ladder as a collapsible card (rungs broad→deep, components + score)."""
@@ -1913,9 +2085,12 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         (nm_switch, "Show overpriced books (near-miss)"), (nm_max_over, "Near-miss max overpay in cents"),
         (ns_switch, "Show cheap NO fades"), (ns_kind, "Cheap NO fade kind"),
         (ns_max_loss, "Cheap NO fade max loss in cents"), (ns_max_buy_no, "Cheap NO fade max Buy-NO cost in cents"),
-        (ns_table, "Cheap NO fades"), (ns_expansion, "Cheap NO fades section"),
+        (ns_event_table, "Event cheap NO fades"), (ns_tournament_table, "Tournament cheap NO fades"),
+        (ns_championship_table, "Championship cheap NO fades"), (ns_all_table, "All cheap NO fades"),
+        (ns_view, "Cheap NO fades view (by level / all)"), (ns_summary_table, "NO-fade ladder summary"),
+        (ns_expansion, "Cheap NO fades section"),
         (ns_group, "Group cheap NO fades by participant ladder"), (ns_sort, "NO-fade ladder sort"),
-        (ns_cards, "NO-fade ladder cards"),
+        (ns_wide, "Include wide-quote cheap NO fades"), (ns_cards, "NO-fade ladder cards"),
         (show_net_sw, "Show estimated net-of-fees columns"),
         (actionable, "Actionable opportunities"), (review, "Review-required opportunities"),
         (blocked, "Blocked opportunities"), (qs_table, "Qualifier setups"),
@@ -1978,7 +2153,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
     for ctrl in (rb_max_loss, rb_min_ratio, rb_min_outright, rb_max_ratio):
         ctrl.on_value_change(lambda _=None: _request_refresh("bounded_loss"))    # only the bounded-loss tables
     nm_max_over.on_value_change(lambda _=None: _request_refresh("near_miss"))     # only the near-miss table
-    for ctrl in (ns_kind, ns_max_loss, ns_max_buy_no, ns_group, ns_sort):
+    for ctrl in (ns_kind, ns_max_loss, ns_max_buy_no, ns_group, ns_sort, ns_wide, ns_view):
         ctrl.on_value_change(lambda _=None: _request_refresh("no_structure"))     # only the cheap-NO-fades section
 
     # Sport / Tournament are the cascade drivers: changing one re-narrows the downstream option lists
