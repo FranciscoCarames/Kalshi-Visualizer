@@ -6,6 +6,7 @@ import type { ColDef } from "ag-grid-community";
 import { loadFeed, rowsFor, type Feed, type FeedRow, type FeedMeta } from "./feed";
 import { COLS, colKeyOf, buildColDefs } from "./columns";
 import { applyLens } from "./lens";
+import { downloadCsv } from "./csv";
 
 const POLL_MS = 4000;
 
@@ -13,7 +14,7 @@ interface TerminalState {
   meta: FeedMeta | null; opps: FeedRow[]; err: string | null; sports: string[];
   zone: string; section: string; lens: string; sportSel: string; part: string;
   sel: FeedRow | null; colKey: string; visible: string[]; columnDefs: ColDef<FeedRow>[]; rows: FeedRow[];
-  theme: "amber" | "hc"; paletteOpen: boolean;
+  theme: "amber" | "hc"; paletteOpen: boolean; multi: FeedRow[];
   goSection: (z: string, s: string) => void;
   setSection: (s: string) => void;
   toggleLens: (l: string) => void;
@@ -28,6 +29,11 @@ interface TerminalState {
   setPaletteOpen: (v: boolean) => void;
   registerLayout: (fn: (preset: string) => void) => void;
   applyLayout: (preset: string) => void;
+  setMulti: (rows: FeedRow[]) => void;
+  registerAddPanel: (fn: (component: string, title: string, params: object) => void) => void;
+  openCompare: () => void;
+  openOverlap: () => void;
+  exportSelected: () => void;
 }
 
 const Ctx = createContext<TerminalState | null>(null);
@@ -49,8 +55,10 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
   const [colsByKey, setColsByKey] = useState<Record<string, string[]>>({});
   const [theme, setTheme] = useState<"amber" | "hc">("amber");
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [multi, setMulti] = useState<FeedRow[]>([]);
   const [, tick] = useState(0);
   const layoutRef = useRef<((preset: string) => void) | null>(null);
+  const addPanelRef = useRef<((component: string, title: string, params: object) => void) | null>(null);
 
   useEffect(() => { document.documentElement.dataset.theme = theme; }, [theme]);
 
@@ -79,7 +87,7 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
 
   const value: TerminalState = {
     meta, opps, err, sports, zone, section, lens, sportSel, part, sel, colKey, visible, columnDefs, rows,
-    theme, paletteOpen,
+    theme, paletteOpen, multi,
     goSection: (z, s) => { setZone(z); setSectionRaw(s); },
     setSection: setSectionRaw,
     toggleLens: (l) => setLens((cur) => (cur === l ? "" : l)),
@@ -91,9 +99,15 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
     }),
     resetCols: () => setColsByKey((m) => { const n = { ...m }; delete n[colKey]; return n; }),
     setColOrder: (order) => setColsByKey((m) => ({ ...m, [colKey]: order })),
-    setTheme, setPaletteOpen,
+    setTheme, setPaletteOpen, setMulti,
     registerLayout: (fn) => { layoutRef.current = fn; },
     applyLayout: (preset) => layoutRef.current?.(preset),
+    registerAddPanel: (fn) => { addPanelRef.current = fn; },
+    openCompare: () => addPanelRef.current?.("compare", `COMPARE (${multi.length})`, { opps: multi }),
+    openOverlap: () => addPanelRef.current?.("overlap", "DON'T-TAKE-BOTH", { opps: multi }),
+    exportSelected: () => downloadCsv(
+      `selected_${multi.length}_snap${meta?.snapshot_id ?? "x"}.csv`,
+      multi, COLS[colKey].filter((c) => visible.includes(c.f))),
   };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

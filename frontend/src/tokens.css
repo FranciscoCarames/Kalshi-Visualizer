@@ -131,6 +131,17 @@ body{background:var(--bg);color:var(--tx);font-family:var(--mono);font-size:12px
 .bc span,.ac span{position:relative;z-index:1}.bc{color:#7fe8c2}.ac{color:#e89090}
 .lf{padding:2px 9px;border-top:1px solid var(--line);font-size:9px;color:var(--tx3);display:flex;justify-content:space-between;flex:0 0 auto}
 
+/* multi-select action bar */
+.selbar{display:flex;align-items:center;flex-wrap:wrap;gap:5px;padding:3px 6px;background:#161203;border-bottom:1px solid var(--amber-d);font-size:9.5px;color:var(--tx2);flex:0 0 auto}
+.selbar .tp-tb{padding:1px 7px;font-size:9.5px}
+html[data-theme="hc"] .selbar{background:#10243a}
+
+/* shared plain table (compare panel) */
+.tp-tbl{width:100%;border-collapse:collapse;font-size:10.5px}
+.tp-tbl th{text-align:left;color:var(--tx3);font-weight:400;font-size:9px;letter-spacing:.4px;text-transform:uppercase;padding:3px 8px;border-bottom:1px solid var(--line2);white-space:nowrap;position:sticky;top:0;background:var(--bg2)}
+.tp-tbl th.r,.tp-tbl td.r{text-align:right}
+.tp-tbl td{padding:1px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+
 /* watch / alerts */
 .wr{display:flex;align-items:center;gap:6px;padding:3px 9px;border-bottom:1px solid var(--line);font-size:10.5px;cursor:pointer}.wr:hover{background:var(--hover)}
 .wr .n3{flex:1;min-width:0;color:var(--white);font-family:var(--sans);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}

@@ -47,8 +47,16 @@ export default function Workspace() {
 
   const onReady = (event: DockviewReadyEvent) => { apiRef.current = event.api; build(event.api, "default"); };
   const applyPreset = (p: Preset) => { setPreset(p); if (apiRef.current) build(apiRef.current, p); };
-  // Expose preset-switching to the command palette (Ctrl-K → Layout).
-  useEffect(() => { t.registerLayout((p) => applyPreset(p as Preset)); }, [t]);
+  const seqRef = useRef(0);
+  // Expose preset-switching (palette → Layout) + dynamic panel adds (multi-select → Compare/Overlap).
+  useEffect(() => {
+    t.registerLayout((p) => applyPreset(p as Preset));
+    t.registerAddPanel((component, title, params) => {
+      const api = apiRef.current; if (!api) return;
+      api.addPanel({ id: `${component}_${++seqRef.current}`, component, title,
+        params: params as never, position: { direction: "right" } as never });
+    });
+  }, [t]);
   const popActive = () => {
     const api = apiRef.current; if (!api) return;
     const g = api.activeGroup; if (g) api.addPopoutGroup(g);
