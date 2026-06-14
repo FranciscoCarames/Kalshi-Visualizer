@@ -16,7 +16,7 @@ export interface FeedRow {
   // display-only derived (computed in the adapter):
   cond?: number | null; cond_child?: number | null; cond_success?: number | null;
   parent_over_maxloss?: number | null;
-  legs?: FeedLeg[]; spark?: number[]; url?: string;
+  legs?: FeedLeg[]; nlegs?: number; spark?: number[]; url?: string;
   [k: string]: unknown;
 }
 
