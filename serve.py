@@ -18,9 +18,11 @@ fragment them). The guard protects ``python serve.py``; a process manager runnin
 from __future__ import annotations
 
 import os
+import pathlib
 import sys
 
 import uvicorn
+from fastapi.staticfiles import StaticFiles
 from nicegui import ui
 
 import api
@@ -33,6 +35,21 @@ from webui import engine
 # Real storage secret comes from the env; the config value is only a clearly-labeled dev fallback.
 _storage_secret = os.getenv("NICEGUI_STORAGE_SECRET") or config.NICEGUI_STORAGE_SECRET_FALLBACK
 
+def mount_spa(fastapi_app, dist_dir: pathlib.Path) -> bool:
+    """Mount the built Terminal Pro SPA at /terminal when its dist exists, returning whether it mounted.
+
+    The dist is a build artifact (gitignored) — ``cd frontend && npm run build`` — so this is CONDITIONAL:
+    a CI run or fresh clone that hasn't built the UI simply leaves /terminal unmounted and never breaks
+    boot. `html=True` serves index.html for the directory (the SPA has no client-side routing). The SPA
+    reads the engine only through the read-only GET /api/terminal/feed; the legacy dashboard at "/" is
+    untouched. Mount BEFORE the NiceGUI "/" catch-all so the more specific prefix wins."""
+    if not dist_dir.is_dir():
+        return False
+    fastapi_app.mount("/terminal", StaticFiles(directory=str(dist_dir), html=True), name="terminal")
+    return True
+
+
+mount_spa(api.app, pathlib.Path(__file__).resolve().parent / "frontend" / "dist")
 ui.run_with(api.app, mount_path="/", storage_secret=_storage_secret)
 
 _LOOPBACK_HOSTS = ("127.0.0.1", "localhost", "::1")

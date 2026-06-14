@@ -1,0 +1,25 @@
+{
+  "name": "kalshi-terminal",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Terminal Pro — the Kalshi opportunity workstation SPA (React + AG Grid), served at /terminal.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "ag-grid-community": "^33.0.0",
+    "ag-grid-react": "^33.0.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "^5.6.0",
+    "vite": "^5.4.10"
+  }
+}
