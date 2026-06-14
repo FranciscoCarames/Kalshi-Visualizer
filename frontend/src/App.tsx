@@ -2,6 +2,8 @@ import { TerminalProvider, useTerminal } from "./context";
 import { TILES, sectionCount } from "./feed";
 import { LENSES } from "./lens";
 import Workspace from "./Workspace";
+import Keys from "./Keys";
+import Palette from "./Palette";
 
 const TILE_SUB: Record<string, string> = {
   act: "executable now", rev: "settlement-dep", blk: "not fillable", bounded: "can lose money",
@@ -22,8 +24,10 @@ function Shell() {
       <div className="tp-cmd">
         <div className="fk"><span>OPP</span><span>RES</span><span>OPS</span><span>ALRT</span></div>
         <div className="ci"><span className="amber">&gt;</span>
-          <input placeholder="SEARCH — functions · participants · lenses · layouts  (Ctrl-K · Phase B3)" readOnly />
-          <button className="go">&lt;GO&gt;</button></div>
+          <input placeholder="SEARCH — functions · participants · lenses · layouts   (Ctrl-K or /)" readOnly
+                 onFocus={() => t.setPaletteOpen(true)} onClick={() => t.setPaletteOpen(true)} />
+          <span className="kbd">Ctrl K</span>
+          <button className="go" onClick={() => t.setPaletteOpen(true)}>&lt;GO&gt;</button></div>
         <div className="clock">{fmtAge(m?.fetched_at ?? null)} · KALSHI</div>
       </div>
 
@@ -50,6 +54,8 @@ function Shell() {
             ))}
           </div>
           <span className="dim" style={{ fontSize: 9 }}>{t.lens ? "sort lens" : "engine order"}</span>
+          <button className="tp-tb" title="Toggle theme (amber / high-contrast)"
+                  onClick={() => t.setTheme(t.theme === "amber" ? "hc" : "amber")}>◐</button>
         </div>
       </div>
 
@@ -76,9 +82,11 @@ function Shell() {
       <Workspace />
 
       <div className="tp-ft">
-        <b>TERMINAL PRO · Phase B2</b>
-        <span className="dim">docked workspace (Dockview) · drag / resize / pop-out panels + layout presets · 6 lenses · per-bucket columns · palette / multi-select land in B3–B4</span>
+        <b>TERMINAL PRO · Phase B3</b>
+        <span className="dim">docked workspace · Ctrl-K palette · keyboard (1-6 lens · J/K rows · /) · amber / high-contrast themes · multi-select lands in B4</span>
       </div>
+      <Keys />
+      <Palette />
     </div>
   );
 }

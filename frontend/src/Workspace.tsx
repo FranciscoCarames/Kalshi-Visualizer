@@ -1,10 +1,11 @@
 /* The docked workspace — Dockview hosts the panels as draggable / resizable / pop-out groups.
  * Layout PRESETS rebuild the arrangement; drag a tab to rearrange, drag a splitter to resize, POP a group
  * to a separate window (multi-monitor). Replaces Phase B1's static CSS grid. */
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { DockviewReact, type DockviewApi, type DockviewReadyEvent, themeAbyss } from "dockview";
 import "dockview/dist/styles/dockview.css";
 import { PANELS } from "./panels";
+import { useTerminal } from "./context";
 
 const TITLES: Record<string, string> = {
   blotter: "BLOTTER", inspector: "INSPECTOR", ladder: "MD LADDER", watch: "RECENTLY ACTIONABLE", alerts: "ALERTS",
@@ -40,11 +41,14 @@ const PRESETS: [Preset, string][] = [
 ];
 
 export default function Workspace() {
+  const t = useTerminal();
   const apiRef = useRef<DockviewApi | null>(null);
   const [preset, setPreset] = useState<Preset>("default");
 
   const onReady = (event: DockviewReadyEvent) => { apiRef.current = event.api; build(event.api, "default"); };
   const applyPreset = (p: Preset) => { setPreset(p); if (apiRef.current) build(apiRef.current, p); };
+  // Expose preset-switching to the command palette (Ctrl-K → Layout).
+  useEffect(() => { t.registerLayout((p) => applyPreset(p as Preset)); }, [t]);
   const popActive = () => {
     const api = apiRef.current; if (!api) return;
     const g = api.activeGroup; if (g) api.addPopoutGroup(g);

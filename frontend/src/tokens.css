@@ -158,3 +158,23 @@ body{background:var(--bg);color:var(--tx);font-family:var(--mono);font-size:12px
 /* footer */
 .tp-ft{flex:0 0 auto;display:flex;gap:12px;align-items:center;border-top:1px solid var(--line2);background:var(--bg1);padding:3px 9px;font-size:9px;color:var(--tx3)}
 .tp-ft b{color:var(--amber)}
+
+/* command palette (cmdk) */
+.kbd{font-size:8.5px;color:var(--tx3);border:1px solid var(--line2);padding:0 4px;border-radius:2px;white-space:nowrap}
+.pal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:80;display:flex;align-items:flex-start;justify-content:center;padding-top:80px}
+.pal{width:620px;max-width:92vw;background:var(--bg1);border:1px solid var(--amber-d);box-shadow:0 20px 60px rgba(0,0,0,.7);font-family:var(--mono)}
+.pal-in{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--line2)}
+.pal-in input{flex:1;background:transparent;border:none;outline:none;color:var(--white);font-family:var(--mono);font-size:14px}
+.pal-list{max-height:360px;overflow:auto}
+.pal [cmdk-group-heading]{padding:3px 12px;color:var(--amber);font-size:8.5px;letter-spacing:1px;background:var(--bg2);border-bottom:1px solid var(--line);position:sticky;top:0}
+.pal [cmdk-item]{display:flex;align-items:center;gap:9px;padding:5px 12px;cursor:pointer;font-size:11px;color:var(--tx2)}
+.pal [cmdk-item][data-selected="true"]{background:var(--hover);color:var(--white)}
+.pal .pi-k{color:var(--white);font-weight:600;min-width:130px}
+.pal .pi-d{color:var(--tx3);font-size:9.5px}
+.pal .pi-tag{margin-left:auto;font-size:8px;color:var(--tx3);border:1px solid var(--line2);padding:0 4px}
+.pal-empty{padding:10px 12px;color:var(--tx3)}
+.pal-foot{padding:4px 12px;border-top:1px solid var(--line2);font-size:9px;color:var(--tx3);display:flex;gap:12px}.pal-foot b{color:var(--tx2)}
+
+/* high-contrast theme (◐ toggle / palette → Theme) */
+html[data-theme="hc"]{--bg:#05070a;--bg1:#0b0e13;--bg2:#11151c;--panel:#0c1016;--line:#243042;--line2:#33425a;--hover:#161c26;--tx:#e9eef5;--tx2:#aebccd;--tx3:#71839a;--white:#fff;--amber:#ffc233;--amber-d:#8a6a18}
+html[data-theme="hc"] body{background-image:none}
