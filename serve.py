@@ -28,6 +28,7 @@ import config
 import presence
 import scan_scheduler
 import webui.dashboard  # noqa: F401  — importing registers the @ui.page('/') dashboard
+import webui.terminal  # noqa: F401  — registers the redesigned @ui.page('/terminal') Terminal Pro UI
 from webui import engine
 
 # Real storage secret comes from the env; the config value is only a clearly-labeled dev fallback.

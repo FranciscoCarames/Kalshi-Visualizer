@@ -162,3 +162,63 @@ async def test_scanning_indicator_appears_via_tick(user: User, seeded_db) -> Non
     await user.should_not_see(_SCANNING_TEXT)
     scan_manager.manager._status["status"] = "in_progress"   # scan starts AFTER the page opened
     await user.should_see(_SCANNING_TEXT)                    # should_see retries past the 1s tick (P2 pattern)
+
+
+# --- Terminal Pro shell (redesign P1) — the /terminal route renders its server-side chrome --------------
+# Same headless caveat as above: the blotter ROWS + the DES card are client-rendered / need a real
+# row-click, so they're manual checks. Here we assert the SHELL (command bar, status strip, disclaimer,
+# tiles, blotter + lens labels, empty DES placeholder) builds without error against a seeded store.
+@pytest.mark.nicegui_main_file(MAIN)
+async def test_terminal_shell_renders(user: User, seeded_db) -> None:
+    _seed(seeded_db, [_actionable_opp()],
+          frames=[{"sport": "tennis", "frame_type": "contracts", "schema_version": 1, "rows": _contracts()}])
+    await user.open("/terminal")
+    await user.should_see("KALSHI TERMINAL PRO")             # command-bar brand
+    await user.should_see("GROSS · TOP-OF-BOOK · $1 BASIS · READ-ONLY · NO ORDER ENTRY · NOT RISKLESS")
+    await user.should_see("ACT-NOW")                         # landing tile (clickable bucket switch)
+    await user.should_see("CHEAP-NO")
+    await user.should_see("BLOTTER")
+    await user.should_see("Blended")                         # the lens switcher (RANK_MODES)
+    await user.should_see("DES — select a row")              # empty trade-card placeholder
+
+
+@pytest.mark.nicegui_main_file(MAIN)
+async def test_terminal_shell_renders_on_empty_store(user: User, seeded_db) -> None:
+    """No scan yet → the shell still builds and the status strip is honest (no crash on an empty store)."""
+    await user.open("/terminal")
+    await user.should_see("KALSHI TERMINAL PRO")
+    await user.should_see("No scan yet")                     # scope_banner honest empty state
+
+
+# --- P4 surfaces: the OPP/RES/OPS/ALRT function tabs switch to real-engine surfaces --------------------
+# These surfaces ARE built server-side on the tab click (set_surface → render_*), so unlike the blotter
+# rows the headless User can drive them: it clicks the function-code label and asserts the surface header
+# + a real-data label appears.
+@pytest.mark.nicegui_main_file(MAIN)
+async def test_terminal_ops_surface_shows_data_health(user: User, seeded_db) -> None:
+    _seed(seeded_db, [_actionable_opp()],
+          frames=[{"sport": "tennis", "frame_type": "contracts", "schema_version": 1, "rows": _contracts()}])
+    await user.open("/terminal")
+    user.find("OPS").click()
+    await user.should_see("OPS — operations & data health")
+    await user.should_see("SCAN HEALTH")
+    await user.should_see("CONTRACT UNIVERSE")
+
+
+@pytest.mark.nicegui_main_file(MAIN)
+async def test_terminal_research_surface_is_labelled_not_a_trade(user: User, seeded_db) -> None:
+    _seed(seeded_db, [_actionable_opp()],
+          frames=[{"sport": "tennis", "frame_type": "contracts", "schema_version": 1, "rows": _contracts()}])
+    await user.open("/terminal")
+    user.find("RES").click()
+    await user.should_see("RES — research lab")
+    await user.should_see("research — not a trade")          # G3: research kept off the executable blotter
+
+
+@pytest.mark.nicegui_main_file(MAIN)
+async def test_terminal_alerts_surface_renders(user: User, seeded_db) -> None:
+    _seed(seeded_db, [_actionable_opp()])
+    await user.open("/terminal")
+    user.find("ALRT").click()
+    await user.should_see("ALRT — trusted-state alerts")
+    await user.should_see("NEW ACTIONABLE")

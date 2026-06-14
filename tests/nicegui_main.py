@@ -16,7 +16,9 @@ import importlib
 from nicegui import ui
 
 import webui.dashboard
+import webui.terminal
 
 importlib.reload(webui.dashboard)
+importlib.reload(webui.terminal)   # re-register the @ui.page('/terminal') Terminal Pro shell each run
 
 ui.run()
