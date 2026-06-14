@@ -2,6 +2,7 @@ import { TerminalProvider, useTerminal } from "./context";
 import { TILES, sectionCount } from "./feed";
 import { LENSES } from "./lens";
 import Workspace from "./Workspace";
+import { ResSurface, OpsSurface } from "./Surfaces";
 import Keys from "./Keys";
 import Palette from "./Palette";
 
@@ -43,9 +44,9 @@ function Shell() {
       </div>
 
       <div className="tp-bar2">
-        <div className="tab on"><span className="c">1)</span>OPP</div>
-        <div className="tab"><span className="c">2)</span>RES</div>
-        <div className="tab"><span className="c">3)</span>OPS</div>
+        <div className={"tab" + (t.surface === "opp" ? " on" : "")} onClick={() => t.setSurface("opp")}><span className="c">1)</span>OPP</div>
+        <div className={"tab" + (t.surface === "res" ? " on" : "")} onClick={() => t.setSurface("res")}><span className="c">2)</span>RES</div>
+        <div className={"tab" + (t.surface === "ops" ? " on" : "")} onClick={() => t.setSurface("ops")}><span className="c">3)</span>OPS</div>
         <div className="right">
           <span className="dim" style={{ fontSize: 9 }}>LENS</span>
           <div className="tp-lens">
@@ -76,14 +77,18 @@ function Shell() {
         </select>
         <label>PARTICIPANT</label>
         <input value={t.part} placeholder="contains…" onChange={(e) => t.setPart(e.target.value)} />
+        <label className="chk"><input type="checkbox" checked={t.showNet} onChange={(e) => t.setShowNet(e.target.checked)} />Net of fees (est.)</label>
         <span className="clr" onClick={() => { t.setSportSel(""); t.setPart(""); }}>clear</span>
       </div>
 
-      <Workspace />
+      {/* OPP keeps the Dockview workspace mounted (display-toggled) so its layout survives surface switches. */}
+      <div style={{ flex: 1, minHeight: 0, flexDirection: "column", display: t.surface === "opp" ? "flex" : "none" }}><Workspace /></div>
+      {t.surface === "res" ? <ResSurface /> : null}
+      {t.surface === "ops" ? <OpsSurface /> : null}
 
       <div className="tp-ft">
-        <b>TERMINAL PRO · Phase B3</b>
-        <span className="dim">docked workspace · Ctrl-K palette · keyboard (1-6 lens · J/K rows · /) · amber / high-contrast themes · multi-select lands in B4</span>
+        <b>TERMINAL PRO · Phase C</b>
+        <span className="dim">OPP / RES / OPS surfaces · inspector tabs (trade card · participant detail · formulas) · net-of-fees toggle (display-only)</span>
       </div>
       <Keys />
       <Palette />

@@ -15,6 +15,7 @@ interface TerminalState {
   zone: string; section: string; lens: string; sportSel: string; part: string;
   sel: FeedRow | null; colKey: string; visible: string[]; columnDefs: ColDef<FeedRow>[]; rows: FeedRow[];
   theme: "amber" | "hc"; paletteOpen: boolean; multi: FeedRow[];
+  surface: "opp" | "res" | "ops"; showNet: boolean; itab: "card" | "detail" | "formula";
   goSection: (z: string, s: string) => void;
   setSection: (s: string) => void;
   toggleLens: (l: string) => void;
@@ -34,6 +35,9 @@ interface TerminalState {
   openCompare: () => void;
   openOverlap: () => void;
   exportSelected: () => void;
+  setSurface: (s: "opp" | "res" | "ops") => void;
+  setShowNet: (v: boolean) => void;
+  setItab: (t: "card" | "detail" | "formula") => void;
 }
 
 const Ctx = createContext<TerminalState | null>(null);
@@ -56,6 +60,9 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<"amber" | "hc">("amber");
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [multi, setMulti] = useState<FeedRow[]>([]);
+  const [surface, setSurface] = useState<"opp" | "res" | "ops">("opp");
+  const [showNet, setShowNet] = useState(false);
+  const [itab, setItab] = useState<"card" | "detail" | "formula">("card");
   const [, tick] = useState(0);
   const layoutRef = useRef<((preset: string) => void) | null>(null);
   const addPanelRef = useRef<((component: string, title: string, params: object) => void) | null>(null);
@@ -76,7 +83,14 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
   const sports = useMemo(() => Object.keys(meta?.sports ?? {}).sort(), [meta]);
   const colKey = colKeyOf(zone, section);
   const defVis = useMemo(() => COLS[colKey].filter((c) => !c.hide).map((c) => c.f), [colKey]);
-  const visible = colsByKey[colKey] ?? defVis;
+  const visible = useMemo(() => {
+    const base = colsByKey[colKey] ?? defVis;
+    if (showNet && colKey === "opp") {                 // reveal the display-only net-of-fees estimate columns
+      const nets = ["net_edge", "net_profit", "fees"].filter((f) => !base.includes(f));
+      if (nets.length) { const i = base.indexOf("profit"); const out = [...base]; out.splice(i < 0 ? out.length : i + 1, 0, ...nets); return out; }
+    }
+    return base;
+  }, [colsByKey, colKey, defVis, showNet]);
   const columnDefs = useMemo(() => buildColDefs(COLS[colKey], visible), [colKey, visible]);
   const rows = useMemo(() => {
     let r = rowsFor(opps, zone, section);
@@ -87,7 +101,7 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
 
   const value: TerminalState = {
     meta, opps, err, sports, zone, section, lens, sportSel, part, sel, colKey, visible, columnDefs, rows,
-    theme, paletteOpen, multi,
+    theme, paletteOpen, multi, surface, showNet, itab,
     goSection: (z, s) => { setZone(z); setSectionRaw(s); },
     setSection: setSectionRaw,
     toggleLens: (l) => setLens((cur) => (cur === l ? "" : l)),
@@ -108,6 +122,7 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
     exportSelected: () => downloadCsv(
       `selected_${multi.length}_snap${meta?.snapshot_id ?? "x"}.csv`,
       multi, COLS[colKey].filter((c) => visible.includes(c.f))),
+    setSurface, setShowNet, setItab,
   };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

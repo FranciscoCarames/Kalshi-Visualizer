@@ -107,6 +107,29 @@ body{background:var(--bg);color:var(--tx);font-family:var(--mono);font-size:12px
 .tp-dock .dv-tab{font-family:var(--mono);font-size:9.5px;letter-spacing:.5px;text-transform:uppercase}
 .tp-dock .dv-default-tab .dv-default-tab-content{color:inherit}
 
+/* inspector tabs */
+.itabs{display:flex;background:var(--bg2);border-bottom:1px solid var(--line);flex:0 0 auto}
+.itab{padding:2px 10px;font-size:9.5px;font-weight:700;cursor:pointer;color:var(--tx3);border-right:1px solid var(--line)}
+.itab.on{color:var(--amber);background:var(--panel);box-shadow:inset 0 -2px 0 var(--amber)}
+
+/* conditional table + formula (participant detail / formulas tabs) */
+.condtbl{width:100%;border-collapse:collapse;font-size:10px;margin-top:2px}
+.condtbl td,.condtbl th{padding:1px 5px;border-bottom:1px solid var(--line);text-align:right}
+.condtbl td:first-child,.condtbl th:first-child{text-align:left}.condtbl th{color:var(--tx3);font-size:8px}
+.formula{font-family:var(--mono);background:var(--bg2);border:1px solid var(--line);padding:3px 6px;font-size:9.5px;color:var(--cyan);margin-top:3px}
+
+/* RES / OPS surfaces */
+.surf-grid{height:100%;overflow:auto;padding:8px;display:grid;grid-template-columns:1fr 1fr;gap:6px;align-content:start}
+.surf-grid .rp{border:1px solid var(--line2);background:var(--panel)}
+.surf-grid .rp .h{padding:4px 9px;background:var(--bg2);border-bottom:1px solid var(--line);color:var(--amber);font-size:10px;display:flex;gap:8px;align-items:center}
+.surf-grid .rp .h.violet{color:var(--violet)}
+.surf-grid .rp .resb{margin-left:auto;color:var(--violet);font-size:8px;border:1px solid var(--violet);padding:0 4px}
+.surf-grid .rp .c{padding:8px}
+.surf-grid .rp .tp-tbl td{font-size:10px}
+.resbars{display:flex;align-items:flex-end;gap:3px;height:64px;margin:5px 0 16px}
+.resbars .b{flex:1;background:#3a3320;position:relative;min-height:2px}.resbars .b:first-child{background:var(--amber)}
+.resbars .b span{position:absolute;bottom:-13px;left:0;right:0;text-align:center;font-size:7.5px;color:var(--tx3)}
+
 /* DES trade card */
 .des{padding:6px 11px;font-size:10.5px;overflow:auto}
 .dtitle{display:flex;align-items:center;gap:8px;margin-bottom:3px;flex-wrap:wrap}.dtitle .t{color:var(--white);font-size:12.5px;font-weight:700;font-family:var(--sans)}

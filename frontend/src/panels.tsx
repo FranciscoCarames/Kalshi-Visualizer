@@ -7,9 +7,11 @@ import { type IDockviewPanelProps } from "dockview";
 import { useTerminal } from "./context";
 import { COLS } from "./columns";
 import { ZONES, SUBTABS, sectionCount, type FeedRow } from "./feed";
-import Inspector from "./Inspector";
+import Inspector, { Detail, Formulas } from "./Inspector";
 import Ladder from "./Ladder";
 import { Watch, Alerts } from "./SidePanels";
+
+const ITABS: [string, string][] = [["card", "TRADE CARD"], ["detail", "PARTICIPANT DETAIL"], ["formula", "FORMULAS"]];
 
 export function BlotterPanel() {
   const t = useTerminal();
@@ -81,9 +83,21 @@ export function BlotterPanel() {
 
 export function InspectorPanel() {
   const t = useTerminal();
-  return <div style={{ height: "100%", overflow: "auto" }}>
-    <Inspector row={t.sel} lens={t.lens} snapshotId={t.meta?.snapshot_id ?? null} />
-  </div>;
+  return (
+    <div style={{ height: "100%", display: "flex", flexDirection: "column", minHeight: 0 }}>
+      <div className="itabs">
+        {ITABS.map(([k, l]) => (
+          <div key={k} className={"itab" + (t.itab === k ? " on" : "")}
+               onClick={() => t.setItab(k as "card" | "detail" | "formula")}>{l}</div>
+        ))}
+      </div>
+      <div style={{ flex: 1, overflow: "auto", minHeight: 0 }}>
+        {t.itab === "detail" ? <Detail row={t.sel} />
+          : t.itab === "formula" ? <Formulas row={t.sel} />
+          : <Inspector row={t.sel} lens={t.lens} snapshotId={t.meta?.snapshot_id ?? null} showNet={t.showNet} />}
+      </div>
+    </div>
+  );
 }
 
 export function LadderPanel() {

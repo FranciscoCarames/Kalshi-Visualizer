@@ -15,6 +15,8 @@ export const COLS: Record<string, Col[]> = {
   opp: [NAME, C("sport", "Sport", "text"), C("detail", "Detail", "text", true), C("action", "Action plan", "text", true),
     C("edge", "Gross edge ¢", "c", false, "firm child bid − parent ask (or Σ-floor for dutch)"),
     C("roi", "ROI %", "pct"), C("units", "Max units", "num"), C("profit", "Max gross profit", "money"),
+    C("net_edge", "Est. net edge ¢", "c", true, "gross edge − estimated taker fees (display-only, never ranks)"),
+    C("net_profit", "Est. net max profit", "money", true), C("fees", "Est. fees ¢", "c", true),
     C("tradable", "Tradable", "trad"), C("caveat", "Caveat", "text")],
   risk: [C("signal", "Signal", "text"), C("flags", "Flags", "text"), C("resolution", "Kind", "text"),
     C("cheap", "Cheap vs peers", "text"), C("sport", "Sport", "text"), NAME, C("detail", "Detail", "text", true),

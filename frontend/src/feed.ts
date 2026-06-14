@@ -15,7 +15,8 @@ export interface FeedRow {
   settlement_caveat?: string; blk?: string; scope?: string; resolution_mode?: string;
   // display-only derived (computed in the adapter):
   cond?: number | null; cond_child?: number | null; cond_success?: number | null;
-  parent_over_maxloss?: number | null;
+  parent_over_maxloss?: number | null; ratio?: number;
+  pnode?: string; cnode?: string; pbid?: number | null; cask?: number | null;
   legs?: FeedLeg[]; nlegs?: number; spark?: number[]; url?: string;
   [k: string]: unknown;
 }
