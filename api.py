@@ -30,7 +30,7 @@ import scan_manager
 import scanner
 import sports
 import store
-from webui import diagnostics
+from webui import diagnostics, feed
 
 app = FastAPI(title="Kalshi opportunity engine", version="4.0")
 logger = logging.getLogger("kalshi.api")
@@ -326,6 +326,17 @@ def get_opportunities(sport: str | None = None, bucket: str | None = None,
     if status:
         rows = [r for r in rows if r.get("status") == status]
     return [Opportunity(**r) for r in rows]
+
+
+@app.get("/api/terminal/feed")
+def get_terminal_feed(db_path: str | None = Depends(db_path_dep)) -> dict[str, Any]:
+    """Denormalized, read-only VIEW of the latest snapshot for the Terminal Pro SPA (`/terminal`).
+
+    A faithful 1:1 view, NOT a second engine: `webui.feed.build_feed` re-presents `store.latest()` through
+    the existing display-row builders and adds only DISPLAY-ONLY fields (ripeness / conditional / net-of-
+    fees estimate). `bucket`/`status`/`tradable_now`/`rule_flag` are copied verbatim from the same rows
+    `/opportunities` serves — parity is asserted in tests/test_feed.py. No re-bucketing, no re-ranking."""
+    return feed.build_feed(db_path=db_path)
 
 
 @app.get("/opportunities/{opportunity_id}", response_model=Opportunity)

@@ -1,0 +1,171 @@
+"""Terminal-feed adapter — a DENORMALIZED, read-only VIEW of the latest snapshot for the Terminal Pro SPA.
+
+This is the single backend surface the React workstation (`/terminal`) reads. It is deliberately NOT a
+second engine (see the plan's PRIME INVARIANT): it re-presents `store.latest()` through the existing
+`webui.viewmodel` row builders and adds a handful of DISPLAY-ONLY fields the terminal shows. It must never
+re-derive `bucket` / `status` / `tradable_now` / `rule_flag` / actionability — those are copied verbatim
+from the engine's opportunity rows — and it must never mutate the input opportunities or feed back into
+`scanner` / `consistency._classify` / ranking.
+
+Lifted from the one-off `_export_mockup_data.py` (which produced the mockup's static `tp-final-data.js`),
+turned into a pure, testable function so a live API route can serve it. The transform is pure: same
+snapshot in -> same `{meta, opps[]}` out, no side effects, no clock, no IO beyond the caller's
+`store.latest()`.
+
+Layers used (all UI-free, so `api.py` can import this without a cycle): `store` (snapshot read) and
+`webui.viewmodel` (the pure display-row builders). Does NOT import `webui.engine` (which imports `api`).
+"""
+from __future__ import annotations
+
+import hashlib
+from collections import Counter
+from typing import Any
+
+import store
+import webui.viewmodel as vm
+
+# bucket -> (zone, section-key). Mirrors the engine's bucket set; diagnostic buckets collapse to one
+# "diag" section. An unknown bucket falls back to diag (never silently dropped).
+_SEC: dict[str, tuple[str, str]] = {
+    "actionable": ("exec", "act"), "review_signal": ("exec", "rev"), "blocked": ("exec", "blk"),
+    "risk_budget": ("spec", "bounded"), "near_miss": ("spec", "nearmiss"),
+    "qualifier_setup": ("spec", "qual"), "no_structure": ("spec", "cheapno"),
+    "data_quality": ("diag", "diag"), "display_signal": ("diag", "diag"),
+    "wide_signal": ("diag", "diag"), "near_edge": ("diag", "diag"), "clean": ("diag", "diag"),
+}
+_EMPTY = (set(), {}, set())   # (new_ids, changes, flash_ids) the row builders accept
+
+
+def _clean(r: dict[str, Any]) -> dict[str, Any]:
+    """Drop the private `_`-prefixed display helpers (severity tags etc.) the SPA doesn't consume."""
+    return {k: v for k, v in r.items() if not k.startswith("_")}
+
+
+def _num(x: Any) -> float | None:
+    """A JSON-safe float, or None for None/blank/NaN/non-numeric (so the SPA renders '—', never crashes).
+    Coerces Decimal cents to float — the wire format is plain JSON numbers."""
+    try:
+        if x is None or x == "":
+            return None
+        f = float(x)
+        return None if f != f else round(f, 4)   # NaN-safe
+    except (TypeError, ValueError):
+        return None
+
+
+def _spark(oid: str) -> list[int]:
+    """A deterministic PLACEHOLDER sparkline (md5 of the opp id) — NOT real intraday data; the engine stores
+    no time series yet (§11). Labelled as a placeholder in the UI; kept so the column renders stably."""
+    h = hashlib.md5(oid.encode()).digest()
+    base = h[0] % 30 + 10
+    return [base + ((h[i] % 11) - 5) for i in range(7)]
+
+
+def _trim_legs(o: dict[str, Any]) -> list[dict[str, Any]]:
+    """The opportunity's legs, trimmed to the fields the ladder/trade-card need (read-only, ≤24 legs)."""
+    out: list[dict[str, Any]] = []
+    for leg in (o.get("legs") or [])[:24]:
+        out.append({"side": leg.get("side"), "c": leg.get("contract"), "p": _num(leg.get("price_c")),
+                    "sz": _num(leg.get("size")) or 0, "tk": leg.get("ticker"), "u": leg.get("url")})
+    return out
+
+
+def _conditional(parent: float | None, child: float | None) -> tuple[float | None, float | None, float | None]:
+    """DISPLAY-ONLY market-implied conditional from firm prices: P(deeper│reached) = child/parent.
+    Returns (cond, cond_child, cond_success) in %, or (None, None, None) when not a priceable parent/child
+    pair. Uncalibrated, gross, not fair value — never feeds classification/ranking."""
+    if not (parent and child and parent > 0):
+        return None, None, None
+    cond = round(child / parent * 100, 1)
+    return cond, cond, round(100 - cond, 1)
+
+
+def _ripeness(o: dict[str, Any]) -> float | None:
+    """DISPLAY-ONLY 'ripeness' = parent display outright ÷ max loss ¢ — in-the-money chance per ¢ at risk
+    (the bounded-loss sort lens). Computed here only; never a backend RANK_MODE. None when there's no
+    bounded downside (no max loss) or no parent outright."""
+    parent = _num(o.get("parent_display_c"))
+    worst = _num(o.get("worst_case_profit_c"))
+    cost = _num(o.get("cost_c"))
+    max_loss = (-worst if (worst is not None and worst < 0)
+                else (cost - 100 if (cost is not None and cost > 100) else None))
+    if parent is None or not max_loss or max_loss <= 0:
+        return None
+    return round(parent / max_loss, 3)
+
+
+def _build_row(o: dict[str, Any]) -> dict[str, Any]:
+    """One opportunity -> one denormalized terminal row. Pure; never mutates `o`. The engine's verbatim
+    fields (bucket/status/tradable/rule) are copied as-is; the only NEW fields are display-only."""
+    bucket = o.get("bucket")
+    zone, sec = _SEC.get(bucket, ("diag", "diag"))
+    try:
+        if bucket == "risk_budget":
+            base = _clean(vm.risk_budget_row(o, *_EMPTY))
+        elif bucket == "near_miss":
+            base = _clean(vm.near_miss_row(o, *_EMPTY))
+        elif bucket == "no_structure":
+            base = _clean(vm.no_structure_row(o, *_EMPTY))
+        elif bucket == "qualifier_setup":
+            base = _clean(vm.qualifier_row(o, *_EMPTY))
+        else:
+            base = _clean(vm.opp_row(o, set(), {}, set()))
+    except Exception as e:                         # a row builder must never sink the whole feed
+        base = {"name": o.get("name"), "sport": o.get("sport_label"), "caveat": f"(row err: {e})"}
+    nf = vm.net_of_fees(o)                          # existing DISPLAY-ONLY estimate (never ranks)
+    parent, child = _num(o.get("parent_yes_bid_c")), _num(o.get("child_yes_ask_c"))
+    cond, cond_child, cond_success = _conditional(parent, child)
+    base.update({
+        "id": o["opportunity_id"], "bucket": bucket, "zone": zone, "section": sec,
+        "scope": o.get("no_structure_scope"), "resolution_mode": o.get("resolution_mode"),
+        "sport": o.get("sport_label") or base.get("sport"),
+        "sub": o.get("tournament") or base.get("detail") or "",
+        "status": o.get("status"), "tradable": o.get("tradable_now") or base.get("tradable"),
+        "rule": o.get("rule_flag"), "settlement_caveat": o.get("settlement_caveat"),
+        "blk": o.get("blocked_reason"),
+        "legs": _trim_legs(o),
+        "nlegs": int(o["n_legs"]) if _num(o.get("n_legs")) else len(o.get("legs") or []),
+        "url": o.get("url"), "url2": o.get("url_2"),
+        "pnode": o.get("parent_node"), "cnode": o.get("child_node"), "pbid": parent, "cask": child,
+        # DISPLAY-ONLY derived fields (computed in this adapter only — never in the engine):
+        "cond": cond, "cond_child": cond_child, "cond_success": cond_success,
+        "parent_over_maxloss": _ripeness(o), "spark": _spark(o["opportunity_id"]),
+        "fees": nf.get("total_fees_c"), "net_edge": nf.get("net_edge_c"),
+        "net_profit": nf.get("net_profit_dollars"),
+    })
+    if isinstance(base.get("flags"), list):        # normalize the flags list -> a short string
+        base["flags"] = " ".join(
+            (f.get("label") if isinstance(f, dict) else str(f)) for f in base["flags"]) if base["flags"] else ""
+    return base
+
+
+def feed_from_snapshot(snap: dict[str, Any] | None) -> dict[str, Any]:
+    """Pure transform: a snapshot dict -> ``{"meta": {...}, "opps": [...]}``. Preserves the engine's
+    opportunity ORDER (the snapshot is already scanner-ranked — the SPA's default view), so the feed is a
+    faithful 1:1 VIEW: every snapshot opportunity yields exactly one feed row, no re-sort, no re-bucket, no
+    cap. Honest empty feed when there's no snapshot."""
+    if not snap:
+        return {"meta": {"snapshot_id": None, "fetched_at": None, "n_total": 0, "totals": {},
+                         "sports": {}, "resolution_counts": {}, "scope_counts": {}}, "opps": []}
+    opps = snap.get("opportunities") or []
+    meta = snap.get("meta") or {}
+    rows = [_build_row(o) for o in opps]
+    res_counts = Counter((o.get("resolution_mode") or "?") for o in opps if o.get("bucket") == "risk_budget")
+    scope_counts = Counter((o.get("no_structure_scope") or "other") for o in opps
+                           if o.get("bucket") == "no_structure")
+    feed_meta = {
+        "snapshot_id": snap.get("snapshot_id"), "fetched_at": snap.get("fetched_at"), "n_total": len(opps),
+        "contracts": meta.get("contracts_scanned"), "checks": meta.get("checks_tested"),
+        "requests": meta.get("kalshi_requests"), "scanned": meta.get("scanned"),
+        "failed": meta.get("failed"), "retry": meta.get("retry_count"),
+        "totals": dict(Counter(o.get("bucket") for o in opps)),
+        "sports": dict(Counter(o.get("sport_label") or o.get("sport") for o in opps)),
+        "resolution_counts": dict(res_counts), "scope_counts": dict(scope_counts),
+        "series_errors": meta.get("series_errors"),
+    }
+    return {"meta": feed_meta, "opps": rows}
+
+
+def build_feed(db_path: str | None = None) -> dict[str, Any]:
+    """The live terminal feed for the newest stored snapshot (read-only; same store the dashboard reads)."""
+    return feed_from_snapshot(store.latest(db_path=db_path))
