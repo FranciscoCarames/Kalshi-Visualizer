@@ -14,8 +14,8 @@ const num = (v: unknown) => (typeof v === "number" && !isNaN(v) ? v : null);
 const n1 = (v: number) => (Number.isInteger(v) ? String(v) : v.toFixed(1));
 const cents = (c: unknown) => { const n = num(c); return n == null ? "—" : Math.round(n) + "¢"; };
 
-export default function Inspector({ row, lens, snapshotId, showNet }:
-  { row: FeedRow | null; lens: string; snapshotId: number | null; showNet: boolean }) {
+export default function Inspector({ row, lens, snapshotId, showNet, longShort }:
+  { row: FeedRow | null; lens: string; snapshotId: number | null; showNet: boolean; longShort?: boolean }) {
   const [basis, setBasis] = useState(1);
   if (!row) return <div className="empty">Click a blotter row to load the trade card — legs · economics · evidence.</div>;
   const cv = (c: unknown) => { const n = num(c); return n == null ? "—" : basis === 100 ? "$" + (n / 100).toFixed(2) : Math.round(n) + "¢"; };
@@ -38,9 +38,10 @@ export default function Inspector({ row, lens, snapshotId, showNet }:
       <div className="sect">BUY-ONLY PLAN — {row.nlegs ?? legs.length} LEG{(row.nlegs ?? legs.length) === 1 ? "" : "S"}</div>
       {legs.length ? legs.map((l, i) => {
         const yes = String(l.side || "").includes("yes");
+        const lbl = longShort ? (yes ? "LONG" : "SHORT") : (yes ? "YES" : "NO");
         return (
           <div className="leg" key={i}>
-            <span className={yes ? "y" : "n"}>{yes ? "YES" : "NO"}</span>
+            <span className={yes ? "y" : "n"}>{lbl}</span>
             <span className="l2">{l.c}</span>
             <span className="white">{l.p != null ? l.p + "¢" : "—"}</span>
             <span className="dim">×{l.sz ?? 0}</span>
@@ -106,13 +107,12 @@ function Tbl({ rows, cols }: { rows: Record<string, unknown>[]; cols: [string, s
   );
 }
 
-export function Detail({ row }: { row: FeedRow | null }) {
+export function Detail({ row, showIds }: { row: FeedRow | null; showIds?: boolean }) {
   const key = detailKey(row);
   const [bundle, setBundle] = useState<DetailBundle | null>(null);
   const [ladder, setLadder] = useState<LadderData | null>(null);
   const [payoff, setPayoff] = useState<PayoffData | null>(null);
   const [err, setErr] = useState<string | null>(null);
-  const [showRaw, setShowRaw] = useState(false);
   useEffect(() => {
     setBundle(null); setLadder(null); setPayoff(null); setErr(null);
     if (!row) return;
@@ -195,9 +195,9 @@ export function Detail({ row }: { row: FeedRow | null }) {
               ))}</>
           ) : null}
 
-          {bundle.raw_fields.length ? (
-            <><div className="sect" style={{ cursor: "pointer" }} onClick={() => setShowRaw((v) => !v)}>RAW FIELDS · IDS &amp; CODES {showRaw ? "▾" : "▸"}</div>
-              {showRaw ? <Tbl rows={bundle.raw_fields} cols={[["series", "Series"], ["tournament", "Tournament"], ["tournament_source", "T-src"], ["player_key", "Player key"], ["mapping_confidence", "Map conf"]]} /> : null}</>
+          {showIds && bundle.raw_fields.length ? (
+            <><div className="sect">RAW FIELDS · IDS &amp; CODES</div>
+              <Tbl rows={bundle.raw_fields} cols={[["series", "Series"], ["tournament", "Tournament"], ["tournament_source", "T-src"], ["player_key", "Player key"], ["mapping_confidence", "Map conf"]]} /></>
           ) : null}
         </>
       )}

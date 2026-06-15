@@ -10,9 +10,9 @@ import { CompareView, OverlapView, LaddersView } from "./panels";
 import { postScan, getScanStatus } from "./scan";
 import { type FilterState, emptyFilters, filteredCount, passAll, tournamentOptions } from "./filters";
 
-const POLL_MS = 4000;
-
 export interface ExtraPanel { title: string; body: ReactNode; }
+export interface Settings { longShort: boolean; showIds: boolean; tz: string; autoRefresh: string; }
+const AUTO_MS: Record<string, number> = { "10s": 10000, "30s": 30000, off: 0 };
 
 interface TerminalState {
   meta: FeedMeta | null; opps: FeedRow[]; err: string | null; sports: string[];
@@ -20,9 +20,12 @@ interface TerminalState {
   sel: FeedRow | null; colKey: string; visible: string[]; rows: FeedRow[];
   theme: "amber" | "hc"; paletteOpen: boolean; multi: FeedRow[];
   surface: "opp" | "res" | "ops"; showNet: boolean; itab: "card" | "detail" | "formula";
-  extra: ExtraPanel | null; panelsMenuOpen: boolean; scanText: string | null;
+  extra: ExtraPanel | null; panelsMenuOpen: boolean; scanText: string | null; settings: Settings;
+  band: { maxLoss: number; minRatio: number; maxOverpay: number };
   count: (zone: string, section: string) => number;
   runScan: (force: boolean) => void;
+  setSetting: <K extends keyof Settings>(k: K, v: Settings[K]) => void;
+  setBand: (k: "maxLoss" | "minRatio" | "maxOverpay", v: number) => void;
   goSection: (z: string, s: string) => void;
   setSection: (s: string) => void;
   toggleLens: (l: string) => void;
@@ -49,6 +52,7 @@ interface TerminalState {
   openLadders: () => void;
   exportSelected: () => void;
   exportView: () => void;
+  exportZip: () => void;
   setSurface: (s: "opp" | "res" | "ops") => void;
   setShowNet: (v: boolean) => void;
   setItab: (t: "card" | "detail" | "formula") => void;
@@ -79,9 +83,13 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
   const [extra, setExtra] = useState<ExtraPanel | null>(null);
   const [panelsMenuOpen, setPanelsMenuOpen] = useState(false);
   const [scanText, setScanText] = useState<string | null>(null);
+  const [settings, setSettings] = useState<Settings>({ longShort: false, showIds: false, tz: "local", autoRefresh: "10s" });
+  const [band, setBand] = useState({ maxLoss: 0, minRatio: 0, maxOverpay: 0 });
   const scanning = useRef(false);
   const [, tick] = useState(0);
   const layoutRef = useRef<((preset: string) => void) | null>(null);
+  const setSetting = <K extends keyof Settings>(k: K, v: Settings[K]) => setSettings((s) => ({ ...s, [k]: v }));
+  const refreshFeed = () => loadFeed().then((f) => (setFeed(f), setErr(null))).catch((e) => setErr(String(e)));
 
   // Manual scan (▷SCAN / ⚡force): drive POST /scan, animate the scanbar, poll /scan/status. The 4s feed
   // poll picks up the new snapshot when the scan finishes. Honors token/rate-limit (never a silent no-op).
@@ -104,7 +112,8 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
           const s = await getScanStatus();
           if (s.status !== "in_progress" || ticks > 40) {
             clearInterval(poll);
-            finish(s.last_scan_error ? "scan error: " + s.last_scan_error : "scan complete · snapshot refreshing");
+            if (!s.last_scan_error) refreshFeed();             // pull the fresh snapshot immediately
+            finish(s.last_scan_error ? "scan error: " + s.last_scan_error : "scan complete · snapshot refreshed");
           }
         } catch { clearInterval(poll); finish("scan status unavailable"); }
       }, 1500);
@@ -113,14 +122,15 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => { document.documentElement.dataset.theme = theme; }, [theme]);
 
+  useEffect(() => { const c = setInterval(() => tick((n) => n + 1), 1000); return () => clearInterval(c); }, []);
   useEffect(() => {
     let alive = true;
     const pull = () => loadFeed().then((f) => alive && (setFeed(f), setErr(null))).catch((e) => alive && setErr(String(e)));
     pull();
-    const poll = setInterval(pull, POLL_MS);
-    const clock = setInterval(() => tick((n) => n + 1), 1000);
-    return () => { alive = false; clearInterval(poll); clearInterval(clock); };
-  }, []);
+    const ms = AUTO_MS[settings.autoRefresh] ?? 10000;        // auto-refresh = feed-poll cadence (off = manual)
+    const poll = ms ? setInterval(pull, ms) : null;
+    return () => { alive = false; if (poll) clearInterval(poll); };
+  }, [settings.autoRefresh]);
 
   const meta = feed?.meta ?? null;
   const opps = useMemo(() => feed?.opps ?? [], [feed]);
@@ -136,9 +146,19 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
     return base;
   }, [colsByKey, colKey, defVis, showNet]);
   const tourOptions = useMemo(() => tournamentOptions(opps, filters.sports), [opps, filters.sports]);
-  const rows = useMemo(
-    () => applyLens(rowsFor(opps, zone, section).filter((o) => passAll(o, filters)), lens),
-    [opps, zone, section, filters, lens]);
+  const rows = useMemo(() => {
+    let r = rowsFor(opps, zone, section).filter((o) => passAll(o, filters));
+    const num = (x: unknown) => (typeof x === "number" && !Number.isNaN(x) ? x : NaN);
+    if (section === "bounded") {
+      if (band.maxLoss > 0) r = r.filter((o) => !(num(o.max_loss) > band.maxLoss));
+      if (band.minRatio > 0) r = r.filter((o) => num(o.ratio) >= band.minRatio);
+    } else if (section === "nearmiss" && band.maxOverpay > 0) {
+      r = r.filter((o) => !(num(o.overpay) > band.maxOverpay));
+    } else if (section === "cheapno" && band.maxLoss > 0) {
+      r = r.filter((o) => !(num(o.max_loss) > band.maxLoss));
+    }
+    return applyLens(r, lens);
+  }, [opps, zone, section, filters, lens, band]);
   // Tile/tab counts over the filtered set (Actionable membership-only — see filters.ts).
   const count = (z: string, s: string) => filteredCount(opps, z, s, filters);
   const patch = (p: Partial<FilterState>) => setFilters((f) => ({ ...f, ...p }));
@@ -149,7 +169,8 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
   const value: TerminalState = {
     meta, opps, err, sports, zone, section, lens, filters, part: filters.part, tourOptions,
     sel, colKey, visible, rows, theme, paletteOpen, multi, surface, showNet, itab,
-    extra, panelsMenuOpen, scanText, count, runScan,
+    extra, panelsMenuOpen, scanText, settings, band, count, runScan, setSetting,
+    setBand: (k, v) => setBand((b) => ({ ...b, [k]: v })),
     goSection: (z, s) => { setZone(z); setSectionRaw(s); },
     setSection: setSectionRaw,
     toggleLens: (l) => setLens((cur) => (cur === l ? "" : l)),
@@ -179,6 +200,20 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
     exportView: () => downloadCsv(
       `kalshi_${section}_snap${meta?.snapshot_id ?? "x"}.csv`,
       rows, COLS[colKey].filter((c) => visible.includes(c.f))),
+    // ZIP export — POST the full FILTERED opportunity set (all sections) so the server's opportunities.csv
+    // matches what the filters show; frames stay whole-snapshot (old-dashboard parity).
+    exportZip: async () => {
+      const ids = opps.filter((o) => passAll(o, filters)).map((o) => o.id);
+      const res = await fetch("/api/terminal/export", { method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/zip" },
+        body: JSON.stringify({ opportunity_ids: ids, snapshot_id: meta?.snapshot_id ?? null }) });
+      if (!res.ok) { setErr(`export ${res.status}`); return; }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = `kalshi-snapshot-${meta?.snapshot_id ?? "x"}.zip`; a.click();
+      URL.revokeObjectURL(url);
+    },
     setSurface, setShowNet, setItab,
   };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

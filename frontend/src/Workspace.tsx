@@ -23,9 +23,9 @@ function InspectorBody() {
         ))}
       </div>
       <div className="pbody">
-        {t.itab === "detail" ? <Detail row={t.sel} />
+        {t.itab === "detail" ? <Detail row={t.sel} showIds={t.settings.showIds} />
           : t.itab === "formula" ? <Formulas row={t.sel} />
-          : <Inspector row={t.sel} lens={t.lens} snapshotId={t.meta?.snapshot_id ?? null} showNet={t.showNet} />}
+          : <Inspector row={t.sel} lens={t.lens} snapshotId={t.meta?.snapshot_id ?? null} showNet={t.showNet} longShort={t.settings.longShort} />}
       </div>
     </>
   );

@@ -1,13 +1,36 @@
 /* App shell — DOM + classes ported VERBATIM from ui-mockup-final-spa.html so the chrome is pixel-exact.
  * React supplies the live data/state; the look is the mockup's. */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { TerminalProvider, useTerminal } from "./context";
 import { TILES } from "./feed";
 import { LENSES } from "./lens";
+import { loadDiagnostics, type Diagnostics } from "./detail";
 import Workspace from "./Workspace";
 import Keys from "./Keys";
 import Palette from "./Palette";
 import MultiSelect from "./MultiSelect";
+
+function OpsDiag() {
+  const [d, setD] = useState<Diagnostics | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  useEffect(() => { let a = true; loadDiagnostics().then((x) => a && setD(x)).catch((e) => a && setErr(String(e))); return () => { a = false; }; }, []);
+  const catRows = d ? Object.entries(d.category).filter(([, v]) => typeof v === "number" || typeof v === "string") : [];
+  return (
+    <>
+      <div className="rp"><div className="h">CATEGORY HONESTY<span className="resb">DIAGNOSTIC</span></div><div className="c">
+        {err ? <div className="note red">{err}</div> : !d ? <div className="note">loading…</div>
+          : <table><tbody>{catRows.map(([k, v]) => <tr key={k}><td className="dim">{k}</td><td className="r white">{typeof v === "number" ? (v as number).toLocaleString() : String(v)}</td></tr>)}</tbody></table>}
+      </div></div>
+      <div className="rp"><div className="h">FULL DIAGNOSTIC GRIDS</div><div className="c">
+        {d ? <div className="note">
+          <b>{d.checks.length.toLocaleString()}</b> consistency-check rows{d.checks_truncated ? <span className="amber"> (+{d.checks_truncated} truncated)</span> : null} ·
+          <b> {d.contracts.length.toLocaleString()}</b> contract rows{d.contracts_truncated ? <span className="amber"> (+{d.contracts_truncated} truncated)</span> : null}.
+          <br />Considered-inventory / non-laddered / full-check tables render here (read-only; capped, never silently truncated).
+        </div> : <div className="note">loading…</div>}
+      </div></div>
+    </>
+  );
+}
 
 const TILE_SUB: Record<string, string> = {
   act: "executable now", rev: "settlement-dep", blk: "not fillable", bounded: "can lose money",
@@ -50,6 +73,7 @@ function Surface({ id }: { id: "res" | "ops" }) {
         {Object.keys(errs).length ? <table className="kv-tbl"><tbody>{Object.entries(errs).map(([k, v]) => (
           <tr key={k}><td className="dim">{k}</td><td className="r">{String(v)}</td></tr>))}</tbody></table>
           : <div className="note green">no series errors this scan</div>}</div></div>
+      <OpsDiag />
     </div></div>
   );
 }
@@ -57,14 +81,45 @@ function Surface({ id }: { id: "res" | "ops" }) {
 function SettingsMenu({ close }: { close: () => void }) {
   const t = useTerminal();
   const [big, setBig] = useState(document.body.classList.contains("big"));
+  const s = t.settings;
   return (
     <div className="menu on" style={{ right: 6, top: 28 }} onMouseLeave={close}>
       <div className="mh">SETTINGS</div>
       <label><input type="checkbox" checked={t.showNet} onChange={(e) => t.setShowNet(e.target.checked)} />Show net of fees (est.)</label>
       <label><input type="checkbox" checked={big} onChange={(e) => { setBig(e.target.checked); document.body.classList.toggle("big", e.target.checked); }} />Larger text</label>
+      <label><input type="checkbox" checked={s.showIds} onChange={(e) => t.setSetting("showIds", e.target.checked)} />Show IDs &amp; codes</label>
+      <label><input type="checkbox" checked={s.longShort} onChange={(e) => t.setSetting("longShort", e.target.checked)} />Long / short wording</label>
+      <div className="mi">Time zone
+        <select value={s.tz} onChange={(e) => t.setSetting("tz", e.target.value)}>
+          <option value="local">Local</option><option value="utc">UTC</option><option value="America/New_York">America/New_York</option>
+        </select></div>
+      <div className="mi">Auto-refresh
+        <select value={s.autoRefresh} onChange={(e) => t.setSetting("autoRefresh", e.target.value)}>
+          <option value="10s">on · 10s</option><option value="30s">on · 30s</option><option value="off">off</option>
+        </select></div>
       <div className="mi" onClick={() => { t.setTheme(t.theme === "amber" ? "hc" : "amber"); }}>◐ Theme: {t.theme === "amber" ? "Amber" : "High-contrast"}</div>
     </div>
   );
+}
+
+function SecBar() {
+  const t = useTerminal();
+  const b = t.band;
+  const numI = (v: number, set: (n: number) => void, label: string, step = 1) => (
+    <label>{label} <input type="number" min={0} step={step} value={v || 0} onChange={(e) => set(Math.max(0, Number(e.target.value) || 0))} /></label>
+  );
+  if (t.section === "bounded") return (
+    <div className="secbar"><span className="tag">BOUNDED-LOSS</span>
+      {numI(b.maxLoss, (n) => t.setBand("maxLoss", n), "Max loss ¢")}
+      {numI(b.minRatio, (n) => t.setBand("minRatio", n), "Min upside:risk", 0.1)}</div>
+  );
+  if (t.section === "nearmiss") return (
+    <div className="secbar"><span className="tag">NEAR-MISS</span>{numI(b.maxOverpay, (n) => t.setBand("maxOverpay", n), "Max overpay ¢")}</div>
+  );
+  if (t.section === "cheapno") return (
+    <div className="secbar"><span className="tag">CHEAP-NO</span>{numI(b.maxLoss, (n) => t.setBand("maxLoss", n), "Max loss ¢")}</div>
+  );
+  return <div className="secbar" />;
 }
 
 function Shell() {
@@ -132,9 +187,10 @@ function Shell() {
                onChange={(e) => t.setMinSize(Math.max(0, Number(e.target.value) || 0))} />
         <label className="chk"><input type="checkbox" checked={t.filters.tradableOnly} onChange={(e) => t.setTradableOnly(e.target.checked)} />Tradable-only</label>
         <button className="tbtn" onClick={t.exportView}>⬇ CSV</button>
+        <button className="tbtn" title="Export filtered snapshot (opportunities + evidence frames + manifest) as ZIP" onClick={t.exportZip}>⬇ ZIP</button>
         <span className="sp">{t.rows.length.toLocaleString()} shown</span><span className="clr" onClick={t.clearFilters}>clear</span>
       </div>
-      <div className="secbar" />
+      <SecBar />
       <div className="tiles">
         {TILES.map(([label, z, s, accent]) => (
           <div key={label} className={"tile" + (t.zone === z && t.section === s ? " on" : "")} onClick={() => { t.setSurface("opp"); t.goSection(z, s); }}>

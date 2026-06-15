@@ -40,3 +40,10 @@ export const loadLadder = (k: { sport: string; player_key: string; tournament: s
 
 export const loadPayoff = (opportunityId: string) =>
   getJson<PayoffData>(`/api/terminal/payoff?opportunity_id=${encodeURIComponent(opportunityId)}`);
+
+export interface Diagnostics {
+  checks: Record<string, unknown>[]; contracts: Record<string, unknown>[];
+  category: Record<string, unknown>; failures: Record<string, unknown>;
+  checks_truncated: number; contracts_truncated: number;
+}
+export const loadDiagnostics = () => getJson<Diagnostics>("/api/terminal/diagnostics");
