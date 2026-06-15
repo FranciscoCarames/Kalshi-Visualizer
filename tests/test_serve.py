@@ -130,3 +130,14 @@ def test_pause_when_idle_truthy_forces_gate_on():
 def test_pause_when_idle_unrecognized_falls_back_to_default():
     assert serve.resolve_pause_when_idle("maybe", True) is True
     assert serve.resolve_pause_when_idle("maybe", False) is False
+
+
+def test_server_mode_pause_default_24_7_on_non_loopback():
+    # Non-loopback (deployed server / LAN) → 24/7 scanning (no idle pause), regardless of the config default.
+    for host in ("0.0.0.0", "192.168.1.50", "10.0.0.2"):
+        assert serve.server_mode_pause_default(host, True) is False
+        assert serve.server_mode_pause_default(host, False) is False
+    # Loopback (local dev) → keep the interactive config default.
+    for host in ("127.0.0.1", "localhost", "::1"):
+        assert serve.server_mode_pause_default(host, True) is True
+        assert serve.server_mode_pause_default(host, False) is False

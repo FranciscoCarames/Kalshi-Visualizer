@@ -126,6 +126,14 @@ def resolve_pause_when_idle(raw: str | None, default: bool) -> bool:
     return default
 
 
+def server_mode_pause_default(host: str, config_default: bool) -> bool:
+    """The DEFAULT idle-pause for a given bind host. A non-loopback (server / LAN) bind is a "deployed"
+    server, so it defaults to **24/7 scanning** (no idle pause) — the snapshot stays fresh even with no
+    browser open. A loopback (local dev) bind keeps the interactive `config_default` (pause when idle).
+    The `AUTO_SCAN_PAUSE_WHEN_IDLE` env override still wins over this default either way. Pure/testable."""
+    return False if host not in _LOOPBACK_HOSTS else config_default
+
+
 def resolve_snapshot_db_path(raw: str | None) -> str | None:
     """Validate an explicit ``SNAPSHOT_DB_PATH`` override (the env value; ``None``/empty -> keep the
     config default, return ``None``). Raises ``SystemExit`` with a clear message if the parent directory
@@ -164,8 +172,10 @@ if __name__ == "__main__":
     # bound every tick. (When using this, disable the optional systemd scan.timer — see docs/DEPLOYMENT.md.)
     # Presence gate (P4): pause auto-scanning while no viewer is connected (config default on). For a
     # headless 24/7 server (no browser ever connected) set AUTO_SCAN_PAUSE_WHEN_IDLE=0 to scan regardless.
+    # A non-loopback (server / LAN) bind defaults to 24/7 scanning; loopback (local dev) keeps the
+    # interactive config default. An explicit AUTO_SCAN_PAUSE_WHEN_IDLE env var overrides either.
     _pause_when_idle = resolve_pause_when_idle(
-        os.getenv("AUTO_SCAN_PAUSE_WHEN_IDLE"), config.AUTO_SCAN_PAUSE_WHEN_IDLE)
+        os.getenv("AUTO_SCAN_PAUSE_WHEN_IDLE"), server_mode_pause_default(_host, config.AUTO_SCAN_PAUSE_WHEN_IDLE))
     # Idle gate: scan when a NiceGUI viewer is connected OR the Terminal Pro SPA polled its feed recently
     # (the SPA isn't a NiceGUI client; its feed poll heartbeats presence). When idle-pause is OFF, gate=None
     # (headless 24/7 scanning, unchanged).
