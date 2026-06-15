@@ -66,14 +66,33 @@ const PANELS: PanelDef[] = [
 
 const DEFAULT_STATE = (): Record<string, PState> =>
   Object.fromEntries(PANELS.map((p) => [p.id, { collapsed: false, maxed: false, hidden: false }]));
+const DEFAULT_COLS = (): Record<Col, string[]> => ({
+  L: PANELS.filter((p) => p.col === "L").map((p) => p.id),
+  M: PANELS.filter((p) => p.col === "M").map((p) => p.id),
+  R: PANELS.filter((p) => p.col === "R").map((p) => p.id),
+});
+const BY_ID: Record<string, PanelDef> = Object.fromEntries(PANELS.map((p) => [p.id, p]));
 
 export default function Workspace() {
   const t = useTerminal();
   const [st, setSt] = useState<Record<string, PState>>(DEFAULT_STATE);
   const [colHidden, setColHidden] = useState<{ M: boolean; R: boolean }>({ M: false, R: false });
   const [colW, setColW] = useState<{ M: number; R: number }>({ M: 330, R: 290 });
+  const [cols, setCols] = useState<Record<Col, string[]>>(DEFAULT_COLS);
+  const dragId = useRef<string | null>(null);
   const refs = useRef<Record<string, HTMLDivElement | null>>({});
   const patch = (id: string, p: Partial<PState>) => setSt((s) => ({ ...s, [id]: { ...s[id], ...p } }));
+
+  // header drag-to-move a panel between/within columns (mockup wirePanelDrag). dragId set on .ph dragstart.
+  const move = (col: Col, idx: number) => {
+    const from = dragId.current; if (!from) return;
+    setCols((c) => {
+      const next: Record<Col, string[]> = { L: [...c.L], M: [...c.M], R: [...c.R] };
+      (["L", "M", "R"] as Col[]).forEach((k) => { const i = next[k].indexOf(from); if (i >= 0) next[k].splice(i, 1); });
+      next[col].splice(Math.max(0, Math.min(next[col].length, idx)), 0, from);
+      return next;
+    });
+  };
 
   // presets — mirror the mockup applyPreset()
   const applyPreset = (name: string) => {
@@ -83,6 +102,7 @@ export default function Workspace() {
     else if (name === "research") { s["p-alerts"].collapsed = true; s["p-des"].basis = 200; setColHidden({ M: false, R: false }); setColW({ M: 330, R: 360 }); }
     else if (name === "blotterfull") { s["p-des"].hidden = true; setColHidden({ M: true, R: true }); }
     else { setColHidden({ M: false, R: false }); setColW({ M: 330, R: 290 }); }
+    setCols(DEFAULT_COLS());
     setSt(s);
   };
   useEffect(() => { t.registerLayout(applyPreset); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
@@ -111,15 +131,21 @@ export default function Workspace() {
     document.addEventListener("pointermove", mv); document.addEventListener("pointerup", up);
   };
 
+  const clearDragover = () => document.querySelectorAll(".panel.dragover").forEach((n) => n.classList.remove("dragover"));
   const renderCol = (c: Col) => {
-    const list = PANELS.filter((p) => p.col === c && !st[p.id].hidden);
+    const list = cols[c].map((id) => BY_ID[id]).filter((p) => p && !st[p.id].hidden);
     return list.map((p, idx) => {
       const s = st[p.id];
       const cls = "panel" + (s.collapsed ? " collapsed" : "") + (s.maxed ? " maxed" : "");
       const style: React.CSSProperties = s.basis != null && !s.collapsed && !s.maxed ? { flex: `0 0 ${s.basis}px` } : {};
       const panel = (
-        <div className={cls} id={p.id} style={style} ref={(el) => { refs.current[p.id] = el; }}>
-          <div className="ph">
+        <div className={cls} id={p.id} style={style} ref={(el) => { refs.current[p.id] = el; }}
+             onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add("dragover"); }}
+             onDragLeave={(e) => e.currentTarget.classList.remove("dragover")}
+             onDrop={(e) => { e.preventDefault(); e.stopPropagation(); clearDragover(); move(c, cols[c].indexOf(p.id)); }}>
+          <div className="ph" draggable
+               onDragStart={(e) => { if ((e.target as HTMLElement).closest(".dock")) { e.preventDefault(); return; } dragId.current = p.id; e.dataTransfer.effectAllowed = "move"; }}
+               onDragEnd={() => { dragId.current = null; clearDragover(); }}>
             <span className="n">{p.n}</span><h3>{p.title}</h3>
             <span className="hint">{p.hint || ""}</span>
             <span className="dock">
@@ -135,17 +161,21 @@ export default function Workspace() {
       return <div key={p.id} style={{ display: "contents" }}>{panel}{idx < list.length - 1 ? <div className="hsplit" onPointerDown={dragH(p.id)} /> : null}</div>;
     });
   };
+  const colDrop = (c: Col) => ({
+    onDragOver: (e: React.DragEvent) => e.preventDefault(),
+    onDrop: (e: React.DragEvent) => { e.preventDefault(); clearDragover(); move(c, cols[c].length); },
+  });
 
   return (
     <div className="workspace" id="ws">
-      <div className="col" id="colL">{renderCol("L")}</div>
+      <div className="col" id="colL" {...colDrop("L")}>{renderCol("L")}</div>
       {!colHidden.M ? <>
         <div className="vsplit" onPointerDown={dragV("M")} />
-        <div className="col" id="colM" style={{ flex: `0 0 ${colW.M}px` }}>{renderCol("M")}</div>
+        <div className="col" id="colM" style={{ flex: `0 0 ${colW.M}px` }} {...colDrop("M")}>{renderCol("M")}</div>
       </> : null}
       {!colHidden.R ? <>
         <div className="vsplit" onPointerDown={dragV("R")} />
-        <div className="col" id="colR" style={{ flex: `0 0 ${colW.R}px` }}>{renderCol("R")}</div>
+        <div className="col" id="colR" style={{ flex: `0 0 ${colW.R}px` }} {...colDrop("R")}>{renderCol("R")}</div>
       </> : null}
 
       {t.extra ? (
