@@ -11,7 +11,7 @@ import auth
 # serve the public bundle. If you add a route here, you are explicitly making it public — think twice.
 EXPECTED_PUBLIC = {
     "/", "/index.html", "/healthz", "/favicon.ico", "/docs", "/redoc", "/openapi.json",
-    "/auth/login", "/auth/logout", "/auth/me", "/auth/config", "/auth/devices",
+    "/auth/login", "/auth/logout", "/auth/me", "/auth/config", "/auth/password", "/auth/devices",
     "/auth/devices/{token_id}/revoke",
 }
 

@@ -133,7 +133,6 @@ def seed_admin_from_env() -> None:
     user exists this is a no-op (it NEVER overwrites an existing account). A weak/default-like password is
     refused. The password is never logged. ``AUTH_DB_PATH`` is read here (the same boundary as the CLI)."""
     import auth_store
-    import manage_users
 
     user = os.getenv("APP_ADMIN_USER")
     password = os.getenv("APP_ADMIN_PASSWORD")
@@ -142,7 +141,7 @@ def seed_admin_from_env() -> None:
     db = os.getenv("AUTH_DB_PATH", config.AUTH_DB_PATH)
     if auth_store.user_count(db_path=db) > 0:
         return
-    err = manage_users.validate_password_strength(password)
+    err = auth_store.validate_password_strength(password)
     if err:
         raise SystemExit(f"APP_ADMIN_PASSWORD rejected: {err}")
     import time

@@ -153,6 +153,35 @@ def test_remember_me_transparent_relogin_and_rotation(env):
     assert third.get("/api/terminal/feed").status_code == 401
 
 
+def test_self_service_password_change(env):
+    c, db = env
+    _login(c)
+    # Wrong current password → 403, password unchanged.
+    bad = c.post("/auth/password", json={"current_password": "nope-wrong", "new_password": "a-fresh-strong-pw"})
+    assert bad.status_code == 403
+    # Weak new password → 400.
+    weak = c.post("/auth/password",
+                  json={"current_password": "correct horse battery", "new_password": "short"})
+    assert weak.status_code == 400
+    # Valid change → 200, session survives (cookie re-issued), and the new password works on a fresh login.
+    ok = c.post("/auth/password",
+                json={"current_password": "correct horse battery", "new_password": "a-fresh-strong-pw"})
+    assert ok.status_code == 200
+    assert c.get("/auth/me").status_code == 200
+    fresh = TestClient(api.app)
+    assert _login(fresh, password="a-fresh-strong-pw").status_code == 200
+
+
+def test_devices_list_and_revoke(env):
+    c, _ = env
+    _login(c, remember=True)
+    devices = c.get("/auth/devices").json()["devices"]
+    assert len(devices) == 1
+    tid = devices[0]["id"]
+    assert c.post(f"/auth/devices/{tid}/revoke").status_code == 200
+    assert c.get("/auth/devices").json()["devices"] == []
+
+
 def test_doc_urls_disabled_in_prod(monkeypatch):
     monkeypatch.setenv("AUTH_ENABLED", "1")
     monkeypatch.delenv("APP_DEV", raising=False)

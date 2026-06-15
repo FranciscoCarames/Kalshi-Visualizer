@@ -24,27 +24,13 @@ import time
 import auth_store
 import config
 
-# A short list of obviously-weak passwords rejected outright; NOT a strength meter, just a floor so a seeded
-# admin is never "admin"/"password". Real strength is the operator's responsibility (documented in AUTH.md).
-_WEAK = {"password", "admin", "administrator", "changeme", "letmein", "kalshi", "12345678", "secret"}
-_MIN_LEN = 10
+# Password policy is single-sourced in auth_store (shared with the env seed + self-service change).
+validate_password_strength = auth_store.validate_password_strength
 
 
 def _auth_db_path() -> str:
     """Resolve AUTH_DB_PATH from the env at this boundary (config stays import-free)."""
     return os.getenv("AUTH_DB_PATH", config.AUTH_DB_PATH)
-
-
-def validate_password_strength(password: str) -> str | None:
-    """Return an error string for an obviously-weak password, else None. Single-sourced so the env-seed in
-    serve.py applies the same floor."""
-    if len(password) < _MIN_LEN:
-        return f"password must be at least {_MIN_LEN} characters"
-    if len(password) > config.AUTH_MAX_CRED_LEN:
-        return f"password must be at most {config.AUTH_MAX_CRED_LEN} characters"
-    if password.lower() in _WEAK:
-        return "password is too common; choose something less guessable"
-    return None
 
 
 def _prompt_new_password() -> str:

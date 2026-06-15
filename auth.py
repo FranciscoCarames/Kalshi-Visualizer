@@ -313,6 +313,33 @@ def logout(request: Request, response: Response) -> dict:
     return {"ok": True}
 
 
+class PasswordChangeBody(BaseModel):
+    current_password: str
+    new_password: str
+
+
+@router.post("/password")
+def change_password(body: PasswordChangeBody, request: Request, response: Response) -> dict:
+    """Self-service password change (the ``force_pw_change`` path). Requires the current session + the
+    current password; rejects a weak new password. ``set_password`` bumps ``session_epoch`` (logging every
+    OTHER device out), so we re-issue THIS session's cookie with a fresh ``iat`` to keep the caller logged
+    in."""
+    now = time.time()
+    principal = _authenticate(request, now=now)
+    if principal is None or principal.user is None:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    user = principal.user
+    if not auth_store.verify_password(user["pw_hash"], body.current_password):
+        raise HTTPException(status_code=403, detail="Current password is incorrect")
+    err = auth_store.validate_password_strength(body.new_password)
+    if err:
+        raise HTTPException(status_code=400, detail=err)
+    db = auth_db_path()
+    auth_store.set_password(user["username"], body.new_password, now=now, db_path=db)
+    _set_session_cookie(response, user["id"], now)             # keep the current device logged in
+    return {"ok": True}
+
+
 @router.get("/me")
 def me(request: Request) -> dict:
     """Current user, or 401 when anonymous. The SPA calls this on boot to decide login-vs-app."""

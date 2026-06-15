@@ -1,6 +1,7 @@
 /* App shell — DOM + classes ported VERBATIM from ui-mockup-final-spa.html so the chrome is pixel-exact.
  * React supplies the live data/state; the look is the mockup's. */
 import { useEffect, useState } from "react";
+import AuthGate from "./AuthGate";
 import { TerminalProvider, useTerminal } from "./context";
 import { TILES } from "./feed";
 import { LENSES } from "./lens";
@@ -350,5 +351,5 @@ function Shell() {
 }
 
 export default function App() {
-  return <TerminalProvider><Shell /></TerminalProvider>;
+  return <AuthGate><TerminalProvider><Shell /></TerminalProvider></AuthGate>;
 }

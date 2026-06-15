@@ -80,6 +80,25 @@ def _hasher() -> argon2.PasswordHasher:
 _DUMMY_HASH = _hasher().hash("dummy-password-for-constant-time-verify")
 
 
+# --- password policy (single-sourced — CLI seed, env seed, and self-service change all use this) -----
+# A small floor, NOT a strength meter: reject obviously-weak/default passwords so a seeded admin is never
+# "admin"/"password". Real strength is the operator's responsibility (documented in docs/AUTH.md).
+_WEAK_PASSWORDS = {"password", "admin", "administrator", "changeme", "letmein", "kalshi",
+                   "12345678", "secret", "passw0rd"}
+PASSWORD_MIN_LEN = 10
+
+
+def validate_password_strength(password: str) -> str | None:
+    """Return an error string for an obviously-weak password, else None."""
+    if len(password) < PASSWORD_MIN_LEN:
+        return f"password must be at least {PASSWORD_MIN_LEN} characters"
+    if len(password) > config.AUTH_MAX_CRED_LEN:
+        return f"password must be at most {config.AUTH_MAX_CRED_LEN} characters"
+    if password.lower() in _WEAK_PASSWORDS:
+        return "password is too common; choose something less guessable"
+    return None
+
+
 # --- password hashing (argon2id) -----------------------------------------------------
 def _check_cred_len(value: str, what: str) -> None:
     """Reject an over-long credential BEFORE it reaches argon2 (a megabyte password would burn CPU/RAM —

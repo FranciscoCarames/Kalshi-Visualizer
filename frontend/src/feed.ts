@@ -1,6 +1,7 @@
 /* Live terminal feed — types + loader + the zone/section taxonomy.
  * The single source of truth is the backend `webui/feed.py` adapter at GET /api/terminal/feed; this file
  * only types its shape and routes rows by the engine-assigned zone/section (it never re-buckets). */
+import { apiFetch } from "./http";
 
 export interface FeedLeg { side?: string; c?: string; p?: number | null; sz?: number; tk?: string; u?: string; }
 
@@ -45,7 +46,7 @@ export interface FeedMeta {
 export interface Feed { meta: FeedMeta; opps: FeedRow[]; }
 
 export async function loadFeed(): Promise<Feed> {
-  const r = await fetch("/api/terminal/feed", { headers: { Accept: "application/json" } });
+  const r = await apiFetch("/api/terminal/feed", { headers: { Accept: "application/json" } });
   if (!r.ok) throw new Error("feed " + r.status);
   return r.json();
 }

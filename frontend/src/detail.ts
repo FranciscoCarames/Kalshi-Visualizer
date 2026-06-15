@@ -1,6 +1,7 @@
 /* Loaders for the read-only participant drill-down + chart endpoints (Stage 1 backend).
  * Everything here is DISPLAY-ONLY (gross, top-of-book, uncalibrated); it never feeds bucket/rank. */
 import type { FeedRow } from "./feed";
+import { apiFetch } from "./http";
 
 export interface DetailBundle {
   chain: Record<string, unknown>[];
@@ -27,7 +28,7 @@ export function detailKey(row: FeedRow | null): { sport: string; player_key: str
 }
 
 async function getJson<T>(url: string, signal?: AbortSignal): Promise<T> {
-  const r = await fetch(url, { headers: { Accept: "application/json" }, signal });
+  const r = await apiFetch(url, { headers: { Accept: "application/json" }, signal });
   if (!r.ok) throw new Error(`${url} → ${r.status}`);
   return r.json();
 }
