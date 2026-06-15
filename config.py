@@ -267,6 +267,28 @@ SCAN_HTTP_WINDOW_SECONDS = 60
 ORDERBOOK_HTTP_MAX_PER_WINDOW = 30          # max live order-book fetches per window (per process)
 ORDERBOOK_HTTP_WINDOW_SECONDS = 10
 
+# --- Per-user authentication (auth_store.py / auth.py) --------------------------------
+# Auth is a SEPARATE concern from the snapshot store: users live in their OWN SQLite file (AUTH_DB_PATH,
+# env-overridable in serve.py/manage_users.py) so a snapshot-store reset (store._reset_to_fresh DROPs its
+# tables on a bad migration) can NEVER touch credentials. config stays import-free — every env read lives
+# at a boundary (serve.py / api.py / auth.py / manage_users.py). All durations are seconds.
+AUTH_DB_PATH = "auth.db"                       # default; SNAPSHOT_DB_PATH-distinct (env override at boundary)
+AUTH_SESSION_IDLE_SECONDS = 12 * 60 * 60       # re-login after this much inactivity (sliding)
+AUTH_SESSION_ABSOLUTE_SECONDS = 12 * 60 * 60   # hard cap on a session's life regardless of activity
+AUTH_LOGIN_MAX_PER_WINDOW = 5                  # login attempts per (ip, username) before 429
+AUTH_LOGIN_WINDOW_SECONDS = 60
+AUTH_LOCKOUT_THRESHOLD = 10                    # consecutive failures before a temporary account lockout
+AUTH_LOCKOUT_SECONDS = 15 * 60                 # lockout duration (temporary — CLI `unlock` clears early)
+AUTH_COOKIE_NAME = "kss_session"               # signed session cookie (itsdangerous, NOT NiceGUI's cookie)
+AUTH_REMEMBER_COOKIE_NAME = "kss_remember"     # opt-in "stay signed in on this device" rotating token
+AUTH_REMEMBER_MAX_AGE = 30 * 24 * 60 * 60      # remember-me token lifetime (30 days)
+AUTH_MAX_CRED_LEN = 256                        # reject username/password longer than this BEFORE hashing
+# Argon2id parameters (OWASP Password Storage minimums, 2024). Pinned so a deployment is reproducible and
+# `needs_rehash` can upgrade old hashes when these change. time=2, 19 MiB, 1 lane.
+AUTH_ARGON2_TIME_COST = 2
+AUTH_ARGON2_MEMORY_COST = 19456                # KiB (= 19 MiB)
+AUTH_ARGON2_PARALLELISM = 1
+
 # --- NiceGUI dashboard (Stage 5) -----------------------------------------------------
 # NiceGUI needs a storage secret to sign its per-user session cookie. There is NO auth/multi-user here,
 # so this is not a real secret — the REAL value comes from the NICEGUI_STORAGE_SECRET env var (read in

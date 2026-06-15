@@ -13,6 +13,9 @@ env/
 # Snapshot store (Stage 1) — local opportunity-history SQLite DB
 *.db
 snapshots.db
+# Per-user auth store (auth_store.py) — credentials; covered by *.db but listed explicitly so it is never
+# committed even if the *.db rule is ever narrowed.
+auth.db
 # WAL sidecar files (v3 enables WAL mode) — gitignore has no inline comments, so keep these bare:
 *.db-wal
 *.db-shm
