@@ -16,6 +16,9 @@ export interface FeedRow {
   edge?: number; roi?: number; units?: number; profit?: number; cost?: number;
   max_loss?: number; max_profit?: number; max_units?: number; quote_health?: string; caveat?: string;
   settlement_caveat?: string; blk?: string; scope?: string; resolution_mode?: string;
+  // net-of-fees ESTIMATE (display-only · general taker fee · never ranks). net_negative flags an Actionable
+  // row whose estimated fees meet/exceed the gross edge — an advisory chip, never a hide/demote.
+  net_edge?: number | null; net_profit?: number | null; fees?: number | null; net_negative?: boolean;
   // display-only derived (computed in the adapter; uncalibrated · gross · never rank). Conditional on two
   // bases: display (dashboard price) and firm (executable bid/ask) — the firm pair is a DIAGNOSTIC, not an
   // executable edge. midpoint_only / wide_basis are honesty flags from the engine row builder.
@@ -54,7 +57,7 @@ export async function loadFeed(): Promise<Feed> {
 /* The executable taxonomy (mirrors the engine's buckets). Zone -> sections -> bucket. */
 export const ZONES: [string, string, string][] = [
   ["exec", "EXECUTABLE", "firm · gross edge"],
-  ["spec", "SPECULATIVE", "bounded-loss · can lose money"],
+  ["spec", "SPECULATIVE", "bounded-loss · convex EV · can lose money"],
   ["diag", "DIAGNOSTIC", "review-only · data quality"],
 ];
 

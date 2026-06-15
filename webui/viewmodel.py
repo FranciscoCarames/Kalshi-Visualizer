@@ -95,6 +95,17 @@ def severity_badges(o: dict[str, Any]) -> list[dict[str, str]]:
     elif qq in ("No quote", "Crossed", "One-sided"):
         add("No firm quote", "blocker", f"{qq} book — no firm two-sided price to trade against.",
             "quote_quality")
+    # Fee-awareness (PR E) — ADVISORY, display-only: when an Actionable row's estimated GENERAL taker fees
+    # (top-of-book, at the executable size) meet or exceed its gross edge, flag it so a thin headline edge
+    # isn't mistaken for net profit. This NEVER hides, demotes, re-ranks, or un-Actionables the row — it is
+    # an informational chip on top of the unchanged gross engine output (the estimate isn't realized P&L).
+    if o.get("bucket") == "actionable":
+        nf = net_of_fees(o)
+        if not nf["missing"] and nf["net_profit_dollars"] is not None and nf["net_profit_dollars"] <= 0:
+            add("Net-negative (est.)", "advisory",
+                "Estimated general taker fees (top-of-book, at the executable size) meet or exceed the gross "
+                "edge — this row may be net-negative. Estimate only (excludes maker/rounding/product-specific "
+                "schedules); informational, not a block.", "net_of_fees")
     out.sort(key=lambda b: _SEVERITY_RANK.get(b["severity"], 9))
     return out
 
@@ -1164,7 +1175,8 @@ def bucket_counts_line(counts: dict[str, dict[str, int]] | None,
 # before Review before Blocked …), and a mode only re-orders WITHIN a bucket. Pure in-memory re-sort of
 # the cached opportunities — no rescan, no store read. Risk-budget geometry comes from the existing PR29
 # payoff fields (worst/best_case_profit_c); a row missing them simply sorts last within its bucket.
-RANK_MODES = {"blended": "Blended", "edge": "Per-unit edge ¢", "spread_upside": "Spread upside",
+RANK_MODES = {"blended": "Blended", "edge": "Per-unit edge ¢",
+              "total_profit": "Max gross profit (top-of-book)", "spread_upside": "Spread upside",
               "spread_ratio": "Outright + spread", "implied_ev": "Implied EV"}
 RANK_MODE_DEFAULT = "blended"
 # Within-bucket Blended weights (renormalized over the components a row actually has). ROI is weighted a
@@ -1466,6 +1478,21 @@ def _implied_ev_order(group: list[dict[str, Any]], is_risk: bool) -> list[dict[s
     return sorted(group, key=key)
 
 
+def _total_profit_order(group: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Order by GROSS DEPLOYABLE PROFIT — per-unit edge × the executable (min-leg) size: the most you could
+    put to work at the inside. So a thin-but-deep book (2¢ × 5000) outranks a fat-but-shallow one (5¢ × 1),
+    which the per-unit modes invert. GROSS and TOP-OF-BOOK only — no fees, no depth past the inside (the
+    mode label says so); it deliberately does NOT read any net-of-fees field. Rows missing edge or size sort
+    last, deterministic by id. Engine bucketing/`scanner._rank_key` are untouched — this is a UI sort."""
+    def key(o: dict[str, Any]) -> tuple:
+        gap = _num_or_none(o.get("exec_gap_c"))
+        size = _num_or_none(o.get("exec_min_size"))
+        if gap is None or size is None:
+            return (1, 0.0, -_edge(o), o.get("opportunity_id") or "")
+        return (0, -(gap * size), -_edge(o), o.get("opportunity_id") or "")
+    return sorted(group, key=key)
+
+
 def rank_opps(opps: Iterable[dict[str, Any]] | None, mode: str = RANK_MODE_DEFAULT) -> list[dict[str, Any]]:
     """Re-order opportunities by `mode` (see RANK_MODES). Buckets group first; the mode re-orders within a
     bucket only. Pure in-memory — switching modes never rescans or reads the store."""
@@ -1482,7 +1509,9 @@ def rank_opps(opps: Iterable[dict[str, Any]] | None, mode: str = RANK_MODE_DEFAU
             # breakeven (see _no_structure_order), never by the executable-edge modes.
             out.extend(_no_structure_order(group))
             continue
-        if mode == "spread_upside":
+        if mode == "total_profit":
+            out.extend(_total_profit_order(group))
+        elif mode == "spread_upside":
             out.extend(_spread_upside_order(group, is_risk))
         elif mode == "spread_ratio":
             out.extend(_spread_ratio_order(group, is_risk))

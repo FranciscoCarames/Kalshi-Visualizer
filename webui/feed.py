@@ -170,6 +170,11 @@ def _build_row(o: dict[str, Any]) -> dict[str, Any]:
         "parent_over_maxloss": _ripeness(o),
         "fees": nf.get("total_fees_c"), "net_edge": nf.get("net_edge_c"),
         "net_profit": nf.get("net_profit_dollars"),
+        # DISPLAY-ONLY advisory: an Actionable row whose estimated taker fees meet/exceed the gross edge at
+        # the executable size. Informational chip in the blotter; never hides/demotes/re-ranks the row.
+        "net_negative": (bucket == "actionable" and not nf.get("missing")
+                         and nf.get("net_profit_dollars") is not None
+                         and nf.get("net_profit_dollars") <= 0),
     })
     if isinstance(base.get("flags"), list):        # normalize the flags list -> a short string
         base["flags"] = " ".join(

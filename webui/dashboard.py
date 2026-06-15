@@ -1096,12 +1096,13 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         _t.props(f'no-data-label="{_msg}"')
 
     # Per-table column menus (redesigned) — a "Columns" button by each table opening labeled checkboxes.
-    # Opp tables hide the net-of-fees columns by default; Bounded-Loss hides the outright/display-spread
-    # context (spread÷parent/child stay visible). Buttons are placed into each section's header / row.
+    # Opp tables now SHOW the net-of-fees ESTIMATE columns by default (labels are prefixed "Est."; they're
+    # display-only and never affect ranking) so a thin gross edge isn't mistaken for net profit; Bounded-Loss
+    # hides the outright/display-spread context (spread÷parent/child stay visible).
     opp_menus = []
     for _hdr, _tbl in ((act_hdr, actionable), (review_hdr, review), (blocked_hdr, blocked)):
         with _hdr:
-            opp_menus.append(build_column_menu(_tbl, _OPP_COLUMNS, default_hidden=_NET_COLUMNS))
+            opp_menus.append(build_column_menu(_tbl, _OPP_COLUMNS, default_hidden=()))
     with qs_hdr:
         build_column_menu(qs_table, _QS_COLUMNS, default_hidden=_QS_HIDDEN)
     with rb_all_cols:

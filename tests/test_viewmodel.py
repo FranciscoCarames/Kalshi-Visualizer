@@ -932,3 +932,62 @@ def test_risk_budget_row_old_snapshot_missing_new_fields_renders_blank():
     assert row["midpoint_only"] is False
     assert row["parent_over_maxloss"] is None
     assert row["flags"] == []
+
+
+# --- D1 total-profit (gross deployable) rank mode + D2 fee badge + net-of-fees isolation -------------
+def _tp(oid, gap, size, bucket="actionable"):
+    return {"opportunity_id": oid, "bucket": bucket, "exec_gap_c": gap, "exec_min_size": size}
+
+
+def test_total_profit_ranks_by_deployable_size_not_per_unit_edge():
+    # The core point: a thin-but-deep book outranks a fat-but-shallow one (the per-unit modes invert this).
+    rows = [_tp("fat_shallow", gap=5, size=1),       # 5¢ × 1   = 5¢ gross
+            _tp("thin_deep", gap=2, size=5000)]      # 2¢ × 5000 = 10000¢ gross
+    assert [o["opportunity_id"] for o in vm.rank_opps(rows, "total_profit")] == ["thin_deep", "fat_shallow"]
+    # And the per-unit "edge" mode still orders the other way (proves it's a distinct, opt-in mode).
+    assert [o["opportunity_id"] for o in vm.rank_opps(rows, "edge")] == ["fat_shallow", "thin_deep"]
+
+
+def test_total_profit_missing_gap_or_size_sorts_last():
+    rows = [_tp("ok", gap=1, size=10), _tp("nosize", gap=9, size=None), _tp("nogap", gap=None, size=9)]
+    ordered = [o["opportunity_id"] for o in vm.rank_opps(rows, "total_profit")]
+    assert ordered[0] == "ok" and set(ordered[1:]) == {"nosize", "nogap"}
+
+
+def test_net_of_fees_fields_do_not_affect_ranking_any_mode():
+    # ISOLATION INVARIANT: stamping the display-only net-of-fees fields onto rows must NEVER change the order
+    # produced by any rank mode (fees are display-only; the engine ranks gross).
+    base = [_tp("a", gap=2, size=5000), _tp("b", gap=5, size=1), _tp("c", gap=3, size=100)]
+    netted = [{**o, "net_edge": -9, "net_profit": -1.0, "fees": 999, "net_negative": True} for o in base]
+    for mode in vm.RANK_MODES:
+        a = [o["opportunity_id"] for o in vm.rank_opps([dict(o) for o in base], mode)]
+        b = [o["opportunity_id"] for o in vm.rank_opps(netted, mode)]
+        assert a == b, f"net-of-fees fields changed ranking under mode {mode!r}: {a} vs {b}"
+
+
+def test_net_negative_badge_on_thin_actionable_absent_on_healthy():
+    # Thin edge: 1¢ × 100 gross = $1, but ~175¢/leg × 2 legs of fees -> net-negative -> advisory badge.
+    thin = {"bucket": "actionable", "exec_gap_c": 1, "exec_min_size": 100,
+            "action_1_price_c": 50, "action_2_price_c": 50}
+    labels = [b["label"] for b in vm.severity_badges(thin)]
+    assert "Net-negative (est.)" in labels
+    assert next(b for b in vm.severity_badges(thin) if b["label"] == "Net-negative (est.)")["severity"] == "advisory"
+    # Healthy edge: 20¢ × 100 easily clears the fees -> no badge.
+    healthy = {**thin, "exec_gap_c": 20}
+    assert "Net-negative (est.)" not in [b["label"] for b in vm.severity_badges(healthy)]
+    # Non-actionable rows never get the badge (it's an Actionable-row advisory only).
+    spec = {**thin, "bucket": "risk_budget"}
+    assert "Net-negative (est.)" not in [b["label"] for b in vm.severity_badges(spec)]
+
+
+def test_kalshi_fee_estimate_endpoints_and_per_leg_sum():
+    # Mini-spec: integer cents, zero at the 0¢/100¢ endpoints, per-leg sum in net_of_fees.
+    assert vm.kalshi_fee_c(100, 0) == 0 and vm.kalshi_fee_c(100, 100) == 0
+    assert isinstance(vm.kalshi_fee_c(100, 50), int) and vm.kalshi_fee_c(100, 50) == 175
+    nf = vm.net_of_fees({"exec_gap_c": 1, "exec_min_size": 100,
+                         "action_1_price_c": 50, "action_2_price_c": 50})
+    assert nf["missing"] is False and nf["is_estimate"] is True
+    assert nf["total_fees_c"] == 350                       # 175 per leg × 2 legs
+    # Missing a leg price -> every net is BLANK (never treated as 0 fees, per the mini-spec).
+    blank = vm.net_of_fees({"exec_gap_c": 1, "exec_min_size": 100, "action_1_price_c": 50})
+    assert blank["missing"] is True and blank["total_fees_c"] is None

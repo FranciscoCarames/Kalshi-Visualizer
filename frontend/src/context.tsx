@@ -89,7 +89,9 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [multi, setMulti] = useState<FeedRow[]>([]);
   const [surface, setSurface] = useState<"opp" | "res" | "ops" | "alrt">("opp");
-  const [showNet, setShowNet] = useState(false);
+  // Net-of-fees ESTIMATE columns are shown by DEFAULT (labels carry "Est."; display-only, never rank) so a
+  // thin gross edge isn't read as net profit. A returning user's saved showNet preference still wins.
+  const [showNet, setShowNet] = useState(true);
   const [itab, setItab] = useState<"card" | "detail" | "formula">("card");
   const [extra, setExtra] = useState<ExtraPanel | null>(null);
   const [panelsMenuOpen, setPanelsMenuOpen] = useState(false);
