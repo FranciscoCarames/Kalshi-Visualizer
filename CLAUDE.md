@@ -19,9 +19,11 @@ engine — the SPA reads it solely through `GET /api/terminal/feed` (+ thin `/ap
 - **Owner / GitHub:** FranciscoCarames (`franciscocarames1@gmail.com`). Repo `Kalshi-Visualizer`
   (private), default branch `main`.
 - **Platform:** Windows 11, PowerShell, Python 3.13. (The Bash tool is also available.)
-- **Scope guard — do NOT add unless explicitly asked:** trading, authentication, order placement,
+- **Scope guard — do NOT add unless explicitly asked:** trading, order placement,
   conditional-probability/de-vig models, net-of-fees math. Adding a **new sport** is in scope via a
-  `SportConfig` drop-in; non-sport-config work is not.
+  `SportConfig` drop-in; non-sport-config work is not. **Per-user authentication is now IN SCOPE**
+  (owner-requested 2026-06) — app-level login over the read-only surface, gated behind `AUTH_ENABLED`;
+  see `docs/AUTH.md` (`auth_store.py`/`auth.py`/`manage_users.py`). It must NOT alter engine logic.
 
 ## NEVER EVER DO
 

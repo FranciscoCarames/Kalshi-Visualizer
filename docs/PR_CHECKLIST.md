@@ -18,9 +18,12 @@ deployment, or runtime behavior, the Tests / static / import / serve checks (§3
 
 ## 2. Scope guard
 
-- [ ] No trading, auth, order placement, conditional-probability / de-vig models, net-of-fees
+- [ ] No trading, order placement, conditional-probability / de-vig models, net-of-fees
       actionability, live WebSocket feeds, or other non-read-only behavior — unless explicitly requested
       (flag/reject otherwise).
+- [ ] **Per-user authentication is now IN SCOPE** (owner-requested 2026-06): app-level login over the
+      read-only surface, gated behind `AUTH_ENABLED`, per `docs/AUTH.md`. Auth must not touch engine logic
+      (scanner/consistency/dutchbook/data) — a regression test pins the opportunity payload unchanged.
 - [ ] Adding a new sport via a `SportConfig` drop-in is in scope.
 
 ## 3. Tests

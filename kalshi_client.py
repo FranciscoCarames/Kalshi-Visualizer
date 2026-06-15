@@ -39,6 +39,15 @@ class KalshiError(RuntimeError):
     """Raised when the Kalshi API cannot be reached or returns an error response."""
 
 
+def _scrub_body(text: str) -> str:
+    """Sanitize an upstream error body before it lands in an exception / `last_scan_error` surface. Control
+    chars + newlines are collapsed to single spaces (so an HTML/Cloudflare page can't inject multi-line
+    structure into logs or the OPS view) and the result is capped short. Defense-in-depth: the endpoints
+    that expose `last_scan_error` (`/metrics`, `/coverage`, `/readyz`, `/scan/status`) are auth-gated too."""
+    collapsed = " ".join((text or "").split())
+    return collapsed[:120]
+
+
 _session = requests.Session()
 _session.headers.update({"User-Agent": USER_AGENT, "Accept": "application/json"})
 # Size the connection pool for our concurrent fan-out so workers don't starve/drop.
@@ -134,7 +143,7 @@ def _get(path: str, params: dict[str, Any]) -> dict[str, Any]:
             time.sleep(_backoff_seconds(resp, attempt))
             continue
         if resp.status_code >= 400:
-            raise KalshiError(f"HTTP {resp.status_code} from {url}: {resp.text[:200]}")
+            raise KalshiError(f"HTTP {resp.status_code} from {url}: {_scrub_body(resp.text)}")
         try:
             return resp.json()
         except ValueError as exc:  # non-JSON 200 body — surface as KalshiError, not a raw decode error

@@ -72,15 +72,25 @@ _LOOPBACK_HOSTS = ("127.0.0.1", "localhost", "::1")
 
 
 def bind_safety(host: str, *, storage_secret_set: bool, allow_dev_on_lan: bool,
-                web_concurrency: int = 0, has_workers_arg: bool = False) -> list[tuple[str, str]]:
+                web_concurrency: int = 0, has_workers_arg: bool = False,
+                auth_enabled: bool = False, session_secret_real: bool = False,
+                has_users: bool = False, tls_or_proxy: bool = False) -> list[tuple[str, str]]:
     """Pure, no-IO safety check for a chosen bind configuration. Returns ``(level, message)`` pairs where
     ``level`` is ``"fatal"`` (startup MUST abort) or ``"warn"`` (print and continue).
 
     - **Storage-secret fail-hard (security):** exposing a non-loopback host without a real
-      ``NICEGUI_STORAGE_SECRET`` is ``fatal`` — the dashboard has no auth and the dev-fallback secret is
-      public. ``allow_dev_on_lan`` (``ALLOW_DEV_STORAGE_SECRET_ON_LAN=1``) downgrades it to a loud ``warn``.
-    - **Multi-worker guard (operational, best-effort):** ``web_concurrency > 1`` or a ``--workers`` arg →
-      ``warn``; the snapshot store + Kalshi throttle are per-process, so multiple workers fragment them.
+      ``NICEGUI_STORAGE_SECRET`` is ``fatal`` — the NiceGUI dashboard signs its cookie with it and the
+      dev-fallback secret is public. ``allow_dev_on_lan`` (``ALLOW_DEV_STORAGE_SECRET_ON_LAN=1``) downgrades
+      it to a loud ``warn``.
+    - **Auth-mode fail-closed (security):** when ``AUTH_ENABLED`` and the bind is non-loopback, it is
+      ``fatal`` to start without (a) a real ``APP_SESSION_SECRET``/``NICEGUI_STORAGE_SECRET``, (b) at least
+      one user account, and (c) TLS (``APP_TLS=1``) or a declared HTTPS-terminating reverse proxy
+      (``TRUST_PROXY=1``) — otherwise the session cookie travels in cleartext or the gate has no one to let
+      in.
+    - **Multi-worker guard:** ``web_concurrency > 1`` / ``--workers`` is ``warn`` normally but ``fatal`` in
+      auth mode — the snapshot store, Kalshi throttle, login rate-limiter, and session state are all
+      PROCESS-LOCAL, so multiple workers fragment them (and split the auth limiter → weaker brute-force
+      defense).
     """
     issues: list[tuple[str, str]] = []
     exposed = host not in _LOOPBACK_HOSTS
@@ -97,11 +107,30 @@ def bind_safety(host: str, *, storage_secret_set: bool, allow_dev_on_lan: bool,
                            "no auth. Set NICEGUI_STORAGE_SECRET to a long random string (the cookie is "
                            "signed with it), or set ALLOW_DEV_STORAGE_SECRET_ON_LAN=1 to override on a "
                            "trusted LAN. (Loopback 127.0.0.1 needs neither.)"))
+    if exposed and auth_enabled:
+        if not session_secret_real:
+            issues.append(("fatal",
+                           f"Refusing to bind {host} with AUTH_ENABLED but no real APP_SESSION_SECRET "
+                           "(the dev-fallback is public — sessions could be forged). Set APP_SESSION_SECRET "
+                           "(or NICEGUI_STORAGE_SECRET) to a long random string."))
+        if not has_users:
+            issues.append(("fatal",
+                           f"Refusing to bind {host} with AUTH_ENABLED but zero user accounts exist. Seed "
+                           "one first: `python -m manage_users add <name>` (or APP_ADMIN_USER/"
+                           "APP_ADMIN_PASSWORD)."))
+        if not tls_or_proxy:
+            issues.append(("fatal",
+                           f"Refusing to bind {host} with AUTH_ENABLED but no TLS: the session cookie would "
+                           "travel in cleartext on the LAN. Enable TLS (APP_TLS=1 with uvicorn "
+                           "--ssl-keyfile/--ssl-certfile) or declare an HTTPS-terminating reverse proxy "
+                           "(TRUST_PROXY=1). See docs/AUTH.md."))
     if web_concurrency > 1 or has_workers_arg:
-        issues.append(("warn",
-                       "Multiple workers requested (WEB_CONCURRENCY>1 / --workers): the snapshot store and "
-                       "the Kalshi request throttle are PROCESS-LOCAL, so each worker keeps its own and "
-                       "they fragment (duplicate scans, divergent data). Run a single worker."))
+        level = "fatal" if auth_enabled else "warn"
+        issues.append((level,
+                       "Multiple workers requested (WEB_CONCURRENCY>1 / --workers): the snapshot store, the "
+                       "Kalshi request throttle, and the auth login rate-limiter are PROCESS-LOCAL, so each "
+                       "worker keeps its own and they fragment (duplicate scans, divergent data, weaker "
+                       "brute-force defense). Run a single worker."))
     return issues
 
 
@@ -111,12 +140,24 @@ def _enforce_bind_safety(host: str) -> None:
         web_concurrency = int(os.getenv("WEB_CONCURRENCY", "0") or "0")
     except ValueError:
         web_concurrency = 0
+    auth_enabled = os.getenv("AUTH_ENABLED") == "1"
+    has_users = False
+    if auth_enabled:
+        import auth_store
+        try:
+            has_users = auth_store.user_count(db_path=os.getenv("AUTH_DB_PATH", config.AUTH_DB_PATH)) > 0
+        except Exception as exc:  # noqa: BLE001 — a broken auth.db must not crash the guard before its message
+            print(f"WARNING: could not read the auth store for the bind guard ({exc}); treating as no users.")
     issues = bind_safety(
         host,
         storage_secret_set=bool(os.getenv("NICEGUI_STORAGE_SECRET")),
         allow_dev_on_lan=os.getenv("ALLOW_DEV_STORAGE_SECRET_ON_LAN") == "1",
         web_concurrency=web_concurrency,
         has_workers_arg=any(a == "--workers" or a.startswith("--workers=") for a in sys.argv[1:]),
+        auth_enabled=auth_enabled,
+        session_secret_real=bool(os.getenv("APP_SESSION_SECRET") or os.getenv("NICEGUI_STORAGE_SECRET")),
+        has_users=has_users,
+        tls_or_proxy=os.getenv("APP_TLS") == "1" or os.getenv("TRUST_PROXY") == "1",
     )
     # ASCII-only prefixes: Windows consoles default to cp1252, which can't encode ⚠/✖ and would crash
     # the print (UnicodeEncodeError) before the refusal is shown.

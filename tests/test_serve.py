@@ -66,6 +66,52 @@ def test_fatal_and_worker_warn_are_independent():
     assert _levels(issues) == ["fatal", "warn"]
 
 
+# --- auth-mode fail-closed bind (Phase 5) ----------------------------------------------------
+def _auth_ok():
+    """The fully-satisfied auth-mode bind args (real secret + users + TLS) for a non-loopback host."""
+    return dict(storage_secret_set=True, allow_dev_on_lan=False, auth_enabled=True,
+                session_secret_real=True, has_users=True, tls_or_proxy=True)
+
+
+def test_auth_mode_all_present_is_clean():
+    assert serve.bind_safety("192.168.1.42", **_auth_ok()) == []
+
+
+def test_auth_mode_missing_session_secret_is_fatal():
+    args = {**_auth_ok(), "session_secret_real": False}
+    assert "fatal" in _levels(serve.bind_safety("0.0.0.0", **args))
+
+
+def test_auth_mode_no_users_is_fatal():
+    args = {**_auth_ok(), "has_users": False}
+    assert "fatal" in _levels(serve.bind_safety("0.0.0.0", **args))
+
+
+def test_auth_mode_without_tls_is_fatal():
+    args = {**_auth_ok(), "tls_or_proxy": False}
+    assert "fatal" in _levels(serve.bind_safety("0.0.0.0", **args))
+
+
+def test_auth_mode_multi_worker_is_fatal_not_warn():
+    args = {**_auth_ok(), "web_concurrency": 2}
+    levels = _levels(serve.bind_safety("0.0.0.0", **args))
+    assert "fatal" in levels and "warn" not in levels
+
+
+def test_auth_mode_loopback_is_exempt():
+    # Loopback never needs TLS/users/secret even with auth on (the gate still applies, but binding is safe).
+    args = dict(storage_secret_set=False, allow_dev_on_lan=False, auth_enabled=True,
+                session_secret_real=False, has_users=False, tls_or_proxy=False)
+    assert serve.bind_safety("127.0.0.1", **args) == []
+
+
+def test_auth_off_keeps_legacy_warn_for_multi_worker():
+    # With auth OFF, multi-worker stays a warn (unchanged behaviour).
+    issues = serve.bind_safety("0.0.0.0", storage_secret_set=True, allow_dev_on_lan=False,
+                               web_concurrency=2)
+    assert _levels(issues) == ["warn"]
+
+
 # --- SNAPSHOT_DB_PATH env override (PR S2) ---------------------------------------------------
 def test_resolve_db_path_unset_keeps_default():
     assert serve.resolve_snapshot_db_path(None) is None
