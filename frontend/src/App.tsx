@@ -71,6 +71,7 @@ function Shell() {
   const t = useTerminal();
   const m = t.meta;
   const [setOpen, setSetOpen] = useState(false);
+  const alrt = t.count("exec", "act");   // ALRT badge = executable-now opportunities (the alert-worthy set)
   const FK: [string, string, "opp" | "res" | "ops" | ""][] = [["OPP", "y", "opp"], ["RES", "g", "res"], ["OPS", "c", "ops"], ["ALRT", "r", ""]];
   return (
     <>
@@ -86,13 +87,14 @@ function Shell() {
       </div>
       <div className="scanbar" />
       <div className="statline">
-        <span className="s"><b className={t.err ? "red" : "green"}>●</b> SNAPSHOT #{m?.snapshot_id ?? "—"} · {fmtAge(m?.fetched_at ?? null)} ago</span>
+        <span className="s"><b className={t.scanText ? "amber blink" : t.err ? "red" : "green"}>●</b> {t.scanText ?? `SNAPSHOT #${m?.snapshot_id ?? "—"} · ${fmtAge(m?.fetched_at ?? null)} ago`}</span>
         <span className="s">Opps <b>{(m?.n_total ?? 0).toLocaleString()}</b></span>
         <span className="s">Contracts <b>{(m?.contracts ?? 0).toLocaleString()}</b></span>
         <span className="s">Checks <b>{(m?.checks ?? 0).toLocaleString()}</b></span>
         <span className="s">Requests <b>{m?.requests ?? 0}</b></span>
         <span className="s">Sports <b>{t.sports.length}</b></span>
-        <span className="s"><b className={m?.failed ? "red blink" : "green"}>●</b> ALRT <b>{m?.failed ?? 0}</b></span>
+        <span className="s"><b className={m?.failed ? "amber" : "green"}>●</b> Failed <b>{m?.failed ?? 0}</b></span>
+        <span className={"s" + (alrt ? " blink" : "")}><b className="red">●</b> ALRT <b>{alrt}</b></span>
         <span className="s discl">GROSS · TOP-OF-BOOK · $1 BASIS · READ-ONLY · NO ORDER ENTRY · NOT RISKLESS · fees est. only</span>
       </div>
 
@@ -116,8 +118,8 @@ function Shell() {
             <button className="tbtn" onClick={() => setSetOpen((v) => !v)}>⚙ SETTINGS ▾</button>
             {setOpen ? <SettingsMenu close={() => setSetOpen(false)} /> : null}
           </div>
-          <button className="tbtn" title="Scan (wired in gate 2)">▷ SCAN</button>
-          <button className="tbtn force" title="Advanced: bypass TTL/cooldown">⚡</button>
+          <button className="tbtn" title="Scan now (non-force)" onClick={() => t.runScan(false)}>▷ SCAN</button>
+          <button className="tbtn force" title="Advanced: bypass TTL/cooldown" onClick={() => t.runScan(true)}>⚡</button>
           <button className="tbtn" onClick={() => t.setTheme(t.theme === "amber" ? "hc" : "amber")}>◐</button>
         </div>
       </div>

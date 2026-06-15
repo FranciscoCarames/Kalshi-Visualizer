@@ -7,6 +7,7 @@ import { COLS, colKeyOf } from "./columns";
 import { applyLens } from "./lens";
 import { downloadCsv } from "./csv";
 import { CompareView, OverlapView, LaddersView } from "./panels";
+import { postScan, getScanStatus } from "./scan";
 import { type FilterState, emptyFilters, filteredCount, passAll, tournamentOptions } from "./filters";
 
 const POLL_MS = 4000;
@@ -19,8 +20,9 @@ interface TerminalState {
   sel: FeedRow | null; colKey: string; visible: string[]; rows: FeedRow[];
   theme: "amber" | "hc"; paletteOpen: boolean; multi: FeedRow[];
   surface: "opp" | "res" | "ops"; showNet: boolean; itab: "card" | "detail" | "formula";
-  extra: ExtraPanel | null; panelsMenuOpen: boolean;
+  extra: ExtraPanel | null; panelsMenuOpen: boolean; scanText: string | null;
   count: (zone: string, section: string) => number;
+  runScan: (force: boolean) => void;
   goSection: (z: string, s: string) => void;
   setSection: (s: string) => void;
   toggleLens: (l: string) => void;
@@ -76,8 +78,38 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
   const [itab, setItab] = useState<"card" | "detail" | "formula">("card");
   const [extra, setExtra] = useState<ExtraPanel | null>(null);
   const [panelsMenuOpen, setPanelsMenuOpen] = useState(false);
+  const [scanText, setScanText] = useState<string | null>(null);
+  const scanning = useRef(false);
   const [, tick] = useState(0);
   const layoutRef = useRef<((preset: string) => void) | null>(null);
+
+  // Manual scan (▷SCAN / ⚡force): drive POST /scan, animate the scanbar, poll /scan/status. The 4s feed
+  // poll picks up the new snapshot when the scan finishes. Honors token/rate-limit (never a silent no-op).
+  const runScan = (force: boolean) => {
+    if (scanning.current) return;
+    scanning.current = true;
+    document.body.classList.add("scanning");
+    setScanText("SCANNING · fetching…");
+    const finish = (msg: string | null) => {
+      document.body.classList.remove("scanning"); scanning.current = false; setScanText(msg);
+      if (msg) setTimeout(() => setScanText((cur) => (cur === msg ? null : cur)), 4000);
+    };
+    postScan(force).then((res) => {
+      if (!res.ok) { finish("scan blocked: " + res.error); return; }
+      setScanText("SCANNING · detecting…");
+      let ticks = 0;
+      const poll = setInterval(async () => {
+        ticks++;
+        try {
+          const s = await getScanStatus();
+          if (s.status !== "in_progress" || ticks > 40) {
+            clearInterval(poll);
+            finish(s.last_scan_error ? "scan error: " + s.last_scan_error : "scan complete · snapshot refreshing");
+          }
+        } catch { clearInterval(poll); finish("scan status unavailable"); }
+      }, 1500);
+    }).catch((e) => finish("scan error: " + String(e)));
+  };
 
   useEffect(() => { document.documentElement.dataset.theme = theme; }, [theme]);
 
@@ -117,7 +149,7 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
   const value: TerminalState = {
     meta, opps, err, sports, zone, section, lens, filters, part: filters.part, tourOptions,
     sel, colKey, visible, rows, theme, paletteOpen, multi, surface, showNet, itab,
-    extra, panelsMenuOpen, count,
+    extra, panelsMenuOpen, scanText, count, runScan,
     goSection: (z, s) => { setZone(z); setSectionRaw(s); },
     setSection: setSectionRaw,
     toggleLens: (l) => setLens((cur) => (cur === l ? "" : l)),
