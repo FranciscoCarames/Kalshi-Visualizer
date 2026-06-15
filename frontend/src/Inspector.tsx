@@ -1,9 +1,11 @@
 /* Inspector — the DES trade card. Ported from ui-mockup-final-spa.html des().
  * Read-only, buy-only, gross. Display-only $1⇄$100 basis. Every field is the engine's; the "why ranked"
  * is a display narrative (lens-relative), not a model. */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { FeedRow } from "./feed";
 import { rankWhy } from "./lens";
+import { detailKey, loadDetail, loadLadder, loadPayoff, type DetailBundle, type LadderData, type PayoffData } from "./detail";
+import { PayoffChart, LadderChart } from "./Charts";
 
 const ZB: Record<string, [string, string]> = {
   exec: ["bk-exec", "EXECUTABLE"], spec: ["bk-spec", "SPECULATIVE"], diag: ["bk-diag", "DIAGNOSTIC"],
@@ -88,7 +90,42 @@ export default function Inspector({ row, lens, snapshotId, showNet }:
   );
 }
 
+const gv = (r: Record<string, unknown>, k: string): string => {
+  const v = r[k];
+  if (v == null || v === "") return "—";
+  return typeof v === "number" ? (Number.isInteger(v) ? String(v) : v.toFixed(1)) : String(v);
+};
+
+function Tbl({ rows, cols }: { rows: Record<string, unknown>[]; cols: [string, string][] }) {
+  if (!rows?.length) return null;
+  return (
+    <table className="condtbl"><tbody>
+      <tr>{cols.map(([k, l]) => <th key={k}>{l}</th>)}</tr>
+      {rows.map((r, i) => <tr key={i}>{cols.map(([k]) => <td key={k}>{gv(r, k)}</td>)}</tr>)}
+    </tbody></table>
+  );
+}
+
 export function Detail({ row }: { row: FeedRow | null }) {
+  const key = detailKey(row);
+  const [bundle, setBundle] = useState<DetailBundle | null>(null);
+  const [ladder, setLadder] = useState<LadderData | null>(null);
+  const [payoff, setPayoff] = useState<PayoffData | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const [showRaw, setShowRaw] = useState(false);
+  useEffect(() => {
+    setBundle(null); setLadder(null); setPayoff(null); setErr(null);
+    if (!row) return;
+    let alive = true;
+    if (key) {
+      loadDetail(key).then((b) => alive && setBundle(b)).catch((e) => alive && setErr(String(e)));
+      loadLadder(key).then((l) => alive && setLadder(l)).catch(() => {});
+    }
+    loadPayoff(row.id).then((p) => alive && setPayoff(p)).catch(() => {});
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [row?.id]);
+
   if (!row) return <div className="empty">Click a blotter row.</div>;
   const z = ZB[row.zone] ?? ZB.diag;
   const raw = row.cond ?? row.cond_child;
@@ -96,22 +133,74 @@ export function Detail({ row }: { row: FeedRow | null }) {
   return (
     <div className="des">
       <div className="dtitle"><span className={"bk " + z[0]}>{z[1]}</span><span className="t">{row.name}</span></div>
-      <div className="sub">{row.sub || ""} · participant detail</div>
+      <div className="sub">{[row.sub, row.sport].filter(Boolean).join(" · ")} · participant detail</div>
+
       {hasCond ? (
         <>
-          <div className="sect">CONDITIONAL PROBABILITY <span className="uncal">UNCALIBRATED · DISPLAY-ONLY</span></div>
+          <div className="sect">CONDITIONAL PROBABILITY <span className="uncal">UNCALIBRATED · DISPLAY-ONLY · NOT FAIR VALUE</span></div>
           <table className="condtbl"><tbody>
-            <tr><th>Stage</th><th>raw</th><th>field-impl. est.</th></tr>
-            <tr><td>{row.pnode || row.detail || "parent"}</td><td>{row.pbid != null ? row.pbid + "¢" : "—"}</td><td className="dim">—</td></tr>
-            <tr><td>Deeper given reached</td><td className="violet">{row.cond_child != null ? n1(row.cond_child) + "%" : (raw != null ? raw + "%" : "—")}</td><td className="violet">field de-vig*</td></tr>
-            <tr><td>Success given reached</td><td>{row.cond_success != null ? n1(row.cond_success) + "%" : "—"}</td><td className="dim">field de-vig*</td></tr>
+            <tr><th>Stage</th><th>raw (price ratio)</th></tr>
+            <tr><td>{row.pnode || row.detail || "parent"}</td><td>{row.pbid != null ? row.pbid + "¢" : "—"}</td></tr>
+            <tr><td>Deeper given reached</td><td className="violet">{row.cond_child != null ? n1(row.cond_child) + "%" : (raw != null ? raw + "%" : "—")}</td></tr>
+            <tr><td>Success given reached</td><td>{row.cond_success != null ? n1(row.cond_success) + "%" : "—"}</td></tr>
           </tbody></table>
           <div className="formula">P(deeper│reached) = price(deeper) ÷ price(parent){row.cask != null && row.pbid ? ` = ${row.cask}/${row.pbid} = ${row.cond}%` : ""}</div>
-          <div className="note" style={{ marginTop: 5 }}>*The <b>field-implied de-vig</b> column needs the per-participant field frames — a future <b>/api/terminal/detail</b> endpoint (consistency.devig_field_by_node). Raw = market price ratio; <b>not</b> fair value; uses_fees=false, uses_depth=false.</div>
         </>
       ) : <div className="note" style={{ marginTop: 6 }}>No parent/child containment node on this row (e.g. a dutch-book field/game). Conditional probability applies to ladder rows.</div>}
-      <div className="sect">CONTAINMENT LADDER (illustrative)</div>
-      <div className="note">{row.pnode || "broader"} ⊇ {row.cnode || "deeper"} — a deeper outcome must price ≤ the broader one that contains it.</div>
+
+      {!key ? (
+        <div className="note" style={{ marginTop: 8 }}>No single-participant anchor on this row — drill-down tables (chain / spreads / contracts) apply to ladder rows with a participant key + tournament.</div>
+      ) : err ? (
+        <div className="note red" style={{ marginTop: 8 }}>detail unavailable: {err}</div>
+      ) : !bundle ? (
+        <div className="note" style={{ marginTop: 8 }}>loading participant detail…</div>
+      ) : (
+        <>
+          {bundle.indicators.length ? (
+            <><div className="sect">DERIVED MARKET-IMPLIED INDICATORS <span className="uncal">DISPLAY-ONLY BOUND</span></div>
+              {bundle.indicators.map((ind, i) => (
+                <div className="note" key={i}>{gv(ind, "label")} {gv(ind, "comparator")} {gv(ind, "value_pct")}{ind.value_pct != null ? "%" : ""} <span className="dim">{gv(ind, "note")}</span></div>
+              ))}</>
+          ) : null}
+
+          {bundle.chain.length ? (
+            <><div className="sect">CONTAINMENT CHAIN (BROAD → DEEP)</div>
+              <Tbl rows={bundle.chain} cols={[["layer", "Layer"], ["source", "Source"], ["display_pct", "Disp %"], ["bid_pct", "Bid %"], ["ask_pct", "Ask %"], ["quote", "Quote"]]} />
+              <LadderChart data={ladder} /></>
+          ) : null}
+
+          {payoff && payoff.scenarios.length ? (
+            <><div className="sect">PER-UNIT PAYOFF BY SCENARIO <span className="uncal">GROSS</span></div><PayoffChart data={payoff} /></>
+          ) : null}
+
+          {bundle.spreads.length ? (
+            <><div className="sect">RAW STAGE-LADDER SPREADS</div>
+              <Tbl rows={bundle.spreads} cols={[["from_layer", "From"], ["to_layer", "To"], ["spread_pct", "Spread pp"], ["spread_cents", "Spread ¢"], ["quote", "Quote"]]} /></>
+          ) : null}
+
+          {bundle.expected.length ? (
+            <><div className="sect">EXPECTED VS FOUND</div>
+              <Tbl rows={bundle.expected} cols={[["layer", "Layer"], ["found", "Found"], ["source", "Source"]]} /></>
+          ) : null}
+
+          {bundle.contracts.length ? (
+            <><div className="sect">ALL CONTRACTS ({bundle.contracts.length})</div>
+              <Tbl rows={bundle.contracts} cols={[["contract", "Contract"], ["stage", "Stage"], ["display_pct", "Disp %"], ["bid_pct", "Bid %"], ["ask_pct", "Ask %"], ["quote", "Quote"], ["status", "Status"]]} /></>
+          ) : null}
+
+          {bundle.rules.length ? (
+            <><div className="sect">RESOLUTION CRITERIA (SETTLEMENT RULES)</div>
+              {bundle.rules.map((r, i) => (
+                <div className="note" key={i}><b className="white">{r.contract}</b> — {r.text}</div>
+              ))}</>
+          ) : null}
+
+          {bundle.raw_fields.length ? (
+            <><div className="sect" style={{ cursor: "pointer" }} onClick={() => setShowRaw((v) => !v)}>RAW FIELDS · IDS &amp; CODES {showRaw ? "▾" : "▸"}</div>
+              {showRaw ? <Tbl rows={bundle.raw_fields} cols={[["series", "Series"], ["tournament", "Tournament"], ["tournament_source", "T-src"], ["player_key", "Player key"], ["mapping_confidence", "Map conf"]]} /> : null}</>
+          ) : null}
+        </>
+      )}
     </div>
   );
 }

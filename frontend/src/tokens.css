@@ -76,6 +76,9 @@ body{background:var(--bg);color:var(--tx);font-family:var(--mono);font-size:12px
 .ms-pop label{display:flex;align-items:center;gap:5px;padding:2px 9px;cursor:pointer;color:var(--tx2);white-space:nowrap}
 .ms-pop label:hover{background:var(--hover);color:var(--white)}
 .ms-empty{padding:3px 9px;color:var(--tx3)}
+/* inline-SVG charts (payoff / ladder-price) in the inspector detail tab */
+.chart{width:100%;height:auto;display:block;margin:4px 0 6px;background:var(--bg1);border:1px solid var(--line)}
+.chart .cl{fill:var(--tx3);font-size:7px;font-family:var(--mono)}
 
 /* lens switcher + toolbar buttons */
 .tp-lens{display:flex;border:1px solid var(--line2)}
