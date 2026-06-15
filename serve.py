@@ -126,6 +126,30 @@ def _enforce_bind_safety(host: str) -> None:
         raise SystemExit(2)
 
 
+def seed_admin_from_env() -> None:
+    """One-shot first-admin bootstrap from the environment (boundary — config stays import-free). When
+    ``APP_ADMIN_USER`` and ``APP_ADMIN_PASSWORD`` are both set AND the auth store has ZERO users, create the
+    first admin with ``force_pw_change`` so the env password is replaced at first login. Idempotent: once any
+    user exists this is a no-op (it NEVER overwrites an existing account). A weak/default-like password is
+    refused. The password is never logged. ``AUTH_DB_PATH`` is read here (the same boundary as the CLI)."""
+    import auth_store
+    import manage_users
+
+    user = os.getenv("APP_ADMIN_USER")
+    password = os.getenv("APP_ADMIN_PASSWORD")
+    if not user or not password:
+        return
+    db = os.getenv("AUTH_DB_PATH", config.AUTH_DB_PATH)
+    if auth_store.user_count(db_path=db) > 0:
+        return
+    err = manage_users.validate_password_strength(password)
+    if err:
+        raise SystemExit(f"APP_ADMIN_PASSWORD rejected: {err}")
+    import time
+    auth_store.create_user(user, password, now=time.time(), force_pw_change=True, db_path=db)
+    print(f"Seeded first admin user {user!r} (must change password at first login).")
+
+
 def resolve_pause_when_idle(raw: str | None, default: bool) -> bool:
     """Resolve the effective presence-gate setting from the ``AUTO_SCAN_PAUSE_WHEN_IDLE`` env override
     (``config.py`` stays import-free, so the env read lives here at the boundary). ``"0"``/``"false"``/
@@ -177,6 +201,7 @@ def _apply_snapshot_db_path() -> None:
 
 if __name__ == "__main__":
     _apply_snapshot_db_path()
+    seed_admin_from_env()
     _host = os.getenv("API_HOST", config.API_HOST)
     _port = int(os.getenv("API_PORT", str(config.API_PORT)))
     _enforce_bind_safety(_host)
