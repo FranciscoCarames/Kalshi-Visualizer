@@ -2,10 +2,11 @@
  * re-render on state change without prop threading. Holds the live feed poll + all view state
  * (zone/section/lens/filters/selection/columns/panels). Still a read-only VIEW of the engine. */
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { loadFeed, rowsFor, type Feed, type FeedRow, type FeedMeta } from "./feed";
+import { loadFeed, rowsFor, SUBTABS, type Feed, type FeedRow, type FeedMeta } from "./feed";
 import { COLS, colKeyOf } from "./columns";
-import { applyLens } from "./lens";
+import { applyLens, LENSES } from "./lens";
 import { downloadCsv } from "./csv";
+import { encodeUrl, decodeUrl } from "./url";
 import { CompareView, OverlapView, LaddersView } from "./panels";
 import { postScan, getScanStatus } from "./scan";
 import { diffSnapshot, edgeMap, type Change } from "./diff";
@@ -166,6 +167,32 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
     return base;
   }, [colsByKey, colKey, defVis, showNet]);
   const tourOptions = useMemo(() => tournamentOptions(opps, filters.sports), [opps, filters.sports]);
+
+  // URL state (old-dashboard parity): restore ONCE after the first feed arrives, sanitized against the
+  // live feed (drop a sport/tournament not present), then mirror changes to the URL (guarded vs loops).
+  const restoredRef = useRef(false);
+  useEffect(() => {
+    if (restoredRef.current || !meta) return;
+    restoredRef.current = true;
+    const d = decodeUrl(window.location.search);
+    const validSports = new Set(Object.keys(meta.sports ?? {}));
+    const sports = new Set((d.sports ?? []).filter((s) => validSports.has(s)));
+    const validTours = new Set(tournamentOptions(opps, sports));
+    const tours = new Set((d.tours ?? []).filter((tv) => validTours.has(tv)));
+    setFilters((f) => ({ ...f, sports, tours, part: d.part ?? f.part }));
+    if (d.surface && ["opp", "res", "ops", "alrt"].includes(d.surface)) setSurface(d.surface as "opp" | "res" | "ops" | "alrt");
+    if (d.lens && LENSES.some(([l]) => l === d.lens)) setLens(d.lens);
+    if (d.section) {
+      const z = d.zone && SUBTABS[d.zone] ? d.zone : Object.keys(SUBTABS).find((k) => SUBTABS[k].some(([s]) => s === d.section));
+      if (z && SUBTABS[z].some(([s]) => s === d.section)) { setZone(z); setSectionRaw(d.section); }
+    }
+  }, [meta, opps]);
+  useEffect(() => {
+    if (!restoredRef.current) return;                 // don't clobber the URL before the restore runs
+    const q = encodeUrl({ surface, zone, section, lens,
+      sports: [...filters.sports], tours: [...filters.tours], part: filters.part });
+    if (q !== window.location.search) window.history.replaceState(null, "", q || window.location.pathname);
+  }, [surface, zone, section, lens, filters]);
   const rows = useMemo(() => {
     const r = applyBand(rowsFor(opps, zone, section).filter((o) => passAll(o, filters)), section, band);
     const sorted = applyLens(r, lens);
