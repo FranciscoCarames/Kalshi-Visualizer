@@ -273,10 +273,13 @@ ORDERBOOK_HTTP_WINDOW_SECONDS = 10
 # tables on a bad migration) can NEVER touch credentials. config stays import-free — every env read lives
 # at a boundary (serve.py / api.py / auth.py / manage_users.py). All durations are seconds.
 AUTH_DB_PATH = "auth.db"                       # default; SNAPSHOT_DB_PATH-distinct (env override at boundary)
-AUTH_SESSION_IDLE_SECONDS = 12 * 60 * 60       # re-login after this much inactivity (sliding)
+AUTH_SESSION_IDLE_SECONDS = 2 * 60 * 60        # re-login after this much INACTIVITY (sliding, re-set each
+                                               #   request); strictly < the absolute cap so sliding is real
 AUTH_SESSION_ABSOLUTE_SECONDS = 12 * 60 * 60   # hard cap on a session's life regardless of activity
 AUTH_LOGIN_MAX_PER_WINDOW = 5                  # login attempts per (ip, username) before 429
 AUTH_LOGIN_WINDOW_SECONDS = 60
+AUTH_LOGIN_LIMITER_MAX = 4096                  # cap on the per-(ip,username) login-limiter map; stale
+                                               #   entries are evicted at the cap so it can't grow unbounded
 AUTH_LOCKOUT_THRESHOLD = 10                    # consecutive failures before a temporary account lockout
 AUTH_LOCKOUT_SECONDS = 15 * 60                 # lockout duration (temporary — CLI `unlock` clears early)
 AUTH_COOKIE_NAME = "kss_session"               # signed session cookie (itsdangerous, NOT NiceGUI's cookie)

@@ -71,10 +71,15 @@ def run_checks(base: str) -> None:
 
     # 2. Deny-by-default gating for the anonymous user.
     print("\n# Gating (anonymous -> 401 / docs off)")
-    for path in ("/api/terminal/feed", "/opportunities", "/metrics", "/coverage", "/readyz",
+    for path in ("/api/terminal/feed", "/opportunities", "/metrics", "/coverage",
                  "/alerts", "/backlog", "/auth/preferences", "/auth/devices"):
         code = requests.get(f"{base}{path}", timeout=5).status_code
         check(f"anon GET {path} -> 401", code == 401, f"got {code}")
+    # /readyz is PUBLIC for LB probes but its detail is redacted for an anonymous caller (C3).
+    rz = requests.get(f"{base}/readyz", timeout=5)
+    check("anon GET /readyz -> 200/503, detail redacted",
+          rz.status_code in (200, 503) and rz.json().get("last_scan_status") is None,
+          f"got {rz.status_code} body={rz.text[:120]}")
     check("/docs disabled in prod -> 404", requests.get(f"{base}/docs", timeout=5).status_code == 404)
     check("/openapi.json disabled -> 404", requests.get(f"{base}/openapi.json", timeout=5).status_code == 404)
 

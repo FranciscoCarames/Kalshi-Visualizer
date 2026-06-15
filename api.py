@@ -18,7 +18,7 @@ import threading
 import time
 from typing import Any, Callable
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Response
+from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response
 from fastapi.responses import RedirectResponse, StreamingResponse
 from pydantic import BaseModel, ConfigDict
 from starlette.middleware.trustedhost import TrustedHostMiddleware
@@ -62,10 +62,18 @@ def favicon() -> RedirectResponse:
 _scan_limiter = ratelimit.SlidingWindow(config.SCAN_HTTP_MAX_PER_WINDOW, config.SCAN_HTTP_WINDOW_SECONDS)
 
 
-def require_scan_token(x_scan_token: str | None = Header(default=None, alias="X-Scan-Token")) -> None:
+def require_scan_token(request: Request,
+                       x_scan_token: str | None = Header(default=None, alias="X-Scan-Token")) -> None:
     """Scan-token gate (PR 26b, locked decision §8). When the `SCAN_TOKEN` env var is SET, `POST /scan`
     requires a matching `X-Scan-Token` header (constant-time compare); when UNSET the gate is OFF (today's
-    open behaviour). Loopback dev simply leaves it unset; a LAN scheduler must send the header."""
+    open behaviour). Loopback dev simply leaves it unset; a LAN scheduler must send the header.
+
+    When AUTH_ENABLED, a request that already carries a valid session or machine token has passed the
+    deny-by-default gate — don't double-gate it out of /scan when SCAN_TOKEN is also set (otherwise a
+    logged-in human could never trigger a scan from the SPA). The legacy header path is unchanged when auth
+    is off."""
+    if auth.auth_enabled() and auth.authenticated(request):
+        return
     token = os.getenv("SCAN_TOKEN", "")
     if token and not hmac.compare_digest(x_scan_token or "", token):
         logger.warning("Rejected POST /scan: missing or invalid X-Scan-Token")
@@ -319,12 +327,17 @@ def healthz() -> dict[str, str]:
 
 
 @app.get("/readyz", response_model=ReadyZ)
-def readyz(response: Response, db_path: str | None = Depends(db_path_dep)):
+def readyz(request: Request, response: Response, db_path: str | None = Depends(db_path_dep)):
     """Readiness (PR S1), distinct from the liveness-only /healthz: ready/degraded → 200, not_ready → 503.
     The DB-writability probe is MIGRATION-FREE (`store.db_writable` → `os.access`; never `_connect`/
     `_migrate`, so a health probe can't migrate or create the prod DB); the latest snapshot is read only
     when the DB file already exists. Reflects the LAST scan's status (no live Kalshi call) and never claims
-    scheduler health."""
+    scheduler health.
+
+    `/readyz` is PUBLIC (allowlisted) so an unauthenticated load-balancer / orchestrator probe still works
+    under AUTH_ENABLED — but for an anonymous caller the DETAIL (snapshot age, last-scan error, scan state)
+    is REDACTED to just the status + HTTP code, so operational internals don't leak. An authenticated
+    caller (or auth-off dev) gets the full body; the detail also lives in the gated /metrics."""
     resolved = db_path or config.SNAPSHOT_DB_PATH
     writable = store.db_writable(resolved)
     snap = store.latest(db_path=resolved) if (writable and os.path.exists(resolved)) else None
@@ -334,6 +347,8 @@ def readyz(response: Response, db_path: str | None = Depends(db_path_dep)):
         writable=writable, snapshot=snap, age=age, stale=stale,
         scan_status=scan_manager.manager.status())
     response.status_code = code
+    if auth.auth_enabled() and not auth.authenticated(request):
+        return ReadyZ(status=body["status"])           # redacted: status + HTTP code only, no internals
     return ReadyZ(**body)
 
 
@@ -539,7 +554,8 @@ def get_terminal_telemetry(db_path: str | None = Depends(db_path_dep)) -> Termin
 @app.get("/api/terminal/orderbook", response_model=TerminalOrderbook)
 def get_terminal_orderbook(ticker: str, depth: int = _ORDERBOOK_DEFAULT_DEPTH) -> TerminalOrderbook:
     """LIVE resting order book for one market — the SPA depth ladder (replaces the old synthetic book).
-    Read-only public market data (no auth). Validates the ticker, clamps depth to 1..100, coalesces the
+    Read-only market data, GATED by the auth middleware when AUTH_ENABLED (like every `/api/terminal/*`
+    route — it is NOT public). Validates the ticker, clamps depth to 1..100, coalesces the
     frontend's ~5s poll via a short per-ticker TTL cache, and is sliding-window rate-limited. Degrades
     HONESTLY: an empty/closed book → empty sides; any upstream failure → ok=False + error (never a 500,
     never fabricated rungs). Display-only depth — never feeds classification/ranking."""

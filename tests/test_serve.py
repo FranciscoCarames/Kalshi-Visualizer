@@ -96,13 +96,27 @@ def test_fatal_and_worker_warn_are_independent():
 
 # --- auth-mode fail-closed bind (Phase 5) ----------------------------------------------------
 def _auth_ok():
-    """The fully-satisfied auth-mode bind args (real secret + users + TLS) for a non-loopback host."""
+    """The fully-satisfied auth-mode bind args (real secret + users + TLS + host allowlist) for a
+    non-loopback host."""
     return dict(storage_secret_set=True, allow_dev_on_lan=False, auth_enabled=True,
-                session_secret_real=True, has_users=True, tls_or_proxy=True)
+                session_secret_real=True, has_users=True, tls_or_proxy=True, host_allowlist_set=True)
 
 
 def test_auth_mode_all_present_is_clean():
     assert serve.bind_safety("192.168.1.42", **_auth_ok()) == []
+
+
+def test_auth_mode_missing_host_allowlist_is_fatal():
+    # A3: AUTH_ENABLED + non-loopback + no APP_ALLOWED_HOSTS (default '*') is fatal — the Host header is
+    # unvalidated and the Origin/CSRF check derives from it.
+    args = {**_auth_ok(), "host_allowlist_set": False}
+    assert "fatal" in _levels(serve.bind_safety("0.0.0.0", **args))
+
+
+def test_auth_mode_host_allowlist_escape_hatch_clears_fatal():
+    # ALLOW_ANY_HOST_ON_LAN=1 downgrades the allowlist requirement on a trusted LAN.
+    args = {**_auth_ok(), "host_allowlist_set": False, "allow_any_host": True}
+    assert serve.bind_safety("192.168.1.42", **args) == []
 
 
 def test_auth_mode_missing_session_secret_is_fatal():

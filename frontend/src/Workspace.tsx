@@ -107,13 +107,25 @@ export default function Workspace() {
   };
   useEffect(() => { t.registerLayout(applyPreset); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
 
-  // pop-out: a window with the panel's current DOM + the page's stylesheets
+  // pop-out: a window with the panel's current DOM + the page's stylesheets. We CLONE nodes (importNode)
+  // rather than serializing node.innerHTML into document.write: a string round-trip would re-parse the
+  // panel's HTML in a fresh same-origin document, re-interpreting any untrusted feed text (names, labels,
+  // URLs) as markup. Cloning preserves React's already-escaped DOM; title/theme are set as text/attribute,
+  // never interpolated into an HTML string.
   const popOut = (id: string, title: string) => {
     const node = refs.current[id]; if (!node) return;
     const w = window.open("", "_blank", "width=560,height=600"); if (!w) return;
-    const css = Array.from(document.querySelectorAll('link[rel="stylesheet"],style')).map((n) => n.outerHTML).join("");
-    w.document.write(`<!doctype html><html data-theme="${document.documentElement.dataset.theme}"><head><title>${title} — popout</title>${css}</head><body style="height:100vh;margin:0"><div class="panel" style="height:100%">${node.innerHTML}</div></body></html>`);
-    w.document.close();
+    const doc = w.document;
+    doc.documentElement.setAttribute("data-theme", document.documentElement.dataset.theme ?? "");
+    doc.title = `${title} — popout`;
+    document.querySelectorAll('link[rel="stylesheet"],style').forEach((n) => doc.head.appendChild(doc.importNode(n, true)));
+    doc.body.style.height = "100vh";
+    doc.body.style.margin = "0";
+    const wrap = doc.createElement("div");
+    wrap.className = "panel";
+    wrap.style.height = "100%";
+    wrap.appendChild(doc.importNode(node, true));
+    doc.body.appendChild(wrap);
   };
 
   const dragV = (which: "M" | "R") => (e: React.PointerEvent) => {

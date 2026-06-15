@@ -74,7 +74,9 @@ _LOOPBACK_HOSTS = ("127.0.0.1", "localhost", "::1")
 def bind_safety(host: str, *, storage_secret_set: bool, allow_dev_on_lan: bool,
                 web_concurrency: int = 0, has_workers_arg: bool = False,
                 auth_enabled: bool = False, session_secret_real: bool = False,
-                has_users: bool = False, tls_or_proxy: bool = False) -> list[tuple[str, str]]:
+                has_users: bool = False, tls_or_proxy: bool = False,
+                host_allowlist_set: bool = False,
+                allow_any_host: bool = False) -> list[tuple[str, str]]:
     """Pure, no-IO safety check for a chosen bind configuration. Returns ``(level, message)`` pairs where
     ``level`` is ``"fatal"`` (startup MUST abort) or ``"warn"`` (print and continue).
 
@@ -84,9 +86,11 @@ def bind_safety(host: str, *, storage_secret_set: bool, allow_dev_on_lan: bool,
       it to a loud ``warn``.
     - **Auth-mode fail-closed (security):** when ``AUTH_ENABLED`` and the bind is non-loopback, it is
       ``fatal`` to start without (a) a real ``APP_SESSION_SECRET``/``NICEGUI_STORAGE_SECRET``, (b) at least
-      one user account, and (c) TLS (``APP_TLS=1``) or a declared HTTPS-terminating reverse proxy
-      (``TRUST_PROXY=1``) — otherwise the session cookie travels in cleartext or the gate has no one to let
-      in.
+      one user account, (c) TLS (``APP_TLS=1``) or a declared HTTPS-terminating reverse proxy
+      (``TRUST_PROXY=1``), and (d) an ``APP_ALLOWED_HOSTS`` allowlist (the default ``*`` leaves the Host
+      header unvalidated, which the Origin/CSRF check derives from) — otherwise the session cookie travels
+      in cleartext, the gate has no one to let in, or the Host is unvalidated. ``ALLOW_ANY_HOST_ON_LAN=1``
+      overrides (d) on a trusted LAN.
     - **Multi-worker guard:** ``web_concurrency > 1`` / ``--workers`` is ``warn`` normally but ``fatal`` in
       auth mode — the snapshot store, Kalshi throttle, login rate-limiter, and session state are all
       PROCESS-LOCAL, so multiple workers fragment them (and split the auth limiter → weaker brute-force
@@ -124,6 +128,13 @@ def bind_safety(host: str, *, storage_secret_set: bool, allow_dev_on_lan: bool,
                            "travel in cleartext on the LAN. Enable TLS (APP_TLS=1 with uvicorn "
                            "--ssl-keyfile/--ssl-certfile) or declare an HTTPS-terminating reverse proxy "
                            "(TRUST_PROXY=1). See docs/AUTH.md."))
+        if not host_allowlist_set and not allow_any_host:
+            issues.append(("fatal",
+                           f"Refusing to bind {host} with AUTH_ENABLED but no APP_ALLOWED_HOSTS: with the "
+                           "default '*' the Host header is unvalidated (DNS-rebinding surface, and the "
+                           "Origin/CSRF check derives from it). Set APP_ALLOWED_HOSTS to a comma-separated "
+                           "host list, or ALLOW_ANY_HOST_ON_LAN=1 to override on a trusted LAN. "
+                           "(Loopback needs neither.)"))
     if web_concurrency > 1 or has_workers_arg:
         level = "fatal" if auth_enabled else "warn"
         issues.append((level,
@@ -158,6 +169,8 @@ def _enforce_bind_safety(host: str) -> None:
         session_secret_real=bool(os.getenv("APP_SESSION_SECRET") or os.getenv("NICEGUI_STORAGE_SECRET")),
         has_users=has_users,
         tls_or_proxy=os.getenv("APP_TLS") == "1" or os.getenv("TRUST_PROXY") == "1",
+        host_allowlist_set=bool(os.getenv("APP_ALLOWED_HOSTS", "").strip()),
+        allow_any_host=os.getenv("ALLOW_ANY_HOST_ON_LAN") == "1",
     )
     # ASCII-only prefixes: Windows consoles default to cp1252, which can't encode ⚠/✖ and would crash
     # the print (UnicodeEncodeError) before the refusal is shown.

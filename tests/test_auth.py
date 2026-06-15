@@ -237,3 +237,112 @@ def test_docs_hidden_in_prod_but_open_in_dev(env, monkeypatch):
     monkeypatch.setenv("APP_DEV", "1")
     assert c.get("/docs").status_code == 200          # re-enabled for dev
     assert c.get("/openapi.json").status_code == 200
+
+
+# --- Branch 1 hardening regressions --------------------------------------------------
+def test_gating_is_exhaustive(env):
+    """Deny-by-default invariant (C2): EVERY non-allowlisted route returns 401 to an anonymous caller.
+    Iterates the live route table so a future data route registered at the wrong (public) prefix is caught."""
+    import re as _re
+
+    from starlette.routing import Route
+    c, _ = env
+    checked = 0
+    for r in api.app.routes:
+        path = getattr(r, "path", None)
+        if not path or not isinstance(r, Route) or auth.is_public(path):
+            continue                                  # public/allowlisted or a Mount — skip
+        methods = getattr(r, "methods", None) or set()
+        method = "GET" if "GET" in methods else ("POST" if "POST" in methods else None)
+        if method is None:
+            continue
+        concrete = _re.sub(r"\{[^}]+\}", "1", path)   # fill path params; the gate 401s before validation
+        resp = c.request(method, concrete)
+        assert resp.status_code == 401, f"{method} {concrete} anon -> {resp.status_code}, expected 401"
+        checked += 1
+    assert checked >= 8                               # sanity: the data surface was actually exercised
+
+
+def test_security_headers_and_vary_present(env):
+    """A5/E2: _harden stamps all five security headers (incl. Vary: Cookie) on gated AND public responses."""
+    c, _ = env
+    for resp in (c.get("/opportunities"), c.get("/healthz")):   # gated 401, then public 200
+        h = resp.headers
+        assert h["x-frame-options"] == "DENY"
+        assert h["x-content-type-options"] == "nosniff"
+        assert h["content-security-policy"] == "frame-ancestors 'none'"
+        assert h["referrer-policy"] == "no-referrer"
+        assert h["vary"] == "Cookie"
+    assert c.get("/opportunities").headers["cache-control"] == "no-store"   # no-store on the gated 401
+
+
+def test_no_store_on_401_and_403(env):
+    """A.4 lock-in: error responses (401 anon, 403 cross-origin) carry Cache-Control: no-store."""
+    c, _ = env
+    assert c.get("/opportunities").headers["cache-control"] == "no-store"
+    _login(c)
+    forbidden = c.post("/scan", headers={"Origin": "http://evil.example"})
+    assert forbidden.status_code == 403 and forbidden.headers["cache-control"] == "no-store"
+
+
+def test_readyz_public_but_redacted_for_anon(env):
+    """C3: /readyz is reachable anonymously (LB probe) but its detail is redacted; an authed caller sees it.
+    The tmp snap.db is empty -> deterministic 'degraded / no snapshot yet'."""
+    c, _ = env
+    anon = c.get("/readyz")
+    assert anon.status_code == 200                    # public — not 401
+    b = anon.json()
+    assert b["status"] == "degraded"
+    assert b["reason"] is None and b["last_scan_status"] is None and b["snapshot_age_seconds"] is None
+    _login(c)
+    full = c.get("/readyz").json()
+    assert full["status"] == "degraded" and full["reason"] == "no snapshot yet"   # detail visible to authed
+
+
+def test_scan_token_does_not_lock_out_logged_in_user(env, monkeypatch):
+    """C1/E4: with SCAN_TOKEN set AND auth on, a logged-in session can still trigger /scan (no header)."""
+    c, _ = env
+    monkeypatch.setenv("SCAN_TOKEN", "lan-token")
+    _login(c)
+    r = c.post("/scan", headers={"Origin": "http://testserver"})
+    assert r.status_code != 401                       # session satisfies; not blocked by the scan-token gate
+
+
+def test_login_limiter_is_bounded(monkeypatch):
+    """A2: the per-(ip,username) login-limiter map cannot grow without bound."""
+    monkeypatch.setattr(api.config, "AUTH_LOGIN_LIMITER_MAX", 10)
+    auth._reset_login_limiters()
+    now = time.time()
+    for i in range(100):
+        auth._login_allowed(f"ip{i}", f"user{i}", now=now)
+    assert len(auth._login_limiters) <= 10
+    auth._reset_login_limiters()
+
+
+def test_cookie_secure_flag(monkeypatch):
+    """E3: cookies are marked Secure only over real TLS or a declared HTTPS-terminating proxy."""
+    monkeypatch.delenv("APP_TLS", raising=False)
+    monkeypatch.delenv("TRUST_PROXY", raising=False)
+    assert auth.cookie_secure() is False
+    monkeypatch.setenv("APP_TLS", "1")
+    assert auth.cookie_secure() is True
+    monkeypatch.delenv("APP_TLS", raising=False)
+    monkeypatch.setenv("TRUST_PROXY", "1")
+    assert auth.cookie_secure() is True
+
+
+def _scope_request(headers: dict[str, str], hostname: str = "testserver"):
+    from starlette.requests import Request
+    raw = [(k.lower().encode(), v.encode()) for k, v in headers.items()]
+    return Request({"type": "http", "method": "POST", "path": "/", "query_string": b"",
+                    "headers": raw, "server": (hostname, 80), "scheme": "http", "client": ("1.2.3.4", 1)})
+
+
+def test_origin_ok_edges():
+    """E5: _origin_ok — absent Origin/Referer passes (native), matching host passes, foreign/malformed fail,
+    Referer is the fallback when Origin is absent."""
+    assert auth._origin_ok(_scope_request({})) is True
+    assert auth._origin_ok(_scope_request({"origin": "http://testserver"})) is True
+    assert auth._origin_ok(_scope_request({"origin": "http://evil.example"})) is False
+    assert auth._origin_ok(_scope_request({"referer": "http://testserver/x"})) is True
+    assert auth._origin_ok(_scope_request({"origin": "::::nonsense"})) is False

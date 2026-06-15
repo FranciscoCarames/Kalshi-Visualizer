@@ -37,7 +37,14 @@ logger = logging.getLogger("kalshi.auth")
 # Public (un-gated) surface. Everything else requires auth when AUTH_ENABLED. Kept explicit so the
 # deny-by-default test can assert no data route ever slips in. The SPA bundle (HTML/JS/CSS — no secrets)
 # stays public so the login screen can load; the DATA behind it does not.
-_PUBLIC_EXACT = {"/", "/index.html", "/healthz", "/favicon.ico", "/docs", "/redoc", "/openapi.json"}
+# `/readyz` is public but its DETAIL is redacted for an anonymous caller (see `readyz` in api.py): a
+# load-balancer / orchestrator probe gets the ready/degraded/not_ready status + HTTP code, while the
+# snapshot age / last-scan error stay behind auth (in the gated /metrics). `/healthz` is liveness-only.
+_PUBLIC_EXACT = {"/", "/index.html", "/healthz", "/readyz", "/favicon.ico", "/docs", "/redoc",
+                 "/openapi.json"}
+# WARNING: `/terminal/` is the PUBLIC SPA static bundle. NEVER register a DATA route under `/terminal/...`
+# — it would be public. Engine data lives at `/api/terminal/...` (gated). `test_gating_is_exhaustive`
+# asserts no non-allowlisted route slips through.
 _PUBLIC_PREFIXES = ("/auth/", "/terminal/", "/assets/", "/static/")
 
 _COOKIE_MAX_AGE = config.AUTH_SESSION_ABSOLUTE_SECONDS
@@ -176,10 +183,21 @@ def _authenticate(request: Request, *, now: float) -> _Principal | None:
         user, new_token = auth_store.consume_device_token(selector, validator, now=now, db_path=db)
         if user is not None and new_token is not None:
             p = _Principal(user=user, via="remember")
+            # A fresh `iat=now` restarts the session's ABSOLUTE cap. This is intentional: the long-lived
+            # credential on this path is the remember-me token itself (AUTH_REMEMBER_MAX_AGE, single-use +
+            # rotating + theft-detecting), NOT the session cookie. The absolute cap bounds the cookie-ONLY
+            # path; "remember this PC" deliberately re-logs the device in until the token expires/rotates out.
             p.refresh.append(("session", (user["id"], now)))
             p.refresh.append(("remember", new_token))
             return p
     return None
+
+
+def authenticated(request: Request) -> bool:
+    """True when the request carries a valid session, machine token, or remember-me cookie. A thin public
+    wrapper over `_authenticate` so callers (e.g. the `/readyz` redaction) can branch on auth without
+    reaching into internals or duplicating the cookie/token logic."""
+    return _authenticate(request, now=time.time()) is not None
 
 
 def _origin_ok(request: Request) -> bool:
@@ -214,6 +232,10 @@ def _harden(response: Response, *, no_store: bool) -> Response:
     response.headers.setdefault("Referrer-Policy", "no-referrer")
     response.headers.setdefault("X-Frame-Options", "DENY")
     response.headers.setdefault("Content-Security-Policy", "frame-ancestors 'none'")
+    # A response can differ by the auth cookie (per-user data vs the login screen). Tell any shared cache
+    # to key on it — defense-in-depth on top of the no-store below — so one user's gated response can never
+    # be served to another.
+    response.headers.setdefault("Vary", "Cookie")
     if no_store:
         response.headers["Cache-Control"] = "no-store"
     return response
@@ -267,10 +289,25 @@ async def gate_and_harden(request: Request, call_next):
 _login_limiters: dict[str, ratelimit.SlidingWindow] = {}
 
 
+def _evict_stale_login_limiters(now: float) -> None:
+    """Bound the per-(ip,username) limiter map: drop limiters whose window has emptied, and if still at the
+    cap, evict oldest-inserted entries. Without this an unauthenticated attacker rotating the username (or
+    spoofing IPs) could grow the map without limit — a slow memory-exhaustion DoS."""
+    for key in [k for k, lim in list(_login_limiters.items()) if lim.is_stale(now)]:
+        _login_limiters.pop(key, None)
+    while len(_login_limiters) >= config.AUTH_LOGIN_LIMITER_MAX:
+        try:
+            _login_limiters.pop(next(iter(_login_limiters)))   # dicts preserve insertion order → oldest first
+        except StopIteration:
+            break
+
+
 def _login_allowed(ip: str, username: str, *, now: float) -> bool:
     key = f"{ip}|{(username or '').lower()}"
     limiter = _login_limiters.get(key)
     if limiter is None:
+        if len(_login_limiters) >= config.AUTH_LOGIN_LIMITER_MAX:
+            _evict_stale_login_limiters(now)
         limiter = ratelimit.SlidingWindow(config.AUTH_LOGIN_MAX_PER_WINDOW, config.AUTH_LOGIN_WINDOW_SECONDS)
         _login_limiters[key] = limiter
     return limiter.allow(now)

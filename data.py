@@ -14,6 +14,7 @@ Data model (verified against the live API):
 from __future__ import annotations
 
 import hashlib
+import logging
 import re
 from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
@@ -232,9 +233,36 @@ def _text_has_keyword(*texts: Any) -> bool:
     return any(kw in blob for kw in FO_KEYWORDS)
 
 
+_log = logging.getLogger(__name__)
+_FO_WINDOW_BOUNDS: tuple[datetime, datetime] | None = None
+_fo_window_parsed = False
+
+
+def _fo_window_bounds() -> tuple[datetime, datetime] | None:
+    """Parse the year-specific ``FO_WINDOW`` config ONCE (cached). A malformed value (an operator typo when
+    updating it for a future tournament — config.py flags it as year-specific) must NOT raise inside
+    ``build_contracts`` and blank an entire sport's fetch: we log once and disable the date-fallback
+    (return None → ``_within_window`` is False), so detection simply relies on the competition/keyword
+    signals instead of crashing."""
+    global _FO_WINDOW_BOUNDS, _fo_window_parsed
+    if not _fo_window_parsed:
+        _fo_window_parsed = True
+        try:
+            _FO_WINDOW_BOUNDS = (
+                datetime.fromisoformat(FO_WINDOW[0]).replace(tzinfo=timezone.utc),
+                datetime.fromisoformat(FO_WINDOW[1]).replace(tzinfo=timezone.utc))
+        except (ValueError, TypeError, IndexError):
+            _log.warning("FO_WINDOW is misconfigured (%r); disabling the French-Open date-fallback.",
+                         FO_WINDOW)
+            _FO_WINDOW_BOUNDS = None
+    return _FO_WINDOW_BOUNDS
+
+
 def _within_window(*timestamps: Any) -> bool:
-    start = datetime.fromisoformat(FO_WINDOW[0]).replace(tzinfo=timezone.utc)
-    end = datetime.fromisoformat(FO_WINDOW[1]).replace(tzinfo=timezone.utc)
+    bounds = _fo_window_bounds()
+    if bounds is None:
+        return False
+    start, end = bounds
     for ts in timestamps:
         dt = _parse_ts(ts)
         if dt is not None and start <= dt <= end:

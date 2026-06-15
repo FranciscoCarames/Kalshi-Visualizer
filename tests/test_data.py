@@ -436,3 +436,18 @@ def test_score_state_helper_normalizes_and_blank_for_non_exact_score():
     assert data.score_state({"Set Score": "2-1"}) == "2-1"
     assert data.score_state({"tennis_competitor": "x"}) == ""           # no Set Score → blank
     assert data.score_state(None) == ""
+
+
+def test_within_window_survives_misconfigured_fo_window(monkeypatch):
+    # C7: a malformed FO_WINDOW (operator typo when updating the year-specific window) must NOT raise inside
+    # build_contracts — _within_window logs once and returns False (date-fallback disabled), never crashes.
+    monkeypatch.setattr(data, "_fo_window_parsed", False)
+    monkeypatch.setattr(data, "_FO_WINDOW_BOUNDS", None)
+    monkeypatch.setattr(data, "FO_WINDOW", ("not-a-real-date", "also-bad"))
+    assert data._within_window("2026-05-30T10:00:00+00:00") is False
+    # And a valid window still matches inside / rejects outside.
+    monkeypatch.setattr(data, "_fo_window_parsed", False)
+    monkeypatch.setattr(data, "_FO_WINDOW_BOUNDS", None)
+    monkeypatch.setattr(data, "FO_WINDOW", ("2026-05-24", "2026-06-08"))
+    assert data._within_window("2026-05-30T10:00:00+00:00") is True
+    assert data._within_window("2026-07-01T10:00:00+00:00") is False

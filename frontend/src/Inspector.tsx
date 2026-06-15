@@ -13,6 +13,12 @@ const ZB: Record<string, [string, string]> = {
 const num = (v: unknown) => (typeof v === "number" && !isNaN(v) ? v : null);
 const n1 = (v: number) => (Number.isInteger(v) ? String(v) : v.toFixed(1));
 const cents = (c: unknown) => { const n = num(c); return n == null ? "—" : Math.round(n) + "¢"; };
+// Only render a URL from feed/market data as a link if it is a real http(s) URL — never a `javascript:`/
+// `data:` scheme that would execute in the authenticated origin on click. Returns the URL or null.
+const safeHref = (u: unknown): string | null => {
+  if (typeof u !== "string" || !u) return null;
+  try { return ["http:", "https:"].includes(new URL(u).protocol) ? u : null; } catch { return null; }
+};
 
 export default function Inspector({ row, lens, snapshotId, showNet, longShort }:
   { row: FeedRow | null; lens: string; snapshotId: number | null; showNet: boolean; longShort?: boolean }) {
@@ -41,13 +47,14 @@ export default function Inspector({ row, lens, snapshotId, showNet, longShort }:
       {legs.length ? legs.map((l, i) => {
         const yes = String(l.side || "").includes("yes");
         const lbl = longShort ? (yes ? "LONG" : "SHORT") : (yes ? "YES" : "NO");
+        const href = safeHref(l.u);
         return (
           <div className="leg" key={i}>
             <span className={yes ? "y" : "n"}>{lbl}</span>
             <span className="l2">{l.c}</span>
             <span className="white">{l.p != null ? l.p + "¢" : "—"}</span>
             <span className="dim">×{l.sz ?? 0}</span>
-            {l.u ? <a href={l.u} target="_blank" rel="noreferrer">↗</a> : null}
+            {href ? <a href={href} target="_blank" rel="noreferrer">↗</a> : null}
           </div>
         );
       }) : <div className="note">No leg detail.</div>}
@@ -95,7 +102,7 @@ export default function Inspector({ row, lens, snapshotId, showNet, longShort }:
         <span className="l">Snapshot</span><span className="v">#{snapshotId ?? "—"}</span>
         <span className="l">Status</span><span className="v">{row.status || "—"}</span>
         <span className="l">Opp id</span><span className="v">{row.id}</span>
-        {row.url ? <><span className="l">Market</span><span className="v"><a href={String(row.url)} target="_blank" rel="noreferrer" className="cyan">open ↗</a></span></> : null}
+        {safeHref(row.url) ? <><span className="l">Market</span><span className="v"><a href={safeHref(row.url)!} target="_blank" rel="noreferrer" className="cyan">open ↗</a></span></> : null}
       </div>
     </div>
   );

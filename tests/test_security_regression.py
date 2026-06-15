@@ -239,7 +239,10 @@ def test_feed_payload_is_engine_identical_under_auth(two_users):
 def test_data_routes_require_a_session(two_users):
     _a, _b, _db, _snap = two_users
     anon = TestClient(api.app)
-    for path in ("/api/terminal/feed", "/opportunities", "/metrics", "/coverage", "/readyz",
+    for path in ("/api/terminal/feed", "/opportunities", "/metrics", "/coverage",
                  "/alerts", "/backlog"):
         assert anon.get(path).status_code == 401, path
-    assert anon.get("/healthz").status_code == 200     # the one public liveness probe
+    assert anon.get("/healthz").status_code == 200     # public liveness probe
+    # /readyz is public for LB probes but its detail is redacted for anon (see test_auth.py).
+    rz = anon.get("/readyz")
+    assert rz.status_code in (200, 503) and rz.json().get("last_scan_status") is None

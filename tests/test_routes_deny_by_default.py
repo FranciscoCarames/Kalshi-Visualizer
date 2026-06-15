@@ -13,14 +13,17 @@ import auth
 # middleware, not from authentication. Static prefixes (/terminal, /assets) + the SPA root serve the public
 # bundle. Adding a path here is an explicit decision to make it gate-exempt — think twice.
 GATE_EXEMPT_ROUTES = {
-    "/", "/index.html", "/healthz", "/favicon.ico", "/docs", "/redoc", "/openapi.json",
+    "/", "/index.html", "/healthz", "/readyz", "/favicon.ico", "/docs", "/redoc", "/openapi.json",
     "/auth/login", "/auth/logout", "/auth/me", "/auth/config", "/auth/register", "/auth/password",
     "/auth/preferences", "/auth/devices", "/auth/devices/{token_id}/revoke",
 }
+# `/readyz` is gate-exempt so a load-balancer probe works unauthenticated — but its DETAIL is REDACTED for
+# an anonymous caller (status + HTTP code only; the snapshot age / last-scan error stay in gated /metrics).
+# See `test_readyz_public_but_redacted_for_anon` in test_auth.py.
 
 # Data/operational routes that MUST be gated (a representative, must-stay-gated set, incl. the ZIP export).
 MUST_BE_GATED = {
-    "/opportunities", "/opportunities/{opportunity_id}", "/coverage", "/metrics", "/readyz",
+    "/opportunities", "/opportunities/{opportunity_id}", "/coverage", "/metrics",
     "/scan", "/scan/status", "/alerts", "/backlog", "/backlog/events",
     "/api/terminal/feed", "/api/terminal/detail", "/api/terminal/payoff", "/api/terminal/ladder",
     "/api/terminal/diagnostics", "/api/terminal/telemetry", "/api/terminal/orderbook",
