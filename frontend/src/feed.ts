@@ -9,6 +9,8 @@ export interface FeedRow {
   // engine-assigned, copied VERBATIM by the feed — the SPA never recomputes these:
   bucket: string; zone: string; section: string; status?: string; tradable?: string; rule?: string;
   sport?: string; name?: string; sub?: string; detail?: string;
+  // routing keys the Inspector passes to /api/terminal/detail|ladder (display-only passthroughs):
+  sport_key?: string; player_key?: string; tournament?: string;
   // economics (present per bucket; absent ones render "—"):
   edge?: number; roi?: number; units?: number; profit?: number; cost?: number;
   max_loss?: number; max_profit?: number; max_units?: number; quote_health?: string; caveat?: string;

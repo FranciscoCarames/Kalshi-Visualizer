@@ -1,10 +1,11 @@
 import { TerminalProvider, useTerminal } from "./context";
-import { TILES, sectionCount } from "./feed";
+import { TILES } from "./feed";
 import { LENSES } from "./lens";
 import Workspace from "./Workspace";
 import { ResSurface, OpsSurface } from "./Surfaces";
 import Keys from "./Keys";
 import Palette from "./Palette";
+import MultiSelect from "./MultiSelect";
 
 const TILE_SUB: Record<string, string> = {
   act: "executable now", rev: "settlement-dep", blk: "not fillable", bounded: "can lose money",
@@ -64,7 +65,7 @@ function Shell() {
         {TILES.map(([label, z, s, accent]) => (
           <button key={label} className={"tp-tile" + (t.zone === z && t.section === s ? " on" : "")} onClick={() => t.goSection(z, s)}>
             <div className="k">{label}</div>
-            <div className={"v " + accent}>{sectionCount(m, z, s).toLocaleString()}</div>
+            <div className={"v " + accent}>{t.count(z, s).toLocaleString()}</div>
             <div className="s">{TILE_SUB[s]}</div>
           </button>
         ))}
@@ -72,13 +73,19 @@ function Shell() {
 
       <div className="tp-filt">
         <label>SPORT</label>
-        <select value={t.sportSel} onChange={(e) => t.setSportSel(e.target.value)}>
-          <option value="">All</option>{t.sports.map((s) => <option key={s} value={s}>{s}</option>)}
-        </select>
+        <MultiSelect label="Sport" options={t.sports} selected={t.filters.sports} onToggle={t.toggleSport} />
+        <label>TOURNAMENT</label>
+        <MultiSelect label="Tournament" options={t.tourOptions} selected={t.filters.tours} onToggle={t.toggleTour} />
         <label>PARTICIPANT</label>
         <input value={t.part} placeholder="contains…" onChange={(e) => t.setPart(e.target.value)} />
-        <label className="chk"><input type="checkbox" checked={t.showNet} onChange={(e) => t.setShowNet(e.target.checked)} />Net of fees (est.)</label>
-        <span className="clr" onClick={() => { t.setSportSel(""); t.setPart(""); }}>clear</span>
+        <label>MIN SIZE</label>
+        <input type="number" min={0} className="mini" value={t.filters.minSize || ""} placeholder="0"
+               onChange={(e) => t.setMinSize(Math.max(0, Number(e.target.value) || 0))} />
+        <label className="chk"><input type="checkbox" checked={t.filters.tradableOnly}
+               onChange={(e) => t.setTradableOnly(e.target.checked)} />Tradable-only</label>
+        <button className="tp-tb" title="Export the current section's filtered rows (visible columns) as CSV"
+                onClick={t.exportView}>⬇ CSV</button>
+        <span className="clr" onClick={t.clearFilters}>clear</span>
       </div>
 
       {/* OPP keeps the Dockview workspace mounted (display-toggled) so its layout survives surface switches. */}

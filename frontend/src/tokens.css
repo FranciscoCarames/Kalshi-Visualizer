@@ -66,6 +66,16 @@ body{background:var(--bg);color:var(--tx);font-family:var(--mono);font-size:12px
 .tp-filt input,.tp-filt select{background:var(--bg1);border:1px solid var(--line2);color:var(--white);font-family:var(--mono);font-size:10.5px;padding:2px 5px;outline:none}
 .tp-filt .chk{display:flex;align-items:center;gap:3px;cursor:pointer;color:var(--tx2)}
 .tp-filt .clr{margin-left:auto;color:var(--cyan);cursor:pointer;text-decoration:underline}
+.tp-filt input.mini{width:48px}
+.tp-filt .tp-tb{padding:2px 7px}
+/* checkbox multi-select popover (Sport / Tournament) */
+.ms{position:relative}
+.ms-btn{background:var(--bg1);border:1px solid var(--line2);color:var(--white);font-family:var(--mono);font-size:10.5px;padding:2px 7px;cursor:pointer}
+.ms-btn:hover{border-color:var(--amber-d)}
+.ms-pop{position:absolute;top:100%;left:0;z-index:60;margin-top:2px;background:var(--bg2);border:1px solid var(--line2);max-height:260px;overflow:auto;min-width:160px;padding:3px 0;box-shadow:0 6px 18px rgba(0,0,0,.6)}
+.ms-pop label{display:flex;align-items:center;gap:5px;padding:2px 9px;cursor:pointer;color:var(--tx2);white-space:nowrap}
+.ms-pop label:hover{background:var(--hover);color:var(--white)}
+.ms-empty{padding:3px 9px;color:var(--tx3)}
 
 /* lens switcher + toolbar buttons */
 .tp-lens{display:flex;border:1px solid var(--line2)}

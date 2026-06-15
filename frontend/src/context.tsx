@@ -7,21 +7,27 @@ import { loadFeed, rowsFor, type Feed, type FeedRow, type FeedMeta } from "./fee
 import { COLS, colKeyOf, buildColDefs } from "./columns";
 import { applyLens } from "./lens";
 import { downloadCsv } from "./csv";
+import { type FilterState, emptyFilters, filteredCount, passAll, tournamentOptions } from "./filters";
 
 const POLL_MS = 4000;
 
 interface TerminalState {
   meta: FeedMeta | null; opps: FeedRow[]; err: string | null; sports: string[];
-  zone: string; section: string; lens: string; sportSel: string; part: string;
+  zone: string; section: string; lens: string; filters: FilterState; part: string; tourOptions: string[];
   sel: FeedRow | null; colKey: string; visible: string[]; columnDefs: ColDef<FeedRow>[]; rows: FeedRow[];
   theme: "amber" | "hc"; paletteOpen: boolean; multi: FeedRow[];
   surface: "opp" | "res" | "ops"; showNet: boolean; itab: "card" | "detail" | "formula";
+  count: (zone: string, section: string) => number;
   goSection: (z: string, s: string) => void;
   setSection: (s: string) => void;
   toggleLens: (l: string) => void;
   setLens: (l: string) => void;
-  setSportSel: (v: string) => void;
+  toggleSport: (v: string) => void;
+  toggleTour: (v: string) => void;
   setPart: (v: string) => void;
+  setMinSize: (v: number) => void;
+  setTradableOnly: (v: boolean) => void;
+  clearFilters: () => void;
   setSel: (r: FeedRow | null) => void;
   toggleCol: (f: string) => void;
   resetCols: () => void;
@@ -35,6 +41,7 @@ interface TerminalState {
   openCompare: () => void;
   openOverlap: () => void;
   exportSelected: () => void;
+  exportView: () => void;
   setSurface: (s: "opp" | "res" | "ops") => void;
   setShowNet: (v: boolean) => void;
   setItab: (t: "card" | "detail" | "formula") => void;
@@ -53,8 +60,7 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
   const [zone, setZone] = useState("exec");
   const [section, setSectionRaw] = useState("act");
   const [lens, setLens] = useState("");
-  const [sportSel, setSportSel] = useState("");
-  const [part, setPart] = useState("");
+  const [filters, setFilters] = useState<FilterState>(emptyFilters);
   const [sel, setSel] = useState<FeedRow | null>(null);
   const [colsByKey, setColsByKey] = useState<Record<string, string[]>>({});
   const [theme, setTheme] = useState<"amber" | "hc">("amber");
@@ -92,21 +98,31 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
     return base;
   }, [colsByKey, colKey, defVis, showNet]);
   const columnDefs = useMemo(() => buildColDefs(COLS[colKey], visible), [colKey, visible]);
-  const rows = useMemo(() => {
-    let r = rowsFor(opps, zone, section);
-    if (sportSel) r = r.filter((o) => (o.sport || "") === sportSel);
-    if (part) { const q = part.toLowerCase(); r = r.filter((o) => (o.name || "").toLowerCase().includes(q)); }
-    return applyLens(r, lens);
-  }, [opps, zone, section, sportSel, part, lens]);
+  const tourOptions = useMemo(() => tournamentOptions(opps, filters.sports), [opps, filters.sports]);
+  const rows = useMemo(
+    () => applyLens(rowsFor(opps, zone, section).filter((o) => passAll(o, filters)), lens),
+    [opps, zone, section, filters, lens]);
+  // Tile/tab counts over the filtered set (Actionable membership-only — see filters.ts).
+  const count = (z: string, s: string) => filteredCount(opps, z, s, filters);
+  const patch = (p: Partial<FilterState>) => setFilters((f) => ({ ...f, ...p }));
+  const toggleSet = (key: "sports" | "tours", v: string) => setFilters((f) => {
+    const next = new Set(f[key]); next.has(v) ? next.delete(v) : next.add(v); return { ...f, [key]: next };
+  });
 
   const value: TerminalState = {
-    meta, opps, err, sports, zone, section, lens, sportSel, part, sel, colKey, visible, columnDefs, rows,
-    theme, paletteOpen, multi, surface, showNet, itab,
+    meta, opps, err, sports, zone, section, lens, filters, part: filters.part, tourOptions,
+    sel, colKey, visible, columnDefs, rows, theme, paletteOpen, multi, surface, showNet, itab, count,
     goSection: (z, s) => { setZone(z); setSectionRaw(s); },
     setSection: setSectionRaw,
     toggleLens: (l) => setLens((cur) => (cur === l ? "" : l)),
     setLens,
-    setSportSel, setPart, setSel,
+    toggleSport: (v) => toggleSet("sports", v),
+    toggleTour: (v) => toggleSet("tours", v),
+    setPart: (v) => patch({ part: v }),
+    setMinSize: (v) => patch({ minSize: v }),
+    setTradableOnly: (v) => patch({ tradableOnly: v }),
+    clearFilters: () => setFilters(emptyFilters()),
+    setSel,
     toggleCol: (f) => setColsByKey((m) => {
       const cur = m[colKey] ?? defVis;
       return { ...m, [colKey]: cur.includes(f) ? cur.filter((x) => x !== f) : [...cur, f] };
@@ -122,6 +138,9 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
     exportSelected: () => downloadCsv(
       `selected_${multi.length}_snap${meta?.snapshot_id ?? "x"}.csv`,
       multi, COLS[colKey].filter((c) => visible.includes(c.f))),
+    exportView: () => downloadCsv(
+      `kalshi_${section}_snap${meta?.snapshot_id ?? "x"}.csv`,
+      rows, COLS[colKey].filter((c) => visible.includes(c.f))),
     setSurface, setShowNet, setItab,
   };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

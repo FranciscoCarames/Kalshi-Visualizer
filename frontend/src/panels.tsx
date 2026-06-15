@@ -6,7 +6,7 @@ import { type GridApi } from "ag-grid-community";
 import { type IDockviewPanelProps } from "dockview";
 import { useTerminal } from "./context";
 import { COLS } from "./columns";
-import { ZONES, SUBTABS, sectionCount, type FeedRow } from "./feed";
+import { ZONES, SUBTABS, type FeedRow } from "./feed";
 import Inspector, { Detail, Formulas } from "./Inspector";
 import Ladder from "./Ladder";
 import { Watch, Alerts } from "./SidePanels";
@@ -23,14 +23,14 @@ export function BlotterPanel() {
         {ZONES.map(([z, label, hint]) => (
           <div key={z} className={"tp-zone" + (t.zone === z ? " on" : "")} data-z={z}
                onClick={() => t.goSection(z, SUBTABS[z][0][0])}>
-            {label} <span className="zc">{sectionCount(t.meta, z, z === "diag" ? "diag" : SUBTABS[z][0][0]).toLocaleString()}</span> <span className="zt">{hint}</span>
+            {label} <span className="zc">{t.count(z, z === "diag" ? "diag" : SUBTABS[z][0][0]).toLocaleString()}</span> <span className="zt">{hint}</span>
           </div>
         ))}
       </div>
       <div className="tp-bt" style={{ position: "relative" }}>
         {SUBTABS[t.zone].map(([s, label]) => (
           <div key={s} className={"btb " + s + (t.section === s ? " on" : "")} onClick={() => t.setSection(s)}>
-            {label}<span className="ct">{sectionCount(t.meta, t.zone, s).toLocaleString()}</span>
+            {label}<span className="ct">{t.count(t.zone, s).toLocaleString()}</span>
           </div>
         ))}
         <span className="showing">
