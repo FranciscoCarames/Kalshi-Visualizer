@@ -58,6 +58,7 @@ def client(tmp_path):
     engine._LATEST_CACHE.update(key=None, snap=None)
     engine._LATEST_TWO_CACHE.update(key=None, two=None)
     engine._FRAME_CACHE.clear()
+    api._telemetry_cache.update(snapshot_id=object(), data=None)   # per-snapshot cache; isolate per test
     c = TestClient(api.app)
     yield c, db
     api.app.dependency_overrides.clear()
@@ -144,6 +145,23 @@ def test_export_matches_posted_ids(client):
 def test_export_409_without_snapshot(client):
     c, _ = client
     assert c.post("/api/terminal/export", json={"opportunity_ids": ["a"]}).status_code == 409
+
+
+def test_telemetry_shape_and_cache(client):
+    c, db = client
+    _seed_two_tournaments(db)
+    r = c.get("/api/terminal/telemetry")
+    assert r.status_code == 200
+    body = r.json()
+    assert {"snapshot_id", "top_sports", "top_contracts", "tightest", "most_traded", "volatility"} <= body.keys()
+    assert body["snapshot_id"] is not None
+    assert c.get("/api/terminal/telemetry").json()["snapshot_id"] == body["snapshot_id"]   # cached, no error
+
+
+def test_telemetry_empty_without_snapshot(client):
+    c, _ = client
+    assert c.get("/api/terminal/telemetry").json() == {
+        "snapshot_id": None, "top_sports": [], "top_contracts": [], "tightest": [], "most_traded": [], "volatility": None}
 
 
 def test_feed_touches_terminal_presence_others_do_not(client):

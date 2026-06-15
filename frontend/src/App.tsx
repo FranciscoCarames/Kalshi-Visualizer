@@ -4,8 +4,33 @@ import { useEffect, useState } from "react";
 import { TerminalProvider, useTerminal } from "./context";
 import { TILES } from "./feed";
 import { LENSES } from "./lens";
-import { loadDiagnostics, loadBacklog, loadBacklogEvents, type Diagnostics, type BacklogItem, type BacklogInterval } from "./detail";
+import { loadDiagnostics, loadBacklog, loadBacklogEvents, loadTelemetry, type Diagnostics, type BacklogItem, type BacklogInterval, type Telemetry } from "./detail";
 import Workspace from "./Workspace";
+
+function MarketTelemetry() {
+  const [d, setD] = useState<Telemetry | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  useEffect(() => { let a = true; loadTelemetry().then((x) => a && setD(x)).catch((e) => a && setErr(String(e))); return () => { a = false; }; }, []);
+  const tbl = (title: string, rows: unknown[][], cols: string[]) => (
+    <div className="rp"><div className="h">{title}<span className="resb">CONTEXT</span></div><div className="c">
+      {rows.length === 0 ? <div className="note dim">no two-sided books</div> :
+        <table><thead><tr><th>{cols[0]}</th>{cols.slice(1).map((c) => <th key={c} className="r">{c}</th>)}</tr></thead>
+          <tbody>{rows.slice(0, 5).map((r, i) => (
+            <tr key={i}><td className="nm">{String(r[0])}</td>{r.slice(1).map((v, j) => <td key={j} className="r">{typeof v === "number" ? v.toLocaleString() : String(v)}</td>)}</tr>
+          ))}</tbody></table>}
+    </div></div>
+  );
+  if (err) return <div className="rp"><div className="h">MARKET TELEMETRY</div><div className="c"><div className="note red">{err}</div></div></div>;
+  if (!d) return <div className="rp"><div className="h">MARKET TELEMETRY</div><div className="c"><div className="note">loading…</div></div></div>;
+  return <>
+    {tbl("MOST LIQUID — SPORTS", d.top_sports, ["Sport", "Depth", "Buy $", "Sell $", "Depth×mid $"])}
+    {tbl("MOST LIQUID — CONTRACTS", d.top_contracts, ["Contract", "Depth", "Spread ¢"])}
+    {tbl("TIGHTEST BOOKS", d.tightest, ["Contract", "Spread ¢", "Depth"])}
+    {tbl("MOST TRADED", d.most_traded, ["Contract", "Volume"])}
+    <div className="rp"><div className="h">MOST VOLATILE NOW<span className="resb">DISPLAY-ONLY</span></div>
+      <div className="c"><div className="note">{d.volatility || "—"} <b className="dim">— context, not a tradable signal.</b></div></div></div>
+  </>;
+}
 import Keys from "./Keys";
 import Palette from "./Palette";
 import MultiSelect from "./MultiSelect";
@@ -53,6 +78,7 @@ function Surface({ id }: { id: "res" | "ops" }) {
         <div className="c"><div className="note">Research surfaces are <b>P5, not a parity predecessor</b> — derived data only, never new scoring, never feed actionability.</div></div></div>
       <div className="rp"><div className="h">CONDITIONAL PROBABILITY — raw + field de-vig<span className="resb">UNCALIBRATED</span></div>
         <div className="c"><div className="note">Per-node P(deeper│reached), raw price-ratio AND field-implied de-vig, in the inspector's <b>Participant Detail</b> tab.</div></div></div>
+      <MarketTelemetry />
     </div></div>
   );
   const buckets = Object.entries(m?.totals ?? {}).sort((a, b) => (b[1] as number) - (a[1] as number));

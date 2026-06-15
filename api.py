@@ -388,6 +388,23 @@ class ExportRequest(BaseModel):
     snapshot_id: int | None = None
 
 
+class TerminalTelemetry(BaseModel):
+    """Snapshot-context market telemetry (DISPLAY-ONLY — NOT an opportunity signal): most-liquid sports +
+    contracts, tightest books, most-traded, and a one-line 'most volatile now' message."""
+    snapshot_id: int | None = None
+    top_sports: list[list[Any]] = []
+    top_contracts: list[list[Any]] = []
+    tightest: list[list[Any]] = []
+    most_traded: list[list[Any]] = []
+    volatility: str | None = None
+
+
+# Telemetry is recomputed at most ONCE per snapshot (liquidity_panel scans all contracts; volatility scans
+# recent frames) — cached here so repeated SPA fetches / surface switches don't re-aggregate every time.
+_telemetry_cache: dict[str, Any] = {"snapshot_id": object(), "data": None}
+_TELEMETRY_VOLATILITY_WINDOW_S = 3600.0
+
+
 def _participant_rows(sport: str, player_key: str, tournament: str, db_path: str | None) -> list[dict[str, Any]]:
     """A participant's stored contracts SCOPED to one tournament — the engine groups ladders by
     (player_key, tournament) (data.tournament_of season-scopes the key), so detail/ladder MUST scope by
@@ -456,6 +473,26 @@ def get_terminal_diagnostics(db_path: str | None = Depends(db_path_dep)) -> Term
         category=engine.category_breakdown(db_path=db_path), failures=engine.diagnostics(db_path=db_path),
         checks_truncated=max(0, len(checks) - _DIAG_ROW_CAP),
         contracts_truncated=max(0, len(contracts) - _DIAG_ROW_CAP))
+
+
+@app.get("/api/terminal/telemetry", response_model=TerminalTelemetry)
+def get_terminal_telemetry(db_path: str | None = Depends(db_path_dep)) -> TerminalTelemetry:
+    """Read-only snapshot-context telemetry for the RES surface. Cached per snapshot_id (so it's not
+    re-aggregated on every poll). Reuses viewmodel.liquidity_panel + volatility_leader; honest-empty when
+    there's no snapshot or no two-sided books. Display-only — never an opportunity signal."""
+    from webui import engine, viewmodel  # lazy (engine cycle); viewmodel is pure
+    sid = store.latest_snapshot_id(db_path=db_path)
+    if sid is None:
+        return TerminalTelemetry(snapshot_id=None)
+    if _telemetry_cache["snapshot_id"] == sid and _telemetry_cache["data"] is not None:
+        return _telemetry_cache["data"]
+    liq = viewmodel.liquidity_panel(engine.all_contracts(db_path=db_path))
+    vol = viewmodel.volatility_leader(engine.recent_contract_frames(_TELEMETRY_VOLATILITY_WINDOW_S, db_path=db_path))
+    rows = lambda key: [list(t) for t in liq.get(key, [])]   # noqa: E731 — tuples → JSON arrays
+    out = TerminalTelemetry(snapshot_id=sid, top_sports=rows("top_sports"), top_contracts=rows("top_contracts"),
+                            tightest=rows("tightest"), most_traded=rows("most_traded"), volatility=vol)
+    _telemetry_cache["snapshot_id"], _telemetry_cache["data"] = sid, out
+    return out
 
 
 @app.post("/api/terminal/export")

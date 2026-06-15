@@ -52,3 +52,10 @@ export interface BacklogItem { opportunity_id?: string; sport?: string; name?: s
 export interface BacklogInterval { category?: string; sport?: string; name?: string; first_seen_ts?: number; left_ts?: number; duration_s?: number; peak_roi_pct?: number; last_status?: string; is_open?: boolean; }
 export const loadBacklog = () => getJson<BacklogItem[]>("/backlog");
 export const loadBacklogEvents = () => getJson<BacklogInterval[]>("/backlog/events?days=7");
+
+export interface Telemetry {
+  snapshot_id: number | null;
+  top_sports: unknown[][]; top_contracts: unknown[][]; tightest: unknown[][]; most_traded: unknown[][];
+  volatility: string | null;
+}
+export const loadTelemetry = () => getJson<Telemetry>("/api/terminal/telemetry");
