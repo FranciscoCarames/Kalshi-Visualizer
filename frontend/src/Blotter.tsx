@@ -18,10 +18,15 @@ function Spark({ pts }: { pts?: number[] }) {
     <path d={d} fill="none" stroke={cssv("--amber")} strokeWidth={1.2} opacity={0.65} /></svg>;
 }
 
-function Cell({ row, col }: { row: FeedRow; col: Col }) {
+function Cell({ row, col, chg }: { row: FeedRow; col: Col; chg?: "new" | "up" | "down" | null }) {
   const v = row[col.f];
   if (col.fmt === "name") {
-    return <td><span className="nm">{String(row.name ?? "")}</span> <span className="sub">{String(row.sub ?? row.detail ?? "")}</span><Spark pts={row.spark} /></td>;
+    return <td>
+      {chg === "new" ? <span className="nw">NEW</span> : null}
+      {chg === "up" ? <span className="green" title="edge up since last scan">▲ </span>
+        : chg === "down" ? <span className="red" title="edge down since last scan">▼ </span> : null}
+      <span className="nm">{String(row.name ?? "")}</span> <span className="sub">{String(row.sub ?? row.detail ?? "")}</span><Spark pts={row.spark} />
+    </td>;
   }
   if (col.fmt === "qh") return <td className={qhClass(v)}>{fmtVal(v, col.fmt)}</td>;
   if (col.fmt === "trad") {
@@ -117,8 +122,10 @@ export default function Blotter() {
               const zc = o.zone === "spec" ? " zspec" : o.zone === "diag" ? " zdiag" : "";
               const sc = t.sel?.id === o.id ? " sel" : "";
               const mc = mids.has(o.id) ? " msel" : "";
-              return <tr key={o.id} className={(zc + sc + mc).trim()} onClick={(e) => onRowClick(e, o)}>
-                {cols.map((c) => <Cell key={c.f} row={o} col={c} />)}
+              const fc = t.flashIds.has(o.id) ? " fl" : "";
+              const chg = t.changeOf(o.id);
+              return <tr key={o.id} className={(zc + sc + mc + fc).trim()} onClick={(e) => onRowClick(e, o)}>
+                {cols.map((c) => <Cell key={c.f} row={o} col={c} chg={c.fmt === "name" ? chg : undefined} />)}
               </tr>;
             })}</tbody>
           </table>

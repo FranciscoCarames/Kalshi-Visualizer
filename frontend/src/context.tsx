@@ -8,6 +8,7 @@ import { applyLens } from "./lens";
 import { downloadCsv } from "./csv";
 import { CompareView, OverlapView, LaddersView } from "./panels";
 import { postScan, getScanStatus } from "./scan";
+import { diffSnapshot, edgeMap, type Change } from "./diff";
 import { type FilterState, type BandState, emptyFilters, emptyBand, applyBand, filteredCount, passAll, tournamentOptions } from "./filters";
 
 export interface ExtraPanel { title: string; body: ReactNode; }
@@ -22,6 +23,8 @@ interface TerminalState {
   surface: "opp" | "res" | "ops" | "alrt"; showNet: boolean; itab: "card" | "detail" | "formula";
   extra: ExtraPanel | null; panelsMenuOpen: boolean; scanText: string | null; settings: Settings;
   band: BandState;
+  changeOf: (id: string) => "new" | "up" | "down" | null;   // change-signal vs the previous snapshot
+  flashIds: Set<string>;                                    // rows to one-shot green-flash this snapshot
   count: (zone: string, section: string) => number;
   runScan: (force: boolean) => void;
   setSetting: <K extends keyof Settings>(k: K, v: Settings[K]) => void;
@@ -134,6 +137,23 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
 
   const meta = feed?.meta ?? null;
   const opps = useMemo(() => feed?.opps ?? [], [feed]);
+
+  // Change-signal vs the PREVIOUS snapshot — diff only when snapshot_id actually advances (NOT on every
+  // same-snapshot poll), and never on the first load (no all-NEW flash). Stored as edge-by-id (NaN = no
+  // edge, so a missing/null edge never produces a false up/down). Display-only; never feeds ranking.
+  const prevEdgeRef = useRef<Map<string, number>>(new Map());
+  const prevSnapRef = useRef<number | null>(null);
+  const [change, setChange] = useState<Map<string, Change>>(new Map());
+  const [flashIds, setFlashIds] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    const sid = meta?.snapshot_id ?? null;
+    if (sid == null || sid === prevSnapRef.current) return;          // no snapshot / unchanged → keep flags
+    const { change: chg, flash } = diffSnapshot(prevEdgeRef.current, opps, prevSnapRef.current === null);
+    setChange(chg); setFlashIds(flash);
+    prevEdgeRef.current = edgeMap(opps);
+    prevSnapRef.current = sid;
+  }, [meta?.snapshot_id, opps]);
+
   const sports = useMemo(() => Object.keys(meta?.sports ?? {}).sort(), [meta]);
   const colKey = colKeyOf(zone, section);
   const defVis = useMemo(() => COLS[colKey].filter((c) => !c.hide).map((c) => c.f), [colKey]);
@@ -166,6 +186,7 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
     meta, opps, err, sports, zone, section, lens, filters, part: filters.part, tourOptions,
     sel, colKey, visible, rows, theme, paletteOpen, multi, surface, showNet, itab,
     extra, panelsMenuOpen, scanText, settings, band, count, runScan, setSetting,
+    changeOf: (id) => change.get(id) ?? null, flashIds,
     setBand: (patch) => setBand((b) => ({ ...b, ...patch })),
     goSection: (z, s) => { setZone(z); setSectionRaw(s); },
     setSection: setSectionRaw,
