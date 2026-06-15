@@ -170,21 +170,28 @@ function fmtTs(ts: number | undefined, tz: string): string {
 }
 const mins = (s?: number) => (s == null ? "—" : Math.round(s / 60) + "m");
 
+const BACKLOG_WINDOWS: [number, string][] = [[3600, "1 hour"], [10800, "3 hours"], [21600, "6 hours"], [43200, "12 hours"], [86400, "24 hours"]];
+
 function BacklogSurface() {
   const t = useTerminal();
   const tz = t.settings.tz;
   const [recent, setRecent] = useState<BacklogItem[] | null>(null);
   const [durable, setDurable] = useState<BacklogInterval[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [windowS, setWindowS] = useState(3600);
   useEffect(() => {
     let a = true;
-    loadBacklog().then((x) => a && setRecent(x)).catch((e) => a && setErr(String(e)));
+    setRecent(null);
+    loadBacklog(windowS).then((x) => a && setRecent(x)).catch((e) => a && setErr(String(e)));
     loadBacklogEvents().then((x) => a && setDurable(x)).catch(() => {});
     return () => { a = false; };
-  }, []);
+  }, [windowS]);
+  const winLabel = BACKLOG_WINDOWS.find(([s]) => s === windowS)?.[1] ?? "1 hour";
   return (
     <div className="view on"><div className="gridfill">
-      <div className="rp"><div className="h">RECENTLY ACTIONABLE — last hour</div><div className="c">
+      <div className="rp"><div className="h">RECENTLY ACTIONABLE — {winLabel}
+        <select className="in" style={{ marginLeft: "auto" }} aria-label="Backlog window" value={windowS} onChange={(e) => setWindowS(Number(e.target.value))}>
+          {BACKLOG_WINDOWS.map(([s, l]) => <option key={s} value={s}>{l}</option>)}</select></div><div className="c">
         {err ? <div className="note red">{err}</div> : !recent ? <div className="note">loading…</div> : recent.length === 0 ? <div className="note">none in the window</div> :
           <table><thead><tr><th>Participant</th><th>Sport</th><th className="r">Became</th><th className="r">Left</th><th className="r">Lasted</th><th>Why left</th></tr></thead>
             <tbody>{recent.map((b, i) => <tr key={i}><td className="nm">{b.name}</td><td>{b.sport}</td><td className="r">{fmtTs(b.became_ts, tz)}</td><td className="r">{fmtTs(b.left_ts, tz)}</td><td className="r">{mins(b.duration_s)}</td><td className="dim">{b.reason_left || "—"}</td></tr>)}</tbody></table>}
@@ -243,7 +250,7 @@ function Shell() {
           <span key={l} className={"fkey " + c} onClick={() => s && t.setSurface(s)}>{l}</span>
         ))}</div>
         <div className="cmdinput"><span className="pr">&gt;</span>
-          <input placeholder="SEARCH — functions · participants · lenses · layouts   (press / or Ctrl-K)" readOnly
+          <input aria-label="Open command palette" placeholder="SEARCH — functions · participants · lenses · layouts   (press / or Ctrl-K)" readOnly
                  onFocus={() => t.setPaletteOpen(true)} onClick={() => t.setPaletteOpen(true)} />
           <span className="kbd">Ctrl K</span><button className="go" onClick={() => t.setPaletteOpen(true)}>&lt;GO&gt;</button></div>
         <div className="clock">{fmtAge(m?.fetched_at ?? null)} · KALSHI</div>
@@ -281,21 +288,21 @@ function Shell() {
             <button className="tbtn" onClick={() => setSetOpen((v) => !v)}>⚙ SETTINGS ▾</button>
             {setOpen ? <SettingsMenu close={() => setSetOpen(false)} /> : null}
           </div>
-          <button className="tbtn" title="Scan now (non-force)" onClick={() => t.runScan(false)}>▷ SCAN</button>
-          <button className="tbtn force" title="Advanced: bypass TTL/cooldown" onClick={() => t.runScan(true)}>⚡</button>
-          <button className="tbtn" onClick={() => t.setTheme(t.theme === "amber" ? "hc" : "amber")}>◐</button>
+          <button className="tbtn" aria-label="Scan now" title="Scan now (non-force)" onClick={() => t.runScan(false)}>▷ SCAN</button>
+          <button className="tbtn force" aria-label="Force scan (bypass cooldown)" title="Advanced: bypass TTL/cooldown" onClick={() => t.runScan(true)}>⚡</button>
+          <button className="tbtn" aria-label="Toggle theme" onClick={() => t.setTheme(t.theme === "amber" ? "hc" : "amber")}>◐</button>
         </div>
       </div>
 
       <div className="filt">
         <label>SPORT</label><MultiSelect label="Sport" options={t.sports} selected={t.filters.sports} onToggle={t.toggleSport} />
         <label>TOURNAMENT</label><MultiSelect label="Tournament" options={t.tourOptions} selected={t.filters.tours} onToggle={t.toggleTour} />
-        <label>PARTICIPANT</label><input type="text" className="in" value={t.part} placeholder="contains…" onChange={(e) => t.setPart(e.target.value)} />
-        <label>MIN SIZE</label><input type="number" className="in" min={0} step={10} value={t.filters.minSize || 0}
+        <label>PARTICIPANT</label><input type="text" className="in" aria-label="Filter by participant" value={t.part} placeholder="contains…" onChange={(e) => t.setPart(e.target.value)} />
+        <label>MIN SIZE</label><input type="number" className="in" aria-label="Minimum size" min={0} step={10} value={t.filters.minSize || 0}
                onChange={(e) => t.setMinSize(Math.max(0, Number(e.target.value) || 0))} />
         <label className="chk"><input type="checkbox" checked={t.filters.tradableOnly} onChange={(e) => t.setTradableOnly(e.target.checked)} />Tradable-only</label>
-        <button className="tbtn" onClick={t.exportView}>⬇ CSV</button>
-        <button className="tbtn" title="Export filtered snapshot (opportunities + evidence frames + manifest) as ZIP" onClick={t.exportZip}>⬇ ZIP</button>
+        <button className="tbtn" aria-label="Export current view as CSV" onClick={t.exportView}>⬇ CSV</button>
+        <button className="tbtn" aria-label="Export filtered snapshot as ZIP" title="Export filtered snapshot (opportunities + evidence frames + manifest) as ZIP" onClick={t.exportZip}>⬇ ZIP</button>
         <span className="sp">{t.rows.length.toLocaleString()} shown</span><span className="clr" onClick={t.clearFilters}>clear</span>
       </div>
       <SecBar />

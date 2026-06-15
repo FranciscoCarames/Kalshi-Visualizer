@@ -50,8 +50,8 @@ export const loadDiagnostics = () => getJson<Diagnostics>("/api/terminal/diagnos
 
 export interface BacklogItem { opportunity_id?: string; sport?: string; name?: string; became_ts?: number; left_ts?: number; duration_s?: number; reason_left?: string; last_edge_c?: number; }
 export interface BacklogInterval { category?: string; sport?: string; name?: string; first_seen_ts?: number; left_ts?: number; duration_s?: number; peak_roi_pct?: number; last_status?: string; is_open?: boolean; }
-export const loadBacklog = () => getJson<BacklogItem[]>("/backlog");
-export const loadBacklogEvents = () => getJson<BacklogInterval[]>("/backlog/events?days=7");
+export const loadBacklog = (windowS = 3600) => getJson<BacklogItem[]>(`/backlog?window_s=${windowS}`);
+export const loadBacklogEvents = (days = 7) => getJson<BacklogInterval[]>(`/backlog/events?days=${days}`);
 
 export interface Telemetry {
   snapshot_id: number | null;

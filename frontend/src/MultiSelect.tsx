@@ -17,7 +17,7 @@ export default function MultiSelect(
   const summary = selected.size === 0 ? "All" : `${selected.size} sel`;
   return (
     <span className="ms" ref={box}>
-      <button className="ms-btn" onClick={() => setOpen((v) => !v)}>{label}: {summary} ▾</button>
+      <button className="ms-btn" aria-label={`Filter by ${label} (${summary})`} aria-expanded={open} onClick={() => setOpen((v) => !v)}>{label}: {summary} ▾</button>
       {open ? (
         <div className="menu on" style={{ top: 22, left: 0 }}>
           {options.length === 0 ? <div className="mi">— none —</div> : options.map((o) => (
