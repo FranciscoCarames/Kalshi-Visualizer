@@ -35,27 +35,27 @@ export default function Ladder({ row }: { row: FeedRow | null }) {
   const b = book(legs[idx]);
   return (
     <>
-      <div className="lh">
+      <div className="ladhdr">
         <div className="t">{row.name} {legs.length > 1 ? <span className="dim">· {legs.length} contracts</span> : null}</div>
         {legs.length > 1
-          ? <select value={idx} onChange={(e) => setLeg(+e.target.value)} style={{ marginTop: 2, maxWidth: "100%" }}>
+          ? <select className="in" value={idx} onChange={(e) => setLeg(+e.target.value)} style={{ marginTop: 2, maxWidth: "100%" }}>
               {legs.map((l, i) => <option key={i} value={i}>{legLabel(l, i)}</option>)}
             </select>
           : <div className="s">{legs[0]?.tk || ""}</div>}
       </div>
-      <div className="tp-pb">
+      <div className="pbody">
         {b ? (
-          <table className="lt"><thead><tr><th>Bid size</th><th>Px¢</th><th>Ask size</th></tr></thead>
+          <table className="ladtbl"><thead><tr><th>Bid size</th><th>Px¢</th><th>Ask size</th></tr></thead>
             <tbody>{b.rows.map(({ p, bid, ask }) => (
               <tr key={p}>
-                <td className="bc">{bid ? <><span className="f" style={{ width: Math.min(100, bid / b.maxsz * 100) + "%" }} /><span>{bid}</span></> : null}</td>
-                <td className={"px" + (p === b.base ? " t" : "")}>{p}</td>
-                <td className="ac">{ask ? <><span className="f" style={{ width: Math.min(100, ask / b.maxsz * 100) + "%" }} /><span>{ask}</span></> : null}</td>
+                <td className="bidc">{bid ? <><span className="fill" style={{ width: Math.min(100, bid / b.maxsz * 100) + "%" }} /><span>{bid}</span></> : null}</td>
+                <td className={"px" + (p === b.base ? " touch" : "")}>{p}</td>
+                <td className="askc">{ask ? <><span className="fill" style={{ width: Math.min(100, ask / b.maxsz * 100) + "%" }} /><span>{ask}</span></> : null}</td>
               </tr>
             ))}</tbody></table>
         ) : <div className="empty">No top-of-book for this contract.</div>}
       </div>
-      {b ? <div className="lf"><span>Touch {b.base}¢</span><span>top size {b.fill} · derived depth</span></div> : null}
+      {b ? <div className="ladfoot"><span>Touch {b.base}¢ · YES bids · NO asks (derived)</span><span>top size {b.fill} · fill realism</span></div> : null}
     </>
   );
 }

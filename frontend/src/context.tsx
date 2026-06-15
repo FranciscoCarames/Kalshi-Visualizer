@@ -1,22 +1,25 @@
-/* Shared terminal state. The chrome AND the Dockview-hosted panels read it via useTerminal(), so panels
- * re-render on state change without threading props through Dockview params. Holds the live feed poll +
- * all view state (zone/section/lens/filters/selection/columns). Still a read-only VIEW of the engine. */
+/* Shared terminal state. The chrome AND the mockup-ported panels read it via useTerminal(), so panels
+ * re-render on state change without prop threading. Holds the live feed poll + all view state
+ * (zone/section/lens/filters/selection/columns/panels). Still a read-only VIEW of the engine. */
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import type { ColDef } from "ag-grid-community";
 import { loadFeed, rowsFor, type Feed, type FeedRow, type FeedMeta } from "./feed";
-import { COLS, colKeyOf, buildColDefs } from "./columns";
+import { COLS, colKeyOf } from "./columns";
 import { applyLens } from "./lens";
 import { downloadCsv } from "./csv";
+import { CompareView, OverlapView, LaddersView } from "./panels";
 import { type FilterState, emptyFilters, filteredCount, passAll, tournamentOptions } from "./filters";
 
 const POLL_MS = 4000;
 
+export interface ExtraPanel { title: string; body: ReactNode; }
+
 interface TerminalState {
   meta: FeedMeta | null; opps: FeedRow[]; err: string | null; sports: string[];
   zone: string; section: string; lens: string; filters: FilterState; part: string; tourOptions: string[];
-  sel: FeedRow | null; colKey: string; visible: string[]; columnDefs: ColDef<FeedRow>[]; rows: FeedRow[];
+  sel: FeedRow | null; colKey: string; visible: string[]; rows: FeedRow[];
   theme: "amber" | "hc"; paletteOpen: boolean; multi: FeedRow[];
   surface: "opp" | "res" | "ops"; showNet: boolean; itab: "card" | "detail" | "formula";
+  extra: ExtraPanel | null; panelsMenuOpen: boolean;
   count: (zone: string, section: string) => number;
   goSection: (z: string, s: string) => void;
   setSection: (s: string) => void;
@@ -37,9 +40,11 @@ interface TerminalState {
   registerLayout: (fn: (preset: string) => void) => void;
   applyLayout: (preset: string) => void;
   setMulti: (rows: FeedRow[]) => void;
-  registerAddPanel: (fn: (component: string, title: string, params: object) => void) => void;
+  setExtra: (e: ExtraPanel | null) => void;
+  setPanelsMenuOpen: (v: boolean) => void;
   openCompare: () => void;
   openOverlap: () => void;
+  openLadders: () => void;
   exportSelected: () => void;
   exportView: () => void;
   setSurface: (s: "opp" | "res" | "ops") => void;
@@ -69,9 +74,10 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
   const [surface, setSurface] = useState<"opp" | "res" | "ops">("opp");
   const [showNet, setShowNet] = useState(false);
   const [itab, setItab] = useState<"card" | "detail" | "formula">("card");
+  const [extra, setExtra] = useState<ExtraPanel | null>(null);
+  const [panelsMenuOpen, setPanelsMenuOpen] = useState(false);
   const [, tick] = useState(0);
   const layoutRef = useRef<((preset: string) => void) | null>(null);
-  const addPanelRef = useRef<((component: string, title: string, params: object) => void) | null>(null);
 
   useEffect(() => { document.documentElement.dataset.theme = theme; }, [theme]);
 
@@ -97,7 +103,6 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
     }
     return base;
   }, [colsByKey, colKey, defVis, showNet]);
-  const columnDefs = useMemo(() => buildColDefs(COLS[colKey], visible), [colKey, visible]);
   const tourOptions = useMemo(() => tournamentOptions(opps, filters.sports), [opps, filters.sports]);
   const rows = useMemo(
     () => applyLens(rowsFor(opps, zone, section).filter((o) => passAll(o, filters)), lens),
@@ -111,7 +116,8 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
 
   const value: TerminalState = {
     meta, opps, err, sports, zone, section, lens, filters, part: filters.part, tourOptions,
-    sel, colKey, visible, columnDefs, rows, theme, paletteOpen, multi, surface, showNet, itab, count,
+    sel, colKey, visible, rows, theme, paletteOpen, multi, surface, showNet, itab,
+    extra, panelsMenuOpen, count,
     goSection: (z, s) => { setZone(z); setSectionRaw(s); },
     setSection: setSectionRaw,
     toggleLens: (l) => setLens((cur) => (cur === l ? "" : l)),
@@ -129,12 +135,12 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
     }),
     resetCols: () => setColsByKey((m) => { const n = { ...m }; delete n[colKey]; return n; }),
     setColOrder: (order) => setColsByKey((m) => ({ ...m, [colKey]: order })),
-    setTheme, setPaletteOpen, setMulti,
+    setTheme, setPaletteOpen, setMulti, setExtra, setPanelsMenuOpen,
     registerLayout: (fn) => { layoutRef.current = fn; },
     applyLayout: (preset) => layoutRef.current?.(preset),
-    registerAddPanel: (fn) => { addPanelRef.current = fn; },
-    openCompare: () => addPanelRef.current?.("compare", `COMPARE (${multi.length})`, { opps: multi }),
-    openOverlap: () => addPanelRef.current?.("overlap", "DON'T-TAKE-BOTH", { opps: multi }),
+    openCompare: () => setExtra({ title: `COMPARE (${multi.length})`, body: <CompareView opps={multi} /> }),
+    openOverlap: () => setExtra({ title: "DON'T-TAKE-BOTH", body: <OverlapView opps={multi} /> }),
+    openLadders: () => setExtra({ title: `LADDERS (${Math.min(8, multi.length)})`, body: <LaddersView opps={multi} /> }),
     exportSelected: () => downloadCsv(
       `selected_${multi.length}_snap${meta?.snapshot_id ?? "x"}.csv`,
       multi, COLS[colKey].filter((c) => visible.includes(c.f))),

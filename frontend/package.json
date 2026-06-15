@@ -3,17 +3,14 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Terminal Pro — the Kalshi opportunity workstation SPA (React + AG Grid), served at /terminal.",
+  "description": "Terminal Pro — the Kalshi opportunity workstation SPA (React, pixel-exact port of ui-mockup-final-spa.html), served at /terminal.",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview"
   },
   "dependencies": {
-    "ag-grid-community": "^33.0.0",
-    "ag-grid-react": "^33.0.0",
     "cmdk": "^1.1.1",
-    "dockview": "^6.6.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },

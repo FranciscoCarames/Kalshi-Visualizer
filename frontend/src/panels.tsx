@@ -1,124 +1,9 @@
-/* The Dockview-hosted panels. Each is a thin body that reads the shared terminal context — Dockview
- * provides the draggable/resizable/pop-out frame + tab; these render only the content. */
-import { useRef, useState, type ReactNode } from "react";
-import { AgGridReact } from "ag-grid-react";
-import { type GridApi } from "ag-grid-community";
-import { type IDockviewPanelProps } from "dockview";
-import { useTerminal } from "./context";
-import { COLS } from "./columns";
-import { ZONES, SUBTABS, type FeedRow } from "./feed";
-import Inspector, { Detail, Formulas } from "./Inspector";
+/* Dynamic multi-selection views shown in the workspace's "extra" overlay panel (Compare / Don't-take-both /
+ * Open ladders). Prop-based and library-free — no Dockview, no AG-Grid. Read-only; never changes ranking. */
+import type { ReactNode } from "react";
+import type { FeedRow } from "./feed";
 import Ladder from "./Ladder";
-import { Watch, Alerts } from "./SidePanels";
 
-const ITABS: [string, string][] = [["card", "TRADE CARD"], ["detail", "PARTICIPANT DETAIL"], ["formula", "FORMULAS"]];
-
-export function BlotterPanel() {
-  const t = useTerminal();
-  const [chooser, setChooser] = useState(false);
-  const apiRef = useRef<GridApi<FeedRow> | null>(null);
-  return (
-    <div style={{ height: "100%", display: "flex", flexDirection: "column", minHeight: 0 }}>
-      <div className="tp-zones">
-        {ZONES.map(([z, label, hint]) => (
-          <div key={z} className={"tp-zone" + (t.zone === z ? " on" : "")} data-z={z}
-               onClick={() => t.goSection(z, SUBTABS[z][0][0])}>
-            {label} <span className="zc">{t.count(z, z === "diag" ? "diag" : SUBTABS[z][0][0]).toLocaleString()}</span> <span className="zt">{hint}</span>
-          </div>
-        ))}
-      </div>
-      <div className="tp-bt" style={{ position: "relative" }}>
-        {SUBTABS[t.zone].map(([s, label]) => (
-          <div key={s} className={"btb " + s + (t.section === s ? " on" : "")} onClick={() => t.setSection(s)}>
-            {label}<span className="ct">{t.count(t.zone, s).toLocaleString()}</span>
-          </div>
-        ))}
-        <span className="showing">
-          {t.err ? <span className="red">feed error: {t.err}</span>
-                 : <>Showing <b className="white">{t.rows.length.toLocaleString()}</b> · {t.visible.length} cols · </>}
-          <span className="tp-tb" style={{ marginLeft: 6 }} onClick={() => setChooser((v) => !v)}>⚙ columns ▾</span>
-        </span>
-        {chooser ? (
-          <div className="menu" onMouseLeave={() => setChooser(false)}>
-            <div className="mh">COLUMNS · {t.section.toUpperCase()} ({COLS[t.colKey].length})</div>
-            {COLS[t.colKey].map((c) => (
-              <label key={c.f}><input type="checkbox" checked={t.visible.includes(c.f)} onChange={() => t.toggleCol(c.f)} />{c.l}</label>
-            ))}
-            <div className="reset" onClick={t.resetCols}>↺ reset to defaults</div>
-          </div>
-        ) : null}
-      </div>
-      {t.multi.length > 1 ? (
-        <div className="selbar">▣ <b className="white">{t.multi.length}</b> selected ·
-          <button className="tp-tb" onClick={t.openCompare}>Compare</button>
-          <button className="tp-tb" onClick={t.openOverlap}>⚠ Don't-take-both</button>
-          <button className="tp-tb" onClick={t.exportSelected}>⬇ Export</button>
-          <button className="tp-tb" onClick={() => apiRef.current?.deselectAll()}>Clear</button>
-        </div>
-      ) : null}
-      <div style={{ flex: 1, minHeight: 0 }}>
-        <div className="ag-theme-quartz ag-theme-tp" style={{ height: "100%" }}>
-          <AgGridReact<FeedRow>
-            theme="legacy"
-            rowData={t.rows}
-            columnDefs={t.columnDefs}
-            defaultColDef={{ sortable: true, resizable: true }}
-            getRowId={(p) => p.data.id}
-            rowSelection={{ mode: "multiRow", enableClickSelection: true, checkboxes: false, headerCheckbox: false }}
-            suppressCellFocus
-            overlayNoRowsTemplate="No rows in this section for the current filters."
-            onGridReady={(e) => { apiRef.current = e.api; }}
-            onColumnMoved={() => {
-              const api = apiRef.current; if (!api) return;
-              t.setColOrder(api.getColumnState().map((s) => s.colId).filter((f) => t.visible.includes(f)));
-            }}
-            onSelectionChanged={(e) => t.setMulti(e.api.getSelectedRows())}
-            onRowClicked={(e) => t.setSel(e.data ? { ...e.data } : null)}
-          />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export function InspectorPanel() {
-  const t = useTerminal();
-  return (
-    <div style={{ height: "100%", display: "flex", flexDirection: "column", minHeight: 0 }}>
-      <div className="itabs">
-        {ITABS.map(([k, l]) => (
-          <div key={k} className={"itab" + (t.itab === k ? " on" : "")}
-               onClick={() => t.setItab(k as "card" | "detail" | "formula")}>{l}</div>
-        ))}
-      </div>
-      <div style={{ flex: 1, overflow: "auto", minHeight: 0 }}>
-        {t.itab === "detail" ? <Detail row={t.sel} />
-          : t.itab === "formula" ? <Formulas row={t.sel} />
-          : <Inspector row={t.sel} lens={t.lens} snapshotId={t.meta?.snapshot_id ?? null} showNet={t.showNet} />}
-      </div>
-    </div>
-  );
-}
-
-export function LadderPanel() {
-  const t = useTerminal();
-  return <div style={{ height: "100%", display: "flex", flexDirection: "column", minHeight: 0 }}>
-    <div className="lw">READ-ONLY DEPTH VIEW — NO ORDERS · TOP-OF-BOOK + DERIVED</div>
-    <Ladder row={t.sel} />
-  </div>;
-}
-
-export function WatchPanel() {
-  const t = useTerminal();
-  return <div style={{ height: "100%", overflow: "auto" }}><Watch opps={t.opps} onPick={t.setSel} /></div>;
-}
-
-export function AlertsPanel() {
-  const t = useTerminal();
-  return <div style={{ height: "100%", overflow: "auto" }}><Alerts opps={t.opps} meta={t.meta} /></div>;
-}
-
-// --- dynamic panels added from a multi-selection (Ctrl/Shift-click → selbar) -------------------------
 function fmtField(o: FeedRow, f: string): string {
   const v = o[f];
   if (v == null || v === "") return "—";
@@ -137,11 +22,10 @@ const COMPARE_FIELDS: [string, string][] = [
   ["parent_over_maxloss", "Ripeness"], ["quote_health", "Quote"], ["tradable", "Tradable"],
 ];
 
-export function ComparePanel(props: IDockviewPanelProps<{ opps: FeedRow[] }>) {
-  const opps = props.params.opps ?? [];
+export function CompareView({ opps }: { opps: FeedRow[] }) {
   return (
-    <div style={{ height: "100%", overflow: "auto", padding: 4 }}>
-      <table className="tp-tbl">
+    <div style={{ padding: 4 }}>
+      <table className="condtbl">
         <thead><tr><th>Metric</th>{opps.map((o) => <th key={o.id} className="r">{String(o.name || "").slice(0, 18)}</th>)}</tr></thead>
         <tbody>{COMPARE_FIELDS.map(([f, l]) => (
           <tr key={f}><td className="dim">{l}</td>{opps.map((o) => <td key={o.id} className="r">{fmtField(o, f)}</td>)}</tr>
@@ -152,8 +36,7 @@ export function ComparePanel(props: IDockviewPanelProps<{ opps: FeedRow[] }>) {
   );
 }
 
-export function OverlapPanel(props: IDockviewPanelProps<{ opps: FeedRow[] }>) {
-  const opps = props.params.opps ?? [];
+export function OverlapView({ opps }: { opps: FeedRow[] }) {
   const warns: ReactNode[] = [];
   for (let i = 0; i < opps.length; i++) {
     for (let j = i + 1; j < opps.length; j++) {
@@ -163,20 +46,28 @@ export function OverlapPanel(props: IDockviewPanelProps<{ opps: FeedRow[] }>) {
       const shared = (B.legs || []).map((l) => l.tk).filter((tk) => tk && ta.has(tk));
       if (shared.length) why.push(`${shared.length} shared market${shared.length > 1 ? "s" : ""}`);
       if (why.length) warns.push(
-        <div className="ar" key={`${i}-${j}`}><span className="red" style={{ fontSize: 9 }}>●</span>
+        <div className="arow" key={`${i}-${j}`}><span className="ic" style={{ background: "var(--red)" }} />
           <div><b className="white">{String(A.name).slice(0, 18)}</b> &amp; <b className="white">{String(B.name).slice(0, 18)}</b> — {why.join(", ")} → doubling exposure</div>
         </div>);
     }
   }
   return (
-    <div style={{ height: "100%", overflow: "auto" }}>
-      <div className="note" style={{ padding: "4px 6px" }}>Flags selected opportunities that share a participant or market — you'd be <b>doubling exposure</b>, not diversifying. Read-only heuristic, not a correlation model; never changes ranking.</div>
+    <div>
+      <div className="note" style={{ padding: "4px 6px" }}>Flags selected opportunities that share a participant or market — you'd be <b>doubling exposure</b>, not diversifying. Read-only heuristic, never changes ranking.</div>
       {warns.length ? warns : <div className="note" style={{ padding: 6 }}><span className="green">No shared participant or market</span> among the {opps.length} selected — they look independent.</div>}
     </div>
   );
 }
 
-export const PANELS = {
-  blotter: BlotterPanel, inspector: InspectorPanel, ladder: LadderPanel, watch: WatchPanel, alerts: AlertsPanel,
-  compare: ComparePanel, overlap: OverlapPanel,
-};
+export function LaddersView({ opps }: { opps: FeedRow[] }) {
+  return (
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 6, padding: 6 }}>
+      {opps.slice(0, 8).map((o) => (
+        <div key={o.id} className="panel" style={{ width: 280, flex: "0 0 auto", maxHeight: 360 }}>
+          <div className="ph"><span className="n">▦</span><h3 style={{ fontSize: 9 }}>{String(o.name).slice(0, 22)}</h3></div>
+          <Ladder row={o} />
+        </div>
+      ))}
+    </div>
+  );
+}

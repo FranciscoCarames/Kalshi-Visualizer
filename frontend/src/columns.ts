@@ -1,9 +1,7 @@
 /* Per-bucket column catalogs — ported from ui-mockup-final-spa.html COLS, which mirror the webui/dashboard
  * column defs. Each bucket (zone/section) shows its own catalog; the SPA renders the engine's row fields
- * verbatim (it never recomputes them). `hide` = present in the chooser but off by default. */
-import { createElement } from "react";
-import type { ColDef } from "ag-grid-community";
-import type { FeedRow } from "./feed";
+ * verbatim (it never recomputes them). `hide` = present in the chooser but off by default. The blotter
+ * renders these as a plain <table> (see Blotter.tsx); the formatters below are reused there. */
 
 export type Fmt = "c" | "pct" | "money" | "x" | "num" | "text" | "qh" | "trad" | "name";
 export interface Col { f: string; l: string; fmt: Fmt; hide?: boolean; tip?: string; }
@@ -78,36 +76,5 @@ export function qhClass(v: unknown): string {
 }
 export function tradClass(v: unknown): string {
   const t = String(v || "").toLowerCase();
-  return t.startsWith("yes") ? "tradable-yes" : t.startsWith("no") ? "tradable-no" : "tradable-rule";
-}
-
-/** Build AG-Grid ColDefs from a catalog, honoring a visible-set (column chooser) + the user's order. */
-export function buildColDefs(cols: Col[], visible: string[] | null): ColDef<FeedRow>[] {
-  const vis = visible ?? cols.filter((c) => !c.hide).map((c) => c.f);
-  const byF = new Map(cols.map((c) => [c.f, c]));
-  return vis.map((f) => byF.get(f)).filter((c): c is Col => !!c).map((c) => {
-    const right = c.fmt !== "text" && c.fmt !== "name" && c.fmt !== "trad" && c.fmt !== "qh";
-    const def: ColDef<FeedRow> = {
-      field: c.f, headerName: c.l, headerTooltip: c.tip || undefined,
-      type: right ? "rightAligned" : undefined,
-      minWidth: c.fmt === "name" ? 240 : 70,
-      flex: c.fmt === "name" ? 2 : c.fmt === "text" ? 1 : undefined,
-      valueFormatter: (p) => fmtVal(p.value, c.fmt),
-    };
-    if (c.fmt === "name") {
-      def.headerName = "Participant / match";
-      // Return a React element (NOT an HTML string): ag-grid-react renders a function renderer's return as
-      // React children, so a string would show its literal <span> tags as text.
-      def.cellRenderer = (p: { data?: FeedRow }) => createElement(
-        "span", null,
-        createElement("span", { className: "nm" }, p.data?.name ?? ""), " ",
-        createElement("span", { className: "sub" }, p.data?.sub ?? ""),
-      );
-    } else if (c.fmt === "qh") def.cellClass = (p) => qhClass(p.value);
-    else if (c.fmt === "trad") def.cellClass = (p) => tradClass(p.value);
-    else if (c.f === "edge") def.cellClass = (p) => (num(p.value) ? "green" : "");
-    else if (c.f === "max_loss") def.cellClass = "red";
-    else if (c.f === "max_profit" || c.f === "bonus_profit") def.cellClass = "green";
-    return def;
-  });
+  return t.startsWith("yes") ? "ty" : t.startsWith("no") ? "tn" : "tr2";
 }

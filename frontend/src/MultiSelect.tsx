@@ -16,15 +16,15 @@ export default function MultiSelect(
   }, [open]);
   const summary = selected.size === 0 ? "All" : `${selected.size} sel`;
   return (
-    <div className="ms" ref={box}>
+    <span className="ms" ref={box}>
       <button className="ms-btn" onClick={() => setOpen((v) => !v)}>{label}: {summary} ▾</button>
       {open ? (
-        <div className="ms-pop">
-          {options.length === 0 ? <div className="ms-empty">— none —</div> : options.map((o) => (
+        <div className="menu on" style={{ top: 22, left: 0 }}>
+          {options.length === 0 ? <div className="mi">— none —</div> : options.map((o) => (
             <label key={o}><input type="checkbox" checked={selected.has(o)} onChange={() => onToggle(o)} />{o}</label>
           ))}
         </div>
       ) : null}
-    </div>
+    </span>
   );
 }
