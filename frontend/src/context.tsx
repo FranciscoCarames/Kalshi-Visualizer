@@ -11,7 +11,7 @@ import { CompareView, OverlapView, LaddersView } from "./panels";
 import { postScan, getScanStatus } from "./scan";
 import { diffSnapshot, edgeMap, type Change } from "./diff";
 import { type FilterState, type BandState, emptyFilters, defaultBand, isDefaultBand, applyBand, passAll, passMembership, tournamentOptions } from "./filters";
-import { loadPrefs, savePrefs, THEMES, LAYOUT_PRESETS, SPLITS, type Prefs } from "./prefs";
+import { loadPrefs, savePrefs, PREFS_VERSION, THEMES, LAYOUT_PRESETS, SPLITS, type Prefs } from "./prefs";
 import { apiFetch } from "./http";
 
 export interface ExtraPanel { title: string; body: ReactNode; }
@@ -101,10 +101,13 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
   const [split, setSplit] = useState("all");            // bounded-loss All / Vertical / Calendar
   const [layoutPreset, setLayoutPreset] = useState("default");   // persisted workspace preset (per user)
   const scanning = useRef(false);
-  const [, tick] = useState(0);
+  const scanPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const mountedRef = useRef(true);                       // guards setState after unmount (logout/expiry)
   const layoutRef = useRef<((preset: string) => void) | null>(null);
   const setSetting = <K extends keyof Settings>(k: K, v: Settings[K]) => setSettings((s) => ({ ...s, [k]: v }));
-  const refreshFeed = () => loadFeed().then((f) => (setFeed(f), setErr(null))).catch((e) => setErr(String(e)));
+  const refreshFeed = () => loadFeed()
+    .then((f) => { if (mountedRef.current) { setFeed(f); setErr(null); } })
+    .catch((e) => { if (mountedRef.current) setErr(String(e)); });
 
   // Manual scan (▷SCAN / ⚡force): drive POST /scan, animate the scanbar, poll /scan/status. The 4s feed
   // poll picks up the new snapshot when the scan finishes. Honors token/rate-limit (never a silent no-op).
@@ -113,31 +116,44 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
     scanning.current = true;
     document.body.classList.add("scanning");
     setScanText("SCANNING · fetching…");
+    const stopPoll = () => { if (scanPollRef.current) { clearInterval(scanPollRef.current); scanPollRef.current = null; } };
     const finish = (msg: string | null) => {
-      document.body.classList.remove("scanning"); scanning.current = false; setScanText(msg);
-      if (msg) setTimeout(() => setScanText((cur) => (cur === msg ? null : cur)), 4000);
+      document.body.classList.remove("scanning"); scanning.current = false;
+      if (!mountedRef.current) return;                      // provider unmounted — don't setState
+      setScanText(msg);
+      if (msg) setTimeout(() => mountedRef.current && setScanText((cur) => (cur === msg ? null : cur)), 4000);
     };
     postScan(force).then((res) => {
       if (!res.ok) { finish("scan blocked: " + res.error); return; }
       setScanText("SCANNING · detecting…");
       let ticks = 0;
-      const poll = setInterval(async () => {
+      stopPoll();                                            // never run two status polls at once
+      scanPollRef.current = setInterval(async () => {
         ticks++;
+        if (!mountedRef.current) { stopPoll(); return; }     // unmounted mid-poll → stop, don't leak
         try {
           const s = await getScanStatus();
           if (s.status !== "in_progress" || ticks > 40) {
-            clearInterval(poll);
+            stopPoll();
             if (!s.last_scan_error) refreshFeed();             // pull the fresh snapshot immediately
             finish(s.last_scan_error ? "scan error: " + s.last_scan_error : "scan complete · snapshot refreshed");
           }
-        } catch { clearInterval(poll); finish("scan status unavailable"); }
+        } catch { stopPoll(); finish("scan status unavailable"); }
       }, 1500);
     }).catch((e) => finish("scan error: " + String(e)));
   };
 
   useEffect(() => { document.documentElement.dataset.theme = theme; }, [theme]);
 
-  useEffect(() => { const c = setInterval(() => tick((n) => n + 1), 1000); return () => clearInterval(c); }, []);
+  // Track mount + tear down a running scan poll on unmount (logout / session expiry unmounts the provider
+  // mid-scan): without this the status setInterval keeps firing and would setState on a dead component.
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; if (scanPollRef.current) clearInterval(scanPollRef.current); };
+  }, []);
+
+  // (The 1s snapshot-age clock now lives in <AgeClock> in App.tsx — a leaf with its own local tick — so it
+  // no longer re-renders the whole provider tree every second.)
   useEffect(() => {
     let alive = true;
     const pull = () => loadFeed().then((f) => alive && (setFeed(f), setErr(null))).catch((e) => alive && setErr(String(e)));
@@ -153,6 +169,9 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
   // overwrite the stored profile before it loads.
   const hydratedRef = useRef(false);
   const applyPrefs = (p: Prefs) => {
+    // Version gate: ignore a blob written by a NEWER client schema (don't misinterpret unknown shapes).
+    // Same/older/absent versions are applied field-by-field below (every field is already whitelisted).
+    if (typeof p.version === "number" && p.version > PREFS_VERSION) return;
     if (p.theme && (THEMES as readonly string[]).includes(p.theme)) setTheme(p.theme);
     if (p.settings && typeof p.settings === "object") {
       setSettings((s) => {
@@ -173,7 +192,18 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
       }
       setColsByKey(clean);
     }
-    if (p.bands && typeof p.bands === "object") setBands(p.bands as unknown as Record<string, BandState>);
+    if (p.bands && typeof p.bands === "object") {
+      // Validate like every other field (defense-in-depth — the server sanitizes too): keep only sections
+      // that are plain objects of FINITE scalars, so a malformed blob can't drive NaN into the filter math.
+      const okScalar = (v: unknown) =>
+        typeof v === "boolean" || typeof v === "string" || (typeof v === "number" && Number.isFinite(v));
+      const cleanBands: Record<string, BandState> = {};
+      for (const [section, band] of Object.entries(p.bands)) {
+        if (band && typeof band === "object" && !Array.isArray(band) && Object.values(band).every(okScalar))
+          cleanBands[section] = band as unknown as BandState;
+      }
+      setBands(cleanBands);
+    }
     if (p.split && (SPLITS as readonly string[]).includes(p.split)) setSplit(p.split);
     if (p.layoutPreset && (LAYOUT_PRESETS as readonly string[]).includes(p.layoutPreset)) setLayoutPreset(p.layoutPreset);
   };
@@ -184,7 +214,7 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
     if (!hydratedRef.current) return;
     const t = setTimeout(() => {
       void savePrefs({
-        version: 1, theme, showNet, columns: colsByKey, split, layoutPreset,
+        version: PREFS_VERSION, theme, showNet, columns: colsByKey, split, layoutPreset,
         settings: settings as unknown as Record<string, unknown>,
         bands: bands as unknown as Record<string, Record<string, unknown>>,
       });

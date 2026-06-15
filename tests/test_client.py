@@ -188,3 +188,14 @@ def test_get_orderbook_skips_malformed_rungs(monkeypatch):
     ], "no_dollars": None}})     # None side -> []
     ob = kc.get_orderbook("TK")
     assert ob["yes"] == [[50, 10]] and ob["no"] == []
+
+
+def test_get_does_not_sleep_after_the_final_attempt(monkeypatch):
+    # B5: a sustained 5xx makes MAX_RETRIES attempts but backs off only BETWEEN them (MAX_RETRIES-1 sleeps)
+    # — no wasted backoff sleep before the final raise (which previously held the scan thread up to ~30s).
+    _patch(monkeypatch, [_Resp(503) for _ in range(config.MAX_RETRIES)])
+    sleeps = []
+    monkeypatch.setattr(kc.time, "sleep", lambda s: sleeps.append(s))
+    with pytest.raises(kc.KalshiError):
+        kc._get("/x", {})
+    assert len(sleeps) == config.MAX_RETRIES - 1

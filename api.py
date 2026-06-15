@@ -448,6 +448,7 @@ class TerminalTelemetry(BaseModel):
 # Telemetry is recomputed at most ONCE per snapshot (liquidity_panel scans all contracts; volatility scans
 # recent frames) — cached here so repeated SPA fetches / surface switches don't re-aggregate every time.
 _telemetry_cache: dict[str, Any] = {"snapshot_id": object(), "data": None}
+_telemetry_cache_lock = threading.Lock()                 # serialize the check+compute+store (compute once)
 _TELEMETRY_VOLATILITY_WINDOW_S = 3600.0
 
 # Live order-book fetch (the SPA depth ladder): a short per-ticker TTL cache coalesces the ~5s frontend
@@ -540,15 +541,19 @@ def get_terminal_telemetry(db_path: str | None = Depends(db_path_dep)) -> Termin
     sid = store.latest_snapshot_id(db_path=db_path)
     if sid is None:
         return TerminalTelemetry(snapshot_id=None)
-    if _telemetry_cache["snapshot_id"] == sid and _telemetry_cache["data"] is not None:
-        return _telemetry_cache["data"]
-    liq = viewmodel.liquidity_panel(engine.all_contracts(db_path=db_path))
-    vol = viewmodel.volatility_leader(engine.recent_contract_frames(_TELEMETRY_VOLATILITY_WINDOW_S, db_path=db_path))
-    rows = lambda key: [list(t) for t in liq.get(key, [])]   # noqa: E731 — tuples → JSON arrays
-    out = TerminalTelemetry(snapshot_id=sid, top_sports=rows("top_sports"), top_contracts=rows("top_contracts"),
-                            tightest=rows("tightest"), most_traded=rows("most_traded"), volatility=vol)
-    _telemetry_cache["snapshot_id"], _telemetry_cache["data"] = sid, out
-    return out
+    # Hold the lock across check+compute+store so two concurrent polls on a NEW snapshot don't both run the
+    # heavy liquidity_panel aggregation — the second waits, then sees the cache hit. Telemetry is a low-QPS
+    # poll, so serializing here is cheap and is exactly the coalescing we want.
+    with _telemetry_cache_lock:
+        if _telemetry_cache["snapshot_id"] == sid and _telemetry_cache["data"] is not None:
+            return _telemetry_cache["data"]
+        liq = viewmodel.liquidity_panel(engine.all_contracts(db_path=db_path))
+        vol = viewmodel.volatility_leader(engine.recent_contract_frames(_TELEMETRY_VOLATILITY_WINDOW_S, db_path=db_path))
+        rows = lambda key: [list(t) for t in liq.get(key, [])]   # noqa: E731 — tuples → JSON arrays
+        out = TerminalTelemetry(snapshot_id=sid, top_sports=rows("top_sports"), top_contracts=rows("top_contracts"),
+                                tightest=rows("tightest"), most_traded=rows("most_traded"), volatility=vol)
+        _telemetry_cache["snapshot_id"], _telemetry_cache["data"] = sid, out
+        return out
 
 
 @app.get("/api/terminal/orderbook", response_model=TerminalOrderbook)

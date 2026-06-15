@@ -220,17 +220,34 @@ def db_writable(db_path: str | None = None) -> bool:
 
 
 # --- connection / migration ----------------------------------------------------------
+# File paths whose schema has been migrated + indexed this process. Migration (a PRAGMA check) and the
+# read-path index build (3× CREATE INDEX IF NOT EXISTS — a writer-lock op) are durable on disk, so they
+# only need to run on the FIRST connect to a path, NOT on every read (the ~1s dashboard poll, /metrics,
+# /coverage, /readyz all open a connection). A fresh :memory: DB is a new database each connect, so it is
+# NEVER cached and always initializes.
+_initialized_paths: set[str] = set()
+
+
+def _reset_init_cache() -> None:
+    """Test hook: forget which DB paths have been schema-initialized (so a reused/recreated path re-migrates)."""
+    _initialized_paths.clear()
+
+
 def _connect(db_path: str | None) -> sqlite3.Connection:
     resolved = db_path or config.SNAPSHOT_DB_PATH
     conn = sqlite3.connect(resolved)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     # WAL lets a reader proceed while a scan write holds the writer lock; busy_timeout bounds the wait on a
-    # held lock instead of raising "database is locked" immediately. (No-ops / harmless for :memory:.)
+    # held lock instead of raising "database is locked" immediately. These are per-connection, so they run
+    # every connect. (No-ops / harmless for :memory:.)
     conn.execute("PRAGMA journal_mode = WAL")
     conn.execute(f"PRAGMA busy_timeout = {int(config.SNAPSHOT_BUSY_TIMEOUT_MS)}")
-    _migrate(conn, resolved)
-    _ensure_indexes(conn)
+    if resolved == ":memory:" or resolved not in _initialized_paths:
+        _migrate(conn, resolved)
+        _ensure_indexes(conn)
+        if resolved != ":memory:":
+            _initialized_paths.add(resolved)
     return conn
 
 
@@ -623,6 +640,10 @@ def write_snapshot(fetched_at: Any, opps: Any, *, meta: Any = None, frames: Any 
                 [(sid, *_frame_rows(f)) for f in frames],
             )
         _maintain_backlog_intervals(conn, records, ts)          # durable tier: 7-day lifecycle intervals
+        conn.commit()                                            # snapshot is durable + visible to readers NOW
+        # Housekeeping runs in a SEPARATE short transaction AFTER the snapshot commit, so readers aren't held
+        # behind the retention scan + per-snapshot size queries while the writer lock covers the insert. The
+        # snapshot is already persisted; a retention hiccup can't lose it.
         _apply_retention(conn)                                   # lean tier: time-based whole-snapshot drop
         _apply_frame_retention(conn, db_path or config.SNAPSHOT_DB_PATH)   # heavy tier: latest-N + size budget
         conn.commit()

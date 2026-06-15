@@ -619,3 +619,17 @@ def test_backlog_legs_round_trip(tmp_path):
     r = store.backlog_intervals(db_path=db)[0]
     assert r["last_legs"] == legs
     assert r["data"]["opportunity_id"] == "a"                    # full row JSON retained
+
+
+def test_connect_initializes_schema_once_per_path(tmp_path, monkeypatch):
+    # B2: migrate + index-build run only on the FIRST connect to a file path, not on every read connect.
+    db = str(tmp_path / "snap.db")
+    store._reset_init_cache()
+    calls = []
+    real = store._ensure_indexes
+    monkeypatch.setattr(store, "_ensure_indexes", lambda conn: (calls.append(1), real(conn))[1])
+    store._connect(db).close()
+    store._connect(db).close()
+    store._connect(db).close()
+    assert len(calls) == 1                      # only the first connect built the indexes
+    store._reset_init_cache()

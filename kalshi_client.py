@@ -135,12 +135,14 @@ def _get(path: str, params: dict[str, Any]) -> dict[str, Any]:
             resp = _session.get(url, params=params, timeout=REQUEST_TIMEOUT)
         except requests.RequestException as exc:
             last_error = exc or KalshiError("network error")
-            time.sleep(_backoff_seconds(None, attempt))
+            if attempt < MAX_RETRIES - 1:                  # don't sleep after the FINAL attempt — we raise next
+                time.sleep(_backoff_seconds(None, attempt))
             continue
 
         if resp.status_code == 429 or resp.status_code >= 500:
             last_error = KalshiError(f"HTTP {resp.status_code} from {url}")
-            time.sleep(_backoff_seconds(resp, attempt))
+            if attempt < MAX_RETRIES - 1:                  # ditto: a final 429/5xx raises, no point sleeping
+                time.sleep(_backoff_seconds(resp, attempt))
             continue
         if resp.status_code >= 400:
             raise KalshiError(f"HTTP {resp.status_code} from {url}: {_scrub_body(resp.text)}")

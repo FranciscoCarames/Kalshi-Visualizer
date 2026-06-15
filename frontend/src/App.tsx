@@ -100,6 +100,15 @@ function fmtAge(fetchedAt: string | null): string {
   return isNaN(t) ? "—" : Math.max(0, Math.round((Date.now() - t) / 1000)) + "s";
 }
 
+// The snapshot-age clock ticks every second. Isolated into this LEAF (local state) so the 1s tick
+// re-renders only the tiny clock, NOT the whole TerminalProvider tree (which would re-render every
+// blotter row, panel, and chart once a second). Renders just the age string; surrounding text is JSX.
+function AgeClock({ fetchedAt }: { fetchedAt: string | null }) {
+  const [, tick] = useState(0);
+  useEffect(() => { const c = setInterval(() => tick((n) => n + 1), 1000); return () => clearInterval(c); }, []);
+  return <>{fmtAge(fetchedAt)}</>;
+}
+
 function Surface({ id }: { id: "res" | "ops" }) {
   const t = useTerminal();
   const m = t.meta;
@@ -266,11 +275,11 @@ function Shell() {
           <input aria-label="Open command palette" placeholder="SEARCH — functions · participants · lenses · layouts   (press / or Ctrl-K)" readOnly
                  onFocus={() => t.setPaletteOpen(true)} onClick={() => t.setPaletteOpen(true)} />
           <span className="kbd">Ctrl K</span><button className="go" onClick={() => t.setPaletteOpen(true)}>&lt;GO&gt;</button></div>
-        <div className="clock">{fmtAge(m?.fetched_at ?? null)} · KALSHI</div>
+        <div className="clock"><AgeClock fetchedAt={m?.fetched_at ?? null} /> · KALSHI</div>
       </div>
       <div className="scanbar" />
       <div className="statline">
-        <span className="s"><b className={t.scanText ? "amber blink" : t.err ? "red" : "green"}>●</b> {t.scanText ?? `SNAPSHOT #${m?.snapshot_id ?? "—"} · ${fmtAge(m?.fetched_at ?? null)} ago`}</span>
+        <span className="s"><b className={t.scanText ? "amber blink" : t.err ? "red" : "green"}>●</b> {t.scanText ?? <>SNAPSHOT #{m?.snapshot_id ?? "—"} · <AgeClock fetchedAt={m?.fetched_at ?? null} /> ago</>}</span>
         <span className="s">Opps <b>{(m?.n_total ?? 0).toLocaleString()}</b></span>
         <span className="s">Contracts <b>{(m?.contracts ?? 0).toLocaleString()}</b></span>
         <span className="s">Checks <b>{(m?.checks ?? 0).toLocaleString()}</b></span>
