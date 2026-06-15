@@ -119,6 +119,10 @@ def _build_row(o: dict[str, Any]) -> dict[str, Any]:
         "id": o["opportunity_id"], "bucket": bucket, "zone": zone, "section": sec,
         "scope": o.get("no_structure_scope"), "resolution_mode": o.get("resolution_mode"),
         "sport": o.get("sport_label") or base.get("sport"),
+        # Routing keys the Inspector passes to GET /api/terminal/detail|ladder (read-only passthroughs;
+        # NOT display values). sport_key is the registry id ("tennis"/"nba"), distinct from `sport` label.
+        "sport_key": o.get("sport"), "player_key": o.get("participant_key"),
+        "tournament": o.get("tournament") or "",
         "sub": o.get("tournament") or base.get("detail") or "",
         "status": o.get("status"), "tradable": o.get("tradable_now") or base.get("tradable"),
         "rule": o.get("rule_flag"), "settlement_caveat": o.get("settlement_caveat"),

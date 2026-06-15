@@ -11,12 +11,14 @@ Run: `python serve.py` (or `uvicorn api:app`). OpenAPI docs at `/docs`.
 from __future__ import annotations
 
 import hmac
+import io
 import logging
 import os
 import time
 from typing import Any, Callable
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Response
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict
 
 import config
@@ -337,6 +339,152 @@ def get_terminal_feed(db_path: str | None = Depends(db_path_dep)) -> dict[str, A
     fees estimate). `bucket`/`status`/`tradable_now`/`rule_flag` are copied verbatim from the same rows
     `/opportunities` serves — parity is asserted in tests/test_feed.py. No re-bucketing, no re-ranking."""
     return feed.build_feed(db_path=db_path)
+
+
+# --- Terminal Pro parity endpoints (read-only VIEWS; reuse engine/viewmodel/viz/export only) -----------
+# Each is a THIN adapter over an existing pure/engine function — never a second engine, never a mutation,
+# never a re-bucket. `webui.engine` is imported LAZILY inside handlers (engine imports api → import cycle).
+_DIAG_ROW_CAP = 2000
+
+
+class TerminalDetail(BaseModel):
+    """Data-driven participant drill-down (the old dashboard's detail panel), scoped to one
+    (sport, player_key, tournament). All fields display-only; never feeds classification/ranking."""
+    chain: list[dict[str, Any]] = []
+    indicators: list[dict[str, Any]] = []
+    spreads: list[dict[str, Any]] = []
+    expected: list[dict[str, Any]] = []
+    contracts: list[dict[str, Any]] = []
+    raw_fields: list[dict[str, Any]] = []
+    link_audit: list[dict[str, Any]] = []
+    duplicates: list[dict[str, Any]] = []
+    rules: list[dict[str, Any]] = []
+
+
+class TerminalPayoff(BaseModel):
+    scenarios: list[dict[str, Any]] = []
+    cost_c: float | None = None
+
+
+class TerminalLadder(BaseModel):
+    layers: list[dict[str, Any]] = []
+
+
+class TerminalDiagnostics(BaseModel):
+    checks: list[dict[str, Any]] = []
+    contracts: list[dict[str, Any]] = []
+    category: dict[str, Any] = {}
+    failures: dict[str, Any] = {}
+    checks_truncated: int = 0
+    contracts_truncated: int = 0
+
+
+class ExportRequest(BaseModel):
+    opportunity_ids: list[str] = []
+    snapshot_id: int | None = None
+
+
+def _participant_rows(sport: str, player_key: str, tournament: str, db_path: str | None) -> list[dict[str, Any]]:
+    """A participant's stored contracts SCOPED to one tournament — the engine groups ladders by
+    (player_key, tournament) (data.tournament_of season-scopes the key), so detail/ladder MUST scope by
+    tournament or they would merge a player's contracts across tournaments/seasons into a false ladder."""
+    from webui import engine  # lazy: engine imports api (cycle)
+    prows = engine.participant_contracts(sport, player_key, db_path=db_path)
+    return [r for r in prows if (r.get("tournament") or "") == tournament]
+
+
+@app.get("/api/terminal/detail", response_model=TerminalDetail)
+def get_terminal_detail(sport: str, player_key: str, tournament: str,
+                        db_path: str | None = Depends(db_path_dep)) -> TerminalDetail:
+    """Read-only participant drill-down for the SPA Inspector. REQUIRES tournament (no silent cross-
+    tournament merge → a false ladder). Honest-empty when the participant has no stored contracts."""
+    if not (sport and player_key and tournament):
+        raise HTTPException(status_code=400, detail="sport, player_key and tournament are all required")
+    from webui import viewmodel as vm
+    prows = _participant_rows(sport, player_key, tournament, db_path)
+    chain = vm.detail_chain(prows, sport)
+    rules = [{"contract": r.get("contract") or r.get("market_ticker") or "—",
+              "text": str(r.get("rules_primary"))} for r in prows if r.get("rules_primary")]
+    return TerminalDetail(
+        chain=chain, indicators=vm.derived_indicators(chain, sport),
+        spreads=vm.detail_spreads(prows), expected=vm.detail_expected(prows),
+        contracts=vm.detail_contracts(prows), raw_fields=vm.raw_fields_rows(prows),
+        link_audit=vm.link_audit_rows(prows), duplicates=vm.duplicate_rows(prows), rules=rules)
+
+
+@app.get("/api/terminal/payoff", response_model=TerminalPayoff)
+def get_terminal_payoff(opportunity_id: str, db_path: str | None = Depends(db_path_dep)) -> TerminalPayoff:
+    """Per-state payoff for the SPA payoff chart. 404 when the id isn't in the latest snapshot; honest-empty
+    scenarios for a non-containment / dutch-book opp (no fabricated curve). Reuses viz.payoff_chart_data."""
+    import viz
+    from webui import engine  # lazy (cycle)
+    opp = next((r for r in _opps(db_path) if r.get("opportunity_id") == opportunity_id), None)
+    if opp is None:
+        raise HTTPException(status_code=404, detail=f"opportunity '{opportunity_id}' not in the latest snapshot")
+    pay = engine.payoff_for_opp(opp, db_path=db_path)
+    return TerminalPayoff(scenarios=viz.payoff_chart_data(pay).to_dict("records"),
+                          cost_c=_num((pay or {}).get("cost_c")))
+
+
+@app.get("/api/terminal/ladder", response_model=TerminalLadder)
+def get_terminal_ladder(sport: str, player_key: str, tournament: str,
+                        db_path: str | None = Depends(db_path_dep)) -> TerminalLadder:
+    """Containment-ladder price chart for the SPA. REQUIRES tournament (same scoping rule as /detail).
+    Reuses viz.ladder_prices (inversion-flagged); display-only, never an edge."""
+    if not (sport and player_key and tournament):
+        raise HTTPException(status_code=400, detail="sport, player_key and tournament are all required")
+    import viz
+    from webui import viewmodel as vm
+    prows = _participant_rows(sport, player_key, tournament, db_path)
+    chain = vm.detail_chain(prows, sport)
+    adapted = [{"Layer": r.get("layer", ""), "Display %": r.get("display_pct")} for r in chain]
+    return TerminalLadder(layers=viz.ladder_prices(adapted).to_dict("records"))
+
+
+@app.get("/api/terminal/diagnostics", response_model=TerminalDiagnostics)
+def get_terminal_diagnostics(db_path: str | None = Depends(db_path_dep)) -> TerminalDiagnostics:
+    """Deep diagnostics grids for the OPS surface (full check rows, all contracts, category honesty, scan
+    failures). Rows capped at _DIAG_ROW_CAP with an explicit truncation count — NO silent truncation."""
+    from webui import engine  # lazy (cycle)
+    checks, contracts = engine.all_checks(db_path=db_path), engine.all_contracts(db_path=db_path)
+    return TerminalDiagnostics(
+        checks=checks[:_DIAG_ROW_CAP], contracts=contracts[:_DIAG_ROW_CAP],
+        category=engine.category_breakdown(db_path=db_path), failures=engine.diagnostics(db_path=db_path),
+        checks_truncated=max(0, len(checks) - _DIAG_ROW_CAP),
+        contracts_truncated=max(0, len(contracts) - _DIAG_ROW_CAP))
+
+
+@app.post("/api/terminal/export")
+def post_terminal_export(req: ExportRequest, db_path: str | None = Depends(db_path_dep)) -> StreamingResponse:
+    """Build the snapshot-export ZIP from EXACTLY the opportunity_ids the grid shows (so the export can
+    never disagree with the visible rows); evidence frames stay whole-snapshot, as the old dashboard
+    exported them. Read-only POST (computes a zip; mutates nothing). 409 when there's no snapshot."""
+    from webui import engine, export  # lazy (engine cycle); export is pure
+    snap = store.latest(db_path=db_path)
+    if snap is None:
+        raise HTTPException(status_code=409, detail="no snapshot to export")
+    wanted = set(req.opportunity_ids)
+    selected = [r for r in _opps(db_path) if r.get("opportunity_id") in wanted]
+    backlog = lifecycle.recently_actionable(
+        store.snapshots_since(config.BACKLOG_WINDOWS["1 hour"], db_path=db_path))
+    blob = export.build_export_zip(
+        snapshot_id=snap.get("snapshot_id"), fetched_at=snap.get("fetched_at"),
+        opportunities=selected, coverage=snap.get("meta") or {}, frames=engine.frames(db_path=db_path),
+        backlog=backlog, backlog_window="1 hour", filters={"opportunity_ids": len(wanted)})
+    fname = f"kalshi-snapshot-{snap.get('snapshot_id')}.zip"
+    return StreamingResponse(io.BytesIO(blob), media_type="application/zip",
+                             headers={"Content-Disposition": f'attachment; filename="{fname}"'})
+
+
+def _num(x: Any) -> float | None:
+    """JSON-safe float (None for None/blank/NaN) — local mirror of feed._num for the payoff cost line."""
+    try:
+        if x is None or x == "":
+            return None
+        f = float(x)
+        return None if f != f else f
+    except (TypeError, ValueError):
+        return None
 
 
 @app.get("/opportunities/{opportunity_id}", response_model=Opportunity)
