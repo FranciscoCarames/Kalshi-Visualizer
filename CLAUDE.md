@@ -20,6 +20,18 @@ throttle. NiceGUI is the **sole UI** — the legacy Streamlit `app.py` was retir
   conditional-probability/de-vig models, net-of-fees math. Adding a **new sport** is in scope via a
   `SportConfig` drop-in; non-sport-config work is not.
 
+## NEVER EVER DO
+
+These rules are ABSOLUTE:
+
+### NEVER Publish Sensitive Data
+- NEVER publish passwords, API keys, tokens to git/npm/docker
+- Before ANY commit: verify no secrets included
+
+### NEVER Commit .env Files
+- NEVER commit `.env` to git
+- ALWAYS verify `.env` is in `.gitignore`
+
 ## Workflow docs
 
 Specialized review/workflow guidance lives in separate files — link to them, don't inline their content here:
@@ -321,3 +333,4 @@ collapsed Diagnostics & debug expander. `viewmodel.py` + `diagnostics.py` are th
 Shipped state, current limits, and the approved next-work list live in **`docs/STATUS.md`**. Detailed
 build history and decisions live in `.kss/` (topics + milestones). `pytest` is the full suite (pure
 layers + engine + API + viewmodel + per-sport `test_*` + headless `test_browser`).
+
