@@ -289,6 +289,25 @@ AUTH_ARGON2_TIME_COST = 2
 AUTH_ARGON2_MEMORY_COST = 19456                # KiB (= 19 MiB)
 AUTH_ARGON2_PARALLELISM = 1
 
+# Per-user preferences (auth_store `preferences` table). A versioned envelope is validated + sanitized
+# server-side (NOT trusted from the client) and size-capped. The allowed-value sets are single-sourced
+# here so the server sanitizer and any future consumer agree. Theme/preset/section names mirror the SPA.
+AUTH_PREFS_MAX_BYTES = 32768                    # 32 KiB cap on the stored JSON blob (bounds abuse)
+AUTH_PREFS_VERSION = 1                          # envelope version (bump when the prefs shape changes)
+PREFS_THEMES = ("amber", "hc")
+PREFS_LAYOUT_PRESETS = ("default", "triage", "inspect", "research", "blotterfull")
+PREFS_SPLITS = ("all", "vertical", "calendar")
+PREFS_AUTOREFRESH = ("10s", "30s", "off")
+PREFS_COL_KEYS = ("opp", "risk", "nm", "no", "qs", "diag")   # colKeyOf() catalogs in columns.ts
+PREFS_SETTINGS_BOOL = ("longShort", "showIds", "resolutionCriteria")
+# Authenticated-action rate limits (per user) — register uses the login (ip,username) limiter; these guard
+# the post-login state-changers so a debounce burst or a script can't hammer them.
+AUTH_ACTION_LIMITS = {                          # action -> (max_events, window_seconds)
+    "password": (10, 300),                      # password changes: 10 / 5 min
+    "preferences": (60, 60),                    # prefs PUT: 60 / min (debounced client → generous)
+    "device": (30, 60),                         # device revoke/logout: 30 / min
+}
+
 # --- NiceGUI dashboard (Stage 5) -----------------------------------------------------
 # NiceGUI needs a storage secret to sign its per-user session cookie. There is NO auth/multi-user here,
 # so this is not a real secret — the REAL value comes from the NICEGUI_STORAGE_SECRET env var (read in

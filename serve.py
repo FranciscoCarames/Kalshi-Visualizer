@@ -167,6 +167,16 @@ def _enforce_bind_safety(host: str) -> None:
         raise SystemExit(2)
 
 
+def apply_runtime_defaults() -> None:
+    """Secure-by-default for the served app: authentication ON and self-registration ON unless the operator
+    explicitly sets them. Applied ONLY here (the supported ``python serve.py`` entrypoint), NOT at module
+    import — so `import api` / the test suite keep their open-by-default contract. (An operator who runs
+    `uvicorn api:app` directly bypasses this, exactly like the bind guard — `python serve.py` is the
+    supported secure entrypoint; see docs/AUTH.md.) Opt out with AUTH_ENABLED=0 / AUTH_ALLOW_SIGNUP=0."""
+    os.environ.setdefault("AUTH_ENABLED", "1")
+    os.environ.setdefault("AUTH_ALLOW_SIGNUP", "1")
+
+
 def seed_admin_from_env() -> None:
     """One-shot first-admin bootstrap from the environment (boundary — config stays import-free). When
     ``APP_ADMIN_USER`` and ``APP_ADMIN_PASSWORD`` are both set AND the auth store has ZERO users, create the
@@ -240,6 +250,7 @@ def _apply_snapshot_db_path() -> None:
 
 
 if __name__ == "__main__":
+    apply_runtime_defaults()
     _apply_snapshot_db_path()
     seed_admin_from_env()
     _host = os.getenv("API_HOST", config.API_HOST)

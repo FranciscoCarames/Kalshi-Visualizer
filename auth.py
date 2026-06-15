@@ -56,6 +56,13 @@ def tls_on() -> bool:
     return os.getenv("APP_TLS") == "1"
 
 
+def cookie_secure() -> bool:
+    """Mark cookies ``Secure`` over real TLS (``APP_TLS=1``) OR behind a declared HTTPS-terminating reverse
+    proxy (``TRUST_PROXY=1``) — where TLS ends at the proxy and the app sees plain HTTP but the browser
+    connection is still HTTPS. Without this, a proxied deployment would ship non-Secure cookies."""
+    return os.getenv("APP_TLS") == "1" or os.getenv("TRUST_PROXY") == "1"
+
+
 def _session_secret() -> str:
     return (os.getenv("APP_SESSION_SECRET") or os.getenv("NICEGUI_STORAGE_SECRET")
             or config.NICEGUI_STORAGE_SECRET_FALLBACK)
@@ -79,7 +86,7 @@ def _set_session_cookie(response: Response, uid: int, iat: float) -> None:
     token = _serializer().dumps({"uid": uid, "iat": iat})
     response.set_cookie(
         config.AUTH_COOKIE_NAME, token, max_age=_COOKIE_MAX_AGE, httponly=True,
-        samesite="strict", secure=tls_on(), path="/")
+        samesite="strict", secure=cookie_secure(), path="/")
 
 
 def _clear_cookie(response: Response, name: str) -> None:
@@ -109,14 +116,14 @@ def _set_remember_cookie(response: Response, selector: str, validator: str) -> N
     response.set_cookie(
         config.AUTH_REMEMBER_COOKIE_NAME, f"{selector}:{validator}",
         max_age=config.AUTH_REMEMBER_MAX_AGE, httponly=True, samesite="strict",
-        secure=tls_on(), path="/")
+        secure=cookie_secure(), path="/")
 
 
 def remember_available() -> bool:
-    """Remember-me issues a long-lived token ONLY when the cookie can be ``Secure`` (TLS) — a 30-day token
-    on a plain-HTTP LAN is the riskiest combination. ``AUTH_REMEMBER_ENABLED=1`` overrides for a knowingly-
-    trusted LAN."""
-    return tls_on() or os.getenv("AUTH_REMEMBER_ENABLED") == "1"
+    """Remember-me issues a long-lived token ONLY when the cookie can be ``Secure`` (TLS or a trusted
+    HTTPS-terminating proxy) — a 30-day token on plain HTTP is the riskiest combination.
+    ``AUTH_REMEMBER_ENABLED=1`` overrides for a knowingly-trusted LAN."""
+    return cookie_secure() or os.getenv("AUTH_REMEMBER_ENABLED") == "1"
 
 
 def signup_enabled() -> bool:
@@ -262,6 +269,47 @@ def _reset_login_limiters() -> None:
     _login_limiters.clear()
 
 
+# Per-(user, action) limiters for the post-login state-changers (password / preferences / device), so a
+# debounce burst or a script can't hammer them. Process-local (single worker — enforced by the bind guard).
+_action_limiters: dict[str, ratelimit.SlidingWindow] = {}
+
+
+def _action_allowed(uid: int, action: str, *, now: float) -> bool:
+    max_events, window = config.AUTH_ACTION_LIMITS.get(action, (60, 60))
+    key = f"{uid}:{action}"
+    limiter = _action_limiters.get(key)
+    if limiter is None:
+        limiter = ratelimit.SlidingWindow(max_events, window)
+        _action_limiters[key] = limiter
+    return limiter.allow(now)
+
+
+def _reset_action_limiters() -> None:
+    """Test hook."""
+    _action_limiters.clear()
+
+
+def _require_user_session(request: Request, *, now: float) -> dict:
+    """Return the authenticated USER (a real login), or raise. 401 when anonymous; **403 when the caller
+    is a machine token** (token principals have no profile — they must not reach user-only endpoints)."""
+    principal = _authenticate(request, now=now)
+    if principal is None:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    if principal.user is None:
+        raise HTTPException(status_code=403, detail="This endpoint requires a user session")
+    return principal.user
+
+
+def _enforce_write_guards(request: Request, uid: int, action: str, *, now: float) -> None:
+    """Defense-in-depth for a cookie-authenticated state change: reject a cross-origin request (CSRF — on
+    top of SameSite=Strict) and rate-limit the action per user."""
+    if not _origin_ok(request):
+        logger.warning("Rejected /auth %s: cross-origin", action)
+        raise HTTPException(status_code=403, detail="Cross-origin request rejected")
+    if not _action_allowed(uid, action, now=now):
+        raise HTTPException(status_code=429, detail="Too many requests; slow down.")
+
+
 # --- /auth router --------------------------------------------------------------------
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -350,8 +398,11 @@ def register(body: RegisterBody, request: Request, response: Response) -> dict:
 
 @router.post("/logout")
 def logout(request: Request, response: Response) -> dict:
-    """Clear the session, revoke this device's remember-me token, and clear both cookies."""
+    """Clear the session, revoke this device's remember-me token (server-side state, not just the browser
+    cookie), and clear both cookies. Origin-checked (CSRF defense-in-depth)."""
     now = time.time()
+    if not _origin_ok(request):
+        raise HTTPException(status_code=403, detail="Cross-origin request rejected")
     raw = request.cookies.get(config.AUTH_REMEMBER_COOKIE_NAME)
     if raw and ":" in raw:
         auth_store.revoke_device_by_selector(raw.partition(":")[0], now=now, db_path=auth_db_path())
@@ -372,10 +423,8 @@ def change_password(body: PasswordChangeBody, request: Request, response: Respon
     OTHER device out), so we re-issue THIS session's cookie with a fresh ``iat`` to keep the caller logged
     in."""
     now = time.time()
-    principal = _authenticate(request, now=now)
-    if principal is None or principal.user is None:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    user = principal.user
+    user = _require_user_session(request, now=now)
+    _enforce_write_guards(request, user["id"], "password", now=now)
     if not auth_store.verify_password(user["pw_hash"], body.current_password):
         raise HTTPException(status_code=403, detail="Current password is incorrect")
     err = auth_store.validate_password_strength(body.new_password)
@@ -409,17 +458,44 @@ def auth_config() -> dict:
 
 @router.get("/devices")
 def list_devices(request: Request) -> dict:
-    principal = _authenticate(request, now=time.time())
-    if principal is None or principal.user is None:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    return {"devices": auth_store.list_device_tokens(principal.user["id"], db_path=auth_db_path())}
+    user = _require_user_session(request, now=time.time())
+    return {"devices": auth_store.list_device_tokens(user["id"], db_path=auth_db_path())}
 
 
 @router.post("/devices/{token_id}/revoke")
 def revoke_device(token_id: int, request: Request) -> dict:
     now = time.time()
-    principal = _authenticate(request, now=now)
-    if principal is None or principal.user is None:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    auth_store.revoke_device_token(token_id, now=now, user_id=principal.user["id"], db_path=auth_db_path())
+    user = _require_user_session(request, now=now)
+    _enforce_write_guards(request, user["id"], "device", now=now)
+    # user_id is the AUTHENTICATED user's — the store only revokes a token that belongs to them, so a
+    # token_id owned by another user is a silent no-op (cross-user isolation).
+    auth_store.revoke_device_token(token_id, now=now, user_id=user["id"], db_path=auth_db_path())
     return {"ok": True}
+
+
+# --- per-user preferences (session-only; uid is ALWAYS the authenticated user, never client-supplied) ---
+class PreferencesBody(BaseModel):
+    prefs: dict
+
+
+@router.get("/preferences")
+def get_preferences(request: Request) -> dict:
+    """The CURRENT user's saved preferences envelope ({} if none). Identity is the session — there is no
+    user_id param, so a user can only ever read their own."""
+    user = _require_user_session(request, now=time.time())
+    return {"prefs": auth_store.get_preferences(user["id"], db_path=auth_db_path())}
+
+
+@router.put("/preferences")
+def put_preferences(body: PreferencesBody, request: Request) -> dict:
+    """Replace the CURRENT user's preferences. Server-sanitizes into a versioned envelope (unknown keys
+    dropped, enums/types checked) and size-caps it; 400 on a non-object or over-cap blob. Origin-checked +
+    rate-limited."""
+    now = time.time()
+    user = _require_user_session(request, now=now)
+    _enforce_write_guards(request, user["id"], "preferences", now=now)
+    try:
+        stored = auth_store.set_preferences(user["id"], body.prefs, now=now, db_path=auth_db_path())
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"ok": True, "prefs": stored}

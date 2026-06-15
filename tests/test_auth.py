@@ -5,12 +5,20 @@ from __future__ import annotations
 
 import time
 
+import pandas as pd
 import pytest
 from fastapi.testclient import TestClient
 
 import api
 import auth
 import auth_store
+import scan_manager
+
+
+def _stub_fetch(_sport_id):
+    """Hermetic fetch so a /scan that passes the Origin check returns instantly (no network, no lingering
+    scan thread that could touch the real Kalshi client in a later test)."""
+    return pd.DataFrame(), "2026-06-15 00:00:00 UTC", [], 1, 0, 0, 0
 
 
 @pytest.fixture
@@ -24,12 +32,19 @@ def env(tmp_path, monkeypatch):
     monkeypatch.delenv("APP_TLS", raising=False)
     monkeypatch.setenv("AUTH_REMEMBER_ENABLED", "1")          # allow remember-me without TLS in tests
     auth._reset_login_limiters()
+    auth._reset_action_limiters()
+    scan_manager.manager.reset()
+    api._scan_limiter.reset()
     auth_store.create_user("alice", "correct horse battery", now=time.time(), db_path=auth_db)
     api.app.dependency_overrides[api.db_path_dep] = lambda: snap_db
+    api.app.dependency_overrides[api.fetch_dep] = lambda: _stub_fetch
     c = TestClient(api.app)
     yield c, auth_db
     api.app.dependency_overrides.clear()
     auth._reset_login_limiters()
+    auth._reset_action_limiters()
+    scan_manager.manager.reset()
+    api._scan_limiter.reset()
 
 
 def _login(c, username="alice", password="correct horse battery", remember=False):

@@ -7,6 +7,7 @@ throttle are process-local, so multiple workers must be warned against.
 from __future__ import annotations
 
 import importlib
+import os
 
 import pytest
 
@@ -16,6 +17,33 @@ import serve
 
 def _levels(issues):
     return sorted(level for level, _ in issues)
+
+
+# --- secure-by-default runtime (apply_runtime_defaults) --------------------------------------
+@pytest.fixture
+def _clean_auth_env(monkeypatch):
+    """apply_runtime_defaults() mutates os.environ via setdefault (NOT monkeypatch), so a test calling it
+    must guarantee those vars are gone afterwards or they LEAK into later tests (gating their endpoints).
+    This fixture removes them before and restores 'absent' after."""
+    monkeypatch.delenv("AUTH_ENABLED", raising=False)
+    monkeypatch.delenv("AUTH_ALLOW_SIGNUP", raising=False)
+    yield
+    os.environ.pop("AUTH_ENABLED", None)
+    os.environ.pop("AUTH_ALLOW_SIGNUP", None)
+
+
+def test_runtime_defaults_enable_auth_and_signup_when_unset(_clean_auth_env):
+    serve.apply_runtime_defaults()
+    assert os.environ["AUTH_ENABLED"] == "1"
+    assert os.environ["AUTH_ALLOW_SIGNUP"] == "1"
+
+
+def test_runtime_defaults_respect_explicit_opt_out(_clean_auth_env, monkeypatch):
+    monkeypatch.setenv("AUTH_ENABLED", "0")
+    monkeypatch.setenv("AUTH_ALLOW_SIGNUP", "0")
+    serve.apply_runtime_defaults()
+    assert os.environ["AUTH_ENABLED"] == "0"        # operator opt-out wins (setdefault is a no-op)
+    assert os.environ["AUTH_ALLOW_SIGNUP"] == "0"
 
 
 # --- storage-secret fail-hard ----------------------------------------------------------------

@@ -11,6 +11,8 @@ import { CompareView, OverlapView, LaddersView } from "./panels";
 import { postScan, getScanStatus } from "./scan";
 import { diffSnapshot, edgeMap, type Change } from "./diff";
 import { type FilterState, type BandState, emptyFilters, defaultBand, isDefaultBand, applyBand, passAll, passMembership, tournamentOptions } from "./filters";
+import { loadPrefs, savePrefs, THEMES, LAYOUT_PRESETS, SPLITS, type Prefs } from "./prefs";
+import { apiFetch } from "./http";
 
 export interface ExtraPanel { title: string; body: ReactNode; }
 export interface Settings { longShort: boolean; showIds: boolean; resolutionCriteria: boolean; tz: string; autoRefresh: string; }
@@ -97,6 +99,7 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
   // default band (from meta.defaults), so bounded max-loss 5¢ and cheap-NO max-loss 15¢ never collide.
   const [bands, setBands] = useState<Record<string, BandState>>({});
   const [split, setSplit] = useState("all");            // bounded-loss All / Vertical / Calendar
+  const [layoutPreset, setLayoutPreset] = useState("default");   // persisted workspace preset (per user)
   const scanning = useRef(false);
   const [, tick] = useState(0);
   const layoutRef = useRef<((preset: string) => void) | null>(null);
@@ -143,6 +146,53 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
     const poll = ms ? setInterval(pull, ms) : null;
     return () => { alive = false; if (poll) clearInterval(poll); };
   }, [settings.autoRefresh]);
+
+  // Per-user preferences: hydrate ONCE on mount (AuthGate has already authenticated), applying only valid
+  // values (defense-in-depth — the server sanitizes too). Then save durable view state, debounced. NOTE:
+  // filters are intentionally NOT persisted. `hydratedRef` gates the saver so first-paint defaults never
+  // overwrite the stored profile before it loads.
+  const hydratedRef = useRef(false);
+  const applyPrefs = (p: Prefs) => {
+    if (p.theme && (THEMES as readonly string[]).includes(p.theme)) setTheme(p.theme);
+    if (p.settings && typeof p.settings === "object") {
+      setSettings((s) => {
+        const next = { ...s };
+        for (const k of ["longShort", "showIds", "resolutionCriteria"] as const) {
+          if (typeof p.settings![k] === "boolean") (next as Record<string, unknown>)[k] = p.settings![k];
+        }
+        if (typeof p.settings!.tz === "string") next.tz = p.settings!.tz as string;
+        if (["10s", "30s", "off"].includes(p.settings!.autoRefresh as string)) next.autoRefresh = p.settings!.autoRefresh as string;
+        return next;
+      });
+    }
+    if (typeof p.showNet === "boolean") setShowNet(p.showNet);
+    if (p.columns && typeof p.columns === "object") {
+      const clean: Record<string, string[]> = {};
+      for (const [k, v] of Object.entries(p.columns)) {
+        if (k in COLS && Array.isArray(v) && v.every((x) => typeof x === "string")) clean[k] = v;
+      }
+      setColsByKey(clean);
+    }
+    if (p.bands && typeof p.bands === "object") setBands(p.bands as unknown as Record<string, BandState>);
+    if (p.split && (SPLITS as readonly string[]).includes(p.split)) setSplit(p.split);
+    if (p.layoutPreset && (LAYOUT_PRESETS as readonly string[]).includes(p.layoutPreset)) setLayoutPreset(p.layoutPreset);
+  };
+  useEffect(() => {
+    loadPrefs().then(applyPrefs).finally(() => { hydratedRef.current = true; });
+  }, []);
+  useEffect(() => {
+    if (!hydratedRef.current) return;
+    const t = setTimeout(() => {
+      void savePrefs({
+        version: 1, theme, showNet, columns: colsByKey, split, layoutPreset,
+        settings: settings as unknown as Record<string, unknown>,
+        bands: bands as unknown as Record<string, Record<string, unknown>>,
+      });
+    }, 600);
+    return () => clearTimeout(t);
+  }, [theme, settings, showNet, colsByKey, bands, split, layoutPreset]);
+  // Apply the (hydrated or user-chosen) layout preset once Workspace has registered its applier.
+  useEffect(() => { layoutRef.current?.(layoutPreset); }, [layoutPreset]);
 
   const meta = feed?.meta ?? null;
   const opps = useMemo(() => feed?.opps ?? [], [feed]);
@@ -271,7 +321,7 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
     setColOrder: (order) => setColsByKey((m) => ({ ...m, [colKey]: order })),
     setTheme, setPaletteOpen, setMulti, setExtra, setPanelsMenuOpen,
     registerLayout: (fn) => { layoutRef.current = fn; },
-    applyLayout: (preset) => layoutRef.current?.(preset),
+    applyLayout: (preset) => setLayoutPreset(preset),    // state-driven so the choice persists per user
     openCompare: () => setExtra({ title: `COMPARE (${multi.length})`, body: <CompareView opps={multi} /> }),
     openOverlap: () => setExtra({ title: "DON'T-TAKE-BOTH", body: <OverlapView opps={multi} /> }),
     openLadders: () => setExtra({ title: `LADDERS (${Math.min(8, multi.length)})`, body: <LaddersView opps={multi} /> }),
@@ -285,7 +335,7 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
     // matches what the filters show; frames stay whole-snapshot (old-dashboard parity).
     exportZip: async () => {
       const ids = opps.filter((o) => passAll(o, filters)).map((o) => o.id);
-      const res = await fetch("/api/terminal/export", { method: "POST",
+      const res = await apiFetch("/api/terminal/export", { method: "POST",
         headers: { "Content-Type": "application/json", Accept: "application/zip" },
         body: JSON.stringify({ opportunity_ids: ids, snapshot_id: meta?.snapshot_id ?? null }) });
       if (!res.ok) { setErr(`export ${res.status}`); return; }

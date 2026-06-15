@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import json
 import logging
 import re
 import secrets
@@ -34,9 +35,10 @@ import config
 _log = logging.getLogger(__name__)
 
 # Bump when the on-disk auth schema changes; held in the SQLite `user_version` pragma (no bookkeeping
-# table). v1 is the initial schema (users + device_tokens). Unlike the snapshot store, a forward-migration
-# failure RAISES rather than resetting — credentials are never silently dropped.
-AUTH_SCHEMA_VERSION = 1
+# table). v1 = users + device_tokens; v2 adds the per-user `preferences` table. Unlike the snapshot store,
+# a forward-migration failure RAISES rather than resetting — credentials/preferences are never silently
+# dropped.
+AUTH_SCHEMA_VERSION = 2
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS users (
@@ -64,6 +66,17 @@ CREATE TABLE IF NOT EXISTS device_tokens (
     revoked_ts     REAL
 );
 CREATE INDEX IF NOT EXISTS ix_device_tokens_user ON device_tokens(user_id);
+"""
+
+# v2 addition: per-user preferences (theme/settings/columns/bands/split/layout). One row per user; the
+# blob is a server-sanitized versioned envelope (see sanitize_prefs). ON DELETE CASCADE relies on
+# `PRAGMA foreign_keys = ON` (set in _connect) so deleting a user removes their prefs + device tokens.
+_PREFERENCES_SCHEMA = """
+CREATE TABLE IF NOT EXISTS preferences (
+    user_id     INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    prefs_json  TEXT NOT NULL,
+    updated_ts  REAL NOT NULL
+);
 """
 
 
@@ -184,13 +197,21 @@ def _migrate(conn: sqlite3.Connection) -> None:
             f"auth DB schema v{version} is newer than supported v{AUTH_SCHEMA_VERSION}")
     if version == 0:
         conn.executescript(_SCHEMA)
+        conn.executescript(_PREFERENCES_SCHEMA)
         conn.execute(f"PRAGMA user_version = {AUTH_SCHEMA_VERSION}")
         conn.commit()
         return
-    # Future forward steps (v1->v2, ...) go here, each wrapped so a failure RAISES (no reset fallback).
-    raise sqlite3.DatabaseError(
-        f"auth DB schema v{version} cannot be migrated to v{AUTH_SCHEMA_VERSION}; refusing to continue "
-        "(credentials are never auto-reset). Restore a backup or migrate manually.")
+    # Forward steps, each idempotent (CREATE TABLE IF NOT EXISTS). A failure RAISES (no reset fallback) so
+    # credentials/preferences are never silently dropped.
+    try:
+        if version < 2:
+            conn.executescript(_PREFERENCES_SCHEMA)                # v1 -> v2: per-user preferences table
+        conn.execute(f"PRAGMA user_version = {AUTH_SCHEMA_VERSION}")
+        conn.commit()
+    except sqlite3.DatabaseError as exc:
+        raise sqlite3.DatabaseError(
+            f"auth DB migration v{version}->v{AUTH_SCHEMA_VERSION} failed ({exc}); refusing to continue "
+            "(credentials are never auto-reset). Restore a backup or migrate manually.") from exc
 
 
 # --- user CRUD -----------------------------------------------------------------------
@@ -484,3 +505,108 @@ def purge_expired(*, now: float, db_path: str | None = None) -> int:
         return cur.rowcount
     finally:
         conn.close()
+
+
+# --- per-user preferences ------------------------------------------------------------
+def _clean_settings(value: object) -> dict:
+    if not isinstance(value, dict):
+        return {}
+    out: dict = {}
+    for k in config.PREFS_SETTINGS_BOOL:
+        if isinstance(value.get(k), bool):
+            out[k] = value[k]
+    tz = value.get("tz")
+    if isinstance(tz, str) and len(tz) <= 64:
+        out["tz"] = tz
+    if value.get("autoRefresh") in config.PREFS_AUTOREFRESH:
+        out["autoRefresh"] = value["autoRefresh"]
+    return out
+
+
+def _clean_columns(value: object) -> dict:
+    if not isinstance(value, dict):
+        return {}
+    out: dict = {}
+    for key, cols in value.items():
+        if key in config.PREFS_COL_KEYS and isinstance(cols, list) \
+                and all(isinstance(c, str) for c in cols):
+            out[key] = cols[:200]                  # bound list length; overall blob is size-capped too
+    return out
+
+
+def _clean_bands(value: object) -> dict:
+    """Bands are per-section scalar overrides; keep only dict-of-scalars (the client also allow-lists on
+    apply, and the overall blob is size-capped)."""
+    if not isinstance(value, dict):
+        return {}
+    out: dict = {}
+    for section, band in value.items():
+        if isinstance(section, str) and isinstance(band, dict) \
+                and all(isinstance(v, (int, float, bool, str)) for v in band.values()):
+            out[section] = band
+    return out
+
+
+def sanitize_prefs(prefs: object) -> dict:
+    """Validate + sanitize a preferences blob into a versioned envelope, server-side (NEVER trust the
+    client). Unknown top-level keys are dropped; values are type/enum-checked; the result is a clean dict
+    safe to store and echo back. Raises ValueError if the input is not an object."""
+    if not isinstance(prefs, dict):
+        raise ValueError("preferences must be an object")
+    out: dict = {"version": config.AUTH_PREFS_VERSION}
+    if prefs.get("theme") in config.PREFS_THEMES:
+        out["theme"] = prefs["theme"]
+    settings = _clean_settings(prefs.get("settings"))
+    if settings:
+        out["settings"] = settings
+    if isinstance(prefs.get("showNet"), bool):
+        out["showNet"] = prefs["showNet"]
+    columns = _clean_columns(prefs.get("columns"))
+    if columns:
+        out["columns"] = columns
+    bands = _clean_bands(prefs.get("bands"))
+    if bands:
+        out["bands"] = bands
+    if prefs.get("split") in config.PREFS_SPLITS:
+        out["split"] = prefs["split"]
+    if prefs.get("layoutPreset") in config.PREFS_LAYOUT_PRESETS:
+        out["layoutPreset"] = prefs["layoutPreset"]
+    return out
+
+
+def get_preferences(user_id: int, db_path: str | None = None) -> dict:
+    """The user's stored preferences envelope, or ``{}`` when none. A corrupt row is treated as empty (a
+    warning is logged WITHOUT the content) — it must never 500 a login or dashboard load."""
+    conn = _connect(db_path)
+    try:
+        row = conn.execute("SELECT prefs_json FROM preferences WHERE user_id = ?", (user_id,)).fetchone()
+    finally:
+        conn.close()
+    if row is None:
+        return {}
+    try:
+        data = json.loads(row["prefs_json"])
+        return data if isinstance(data, dict) else {}
+    except (ValueError, TypeError):
+        _log.warning("Corrupt preferences row for user_id=%s; returning empty.", user_id)
+        return {}
+
+
+def set_preferences(user_id: int, prefs: object, *, now: float, db_path: str | None = None) -> dict:
+    """Sanitize + persist the user's preferences (upsert). Raises ValueError on a non-object or an
+    over-cap blob. Returns the stored (sanitized) envelope."""
+    clean = sanitize_prefs(prefs)
+    blob = json.dumps(clean, separators=(",", ":"))
+    if len(blob.encode("utf-8")) > config.AUTH_PREFS_MAX_BYTES:
+        raise ValueError("preferences too large")
+    conn = _connect(db_path)
+    try:
+        conn.execute(
+            "INSERT INTO preferences (user_id, prefs_json, updated_ts) VALUES (?, ?, ?) "
+            "ON CONFLICT(user_id) DO UPDATE SET prefs_json = excluded.prefs_json, "
+            "updated_ts = excluded.updated_ts",
+            (user_id, blob, now))
+        conn.commit()
+    finally:
+        conn.close()
+    return clean

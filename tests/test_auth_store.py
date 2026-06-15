@@ -158,3 +158,95 @@ def test_disable_bumps_epoch_and_revokes(tmp_path):
     user = auth_store.get_user("gina", db_path=db)
     assert user["disabled"] == 1 and user["session_epoch"] == 30.0
     assert auth_store.list_device_tokens(uid, db_path=db) == []
+
+
+# --- schema v1 -> v2 migration (preferences table) -----------------------------------
+def test_v1_to_v2_migration_adds_preferences_without_dropping_users(tmp_path):
+    db = _db(tmp_path)
+    # Build a v1 file by hand: only the v1 tables, user_version = 1.
+    conn = sqlite3.connect(db)
+    try:
+        conn.executescript(auth_store._SCHEMA)
+        conn.execute("INSERT INTO users (username, pw_hash, created_ts) VALUES ('hank', 'x', 1.0)")
+        conn.execute("PRAGMA user_version = 1")
+        conn.commit()
+    finally:
+        conn.close()
+    # Opening through auth_store migrates v1 -> v2 (creates preferences) and KEEPS the user.
+    assert auth_store.user_count(db_path=db) == 1
+    uid = auth_store.get_user("hank", db_path=db)["id"]
+    auth_store.set_preferences(uid, {"theme": "hc"}, now=2.0, db_path=db)   # table now exists
+    assert auth_store.get_preferences(uid, db_path=db)["theme"] == "hc"
+
+
+# --- preferences storage + sanitization ----------------------------------------------
+def test_preferences_roundtrip_and_default_empty(tmp_path):
+    db = _db(tmp_path)
+    uid = auth_store.create_user("iris", "pw-correct-horse", now=1.0, db_path=db)
+    assert auth_store.get_preferences(uid, db_path=db) == {}        # none yet
+    stored = auth_store.set_preferences(
+        uid, {"theme": "hc", "split": "vertical", "layoutPreset": "triage"}, now=2.0, db_path=db)
+    assert stored["version"] == config.AUTH_PREFS_VERSION
+    got = auth_store.get_preferences(uid, db_path=db)
+    assert got["theme"] == "hc" and got["split"] == "vertical" and got["layoutPreset"] == "triage"
+
+
+def test_sanitize_drops_unknown_keys_and_bad_values(tmp_path):
+    clean = auth_store.sanitize_prefs({
+        "theme": "neon",                       # invalid enum -> dropped
+        "split": "vertical",                   # valid
+        "layoutPreset": "evil",                # invalid -> dropped
+        "evil_key": {"x": 1},                  # unknown top-level -> dropped
+        "settings": {"showIds": True, "autoRefresh": "weird", "tz": "utc", "bogus": 1},
+        "columns": {"opp": ["a", "b"], "notakey": ["x"], "risk": [1, 2]},  # bad key/values filtered
+        "showNet": "yes",                      # not a bool -> dropped
+    })
+    assert clean == {
+        "version": config.AUTH_PREFS_VERSION, "split": "vertical",
+        "settings": {"showIds": True, "tz": "utc"},
+        "columns": {"opp": ["a", "b"]},
+    }
+
+
+def test_sanitize_rejects_non_object(tmp_path):
+    with pytest.raises(ValueError):
+        auth_store.sanitize_prefs(["not", "a", "dict"])
+
+
+def test_preferences_size_cap(tmp_path):
+    db = _db(tmp_path)
+    uid = auth_store.create_user("jack", "pw-correct-horse", now=1.0, db_path=db)
+    huge = {"columns": {"opp": ["x" * 1000] * 100}}     # well over the cap once serialized
+    with pytest.raises(ValueError):
+        auth_store.set_preferences(uid, huge, now=2.0, db_path=db)
+
+
+def test_corrupt_preferences_row_returns_empty(tmp_path, caplog):
+    db = _db(tmp_path)
+    uid = auth_store.create_user("kate", "pw-correct-horse", now=1.0, db_path=db)
+    auth_store.set_preferences(uid, {"theme": "hc"}, now=2.0, db_path=db)
+    conn = sqlite3.connect(db)                          # corrupt the JSON directly
+    try:
+        conn.execute("UPDATE preferences SET prefs_json = '{not valid json' WHERE user_id = ?", (uid,))
+        conn.commit()
+    finally:
+        conn.close()
+    assert auth_store.get_preferences(uid, db_path=db) == {}   # never raises / 500s
+    assert "kate" not in caplog.text and "{not valid" not in caplog.text   # no content leaked
+
+
+def test_delete_user_cascades_to_prefs_and_tokens(tmp_path):
+    """FK cascade requires PRAGMA foreign_keys=ON per connection (_connect sets it)."""
+    db = _db(tmp_path)
+    uid = auth_store.create_user("liam", "pw-correct-horse", now=1.0, db_path=db)
+    auth_store.set_preferences(uid, {"theme": "hc"}, now=2.0, db_path=db)
+    auth_store.issue_device_token(uid, now=2.0, db_path=db)
+    conn = auth_store._connect(db)
+    try:
+        conn.execute("DELETE FROM users WHERE id = ?", (uid,))
+        conn.commit()
+        assert conn.execute("SELECT COUNT(*) FROM preferences WHERE user_id = ?", (uid,)).fetchone()[0] == 0
+        assert conn.execute("SELECT COUNT(*) FROM device_tokens WHERE user_id = ?",
+                            (uid,)).fetchone()[0] == 0
+    finally:
+        conn.close()

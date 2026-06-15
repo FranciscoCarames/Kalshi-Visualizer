@@ -4,21 +4,52 @@ Per-user authentication for the Kalshi Structured Scanner, for a **loopback + tr
 The app is read-only over public Kalshi data; auth exists to keep the data surface and scan controls
 private once the app leaves `127.0.0.1`, and to give a per-user identity for future per-user features.
 
-Everything is **gated behind `AUTH_ENABLED`** (env). Unset → the app behaves exactly as before (open,
-with the legacy optional `SCAN_TOKEN` gate on `POST /scan`). Set to `1` → the deny-by-default gate is
-live and a login is required.
+Everything is **gated behind `AUTH_ENABLED`**. **`python serve.py` turns it ON by default** (and turns
+self-registration on) — see *Secure defaults* below. The gate itself reads the env per request: unset →
+open (legacy `SCAN_TOKEN`-only behaviour, used by the test suite); `1` → deny-by-default, login required.
+
+## Secure defaults & the supported entrypoint
+
+`serve.py` calls `apply_runtime_defaults()` at startup, which `setdefault`s **`AUTH_ENABLED=1`** and
+**`AUTH_ALLOW_SIGNUP=1`**. So a plain `python serve.py` is auth-on with open self-registration; an operator
+opts out with `AUTH_ENABLED=0` / `AUTH_ALLOW_SIGNUP=0`.
+
+These defaults are applied in the `serve.py` entrypoint only (NOT at module import, which would gate the
+test suite). **`python serve.py` is therefore the supported secure entrypoint** — exactly like the
+fail-closed bind guard, which also only protects `serve.py`. Running `uvicorn api:app` directly bypasses
+both; if you must, set `AUTH_ENABLED=1` yourself.
 
 ## Account creation
 
-Two paths:
+- **Self-registration (default ON):** the login screen shows a "create one" link; `POST /auth/register`
+  validates the username (3–32 chars, `[A-Za-z0-9._-]`) + password strength, rejects a taken name, and
+  logs the new user straight in. Rate-limited by (IP, username) like login. The **only** way to access an
+  account's data is its username + password.
+- **Admin-created:** `python -m manage_users add <username>` (see Operations). Use this and set
+  `AUTH_ALLOW_SIGNUP=0` if you want a closed set of accounts.
+- **Trade-offs to know (trusted-LAN model):** open registration means anyone who can reach the host can
+  create an account and view the (read-only) data / trigger scans (rate-limited); and a duplicate-name
+  registration returns `409`, so registration reveals whether a username is taken. Login itself stays
+  non-enumerable (a generic 401). Acceptable on a trusted LAN; close signup if that's not your network.
 
-- **Admin-created (default, safest):** `python -m manage_users add <username>` (see Operations below).
-  Self-registration stays off, so only an admin makes accounts.
-- **Self-registration (opt-in):** set `AUTH_ALLOW_SIGNUP=1`. The login screen then shows a "create one"
-  link; `POST /auth/register` validates the username (3–32 chars, `[A-Za-z0-9._-]`) + password strength,
-  rejects a taken name, and logs the new user straight in. It is rate-limited by (IP, username) like
-  login. **Trade-off:** anyone who can reach the app can then create an account and view the data /
-  trigger scans (rate-limited) — only enable it on a trusted network.
+## Per-user preferences (profiles)
+
+Each account has a private profile — **theme, settings, shown/ordered columns, band thresholds, the
+bounded-loss split, and the chosen layout preset** — saved server-side in `auth.db` and restored on login,
+so a user's setup follows their account across devices. (Transient *filters* are deliberately NOT saved —
+a shared/debug URL must never silently persist a narrowed dashboard.)
+
+- **Endpoints:** `GET`/`PUT /auth/preferences`, session-only. Identity is the session cookie — there is
+  **no `user_id` parameter anywhere**, so a user can only ever read/write their own row. Isolation is
+  proven by `tests/test_security_regression.py` (two users) + a route-introspection test.
+- **Validation:** the server sanitizes a *versioned envelope* (unknown keys dropped, enums/types checked)
+  and size-caps the blob (`AUTH_PREFS_MAX_BYTES`, 32 KiB). A corrupt row degrades to `{}` (logged without
+  content), never a 500. The client also allow-lists on apply.
+- **Sensitivity:** preferences are *user-private app data* (which columns/filters/layout you favour can
+  hint at what you watch), not secret financial records. They are protected by auth isolation + the
+  `auth.db` file, and are excluded from the ZIP export (which only packages snapshot market data).
+- **Multi-tab:** whole-profile writes are last-write-wins (no merge); fine for a personal dashboard. A
+  failed save is swallowed (logged), never blocking the dashboard.
 
 ## Threat model
 
@@ -30,17 +61,26 @@ Two paths:
 - The protected asset is the **data**, not the public JS bundle. The SPA shell + `/healthz` stay open;
   the login screen loads, then everything else requires a session or a machine token.
 
-## What is gated vs. open
+## Route inventory (gated vs. open)
 
-| Open | Gated (session or machine token) |
+Gating is a single **deny-by-default** HTTP middleware (`auth.gate_and_harden`); `is_public()` is the only
+allowlist. `tests/test_routes_deny_by_default.py` fails if a new route lands under a public prefix.
+
+| Surface | Access |
 |---|---|
-| `GET /healthz`, `GET /favicon.ico` | `/opportunities`, `/coverage`, `/metrics`, `/readyz`, `/scan`, `/scan/status`, `/alerts`, `/backlog(/events)` |
-| `POST /auth/login`, `/auth/logout`, `GET /auth/me`, `GET /auth/config` | all `/api/terminal/*` (feed, detail, payoff, ladder, diagnostics, telemetry, orderbook, export) |
-| static SPA bundle: `/`, `/index.html`, `/terminal/*`, `/assets/*` | the NiceGUI `/dashboard*` mount (anon → redirect to `/`) |
-| `/auth/password`, `/auth/devices*` (enforce their own auth internally) | `/docs`, `/redoc`, `/openapi.json` are **disabled** in prod unless `APP_DEV=1` |
+| `GET /healthz`, `GET /favicon.ico` | **public** (minimal liveness / icon) |
+| static SPA bundle: `/`, `/index.html`, `/terminal/*`, `/assets/*`, `/static/*` | **public** (HTML/JS/CSS — no data/secrets; the login screen loads from here) |
+| `POST /auth/login`, `POST /auth/register`, `GET /auth/config` | **public** (the entry points) |
+| `POST /auth/logout`, `GET /auth/me`, `POST /auth/password`, `GET/PUT /auth/preferences`, `GET /auth/devices`, `POST /auth/devices/{id}/revoke` | **gate-exempt but session-required** (enforce their own auth; user-only → machine token gets 403) |
+| `/opportunities(/{id})`, `/coverage`, `/metrics`, `/readyz`, `/scan`, `/scan/status`, `/alerts`, `/backlog(/events)` | **gated** (session or machine token) |
+| all `/api/terminal/*` — `feed`, `detail`, `payoff`, `ladder`, `diagnostics`, `telemetry`, `orderbook`, **`export` (ZIP)** | **gated** |
+| the NiceGUI `/dashboard*` mount | **gated** (anon HTML nav → redirect to `/`) |
+| `/docs`, `/redoc`, `/openapi.json` | **disabled** when `AUTH_ENABLED` & not `APP_DEV=1` |
 
-Gating is a single deny-by-default HTTP middleware (`auth.gate_and_harden`). `tests/test_routes_deny_by_default.py`
-fails if a new route lands under a public prefix by accident.
+**Machine token** (`X-API-Token`) reaches the *data* routes but is **403** on the user-only `/auth/*`
+profile/credential endpoints (it has no user identity). State-changing browser requests (`/scan`, the
+`/auth/*` writes) are additionally **Origin-checked** (CSRF defense-in-depth on top of `SameSite=Strict`);
+a token call skips the Origin check (no ambient cookie to abuse).
 
 ## Sessions, revocation, and remember-me
 
@@ -113,18 +153,23 @@ export APP_ADMIN_USER=admin APP_ADMIN_PASSWORD='a-long-passphrase'
 python serve.py
 ```
 
-- **Credential isolation:** users live in their OWN SQLite file (`AUTH_DB_PATH`, default `auth.db`),
-  separate from the snapshot store (which self-resets on a bad migration). `auth.db` is gitignored; back it
-  up separately. Its migration **fails hard** rather than ever dropping the users table.
-- **Dependencies:** run `pip-audit` periodically; the deploy artifact pins via `pip-compile`, the frontend
-  via `package-lock.json`.
+- **Credential + profile isolation:** users, device tokens, and preferences live in their OWN SQLite file
+  (`AUTH_DB_PATH`, default `auth.db`), separate from the snapshot store (which self-resets on a bad
+  migration). Its migration **fails hard** rather than ever dropping a table, and deleting a user cascades
+  to their tokens + preferences (`PRAGMA foreign_keys=ON`).
+- **Backups & permissions:** `auth.db` is gitignored and excluded from the ZIP export. Back it up
+  separately (it holds the only copy of accounts + profiles); restrict its file permissions to the service
+  user; a corrupt prefs row degrades to defaults rather than failing login.
+- **Dependencies (advisory sweep):** `pip-audit` (dependency CVEs) + `bandit -r . -x tests,frontend`
+  (static analysis) are in `requirements-dev.txt`; run them periodically. The deploy artifact pins via
+  `pip-compile`, the frontend via `package-lock.json`.
 
 ## Environment variables (read only at boundaries)
 
 | Var | Purpose |
 |---|---|
-| `AUTH_ENABLED=1` | turn the gate + login on (default off) |
-| `AUTH_ALLOW_SIGNUP=1` | allow self-registration (`POST /auth/register` + a "create account" link); default off (admin-created accounts only) |
+| `AUTH_ENABLED` | turn the gate + login on; **`python serve.py` defaults it to `1`** (set `0` to opt out) |
+| `AUTH_ALLOW_SIGNUP` | allow self-registration (`POST /auth/register` + a "create account" link); **`python serve.py` defaults it to `1`** (set `0` for admin-created accounts only) |
 | `APP_SESSION_SECRET` | session cookie signing key (falls back to `NICEGUI_STORAGE_SECRET`, then a public dev fallback) |
 | `AUTH_DB_PATH` | auth store path (default `auth.db`) |
 | `APP_ADMIN_USER` / `APP_ADMIN_PASSWORD` | one-shot first-admin seed |
@@ -134,3 +179,4 @@ python serve.py
 | `TRUST_PROXY=1` | declare an HTTPS-terminating reverse proxy (satisfies the TLS requirement) |
 | `APP_ALLOWED_HOSTS` | comma-separated Host allowlist for `TrustedHostMiddleware` (default `*`) |
 | `APP_DEV=1` | re-enable `/docs` `/redoc` `/openapi.json` in an auth-on deployment |
+| `AUTH_PREFS_MAX_BYTES` | cap on a stored preferences blob (default 32 KiB; in `config.py`) |
