@@ -35,24 +35,54 @@ import Keys from "./Keys";
 import Palette from "./Palette";
 import MultiSelect from "./MultiSelect";
 
+const DIAG_DISPLAY_CAP = 200;   // cap rendered rows (endpoint caps the payload at 2000); never silent
+
+function GridCard({ title, rows, total, cols }: { title: string; rows: Record<string, unknown>[]; total?: number; cols?: string[] }) {
+  if (!rows.length) return <div className="rp"><div className="h">{title}</div><div className="c"><div className="note dim">none</div></div></div>;
+  const keys = cols ?? Object.keys(rows[0]).slice(0, 9);
+  const shown = rows.slice(0, DIAG_DISPLAY_CAP);
+  const n = total ?? rows.length;
+  return <div className="rp"><div className="h">{title}<span className="resb">{n > shown.length ? `${shown.length} of ${n.toLocaleString()}` : n.toLocaleString()}</span></div>
+    <div className="c" style={{ maxHeight: 260, overflow: "auto" }}>
+      <table><thead><tr>{keys.map((k) => <th key={k}>{k}</th>)}</tr></thead>
+        <tbody>{shown.map((r, i) => <tr key={i}>{keys.map((k) => <td key={k}>{String(r[k] ?? "")}</td>)}</tr>)}</tbody></table>
+    </div></div>;
+}
+
 function OpsDiag() {
+  const t = useTerminal();
   const [d, setD] = useState<Diagnostics | null>(null);
   const [err, setErr] = useState<string | null>(null);
   useEffect(() => { let a = true; loadDiagnostics().then((x) => a && setD(x)).catch((e) => a && setErr(String(e))); return () => { a = false; }; }, []);
   const catRows = d ? Object.entries(d.category).filter(([, v]) => typeof v === "number" || typeof v === "string") : [];
+  const sumMaxima = t.opps.filter((o) => o.section === "act").reduce((s, o) => s + (typeof o.profit === "number" ? o.profit : 0), 0);
+  // considered inventory derived from the LOADED contracts (honest label — not "considered by engine").
+  const inv = (() => {
+    const c = d?.contracts ?? [];
+    const tours = new Set(c.map((r) => String(r.tournament ?? "")));
+    const parts = new Set(c.map((r) => String(r.player_key ?? r.player ?? "")));
+    const kinds: Record<string, number> = {};
+    c.forEach((r) => { const k = String(r.kind ?? "?"); kinds[k] = (kinds[k] || 0) + 1; });
+    return { nTour: tours.size, nPart: parts.size, kinds: Object.entries(kinds).sort((a, b) => b[1] - a[1]) };
+  })();
   return (
     <>
       <div className="rp"><div className="h">CATEGORY HONESTY<span className="resb">DIAGNOSTIC</span></div><div className="c">
         {err ? <div className="note red">{err}</div> : !d ? <div className="note">loading…</div>
-          : <table><tbody>{catRows.map(([k, v]) => <tr key={k}><td className="dim">{k}</td><td className="r white">{typeof v === "number" ? (v as number).toLocaleString() : String(v)}</td></tr>)}</tbody></table>}
+          : <table><tbody>{catRows.map(([k, v]) => <tr key={k}><td className="dim">{k}</td><td className="r white">{typeof v === "number" ? (v as number).toLocaleString() : String(v)}</td></tr>)}
+            <tr><td className="dim">sum of independent row maxima (actionable)</td><td className="r white">${sumMaxima.toFixed(2)}</td></tr></tbody></table>}
+        <div className="note dim" style={{ marginTop: 4 }}>Sum is NOT a simultaneous total — each opportunity's max is independent.</div>
       </div></div>
-      <div className="rp"><div className="h">FULL DIAGNOSTIC GRIDS</div><div className="c">
-        {d ? <div className="note">
-          <b>{d.checks.length.toLocaleString()}</b> consistency-check rows{d.checks_truncated ? <span className="amber"> (+{d.checks_truncated} truncated)</span> : null} ·
-          <b> {d.contracts.length.toLocaleString()}</b> contract rows{d.contracts_truncated ? <span className="amber"> (+{d.contracts_truncated} truncated)</span> : null}.
-          <br />Considered-inventory / non-laddered / full-check tables render here (read-only; capped, never silently truncated).
-        </div> : <div className="note">loading…</div>}
+      <div className="rp"><div className="h">CONSIDERED INVENTORY<span className="resb">DERIVED</span></div><div className="c">
+        {!d ? <div className="note">loading…</div> : <>
+          <div className="note">{inv.nTour.toLocaleString()} tournaments · {inv.nPart.toLocaleString()} participants · {d.contracts.length.toLocaleString()} contracts loaded{d.contracts_truncated ? <span className="amber"> (+{d.contracts_truncated} beyond cap)</span> : null}.</div>
+          <table style={{ marginTop: 4 }}><thead><tr><th>Kind</th><th className="r">Contracts</th></tr></thead>
+            <tbody>{inv.kinds.slice(0, 12).map(([k, n]) => <tr key={k}><td>{k}</td><td className="r white">{n.toLocaleString()}</td></tr>)}</tbody></table>
+          <div className="note dim" style={{ marginTop: 3 }}>Derived from the loaded contracts — not the engine's "considered" set; failed/excluded series show under SCAN COVERAGE.</div>
+        </>}
       </div></div>
+      <GridCard title="FULL CHECK ROWS" rows={d?.checks ?? []} total={(d?.checks.length ?? 0) + (d?.checks_truncated ?? 0)} />
+      <GridCard title="LOADED CONTRACTS" rows={d?.contracts ?? []} total={(d?.contracts.length ?? 0) + (d?.contracts_truncated ?? 0)} />
     </>
   );
 }
