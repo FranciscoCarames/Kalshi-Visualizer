@@ -229,9 +229,11 @@ def test_devices_list_and_revoke(env):
     assert c.get("/auth/devices").json()["devices"] == []
 
 
-def test_doc_urls_disabled_in_prod(monkeypatch):
-    monkeypatch.setenv("AUTH_ENABLED", "1")
+def test_docs_hidden_in_prod_but_open_in_dev(env, monkeypatch):
+    c, _ = env                                       # env sets AUTH_ENABLED=1
     monkeypatch.delenv("APP_DEV", raising=False)
-    assert api._doc_urls() == {"docs_url": None, "redoc_url": None, "openapi_url": None}
+    assert c.get("/docs").status_code == 404         # hidden in an auth-on deployment
+    assert c.get("/openapi.json").status_code == 404
     monkeypatch.setenv("APP_DEV", "1")
-    assert api._doc_urls()["docs_url"] == "/docs"
+    assert c.get("/docs").status_code == 200          # re-enabled for dev
+    assert c.get("/openapi.json").status_code == 200

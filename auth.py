@@ -219,12 +219,24 @@ def _harden(response: Response, *, no_store: bool) -> Response:
     return response
 
 
+_DOCS_PATHS = {"/docs", "/redoc", "/openapi.json"}
+
+
+def docs_hidden() -> bool:
+    """In an auth-on deployment the OpenAPI docs/schema are hidden (they leak the full API shape) unless
+    ``APP_DEV=1``. Decided at REQUEST time so the secure default (set after import) takes effect."""
+    return auth_enabled() and os.getenv("APP_DEV") != "1"
+
+
 async def gate_and_harden(request: Request, call_next):
     """Deny-by-default auth gate + security headers. Pass-through (headers only) when AUTH_ENABLED is unset
     or the path is public; otherwise require a session or machine token, enforce Origin on cookie POSTs,
     and slide/rotate cookies on success."""
     now = time.time()
     path = request.url.path
+    # Hide the OpenAPI docs/schema in an auth-on prod deployment (404 — as if they don't exist).
+    if path in _DOCS_PATHS and docs_hidden():
+        return _harden(JSONResponse({"detail": "Not Found"}, status_code=404), no_store=True)
     if not auth_enabled() or is_public(path):
         return _harden(await call_next(request), no_store=False)
 

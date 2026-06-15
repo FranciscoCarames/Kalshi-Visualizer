@@ -27,7 +27,7 @@ describe("savePrefs", () => {
     vi.stubGlobal("fetch", fetchMock);
     await savePrefs({ version: 1, theme: "hc" });
     expect(fetchMock).toHaveBeenCalledOnce();
-    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
     expect(init.method).toBe("PUT");
     expect(JSON.parse(init.body as string)).toEqual({ prefs: { version: 1, theme: "hc" } });
   });

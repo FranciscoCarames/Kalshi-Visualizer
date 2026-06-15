@@ -37,17 +37,11 @@ import sports
 import store
 from webui import diagnostics, feed
 
-
-def _doc_urls() -> dict[str, str | None]:
-    """OpenAPI docs are open by default (dev). In an auth-on deployment they are DISABLED — the schema
-    leaks the full API shape — unless ``APP_DEV=1`` is set. Read at import (the app is built once); a unit
-    test asserts the logic directly. The SPA's type pipeline generates from a dev/CI server, not prod."""
-    if os.getenv("AUTH_ENABLED") == "1" and os.getenv("APP_DEV") != "1":
-        return {"docs_url": None, "redoc_url": None, "openapi_url": None}
-    return {"docs_url": "/docs", "redoc_url": "/redoc", "openapi_url": "/openapi.json"}
-
-
-app = FastAPI(title="Kalshi Structured Scanner", version="4.0", **_doc_urls())
+# The OpenAPI docs routes are always CONSTRUCTED, but hidden at REQUEST time by the auth middleware when
+# `AUTH_ENABLED` and not `APP_DEV` (it returns 404). Doing this in the middleware — not via the
+# `FastAPI(docs_url=None)` constructor — is deliberate: `apply_runtime_defaults()` sets `AUTH_ENABLED`
+# AFTER `import api`, so a constructor-time check would miss the secure default. See `auth.gate_and_harden`.
+app = FastAPI(title="Kalshi Structured Scanner", version="4.0")
 # Host allowlist (default "*" — no restriction until an operator sets APP_ALLOWED_HOSTS) + the
 # deny-by-default auth gate / security-headers middleware. Both are no-ops for loopback/dev and the test
 # client until AUTH_ENABLED / APP_ALLOWED_HOSTS are set; see auth.py.
