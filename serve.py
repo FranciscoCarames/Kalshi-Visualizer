@@ -1,9 +1,12 @@
-"""Entrypoint: the FastAPI engine API + the NiceGUI dashboard, served by uvicorn (Stage 5).
+"""Entrypoint: the FastAPI engine API + the React SPA + the NiceGUI dashboard, served by uvicorn (Stage 5).
 
-The REST API (`api.app`) and the NiceGUI opportunity-first dashboard run on ONE app: importing
-`webui.dashboard` registers the `@ui.page('/')`, and `ui.run_with` mounts NiceGUI onto `api.app`.
-This is the sole UI (the legacy Streamlit app was retired).
-Run: ``python serve.py``  (UI at ``/``, REST at ``/opportunities`` etc., OpenAPI at ``/docs``).
+The REST API (`api.app`), the React "Kalshi Structured Scanner" SPA, and the legacy NiceGUI dashboard run
+on ONE app. The SPA (built `frontend/dist`) is the DEFAULT UI at ``/``; the NiceGUI dashboard is RETAINED
+(not deleted) under ``/dashboard`` — importing `webui.dashboard` registers its `@ui.page('/')` and
+`ui.run_with(mount_path="/dashboard")` relocates the whole NiceGUI app under that prefix. (The legacy
+Streamlit app was retired.)
+Run: ``python serve.py``  (SPA at ``/``, dashboard at ``/dashboard``, REST at ``/opportunities`` etc.,
+OpenAPI at ``/docs``).
 
 **Bind / LAN safety (PR 19a).** The bind address/port are env-overridable (``API_HOST``/``API_PORT``) so
 the same code serves loopback-only (the safe default, ``127.0.0.1``) or the whole LAN
@@ -35,22 +38,35 @@ from webui import engine
 # Real storage secret comes from the env; the config value is only a clearly-labeled dev fallback.
 _storage_secret = os.getenv("NICEGUI_STORAGE_SECRET") or config.NICEGUI_STORAGE_SECRET_FALLBACK
 
-def mount_spa(fastapi_app, dist_dir: pathlib.Path) -> bool:
-    """Mount the built Terminal Pro SPA at /terminal when its dist exists, returning whether it mounted.
+def mount_spa(fastapi_app, dist_dir: pathlib.Path, mount_path: str = "/terminal") -> bool:
+    """Mount the built Kalshi Structured Scanner SPA at ``mount_path`` when its dist exists, returning
+    whether it mounted.
 
     The dist is a build artifact (gitignored) — ``cd frontend && npm run build`` — so this is CONDITIONAL:
-    a CI run or fresh clone that hasn't built the UI simply leaves /terminal unmounted and never breaks
-    boot. `html=True` serves index.html for the directory (the SPA has no client-side routing). The SPA
-    reads the engine only through the read-only GET /api/terminal/feed; the legacy dashboard at "/" is
-    untouched. Mount BEFORE the NiceGUI "/" catch-all so the more specific prefix wins."""
+    a CI run or fresh clone that hasn't built the UI simply leaves the SPA unmounted and never breaks boot.
+    `html=True` serves index.html for the directory (the SPA has no client-side routing). The SPA reads the
+    engine only through the read-only GET /api/terminal/feed. A mount at ``"/"`` is a catch-all, so it MUST
+    be registered AFTER the API routes and the relocated NiceGUI mount (see below) — Starlette resolves
+    routes in registration order, so the catch-all wins only for paths nothing more specific claimed."""
     if not dist_dir.is_dir():
         return False
-    fastapi_app.mount("/terminal", StaticFiles(directory=str(dist_dir), html=True), name="terminal")
+    name = "spa" + (mount_path.rstrip("/").replace("/", "_") or "_root")
+    fastapi_app.mount(mount_path, StaticFiles(directory=str(dist_dir), html=True), name=name)
     return True
 
 
-mount_spa(api.app, pathlib.Path(__file__).resolve().parent / "frontend" / "dist")
-ui.run_with(api.app, mount_path="/", storage_secret=_storage_secret)
+# UI mounting. When the SPA is built it is the DEFAULT UI at "/" and the legacy NiceGUI dashboard is
+# RETAINED (not deleted) under "/dashboard"; when it ISN'T built (fresh clone / CI before `npm run build`)
+# NiceGUI stays at "/" so the root UI still works and boot never breaks. `ui.run_with(mount_path=...)`
+# relocates the whole NiceGUI app (its `@ui.page('/')` becomes "<prefix>/", assets/websocket under the same
+# prefix). Registration order is load-bearing — Starlette resolves in order, so the "/" catch-all must be
+# LAST: API routes (from `import api`) → NiceGUI → SPA at "/terminal" (back-compat / favicon) → SPA at "/".
+_SPA_DIST = pathlib.Path(__file__).resolve().parent / "frontend" / "dist"
+_spa_built = _SPA_DIST.is_dir()
+ui.run_with(api.app, mount_path="/dashboard" if _spa_built else "/", storage_secret=_storage_secret)
+if _spa_built:
+    mount_spa(api.app, _SPA_DIST, "/terminal")
+    mount_spa(api.app, _SPA_DIST, "/")
 
 _LOOPBACK_HOSTS = ("127.0.0.1", "localhost", "::1")
 

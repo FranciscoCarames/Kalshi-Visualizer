@@ -11,7 +11,10 @@ inconsistencies** across a participant's related contracts (a deeper outcome mus
 prerequisite that contains it) and **dutch-book arbitrage** on MECE events, as buy-only opportunities
 (**Buy YES / Buy NO**), ranked Actionable / Review / Blocked with collapsed diagnostics and
 per-participant detail. A background scan refreshes a SQLite snapshot store under a process-wide rate
-throttle. NiceGUI is the **sole UI** — the legacy Streamlit `app.py` was retired.
+throttle. The **React "Kalshi Structured Scanner" SPA** (`frontend/`, built to `frontend/dist`) is the
+**default UI at `/`**; the legacy NiceGUI dashboard is **retained (not deleted) at `/dashboard`** as a
+read-only fallback. (The older Streamlit `app.py` was retired.) Both are read-only views of the same
+engine — the SPA reads it solely through `GET /api/terminal/feed` (+ thin `/api/terminal/*` parity views).
 
 - **Owner / GitHub:** FranciscoCarames (`franciscocarames1@gmail.com`). Repo `Kalshi-Visualizer`
   (private), default branch `main`.
@@ -81,14 +84,17 @@ MLB/NHL/motorsport lookalikes & props → `other`. Motorsport: `field_families`
 
 ```bash
 pip install -r requirements.txt          # runtime: requests, pandas, fastapi, nicegui, uvicorn
-python serve.py                          # FastAPI + NiceGUI dashboard (/) + REST API
+cd frontend && npm install && npm run build && cd ..   # build the default SPA UI → frontend/dist
+python serve.py                          # SPA (/) + NiceGUI dashboard (/dashboard) + REST API, one app
 pip install -r requirements-dev.txt      # adds pytest, pytest-asyncio, ruff
 pytest -q                                # pure layers + in-process engine/API + headless NiceGUI smoke
 ruff check .                             # lint
 ```
 
 Verify without a browser: `pytest -q`; `python -c "import serve, api, webui.dashboard"`; a `serve.py`
-boot — `GET /`, `/healthz`, `/metrics` → 200, `/readyz` → `ready`/`degraded`/`not_ready`. Headless
+boot — `GET /` (SPA), `/dashboard/` (NiceGUI), `/healthz`, `/metrics` → 200, `/readyz` →
+`ready`/`degraded`/`not_ready`. The SPA is served from `frontend/dist` only when built (gitignored
+artifact); an unbuilt tree leaves `/` unmounted but never breaks boot. Headless
 NiceGUI smoke is `tests/test_browser.py` (`nicegui.testing`, no selenium). Live Kalshi calls, `pip`, and
 `git push` need the Bash tool with the sandbox disabled (network is otherwise blocked).
 

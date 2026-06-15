@@ -106,8 +106,8 @@ function Surface({ id }: { id: "res" | "ops" }) {
     <div className="view on"><div className="gridfill">
       <div className="rp"><div className="h">RESEARCH LAB — read-only over derived data<span className="resb">P5 · FUTURE</span></div>
         <div className="c"><div className="note">Research surfaces are <b>P5, not a parity predecessor</b> — derived data only, never new scoring, never feed actionability.</div></div></div>
-      <div className="rp"><div className="h">CONDITIONAL PROBABILITY — raw + field de-vig<span className="resb">UNCALIBRATED</span></div>
-        <div className="c"><div className="note">Per-node P(deeper│reached), raw price-ratio AND field-implied de-vig, in the inspector's <b>Participant Detail</b> tab.</div></div></div>
+      <div className="rp"><div className="h">CONDITIONAL PROBABILITY — raw price ratio<span className="resb">UNCALIBRATED</span></div>
+        <div className="c"><div className="note">Per-node P(deeper│reached) as a raw price ratio on two bases — <b>display</b> and <b>firm</b> (bid/ask) — in the inspector's <b>Participant Detail</b> tab. Gross, top-of-book, NOT de-vigged, not fair value.</div></div></div>
       <MarketTelemetry />
     </div></div>
   );

@@ -1,7 +1,7 @@
 /* The blotter — a plain HTML <table>, ported from ui-mockup-final-spa.html blotter() (replaces AG-Grid so
- * the look is pixel-exact). Zones + bucket tabs + split + name cell + selection bar + column
- * chooser, all on the mockup's classes. Rows are engine-ranked + lens-sorted (no click-sort — matches the
- * mockup; AG-Grid's sort/virtualization are intentionally not reproduced at this gate). */
+ * the look is pixel-exact). Zones + bucket tabs + split + name cell + selection bar + column chooser, all
+ * on the mockup's classes. Rows arrive engine-ranked + lens-sorted; a click on a header applies a display-
+ * only sort override (reset when the section/catalog changes). AG-Grid's virtualization is not reproduced. */
 import { useEffect, useRef, useState } from "react";
 import { useTerminal } from "./context";
 import { ZONES, SUBTABS, type FeedRow } from "./feed";
