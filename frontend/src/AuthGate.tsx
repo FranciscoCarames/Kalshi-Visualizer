@@ -9,7 +9,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import {
   type AuthConfig, type AuthUser, type Device,
-  changePassword, getAuthConfig, getMe, listDevices, login, logout, revokeDevice,
+  changePassword, getAuthConfig, getMe, listDevices, login, logout, register, revokeDevice,
 } from "./auth";
 import { setUnauthorizedHandler } from "./http";
 
@@ -35,18 +35,26 @@ const btn: React.CSSProperties = {
 const label: React.CSSProperties = { fontSize: 11, color: "var(--tx2)", textTransform: "uppercase", letterSpacing: 0.5 };
 
 function LoginView({ cfg, onAuthed }: { cfg: AuthConfig; onAuthed: () => void }) {
+  const [mode, setMode] = useState<"login" | "register">("login");
   const [u, setU] = useState("");
   const [p, setP] = useState("");
+  const [confirm, setConfirm] = useState("");
   const [remember, setRemember] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const registering = mode === "register";
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (registering && p !== confirm) { setErr("Passwords do not match"); return; }
     setBusy(true); setErr(null);
-    const res = await login(u, p, remember);
+    const res = registering ? await register(u, p, remember) : await login(u, p, remember);
     setBusy(false);
-    if (res.ok) onAuthed(); else setErr(res.error ?? "Login failed");
+    if (res.ok) onAuthed(); else setErr(res.error ?? "Something went wrong");
+  }
+
+  function swap(next: "login" | "register") {
+    setMode(next); setErr(null); setP(""); setConfirm("");
   }
 
   return (
@@ -55,23 +63,46 @@ function LoginView({ cfg, onAuthed }: { cfg: AuthConfig; onAuthed: () => void })
         <div style={{ color: "var(--amber)", fontWeight: 700, letterSpacing: 1, marginBottom: 2 }}>
           KALSHI STRUCTURED SCANNER
         </div>
-        <div style={{ fontSize: 11, color: "var(--tx3)", marginBottom: 18 }}>sign in to continue</div>
+        <div style={{ fontSize: 11, color: "var(--tx3)", marginBottom: 18 }}>
+          {registering ? "create an account" : "sign in to continue"}
+        </div>
         <div style={label}>username</div>
         <input style={field} value={u} autoFocus autoComplete="username"
                onChange={(e) => setU(e.target.value)} />
         <div style={label}>password</div>
-        <input style={field} type="password" value={p} autoComplete="current-password"
+        <input style={field} type="password" value={p}
+               autoComplete={registering ? "new-password" : "current-password"}
                onChange={(e) => setP(e.target.value)} />
+        {registering ? (
+          <>
+            <div style={label}>confirm password</div>
+            <input style={field} type="password" value={confirm} autoComplete="new-password"
+                   onChange={(e) => setConfirm(e.target.value)} />
+          </>
+        ) : null}
         {cfg.remember_available ? (
           <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, margin: "2px 0 14px", color: "var(--tx2)", cursor: "pointer" }}>
             <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
-            stay signed in on this device
+            remember this PC
           </label>
         ) : <div style={{ height: 8 }} />}
         {err ? <div style={{ color: "var(--red)", fontSize: 12, marginBottom: 10 }}>{err}</div> : null}
         <button style={{ ...btn, opacity: busy ? 0.6 : 1 }} type="submit" disabled={busy}>
-          {busy ? "…" : "SIGN IN"}
+          {busy ? "…" : registering ? "CREATE ACCOUNT" : "SIGN IN"}
         </button>
+        {cfg.signup_enabled ? (
+          <div style={{ fontSize: 12, color: "var(--tx2)", marginTop: 14, textAlign: "center" }}>
+            {registering ? (
+              <>have an account?{" "}
+                <span style={{ color: "var(--cyan)", cursor: "pointer" }} onClick={() => swap("login")}>sign in</span>
+              </>
+            ) : (
+              <>no account?{" "}
+                <span style={{ color: "var(--cyan)", cursor: "pointer" }} onClick={() => swap("register")}>create one</span>
+              </>
+            )}
+          </div>
+        ) : null}
       </form>
     </div>
   );
@@ -167,7 +198,7 @@ function AccountBar({ user, onLogout }: { user: AuthUser; onLogout: () => void }
 
 export default function AuthGate({ children }: { children: React.ReactNode }) {
   const [phase, setPhase] = useState<Phase>("loading");
-  const [cfg, setCfg] = useState<AuthConfig>({ auth_enabled: false, remember_available: false });
+  const [cfg, setCfg] = useState<AuthConfig>({ auth_enabled: false, remember_available: false, signup_enabled: false });
   const [user, setUser] = useState<AuthUser | null>(null);
 
   const refresh = useCallback(async () => {

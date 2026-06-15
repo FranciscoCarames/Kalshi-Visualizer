@@ -8,6 +8,18 @@ Everything is **gated behind `AUTH_ENABLED`** (env). Unset → the app behaves e
 with the legacy optional `SCAN_TOKEN` gate on `POST /scan`). Set to `1` → the deny-by-default gate is
 live and a login is required.
 
+## Account creation
+
+Two paths:
+
+- **Admin-created (default, safest):** `python -m manage_users add <username>` (see Operations below).
+  Self-registration stays off, so only an admin makes accounts.
+- **Self-registration (opt-in):** set `AUTH_ALLOW_SIGNUP=1`. The login screen then shows a "create one"
+  link; `POST /auth/register` validates the username (3–32 chars, `[A-Za-z0-9._-]`) + password strength,
+  rejects a taken name, and logs the new user straight in. It is rate-limited by (IP, username) like
+  login. **Trade-off:** anyone who can reach the app can then create an account and view the data /
+  trigger scans (rate-limited) — only enable it on a trusted network.
+
 ## Threat model
 
 - **In scope:** a trusted home/LAN where you want to keep casual/other-device access out, and avoid
@@ -112,6 +124,7 @@ python serve.py
 | Var | Purpose |
 |---|---|
 | `AUTH_ENABLED=1` | turn the gate + login on (default off) |
+| `AUTH_ALLOW_SIGNUP=1` | allow self-registration (`POST /auth/register` + a "create account" link); default off (admin-created accounts only) |
 | `APP_SESSION_SECRET` | session cookie signing key (falls back to `NICEGUI_STORAGE_SECRET`, then a public dev fallback) |
 | `AUTH_DB_PATH` | auth store path (default `auth.db`) |
 | `APP_ADMIN_USER` / `APP_ADMIN_PASSWORD` | one-shot first-admin seed |

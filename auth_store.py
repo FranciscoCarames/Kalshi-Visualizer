@@ -22,6 +22,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import logging
+import re
 import secrets
 import sqlite3
 
@@ -96,6 +97,18 @@ def validate_password_strength(password: str) -> str | None:
         return f"password must be at most {config.AUTH_MAX_CRED_LEN} characters"
     if password.lower() in _WEAK_PASSWORDS:
         return "password is too common; choose something less guessable"
+    return None
+
+
+# Usernames are constrained to a safe, unambiguous charset (used by self-registration; the admin CLI is
+# trusted and only length/blank-checked). Keeps display/URLs/logs clean and avoids confusable whitespace.
+_USERNAME_RE = re.compile(r"^[A-Za-z0-9._-]{3,32}$")
+
+
+def validate_username(username: str) -> str | None:
+    """Return an error string for an invalid username, else None."""
+    if not _USERNAME_RE.match(username or ""):
+        return "username must be 3-32 characters: letters, digits, '.', '_' or '-'"
     return None
 
 

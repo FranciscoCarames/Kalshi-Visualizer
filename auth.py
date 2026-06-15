@@ -119,6 +119,13 @@ def remember_available() -> bool:
     return tls_on() or os.getenv("AUTH_REMEMBER_ENABLED") == "1"
 
 
+def signup_enabled() -> bool:
+    """Self-registration is OPT-IN (``AUTH_ALLOW_SIGNUP=1``). Off by default so the safe model is
+    admin-creates-accounts; on, anyone who can reach the app can register (rate-limited). The deployment
+    chooses."""
+    return os.getenv("AUTH_ALLOW_SIGNUP") == "1"
+
+
 # --- token auth (machine / scripts) --------------------------------------------------
 def _valid_api_token(request: Request) -> bool:
     """A machine token reaches gated routes without a browser session. Honors ``APP_API_TOKEN`` and, for
@@ -294,11 +301,51 @@ def login(body: LoginBody, request: Request, response: Response) -> dict:
     if auth_store.needs_rehash(user["pw_hash"]):
         auth_store.set_password(body.username, body.password, now=now, clear_force=False, db_path=db)
     _set_session_cookie(response, user["id"], now)
-    if body.remember and remember_available():
-        selector, validator = auth_store.issue_device_token(user["id"], now=now, db_path=db)
-        _set_remember_cookie(response, selector, validator)
+    _maybe_remember(response, user["id"], body.remember, now=now, db=db)
     logger.info("Login ok for %r", user["username"])
     return {"ok": True, "user": _public_user(user)}
+
+
+def _maybe_remember(response: Response, uid: int, remember: bool, *, now: float, db: str) -> None:
+    """Issue a "remember this device" token + cookie when the user asked AND it is permitted (TLS-gated /
+    AUTH_REMEMBER_ENABLED). Shared by login and register."""
+    if remember and remember_available():
+        selector, validator = auth_store.issue_device_token(uid, now=now, db_path=db)
+        _set_remember_cookie(response, selector, validator)
+
+
+class RegisterBody(BaseModel):
+    username: str
+    password: str
+    remember: bool = False
+
+
+@router.post("/register")
+def register(body: RegisterBody, request: Request, response: Response) -> dict:
+    """Self-service account creation (opt-in via AUTH_ALLOW_SIGNUP). Validates the username + password,
+    rejects a taken username, then logs the new user straight in (sets the session cookie). Rate-limited by
+    (ip, username) like login to bound mass-registration."""
+    if not signup_enabled():
+        raise HTTPException(status_code=403, detail="Self-registration is disabled")
+    now = time.time()
+    ip = request.client.host if request.client else "?"
+    if not _login_allowed(ip, body.username, now=now):
+        raise HTTPException(status_code=429, detail="Too many attempts; slow down.")
+    name_err = auth_store.validate_username(body.username)
+    if name_err:
+        raise HTTPException(status_code=400, detail=name_err)
+    pw_err = auth_store.validate_password_strength(body.password)
+    if pw_err:
+        raise HTTPException(status_code=400, detail=pw_err)
+    db = auth_db_path()
+    try:
+        uid = auth_store.create_user(body.username, body.password, now=now, db_path=db)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    _set_session_cookie(response, uid, now)
+    _maybe_remember(response, uid, body.remember, now=now, db=db)
+    logger.info("Registered new user %r", body.username)
+    return {"ok": True, "user": {"username": body.username.strip(), "force_pw_change": False}}
 
 
 @router.post("/logout")
@@ -354,9 +401,10 @@ def me(request: Request) -> dict:
 
 @router.get("/config")
 def auth_config() -> dict:
-    """Public auth config the login view needs (no secrets): whether auth is on and whether the
-    remember-me checkbox should be offered."""
-    return {"auth_enabled": auth_enabled(), "remember_available": remember_available()}
+    """Public auth config the login view needs (no secrets): whether auth is on, whether the remember-me
+    checkbox should be offered, and whether self-registration is open."""
+    return {"auth_enabled": auth_enabled(), "remember_available": remember_available(),
+            "signup_enabled": signup_enabled()}
 
 
 @router.get("/devices")

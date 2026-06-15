@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { getAuthConfig, getMe, login } from "./auth";
+import { getAuthConfig, getMe, login, register } from "./auth";
 
 function mockFetch(status: number, body: unknown) {
   vi.stubGlobal("fetch", vi.fn(async () => ({
@@ -26,7 +26,7 @@ describe("getMe", () => {
 describe("getAuthConfig", () => {
   it("falls back to auth-off when the endpoint errors", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => { throw new Error("network"); }));
-    expect(await getAuthConfig()).toEqual({ auth_enabled: false, remember_available: false });
+    expect(await getAuthConfig()).toEqual({ auth_enabled: false, remember_available: false, signup_enabled: false });
   });
 });
 
@@ -48,5 +48,20 @@ describe("login", () => {
     const r = await login("alice", "pw", false);
     expect(r.ok).toBe(false);
     expect(r.error).toMatch(/too many/i);
+  });
+});
+
+describe("register", () => {
+  it("returns ok + user on success", async () => {
+    mockFetch(200, { ok: true, user: { username: "newbie", force_pw_change: false } });
+    const r = await register("newbie", "a-strong-passphrase", false);
+    expect(r.ok).toBe(true);
+    expect(r.user?.username).toBe("newbie");
+  });
+  it("surfaces the server's detail on a duplicate (409)", async () => {
+    mockFetch(409, { detail: "username 'alice' already exists" });
+    const r = await register("alice", "a-strong-passphrase", false);
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/already exists/);
   });
 });

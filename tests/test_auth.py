@@ -153,6 +153,38 @@ def test_remember_me_transparent_relogin_and_rotation(env):
     assert third.get("/api/terminal/feed").status_code == 401
 
 
+def test_register_disabled_by_default(env):
+    c, _ = env
+    r = c.post("/auth/register", json={"username": "newbie", "password": "a-strong-passphrase"})
+    assert r.status_code == 403
+    assert c.get("/auth/config").json()["signup_enabled"] is False
+
+
+def test_register_enabled_auto_logs_in(env, monkeypatch):
+    c, _ = env
+    monkeypatch.setenv("AUTH_ALLOW_SIGNUP", "1")
+    assert c.get("/auth/config").json()["signup_enabled"] is True
+    r = c.post("/auth/register", json={"username": "newbie", "password": "a-strong-passphrase"})
+    assert r.status_code == 200 and r.json()["user"]["username"] == "newbie"
+    # Auto-logged-in: the session cookie is set, so a gated route + /me work immediately.
+    assert c.get("/auth/me").json()["user"]["username"] == "newbie"
+    assert c.get("/opportunities").status_code == 200
+    # And the new account can log in fresh.
+    fresh = TestClient(api.app)
+    assert _login(fresh, username="newbie", password="a-strong-passphrase").status_code == 200
+
+
+def test_register_rejects_duplicate_weak_and_bad_username(env, monkeypatch):
+    c, _ = env
+    monkeypatch.setenv("AUTH_ALLOW_SIGNUP", "1")
+    assert c.post("/auth/register",
+                  json={"username": "alice", "password": "a-strong-passphrase"}).status_code == 409
+    assert c.post("/auth/register",
+                  json={"username": "bob", "password": "short"}).status_code == 400
+    assert c.post("/auth/register",
+                  json={"username": "b b", "password": "a-strong-passphrase"}).status_code == 400
+
+
 def test_self_service_password_change(env):
     c, db = env
     _login(c)

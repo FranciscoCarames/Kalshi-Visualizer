@@ -3,19 +3,21 @@
  * and must NOT trigger the global login-redirect handler. */
 
 export interface AuthUser { username: string; force_pw_change: boolean; }
-export interface AuthConfig { auth_enabled: boolean; remember_available: boolean; }
+export interface AuthConfig { auth_enabled: boolean; remember_available: boolean; signup_enabled: boolean; }
 export interface Device {
   id: number; label: string | null; created_ts: number; expires_ts: number;
   last_used_ts: number | null; revoked_ts: number | null;
 }
 
+const AUTH_OFF: AuthConfig = { auth_enabled: false, remember_available: false, signup_enabled: false };
+
 export async function getAuthConfig(): Promise<AuthConfig> {
   try {
     const r = await fetch("/auth/config", { headers: { Accept: "application/json" } });
-    if (!r.ok) return { auth_enabled: false, remember_available: false };
+    if (!r.ok) return AUTH_OFF;
     return r.json();
   } catch {
-    return { auth_enabled: false, remember_available: false };
+    return AUTH_OFF;
   }
 }
 
@@ -34,6 +36,18 @@ export async function login(username: string, password: string, remember: boolea
   });
   if (r.ok) return { ok: true, user: (await r.json()).user as AuthUser };
   let error = r.status === 429 ? "Too many attempts — wait a minute" : "Invalid username or password";
+  try { const j = await r.json(); if (j?.detail) error = String(j.detail); } catch { /* keep default */ }
+  return { ok: false, error };
+}
+
+export async function register(username: string, password: string, remember: boolean):
+  Promise<{ ok: boolean; user?: AuthUser; error?: string }> {
+  const r = await fetch("/auth/register", {
+    method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ username, password, remember }),
+  });
+  if (r.ok) return { ok: true, user: (await r.json()).user as AuthUser };
+  let error = r.status === 429 ? "Too many attempts — wait a minute" : "Could not create account";
   try { const j = await r.json(); if (j?.detail) error = String(j.detail); } catch { /* keep default */ }
   return { ok: false, error };
 }
