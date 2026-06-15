@@ -13,7 +13,7 @@ import { diffSnapshot, edgeMap, type Change } from "./diff";
 import { type FilterState, type BandState, emptyFilters, emptyBand, applyBand, filteredCount, passAll, passMembership, tournamentOptions } from "./filters";
 
 export interface ExtraPanel { title: string; body: ReactNode; }
-export interface Settings { longShort: boolean; showIds: boolean; tz: string; autoRefresh: string; }
+export interface Settings { longShort: boolean; showIds: boolean; resolutionCriteria: boolean; tz: string; autoRefresh: string; }
 const AUTO_MS: Record<string, number> = { "10s": 10000, "30s": 30000, off: 0 };
 
 interface TerminalState {
@@ -89,7 +89,7 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
   const [extra, setExtra] = useState<ExtraPanel | null>(null);
   const [panelsMenuOpen, setPanelsMenuOpen] = useState(false);
   const [scanText, setScanText] = useState<string | null>(null);
-  const [settings, setSettings] = useState<Settings>({ longShort: false, showIds: false, tz: "local", autoRefresh: "10s" });
+  const [settings, setSettings] = useState<Settings>({ longShort: false, showIds: false, resolutionCriteria: true, tz: "local", autoRefresh: "10s" });
   const [band, setBand] = useState<BandState>(emptyBand);
   const [split, setSplit] = useState("all");            // bounded-loss All / Vertical / Calendar
   const scanning = useRef(false);

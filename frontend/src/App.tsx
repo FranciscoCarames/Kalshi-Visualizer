@@ -114,6 +114,7 @@ function SettingsMenu({ close }: { close: () => void }) {
       <label><input type="checkbox" checked={t.showNet} onChange={(e) => t.setShowNet(e.target.checked)} />Show net of fees (est.)</label>
       <label><input type="checkbox" checked={big} onChange={(e) => { setBig(e.target.checked); document.body.classList.toggle("big", e.target.checked); }} />Larger text</label>
       <label><input type="checkbox" checked={s.showIds} onChange={(e) => t.setSetting("showIds", e.target.checked)} />Show IDs &amp; codes</label>
+      <label><input type="checkbox" checked={s.resolutionCriteria} onChange={(e) => t.setSetting("resolutionCriteria", e.target.checked)} />Resolution criteria</label>
       <label><input type="checkbox" checked={s.longShort} onChange={(e) => t.setSetting("longShort", e.target.checked)} />Long / short wording</label>
       <div className="mi">Time zone
         <select value={s.tz} onChange={(e) => t.setSetting("tz", e.target.value)}>
@@ -189,6 +190,7 @@ function SecBar() {
       <label>Kind <select value={b.cheapKind} onChange={(e) => t.setBand({ cheapKind: e.target.value })}>
         <option value="all">all</option><option value="band">band</option><option value="outright">outright</option></select></label>
       {numI(b.maxLoss, "maxLoss", "Max loss ¢")}
+      {numI(b.maxBuyNo, "maxBuyNo", "Max Buy-NO ¢")}
       <label className="chk"><input type="checkbox" checked={b.groupByLadder}
         onChange={(e) => t.setBand({ groupByLadder: e.target.checked })} />Group by ladder</label></div>
   );
@@ -200,6 +202,9 @@ function Shell() {
   const m = t.meta;
   const [setOpen, setSetOpen] = useState(false);
   const alrt = t.count("exec", "act");   // ALRT badge = executable-now opportunities (the alert-worthy set)
+  const newAct = t.opps.filter((o) => o.section === "act" && t.changeOf(o.id) === "new").length;
+  const [bannerSnap, setBannerSnap] = useState<number | null>(null);   // dismissed-for snapshot id
+  const showBanner = newAct > 0 && bannerSnap !== (m?.snapshot_id ?? null);
   const FK: [string, string, "opp" | "res" | "ops" | "alrt" | ""][] = [["OPP", "y", "opp"], ["RES", "g", "res"], ["OPS", "c", "ops"], ["ALRT", "r", "alrt"]];
   return (
     <>
@@ -264,6 +269,12 @@ function Shell() {
         <span className="sp">{t.rows.length.toLocaleString()} shown</span><span className="clr" onClick={t.clearFilters}>clear</span>
       </div>
       <SecBar />
+      {showBanner ? (
+        <div className="newbanner" onClick={() => { t.setSurface("opp"); t.goSection("exec", "act"); }}>
+          ▲ <b>{newAct}</b> newly actionable this scan
+          <span className="x" onClick={(e) => { e.stopPropagation(); setBannerSnap(m?.snapshot_id ?? null); }}>✕</span>
+        </div>
+      ) : null}
       <div className="tiles">
         {TILES.map(([label, z, s, accent]) => (
           <div key={label} className={"tile" + (t.zone === z && t.section === s ? " on" : "")} onClick={() => { t.setSurface("opp"); t.goSection(z, s); }}>

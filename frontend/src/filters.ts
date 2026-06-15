@@ -65,10 +65,11 @@ export interface BandState {
   maxLoss: number; minRatio: number; maxOverpay: number;
   minChildOutright: number; maxSpreadOverChild: number;
   cheapKind: string;            // "all" | "band" | "outright"
+  maxBuyNo: number;             // cheap-NO: cap the Buy-NO anchor cost (¢); 0 = off
   groupByLadder: boolean;
 }
 export const emptyBand = (): BandState =>
-  ({ maxLoss: 0, minRatio: 0, maxOverpay: 0, minChildOutright: 0, maxSpreadOverChild: 0, cheapKind: "all", groupByLadder: false });
+  ({ maxLoss: 0, minRatio: 0, maxOverpay: 0, minChildOutright: 0, maxSpreadOverChild: 0, cheapKind: "all", maxBuyNo: 0, groupByLadder: false });
 
 const fnum = (x: unknown): number => (typeof x === "number" && !Number.isNaN(x) ? x : NaN);
 const overMax = (x: unknown, lim: number) => lim > 0 && fnum(x) > lim;        // present & exceeds the cap
@@ -82,7 +83,7 @@ export function applyBand(rows: FeedRow[], section: string, b: BandState): FeedR
   }
   if (section === "nearmiss") return rows.filter((o) => !overMax(o.overpay, b.maxOverpay));
   if (section === "cheapno") {
-    let r = rows.filter((o) => !overMax(o.max_loss, b.maxLoss));
+    let r = rows.filter((o) => !overMax(o.max_loss, b.maxLoss) && !overMax(o.buy_no, b.maxBuyNo));
     if (b.cheapKind !== "all") r = r.filter((o) => String(o.kind || "").toLowerCase().includes(b.cheapKind));
     return r;
   }

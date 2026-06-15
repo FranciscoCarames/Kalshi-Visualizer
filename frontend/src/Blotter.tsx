@@ -80,6 +80,14 @@ export default function Blotter() {
     t.setColOrder(order);
   };
   const mids = new Set(t.multi.map((m) => m.id));
+  // Truthful empty-state message (mirrors the old dashboard's distinct states).
+  const emptyMsg = (): string => {
+    if (t.scanText) return "Scanning — new data shortly…";
+    if (!t.meta || t.meta.snapshot_id == null) return "No scan yet — hit ▷ SCAN (or open the dashboard).";
+    if ((t.meta.n_total ?? 0) === 0) return "No opportunities in the latest snapshot.";
+    if (t.inScope(t.zone, t.section) === 0) return "No opportunities in this section for the current filters.";
+    return "All rows hidden by the section / band filters — relax them to see in-scope rows.";
+  };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
@@ -126,7 +134,7 @@ export default function Blotter() {
       ) : null}
       <div className="pbody">
         {t.err ? <div className="empty red">feed error: {t.err}</div>
-          : !t.rows.length ? <div className="empty">No rows in this section for the current filters.</div>
+          : !rows.length ? <div className="empty">{emptyMsg()}</div>
           : (
           <table>
             <thead><tr>{cols.map((c) => (

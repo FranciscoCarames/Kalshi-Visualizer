@@ -107,7 +107,7 @@ function Tbl({ rows, cols }: { rows: Record<string, unknown>[]; cols: [string, s
   );
 }
 
-export function Detail({ row, showIds }: { row: FeedRow | null; showIds?: boolean }) {
+export function Detail({ row, showIds, showRules = true }: { row: FeedRow | null; showIds?: boolean; showRules?: boolean }) {
   const key = detailKey(row);
   const [bundle, setBundle] = useState<DetailBundle | null>(null);
   const [ladder, setLadder] = useState<LadderData | null>(null);
@@ -188,7 +188,7 @@ export function Detail({ row, showIds }: { row: FeedRow | null; showIds?: boolea
               <Tbl rows={bundle.contracts} cols={[["contract", "Contract"], ["stage", "Stage"], ["display_pct", "Disp %"], ["bid_pct", "Bid %"], ["ask_pct", "Ask %"], ["quote", "Quote"], ["status", "Status"]]} /></>
           ) : null}
 
-          {bundle.rules.length ? (
+          {showRules && bundle.rules.length ? (
             <><div className="sect">RESOLUTION CRITERIA (SETTLEMENT RULES)</div>
               {bundle.rules.map((r, i) => (
                 <div className="note" key={i}><b className="white">{r.contract}</b> — {r.text}</div>
