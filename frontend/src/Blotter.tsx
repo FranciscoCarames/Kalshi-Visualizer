@@ -18,15 +18,27 @@ function Spark({ pts }: { pts?: number[] }) {
     <path d={d} fill="none" stroke={cssv("--amber")} strokeWidth={1.2} opacity={0.65} /></svg>;
 }
 
-function Cell({ row, col, chg }: { row: FeedRow; col: Col; chg?: "new" | "up" | "down" | null }) {
+function severityOf(o: FeedRow): { cls: string; txt: string } | null {
+  if (o.blk) return { cls: "sev-blk", txt: "Blocker" };
+  if (o.rule) return { cls: "sev-rev", txt: "Review" };
+  if (o.settlement_caveat || o.caveat) return { cls: "sev-adv", txt: "Advisory" };
+  return null;
+}
+
+function Cell({ row, col, chg }: { row: FeedRow; col: Col; chg?: "new" | "up" | "down" | "returned" | null }) {
   const v = row[col.f];
   if (col.fmt === "name") {
     return <td>
-      {chg === "new" ? <span className="nw">NEW</span> : null}
+      {chg === "new" ? <span className="nw">NEW</span> : chg === "returned" ? <span className="amber" title="returned to this set">↶ </span> : null}
       {chg === "up" ? <span className="green" title="edge up since last scan">▲ </span>
         : chg === "down" ? <span className="red" title="edge down since last scan">▼ </span> : null}
       <span className="nm">{String(row.name ?? "")}</span> <span className="sub">{String(row.sub ?? row.detail ?? "")}</span><Spark pts={row.spark} />
     </td>;
+  }
+  if (col.f === "caveat") {
+    const sev = severityOf(row);
+    const txt = fmtVal(v, "text");
+    return <td>{sev ? <span className={"sev " + sev.cls} title={txt === "—" ? sev.txt : txt}>{sev.txt}</span> : null} {txt === "—" ? "" : txt}</td>;
   }
   if (col.fmt === "qh") return <td className={qhClass(v)}>{fmtVal(v, col.fmt)}</td>;
   if (col.fmt === "trad") {
@@ -96,6 +108,13 @@ export default function Blotter() {
           </div>
         ) : null}
       </div>
+      {t.section === "bounded" ? (
+        <div className="subtabs">
+          {[["all", "All"], ["vertical", "Vertical"], ["calendar", "Calendar"]].map(([s, label]) => (
+            <div key={s} className={"subtab" + (t.split === s ? " on" : "")} onClick={() => t.setSplit(s)}>{label}</div>
+          ))}
+        </div>
+      ) : null}
       {t.multi.length > 1 ? (
         <div className="selbar">▣ <b className="white">{t.multi.length}</b> selected ·
           <button className="tbtn" onClick={t.openLadders}>Open ladders</button>
@@ -132,7 +151,9 @@ export default function Blotter() {
         )}
       </div>
       <div className="showing">
-        Showing <b className="white">{rows.length.toLocaleString()}</b> · {t.visible.length} cols
+        Showing <b className="white">{rows.length.toLocaleString()}</b> of {t.inScope(t.zone, t.section).toLocaleString()} in scope
+        {(() => { const hid = t.inScope(t.zone, t.section) - rows.length; return hid > 0 ? <> ({hid.toLocaleString()} hidden by settings)</> : null; })()}
+        · {t.visible.length} cols
         {sort ? <> · sort <b className="amber">{sort.field} {sort.dir === "asc" ? "▲" : "▼"}</b></>
               : t.lens ? <> · lens <b className="amber">{t.lens}</b></> : <> · engine order</>}
       </div>

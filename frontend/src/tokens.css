@@ -131,6 +131,8 @@ tbody tr.fl td{animation:flash 1.8s ease-out 1}
 .ty{color:var(--green)}.tn{color:var(--tx3)}.tr2{color:var(--amber)}
 .qh-tight{color:var(--green)}.qh-ok{color:var(--cyan)}.qh-wide{color:var(--amber)}.qh-bad{color:var(--red)}
 .showing{padding:3px 8px;font-size:9px;color:var(--tx3);border-top:1px solid var(--line);background:var(--bg1);flex:0 0 auto}
+.sev{font-size:7.5px;font-weight:800;padding:0 3px;border-radius:2px;letter-spacing:.3px;vertical-align:middle}
+.sev-blk{background:rgba(255,69,58,.2);color:var(--red)}.sev-rev{background:rgba(255,176,0,.18);color:var(--amber)}.sev-adv{background:rgba(122,106,58,.25);color:var(--tx2)}
 tbody tr.msel{background:#12130a}
 tbody tr.msel td:first-child{box-shadow:inset 3px 0 0 var(--cyan)}
 tbody tr.sel.msel td:first-child{box-shadow:inset 3px 0 0 var(--amber)}

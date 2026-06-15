@@ -31,6 +31,13 @@ describe("diffSnapshot (change-signal)", () => {
     expect(change.has("a")).toBe(false);               // a lost its edge → NaN compares false, no signal
     expect(change.has("b")).toBe(false);               // b prev was NaN → no signal
   });
+  it("classifies a previously-seen id as RETURNED, an unseen id as NEW", () => {
+    const prev = edgeMap([row("a", 5)]);
+    const seen = new Set(["a", "b"]);                  // b was seen earlier this session, c never
+    const { change } = diffSnapshot(prev, [row("a", 5), row("b", 2), row("c", 1)], false, seen);
+    expect(change.get("b")).toBe("returned");
+    expect(change.get("c")).toBe("new");
+  });
   it("disappeared rows are not flashed (only current rows are considered)", () => {
     const prev = edgeMap([row("a", 5), row("gone", 9)]);
     const { change, flash } = diffSnapshot(prev, [row("a", 5)], false);

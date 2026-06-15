@@ -10,7 +10,7 @@ import { encodeUrl, decodeUrl } from "./url";
 import { CompareView, OverlapView, LaddersView } from "./panels";
 import { postScan, getScanStatus } from "./scan";
 import { diffSnapshot, edgeMap, type Change } from "./diff";
-import { type FilterState, type BandState, emptyFilters, emptyBand, applyBand, filteredCount, passAll, tournamentOptions } from "./filters";
+import { type FilterState, type BandState, emptyFilters, emptyBand, applyBand, filteredCount, passAll, passMembership, tournamentOptions } from "./filters";
 
 export interface ExtraPanel { title: string; body: ReactNode; }
 export interface Settings { longShort: boolean; showIds: boolean; tz: string; autoRefresh: string; }
@@ -23,13 +23,15 @@ interface TerminalState {
   theme: "amber" | "hc"; paletteOpen: boolean; multi: FeedRow[];
   surface: "opp" | "res" | "ops" | "alrt"; showNet: boolean; itab: "card" | "detail" | "formula";
   extra: ExtraPanel | null; panelsMenuOpen: boolean; scanText: string | null; settings: Settings;
-  band: BandState;
-  changeOf: (id: string) => "new" | "up" | "down" | null;   // change-signal vs the previous snapshot
+  band: BandState; split: string;
+  changeOf: (id: string) => "new" | "up" | "down" | "returned" | null;   // change-signal vs the prev snapshot
   flashIds: Set<string>;                                    // rows to one-shot green-flash this snapshot
   count: (zone: string, section: string) => number;
+  inScope: (zone: string, section: string) => number;       // membership-only count (thresholds not applied)
   runScan: (force: boolean) => void;
   setSetting: <K extends keyof Settings>(k: K, v: Settings[K]) => void;
   setBand: (patch: Partial<BandState>) => void;
+  setSplit: (v: string) => void;
   goSection: (z: string, s: string) => void;
   setSection: (s: string) => void;
   toggleLens: (l: string) => void;
@@ -89,6 +91,7 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
   const [scanText, setScanText] = useState<string | null>(null);
   const [settings, setSettings] = useState<Settings>({ longShort: false, showIds: false, tz: "local", autoRefresh: "10s" });
   const [band, setBand] = useState<BandState>(emptyBand);
+  const [split, setSplit] = useState("all");            // bounded-loss All / Vertical / Calendar
   const scanning = useRef(false);
   const [, tick] = useState(0);
   const layoutRef = useRef<((preset: string) => void) | null>(null);
@@ -144,15 +147,17 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
   // edge, so a missing/null edge never produces a false up/down). Display-only; never feeds ranking.
   const prevEdgeRef = useRef<Map<string, number>>(new Map());
   const prevSnapRef = useRef<number | null>(null);
+  const seenEverRef = useRef<Set<string>>(new Set());     // ids seen any time this session → "returned" vs "new"
   const [change, setChange] = useState<Map<string, Change>>(new Map());
   const [flashIds, setFlashIds] = useState<Set<string>>(new Set());
   useEffect(() => {
     const sid = meta?.snapshot_id ?? null;
     if (sid == null || sid === prevSnapRef.current) return;          // no snapshot / unchanged → keep flags
-    const { change: chg, flash } = diffSnapshot(prevEdgeRef.current, opps, prevSnapRef.current === null);
+    const { change: chg, flash } = diffSnapshot(prevEdgeRef.current, opps, prevSnapRef.current === null, seenEverRef.current);
     setChange(chg); setFlashIds(flash);
     prevEdgeRef.current = edgeMap(opps);
     prevSnapRef.current = sid;
+    for (const o of opps) seenEverRef.current.add(o.id);            // remember after diffing
   }, [meta?.snapshot_id, opps]);
 
   const sports = useMemo(() => Object.keys(meta?.sports ?? {}).sort(), [meta]);
@@ -194,16 +199,22 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
     if (q !== window.location.search) window.history.replaceState(null, "", q || window.location.pathname);
   }, [surface, zone, section, lens, filters]);
   const rows = useMemo(() => {
-    const r = applyBand(rowsFor(opps, zone, section).filter((o) => passAll(o, filters)), section, band);
+    let r = applyBand(rowsFor(opps, zone, section).filter((o) => passAll(o, filters)), section, band);
+    // Bounded-loss Vertical/Calendar split (resolution_mode; missing → "calendar", the engine default).
+    if (section === "bounded" && split !== "all") {
+      r = r.filter((o) => (String(o.resolution_mode || "calendar")) === split);
+    }
     const sorted = applyLens(r, lens);
     // Cheap-NO "group by ladder" is a final display grouping (after the lens), by tournament/ladder.
     if (section === "cheapno" && band.groupByLadder) {
       return [...sorted].sort((a, b) => String(a.sub || "").localeCompare(String(b.sub || "")));
     }
     return sorted;
-  }, [opps, zone, section, filters, lens, band]);
+  }, [opps, zone, section, filters, lens, band, split]);
   // Tile/tab counts over the filtered set (Actionable membership-only — see filters.ts).
   const count = (z: string, s: string) => filteredCount(opps, z, s, filters);
+  // Membership-only count (thresholds NOT applied) — the "in scope" denominator for "X shown / Y in scope".
+  const inScope = (z: string, s: string) => rowsFor(opps, z, s).filter((o) => passMembership(o, filters)).length;
   const patch = (p: Partial<FilterState>) => setFilters((f) => ({ ...f, ...p }));
   const toggleSet = (key: "sports" | "tours", v: string) => setFilters((f) => {
     const next = new Set(f[key]); next.has(v) ? next.delete(v) : next.add(v); return { ...f, [key]: next };
@@ -212,9 +223,9 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
   const value: TerminalState = {
     meta, opps, err, sports, zone, section, lens, filters, part: filters.part, tourOptions,
     sel, colKey, visible, rows, theme, paletteOpen, multi, surface, showNet, itab,
-    extra, panelsMenuOpen, scanText, settings, band, count, runScan, setSetting,
+    extra, panelsMenuOpen, scanText, settings, band, split, count, inScope, runScan, setSetting,
     changeOf: (id) => change.get(id) ?? null, flashIds,
-    setBand: (patch) => setBand((b) => ({ ...b, ...patch })),
+    setBand: (patch) => setBand((b) => ({ ...b, ...patch })), setSplit,
     goSection: (z, s) => { setZone(z); setSectionRaw(s); },
     setSection: setSectionRaw,
     toggleLens: (l) => setLens((cur) => (cur === l ? "" : l)),
