@@ -52,6 +52,35 @@ poll + derived), `App.tsx` (chrome + surfaces), `Workspace.tsx` + `panels.tsx` (
 (per-bucket catalogs), `lens.ts`, `Inspector.tsx` (card/detail/formulas), `Ladder.tsx`, `SidePanels.tsx`,
 `Surfaces.tsx` (RES/OPS), `Palette.tsx` + `Keys.tsx`, `csv.ts`, `tokens.css`.
 
+## Full-parity + mockup-exact effort (branch `feat/terminal-spa-parity`, off `feat/terminal-spa`)
+
+Goal: zero gaps vs the old NiceGUI dashboard AND match `ui-mockup-final-spa.html` exactly. Plan +
+audit-amendments: `~/.claude/plans/delightful-hopping-aurora.md`. PRIME INVARIANT preserved throughout
+(read-only view; new endpoints reuse engine/viewmodel/viz/export; display-only numbers never rank).
+
+**Done + verified (committed):**
+- **Stage 1 — backend** (`56033af`): 5 read-only endpoints — `GET /api/terminal/detail|payoff|ladder|
+  diagnostics`, `POST /api/terminal/export` (ZIP from posted opportunity_ids). `detail`/`ladder` REQUIRE
+  `tournament` (the `(player_key, tournament)` grouping — no false cross-tournament ladder). feed.py adds
+  display-only `sport_key`/`player_key`/`tournament` routing keys. `tests/test_terminal_endpoints.py`
+  (8 tests: tournament-scoping, 400/404/409, export parity, read-only). Full suite 961 green, ruff clean.
+- **Stage 2a — filters** (`2c435d5`): mockup filter bar — Sport + Tournament MULTI-selects (cascading),
+  Min-size, Tradable-only, ⬇CSV, clear. New pure `filters.ts` two-pass (membership narrows all; thresholds
+  spare Actionable + Diagnostics) drives rows AND counts → Actionable count is membership-only (audit §4,
+  verified live: min-size=100k drops other buckets, Actionable holds).
+- **Stage 2e — participant detail + charts** (`3889b16`): real data-driven drill-down (chain / derived
+  indicators / spreads / expected-vs-found / contracts / rules / raw-fields) from `/detail`, plus inline-SVG
+  `LadderChart` + `PayoffChart` (no charting lib). Every derived number caveated uncalibrated/gross/not-fair-
+  value. Verified live on a soccer ladder row, 0 console errors.
+
+**Remaining for full parity (not yet built):** scan button + ⚡force + `.scanbar` + `/scan/status` wiring;
+⚙ settings menu (long/short wording, show-IDs gate, timezone, auto-refresh, larger-text); per-section
+`SecBar` band controls (bounded-loss / near-miss / cheap-no); blotter name-cell sparkline; OPS deep-
+diagnostics grids from `/api/terminal/diagnostics`; durable-backlog panel (`/backlog/events`); ZIP export
+button wired to `POST /api/terminal/export`; palette Surface/Zone/Split/Toggle/Help groups; cosmetic
+clock `KALSHI<POLL>` + footer/keyboard-hints + `--orange/--bid/--ask/--fs` tokens. See the plan file for
+the file-by-file map.
+
 ## Remaining work (pick up here)
 
 ### Phase D — retire the old NiceGUI `/terminal`
