@@ -47,3 +47,8 @@ export interface Diagnostics {
   checks_truncated: number; contracts_truncated: number;
 }
 export const loadDiagnostics = () => getJson<Diagnostics>("/api/terminal/diagnostics");
+
+export interface BacklogItem { opportunity_id?: string; sport?: string; name?: string; became_ts?: number; left_ts?: number; duration_s?: number; reason_left?: string; last_edge_c?: number; }
+export interface BacklogInterval { category?: string; sport?: string; name?: string; first_seen_ts?: number; left_ts?: number; duration_s?: number; peak_roi_pct?: number; last_status?: string; is_open?: boolean; }
+export const loadBacklog = () => getJson<BacklogItem[]>("/backlog");
+export const loadBacklogEvents = () => getJson<BacklogInterval[]>("/backlog/events?days=7");

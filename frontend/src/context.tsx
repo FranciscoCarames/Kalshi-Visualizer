@@ -19,7 +19,7 @@ interface TerminalState {
   zone: string; section: string; lens: string; filters: FilterState; part: string; tourOptions: string[];
   sel: FeedRow | null; colKey: string; visible: string[]; rows: FeedRow[];
   theme: "amber" | "hc"; paletteOpen: boolean; multi: FeedRow[];
-  surface: "opp" | "res" | "ops"; showNet: boolean; itab: "card" | "detail" | "formula";
+  surface: "opp" | "res" | "ops" | "alrt"; showNet: boolean; itab: "card" | "detail" | "formula";
   extra: ExtraPanel | null; panelsMenuOpen: boolean; scanText: string | null; settings: Settings;
   band: { maxLoss: number; minRatio: number; maxOverpay: number };
   count: (zone: string, section: string) => number;
@@ -53,7 +53,7 @@ interface TerminalState {
   exportSelected: () => void;
   exportView: () => void;
   exportZip: () => void;
-  setSurface: (s: "opp" | "res" | "ops") => void;
+  setSurface: (s: "opp" | "res" | "ops" | "alrt") => void;
   setShowNet: (v: boolean) => void;
   setItab: (t: "card" | "detail" | "formula") => void;
 }
@@ -77,7 +77,7 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<"amber" | "hc">("amber");
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [multi, setMulti] = useState<FeedRow[]>([]);
-  const [surface, setSurface] = useState<"opp" | "res" | "ops">("opp");
+  const [surface, setSurface] = useState<"opp" | "res" | "ops" | "alrt">("opp");
   const [showNet, setShowNet] = useState(false);
   const [itab, setItab] = useState<"card" | "detail" | "formula">("card");
   const [extra, setExtra] = useState<ExtraPanel | null>(null);

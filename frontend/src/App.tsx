@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { TerminalProvider, useTerminal } from "./context";
 import { TILES } from "./feed";
 import { LENSES } from "./lens";
-import { loadDiagnostics, type Diagnostics } from "./detail";
+import { loadDiagnostics, loadBacklog, loadBacklogEvents, type Diagnostics, type BacklogItem, type BacklogInterval } from "./detail";
 import Workspace from "./Workspace";
 import Keys from "./Keys";
 import Palette from "./Palette";
@@ -102,6 +102,45 @@ function SettingsMenu({ close }: { close: () => void }) {
   );
 }
 
+function fmtTs(ts: number | undefined, tz: string): string {
+  if (!ts) return "—";
+  const d = new Date(ts * 1000);
+  try {
+    if (tz === "utc") return d.toLocaleString("en-GB", { timeZone: "UTC", hour12: false }).replace(",", "");
+    if (tz && tz !== "local") return d.toLocaleString("en-GB", { timeZone: tz, hour12: false }).replace(",", "");
+  } catch { /* fall through to local */ }
+  return d.toLocaleString();
+}
+const mins = (s?: number) => (s == null ? "—" : Math.round(s / 60) + "m");
+
+function BacklogSurface() {
+  const t = useTerminal();
+  const tz = t.settings.tz;
+  const [recent, setRecent] = useState<BacklogItem[] | null>(null);
+  const [durable, setDurable] = useState<BacklogInterval[] | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  useEffect(() => {
+    let a = true;
+    loadBacklog().then((x) => a && setRecent(x)).catch((e) => a && setErr(String(e)));
+    loadBacklogEvents().then((x) => a && setDurable(x)).catch(() => {});
+    return () => { a = false; };
+  }, []);
+  return (
+    <div className="view on"><div className="gridfill">
+      <div className="rp"><div className="h">RECENTLY ACTIONABLE — last hour</div><div className="c">
+        {err ? <div className="note red">{err}</div> : !recent ? <div className="note">loading…</div> : recent.length === 0 ? <div className="note">none in the window</div> :
+          <table><thead><tr><th>Participant</th><th>Sport</th><th className="r">Became</th><th className="r">Left</th><th className="r">Lasted</th><th>Why left</th></tr></thead>
+            <tbody>{recent.map((b, i) => <tr key={i}><td className="nm">{b.name}</td><td>{b.sport}</td><td className="r">{fmtTs(b.became_ts, tz)}</td><td className="r">{fmtTs(b.left_ts, tz)}</td><td className="r">{mins(b.duration_s)}</td><td className="dim">{b.reason_left || "—"}</td></tr>)}</tbody></table>}
+      </div></div>
+      <div className="rp"><div className="h">DURABLE BACKLOG — 7 days<span className="resb">v4</span></div><div className="c">
+        {!durable ? <div className="note">loading…</div> : durable.length === 0 ? <div className="note">no intervals in the window</div> :
+          <table><thead><tr><th>Category</th><th>Participant</th><th>Sport</th><th className="r">First seen</th><th className="r">Lasted</th><th className="r">Peak ROI</th><th>Last status</th></tr></thead>
+            <tbody>{durable.map((b, i) => <tr key={i}><td>{b.category}</td><td className="nm">{b.name}</td><td>{b.sport}</td><td className="r">{fmtTs(b.first_seen_ts, tz)}</td><td className="r">{b.is_open ? "open" : mins(b.duration_s)}</td><td className="r">{b.peak_roi_pct != null ? b.peak_roi_pct.toFixed(1) + "%" : "—"}</td><td className="dim">{b.last_status || "—"}</td></tr>)}</tbody></table>}
+      </div></div>
+    </div></div>
+  );
+}
+
 function SecBar() {
   const t = useTerminal();
   const b = t.band;
@@ -127,7 +166,7 @@ function Shell() {
   const m = t.meta;
   const [setOpen, setSetOpen] = useState(false);
   const alrt = t.count("exec", "act");   // ALRT badge = executable-now opportunities (the alert-worthy set)
-  const FK: [string, string, "opp" | "res" | "ops" | ""][] = [["OPP", "y", "opp"], ["RES", "g", "res"], ["OPS", "c", "ops"], ["ALRT", "r", ""]];
+  const FK: [string, string, "opp" | "res" | "ops" | "alrt" | ""][] = [["OPP", "y", "opp"], ["RES", "g", "res"], ["OPS", "c", "ops"], ["ALRT", "r", "alrt"]];
   return (
     <>
       <div className="cmdline">
@@ -204,6 +243,7 @@ function Shell() {
       <div className="view on" style={{ display: t.surface === "opp" ? "flex" : "none" }}><Workspace /></div>
       {t.surface === "res" ? <Surface id="res" /> : null}
       {t.surface === "ops" ? <Surface id="ops" /> : null}
+      {t.surface === "alrt" ? <BacklogSurface /> : null}
 
       <div className="foot">
         <div><b className="amber">TERMINAL PRO</b> · real viewmodel rows · full column catalog · bounded-loss + cheap-NO splits · read-only over the live snapshot</div>
