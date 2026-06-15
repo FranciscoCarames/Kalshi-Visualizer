@@ -9,7 +9,7 @@
  * Because passThreshold auto-passes Actionable + Diagnostics, `passAll` is the single filter for both the
  * shown rows AND the tile/tab counts — the Actionable count is therefore membership-only, the invariant the
  * plan's audit (§4) calls for. Kept pure (no React) so it is unit-testable in isolation. */
-import { rowsFor, type FeedRow } from "./feed";
+import { rowsFor, type BandDefaults, type FeedRow } from "./feed";
 
 export interface FilterState {
   sports: Set<string>;        // membership — empty = all
@@ -70,6 +70,29 @@ export interface BandState {
 }
 export const emptyBand = (): BandState =>
   ({ maxLoss: 0, minRatio: 0, maxOverpay: 0, minChildOutright: 0, maxSpreadOverChild: 0, cheapKind: "all", maxBuyNo: 0, groupByLadder: false });
+
+/* Fallback band defaults if meta.defaults is absent — these literals match config.py
+ * (RISK_BUDGET_DEFAULT_MAX_LOSS_C=5, NEAR_MISS_DEFAULT_OVER_C=3, NO_STRUCTURE_DEFAULT_MAX_LOSS_C=15,
+ * NO_STRUCTURE_DEFAULT_MAX_BUY_NO_C=15). meta.defaults is the source of truth when present. */
+const FALLBACK_DEFAULTS: BandDefaults =
+  { bounded_max_loss_c: 5, nearmiss_overpay_c: 3, cheapno_max_loss_c: 15, cheapno_max_buy_no_c: 15 };
+
+/** The old-dashboard default band for a section (per-section so bounded max-loss 5¢ and cheap-NO max-loss
+ * 15¢ never collide). Off (0) sections keep emptyBand values. Source = meta.defaults, fallback literals. */
+export function defaultBand(section: string, d?: BandDefaults): BandState {
+  const dd = d ?? FALLBACK_DEFAULTS;
+  const b = emptyBand();
+  if (section === "bounded") return { ...b, maxLoss: dd.bounded_max_loss_c };
+  if (section === "nearmiss") return { ...b, maxOverpay: dd.nearmiss_overpay_c };
+  if (section === "cheapno") return { ...b, maxLoss: dd.cheapno_max_loss_c, maxBuyNo: dd.cheapno_max_buy_no_c };
+  return b;
+}
+
+/** True when `b` equals the section's default band (used to show "defaults applied" vs "edited" in the UI). */
+export function isDefaultBand(section: string, b: BandState, d?: BandDefaults): boolean {
+  const def = defaultBand(section, d);
+  return (Object.keys(def) as (keyof BandState)[]).every((k) => b[k] === def[k]);
+}
 
 const fnum = (x: unknown): number => (typeof x === "number" && !Number.isNaN(x) ? x : NaN);
 const overMax = (x: unknown, lim: number) => lim > 0 && fnum(x) > lim;        // present & exceeds the cap

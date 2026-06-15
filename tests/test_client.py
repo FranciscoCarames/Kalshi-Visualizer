@@ -158,3 +158,33 @@ def test_golf_discover_short_circuits_to_four_tickers(monkeypatch):
     monkeypatch.setattr(kc, "get_paginated", boom)
     assert kc.discover_series_for_sport(sports.GOLF) == [
         "KXPGATOP10", "KXPGATOP20", "KXPGATOP5", "KXPGATOUR"]
+
+
+# --- get_orderbook: fixed-point dollar strings -> integer cents (NEVER float) ---------
+def test_get_orderbook_parses_fp_dollars_to_cents(monkeypatch):
+    monkeypatch.setattr(kc, "_get", lambda *_a: {"orderbook_fp": {
+        "yes_dollars": [["0.6000", 100], ["0.6100", 40]],
+        "no_dollars": [["0.3700", 80]]}})
+    ob = kc.get_orderbook("KXNBA-27-BOS", depth=10)
+    assert ob == {"ticker": "KXNBA-27-BOS", "yes": [[60, 100], [61, 40]], "no": [[37, 80]]}
+    # cents are exact ints (Decimal-parsed), never floats
+    assert all(isinstance(p, int) and isinstance(s, int) for p, s in ob["yes"])
+
+
+def test_get_orderbook_empty_and_missing_arrays(monkeypatch):
+    monkeypatch.setattr(kc, "_get", lambda *_a: {"orderbook_fp": {"yes_dollars": []}})
+    assert kc.get_orderbook("TK") == {"ticker": "TK", "yes": [], "no": []}
+    monkeypatch.setattr(kc, "_get", lambda *_a: {})        # no orderbook_fp at all (closed market)
+    assert kc.get_orderbook("TK") == {"ticker": "TK", "yes": [], "no": []}
+
+
+def test_get_orderbook_skips_malformed_rungs(monkeypatch):
+    monkeypatch.setattr(kc, "_get", lambda *_a: {"orderbook_fp": {"yes_dollars": [
+        ["0.5000", 10],          # good
+        ["notanumber", 5],       # bad price -> skipped (to_cents returns None)
+        ["0.4000", "x"],         # bad size -> skipped
+        ["0.3000", 0],           # non-positive size -> skipped
+        [42],                    # wrong shape -> skipped
+    ], "no_dollars": None}})     # None side -> []
+    ob = kc.get_orderbook("TK")
+    assert ob["yes"] == [[50, 10]] and ob["no"] == []

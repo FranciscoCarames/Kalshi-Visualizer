@@ -71,6 +71,7 @@ select.in,input.in{background:var(--bg1);border:1px solid var(--line2);color:var
 .secbar:empty{display:none}.secbar .tag{color:var(--amber);font-weight:700;letter-spacing:.5px}
 .secbar input{background:var(--bg2);border:1px solid var(--line2);color:var(--white);font-family:var(--mono);font-size:9.5px;width:52px;padding:1px 4px}
 .secbar select{background:var(--bg2);border:1px solid var(--line2);color:var(--white);font-family:var(--mono);font-size:9.5px}
+.secbar .bandhint{margin-left:auto;color:var(--tx3);font-size:9px}.secbar .bandhint a{color:var(--amber);cursor:pointer;text-decoration:underline}
 .ms{position:relative;display:inline-block}
 .ms .ms-btn{background:var(--bg1);border:1px solid var(--line2);color:var(--white);font-size:10px;padding:2px 7px;cursor:pointer;font-family:var(--mono)}
 
@@ -203,6 +204,3 @@ tbody tr.sel.msel td:first-child{box-shadow:inset 3px 0 0 var(--amber)}
 .pal .pitem .pi-tag{margin-left:auto;font-size:8px;color:var(--tx3);border:1px solid var(--line2);padding:0 4px}
 .pal .pfoot{padding:4px 12px;border-top:1px solid var(--line2);font-size:9px;color:var(--tx3);display:flex;gap:12px}
 
-/* inline-SVG charts in the inspector detail tab (already mockup-styled) */
-.chart{width:100%;height:auto;display:block;margin:4px 0 6px;background:var(--bg1);border:1px solid var(--line)}
-.chart .cl{fill:var(--tx3);font-size:7px;font-family:var(--mono)}

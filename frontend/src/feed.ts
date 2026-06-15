@@ -23,12 +23,18 @@ export interface FeedRow {
   [k: string]: unknown;
 }
 
+export interface BandDefaults {
+  bounded_max_loss_c: number; nearmiss_overpay_c: number;
+  cheapno_max_loss_c: number; cheapno_max_buy_no_c: number;
+}
+
 export interface FeedMeta {
   snapshot_id: number | null; fetched_at: string | null; n_total: number;
   contracts?: number; checks?: number; requests?: number; scanned?: number; failed?: number; retry?: number;
   totals: Record<string, number>; sports: Record<string, number>;
   resolution_counts: Record<string, number>; scope_counts: Record<string, number>;
   series_errors?: unknown;
+  defaults?: BandDefaults;       // old-dashboard band-control defaults (single-sourced from config)
 }
 
 export interface Feed { meta: FeedMeta; opps: FeedRow[]; }

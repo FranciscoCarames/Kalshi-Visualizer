@@ -6,37 +6,71 @@ dashboard is untouched at **`/`**. This doc is the pick-up point for a fresh ses
 
 ---
 
-## ⏭️ NEXT SESSION — START HERE (5 inspector/links/ladder/defaults fixes)
+## ✅ 5 inspector/links/ladder/defaults fixes — DONE (2026-06-15, uncommitted, awaiting owner test+merge)
 
-Branch **`feat/terminal-spa-parity`** (full parity DONE + pushed to origin, HEAD `032c9e1`). The full
-mockup-exact port + NiceGUI parity is complete; these are 5 owner-requested polish/correctness fixes.
-**Full plan:** `~/.claude/plans/delightful-hopping-aurora.md`. Order: 1 → 2 → 5 (quick FE) → 3 → 4.
+Branch **`feat/terminal-spa-parity`**. All 5 owner-requested polish/correctness fixes are implemented +
+verified in the working tree (NOT committed — owner merges manually). Plan (audit-hardened):
+`~/.claude/plans/show-me-the-full-eager-wreath.md`.
 
-1. **Charts too big** (Participant-Detail) — `tokens.css .chart` is `width:100%`. Cap `max-width:300px;
-   max-height:160px`, shrink viewBoxes (payoff `W240 H96`, ladder `rowH14`, cap ~8 layers).
-2. **Conditional probs hard to find** — they're in the **PARTICIPANT DETAIL** tab, ladder rows only
-   (`Inspector.tsx` `Detail`, `hasCond`). Add a Trade-Card pointer + plain-English explainer.
-3. **Per-participant + per-side deep links** — CONFIRMED format (owner examples):
-   `<event_url>?op_market_ticker=<FULL_TICKER>&op_order_side=<yes|no>`. All parts already in each feed leg
-   (`u`=event url, `tk`=`KXNBA-27-BOS`, `side`=`buy_yes/buy_no`). Build in `webui/feed.py` `_trim_legs`
-   (`legs[].u`); keep `data.kalshi_url` (event url) intact for link_audit. Engine is BUY-ONLY → side is
-   always the buy's yes/no (no sell). + a feed test.
-4. **Depth ladder — DROP synthetic, show ACTUAL Kalshi order book** (owner: "I want the actual depth").
-   Snapshot has only top-of-book → fetch live. CONFIRMED endpoint:
-   `GET /trade-api/v2/markets/{ticker}/orderbook?depth=N` → `{orderbook_fp:{yes_dollars:[[price$,size]…],
-   no_dollars:[[price$,size]…]}}` (resting bids/side; dollar strings → cents). Add
-   `kalshi_client.get_orderbook()` + read-only `GET /api/terminal/orderbook?ticker=` (throttled/rate-
-   limited). Rewrite `Ladder.tsx`: delete the fabricated `book()`; render YES bids from `yes_dollars`,
-   YES asks = `100 − no_price` (invert `no_dollars`), sizes verbatim; re-fetch ~5s while a row is selected;
-   footer "LIVE · refreshed Ns ago"; empty book → honest "no resting orders".
-5. **Band defaults ≠ old UI (bug)** — SPA SecBar defaults all to 0 (off); old UI uses
-   `config.RISK_BUDGET_DEFAULT_MAX_LOSS_C=5`, `NEAR_MISS_DEFAULT_OVER_C=3`,
-   `NO_STRUCTURE_DEFAULT_MAX_LOSS_C=15`, `NO_STRUCTURE_DEFAULT_MAX_BUY_NO_C=15`. Expose via
-   `feed.meta.defaults`; seed `filters.emptyBand()` from it; add a defaults hint + "reset band". The
-   SecBar (thin bar under the filter row, shown for Bounded-loss/Near-miss/Cheap-NO) is where they live.
+1. **Charts too big** — SUPERSEDED by the table redesign below; `Charts.tsx` SVGs were first shrunk, then
+   replaced entirely with numeric tables (owner preferred numbers over bars).
+2. **Conditional probs discoverable** — `Inspector.tsx` Trade-Card now shows a one-line conditional pointer
+   for containment rows; Participant-Detail leads with a plain-English explainer + full row labels.
+3. **Per-participant + per-side deep links** — `webui/feed.py` `_leg_deep_link` builds
+   `<event_url>?op_market_ticker=<TK>&op_order_side=<yes|no>` into each `legs[].u`; `data.kalshi_url` (event
+   url) left intact for link_audit. Engine is BUY-ONLY → side is the buy's yes/no.
+4. **Real Kalshi order book** (synthetic dropped) — `kalshi_client.get_orderbook()` (Decimal cents via
+   `data.to_cents`, tolerates malformed rungs) + read-only `GET /api/terminal/orderbook` (depth clamp
+   1..100, light ticker validation, ~2s per-ticker TTL cache, sliding-window limiter, honest-degrade on
+   4xx/5xx/empty). `Ladder.tsx` rewritten: deleted `book()`; YES bids verbatim, YES asks = `100 − no_price`
+   (best ask from the HIGHEST no-bid), ~5s refetch while selected + AbortController, "LIVE · refreshed Ns
+   ago", empty → "no resting orders". Live-verified unauthenticated against Kalshi.
+5. **Band defaults = old UI** — `feed.meta.defaults` (config 5/3/15/15); `filters.ts` `defaultBand(section,
+   meta.defaults)` seeds PER-SECTION (bounded max-loss 5¢ vs cheap-NO 15¢ collide → per-section band map in
+   `context.tsx`); SecBar (`App.tsx`) shows a defaults hint + "reset band".
 
-Verify: `tsc`+`vitest`+`npm run build`; `pytest -q`+`ruff`; Playwright `/terminal` (compact charts; leg ↗
-opens the exact market+side; ladder shows real bid/ask sizes; bounded-loss opens with max-loss 5¢).
+Verified: `pytest -q` 981 green, `vitest` 31 green, `tsc` + `npm run build` clean, `ruff` clean (only the
+untracked `_export_mockup_data.py` is dirty), serve.py boot smoke, live Kalshi orderbook probe. New/updated
+tests: `tests/test_feed.py`, `tests/test_client.py`, `tests/test_terminal_endpoints.py`,
+`frontend/src/filters.test.ts`, `frontend/src/ladder.test.ts`. Remaining owner step: visual `/terminal`
+check + merge.
+
+## ✅ Follow-on polish — DONE same session (2026-06-15)
+
+- **Participant-Detail charts → numeric tables** (`Charts.tsx`): owner disliked the inline-SVG bars (too
+  small, imprecise, preferred numbers). Both rebuilt as `.condtbl` tables, no SVG. `LadderChart` = Layer /
+  Disp % / Δ-vs-parent / step verdict (inversion → red "↑ INVERTED"); `PayoffChart` = Scenario / Role /
+  Payout / signed P&L (green/red), `Cost N¢ · per contract · gross` header. Dead `.chart` CSS removed.
+  Mockup used to choose the design: `chart-redesign-mockup.html` (untracked scratch, safe to delete).
+- **Count-badge fixes** (`context.tsx`, `Blotter.tsx`): (1) tab/tile counts for the speculative band
+  sections (bounded/nearmiss/cheapno) now apply the SecBar band, so the BOUNDED-LOSS badge tracks the
+  Max-loss control (Actionable stays membership-only — invariant preserved). (2) new `zoneCount(z)` = Σ of
+  the zone's section counts, so the SPECULATIVE badge is the true total instead of mirroring the first
+  (bounded) sub-tab. `filteredCount` import dropped (now inlined band-aware).
+
+## ⏭️ PENDING for next session — terminology rename (agreed, NOT yet applied)
+
+Owner approved a desk-standard-but-honest label pass (display text only — keep internal keys/buckets/CSS
+`data-tab`/tests/engine fields/the `ripeness` lens name). Final agreed set (audit-reconciled):
+- **Sections:** `BOUNDED-LOSS`→**BOUNDED RISK**, `CHEAP-NO`→**CHEAP NO FADES**, spec tagline→
+  `bounded-risk · speculative · can lose money`; RES/OPS `BOUNDED-LOSS MIX`→**BOUNDED RISK MIX**,
+  `CHEAP-NO SCOPE`→**CHEAP NO SCOPE**. Keep **NEAR-MISS**.
+- **Columns (`columns.ts`):** `Participant / market`→**Participant / Market**, `Max units`→**Max contracts**,
+  `Upside:risk`→**Reward / risk**, `Quote health`→**Quote quality**, `Market gap (pp)`→**Parent − child gap
+  (pp)**, `Success given reached %`→**P(win │ parent) %**, `Deeper given reached %`→**P(deeper │ parent) %**,
+  `Parent ÷ max loss`→**Parent coverage / ¢ risk**, `Kind`→**Structure**, `Caveat`→**Risk note**. (Keep
+  `Max gross profit`.)
+- **Inspector:** `BUY-ONLY PLAN`→**BUY PLAN** (NOT "Order plan" — read-only posture), `ECONOMICS (PER UNIT)`→
+  **P&L — PER CONTRACT**, `Worst case`/`Best case`→**Max loss**/**Max gross profit**, `Max units`→**Max
+  contracts**, `Ripeness (parent÷loss)`→**Parent coverage / ¢ risk**, `WHY RANKED HERE`→**RANKING
+  RATIONALE**, `EVIDENCEPACK`→**EVIDENCE / CHECKS**, `Opp id`→**Opportunity ID**, `PER-UNIT PAYOFF BY
+  SCENARIO`→**SCENARIO PAYOFF — PER CONTRACT**, Formulas heading→**PARENT COVERAGE / ¢ RISK**.
+- **Charts tables:** payoff `· per unit ·`→`· per contract ·`, cols `Settles`/`Profit`→**Role**/**P&L**
+  (keep `Payout` distinct); ladder `Disp %`/`Δ parent`/`Step`→**Implied %**/**Δ vs parent**/**Check**.
+- **3 deviations from the audit (intentional):** keep **P&L** (not "Payoff") for the economics block AND
+  the payoff table's profit column (a `Payout`+`Payoff` pair would collide); harmonize BOTH conditional
+  columns to **parent** (audit was internally inconsistent). Rejected: `Market`, `ITM per ¢ risk`,
+  `ORDER PLAN`, `Notes`, `NO FADES`-without-"cheap".
 
 ---
 

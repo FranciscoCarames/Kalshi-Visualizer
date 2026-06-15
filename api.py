@@ -14,6 +14,7 @@ import hmac
 import io
 import logging
 import os
+import threading
 import time
 from typing import Any, Callable
 
@@ -388,6 +389,17 @@ class ExportRequest(BaseModel):
     snapshot_id: int | None = None
 
 
+class TerminalOrderbook(BaseModel):
+    """Live resting order book for one market (DISPLAY-ONLY depth view — gross / top-of-book limits still
+    apply; NOT net executable capacity). yes/no are [[price_c, size], …] ascending (best bid last)."""
+    ticker: str
+    yes: list[list[int]] = []
+    no: list[list[int]] = []
+    ok: bool = True
+    error: str | None = None
+    age_s: float = 0.0
+
+
 class TerminalTelemetry(BaseModel):
     """Snapshot-context market telemetry (DISPLAY-ONLY — NOT an opportunity signal): most-liquid sports +
     contracts, tightest books, most-traded, and a one-line 'most volatile now' message."""
@@ -403,6 +415,16 @@ class TerminalTelemetry(BaseModel):
 # recent frames) — cached here so repeated SPA fetches / surface switches don't re-aggregate every time.
 _telemetry_cache: dict[str, Any] = {"snapshot_id": object(), "data": None}
 _TELEMETRY_VOLATILITY_WINDOW_S = 3600.0
+
+# Live order-book fetch (the SPA depth ladder): a short per-ticker TTL cache coalesces the ~5s frontend
+# poll across tabs/sessions (the Kalshi throttle is process-wide, so caching bounds upstream load), and a
+# sliding window caps total orderbook fetches/sec. Depth is clamped 1..100. All process-local.
+_ORDERBOOK_DEFAULT_DEPTH = 10
+_ORDERBOOK_MAX_DEPTH = 100
+_ORDERBOOK_CACHE_TTL_S = 2.0
+_orderbook_cache: dict[str, tuple[float, dict[str, Any]]] = {}      # ticker -> (fetched_monotonic, parsed)
+_orderbook_cache_lock = threading.Lock()
+_orderbook_limiter = ratelimit.SlidingWindow(config.ORDERBOOK_HTTP_MAX_PER_WINDOW, config.ORDERBOOK_HTTP_WINDOW_SECONDS)
 
 
 def _participant_rows(sport: str, player_key: str, tournament: str, db_path: str | None) -> list[dict[str, Any]]:
@@ -493,6 +515,36 @@ def get_terminal_telemetry(db_path: str | None = Depends(db_path_dep)) -> Termin
                             tightest=rows("tightest"), most_traded=rows("most_traded"), volatility=vol)
     _telemetry_cache["snapshot_id"], _telemetry_cache["data"] = sid, out
     return out
+
+
+@app.get("/api/terminal/orderbook", response_model=TerminalOrderbook)
+def get_terminal_orderbook(ticker: str, depth: int = _ORDERBOOK_DEFAULT_DEPTH) -> TerminalOrderbook:
+    """LIVE resting order book for one market — the SPA depth ladder (replaces the old synthetic book).
+    Read-only public market data (no auth). Validates the ticker, clamps depth to 1..100, coalesces the
+    frontend's ~5s poll via a short per-ticker TTL cache, and is sliding-window rate-limited. Degrades
+    HONESTLY: an empty/closed book → empty sides; any upstream failure → ok=False + error (never a 500,
+    never fabricated rungs). Display-only depth — never feeds classification/ranking."""
+    tk = (ticker or "").strip().upper()
+    if not (3 <= len(tk) <= 64) or not all(c.isalnum() or c in "-_." for c in tk):
+        raise HTTPException(status_code=400, detail="invalid ticker")
+    depth = max(1, min(_ORDERBOOK_MAX_DEPTH, int(depth)))
+
+    now = time.monotonic()
+    with _orderbook_cache_lock:                                  # serve a fresh cache hit (coalesce polls)
+        hit = _orderbook_cache.get(tk)
+        if hit and (now - hit[0]) < _ORDERBOOK_CACHE_TTL_S:
+            ob = hit[1]
+            return TerminalOrderbook(ticker=tk, yes=ob["yes"], no=ob["no"], age_s=round(now - hit[0], 2))
+
+    if not _orderbook_limiter.allow(time.time()):
+        return TerminalOrderbook(ticker=tk, ok=False, error="rate limited — try again shortly")
+    try:
+        ob = kalshi_client.get_orderbook(tk, depth=depth)
+    except Exception as exc:                                     # network/4xx/5xx/closed → honest degrade
+        return TerminalOrderbook(ticker=tk, ok=False, error=f"order book unavailable: {exc}")
+    with _orderbook_cache_lock:
+        _orderbook_cache[tk] = (now, ob)
+    return TerminalOrderbook(ticker=tk, yes=ob["yes"], no=ob["no"], age_s=0.0)
 
 
 @app.post("/api/terminal/export")

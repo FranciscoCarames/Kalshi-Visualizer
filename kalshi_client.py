@@ -20,6 +20,7 @@ from typing import Any
 import requests
 from requests.adapters import HTTPAdapter
 
+import data
 import sports
 from config import (
     BACKOFF_BASE,
@@ -182,6 +183,45 @@ def get_events(series_ticker: str, status: str = "open") -> list[dict[str, Any]]
         },
         list_key="events",
     )
+
+
+def _parse_book_side(levels: Any) -> list[list[int]]:
+    """Parse one side of the ``orderbook_fp`` book ([[price$, size], …]) into ``[[price_c, size], …]`` —
+    fixed-point dollar STRINGS → exact integer cents via ``data.to_cents`` (NEVER float). A malformed rung
+    (bad price, non-numeric size, non-positive size) is SKIPPED, not raised; a non-list yields []. Kalshi
+    returns levels ascending (best bid last); order is preserved verbatim for the caller to interpret."""
+    out: list[list[int]] = []
+    if not isinstance(levels, list):
+        return out
+    for lvl in levels:
+        if not isinstance(lvl, (list, tuple)) or len(lvl) < 2:
+            continue
+        price_c = data.to_cents(lvl[0])
+        try:
+            size = int(round(float(lvl[1])))
+        except (TypeError, ValueError):
+            continue
+        if price_c is None or size <= 0:
+            continue
+        out.append([price_c, size])
+    return out
+
+
+def get_orderbook(ticker: str, depth: int = 10) -> dict[str, Any]:
+    """Fetch one market's resting order book (read-only market data; no auth required, like /events).
+
+    Endpoint: ``GET /markets/{ticker}/orderbook?depth=N`` → ``{"orderbook_fp": {"yes_dollars":
+    [[price$,size]…], "no_dollars": [[price$,size]…]}}`` — resting BIDS on each side, prices as fixed-point
+    dollar strings, ascending (best bid last). Returns ``{"ticker", "yes": [[price_c,size]…],
+    "no": [[price_c,size]…]}`` with prices in integer cents. An empty/closed book yields empty sides
+    (honest empty — never fabricated). Network/4xx/5xx surface as ``KalshiError`` (the caller degrades)."""
+    payload = _get(f"/markets/{ticker}/orderbook", {"depth": depth})
+    ob = (payload or {}).get("orderbook_fp") or {}
+    return {
+        "ticker": ticker,
+        "yes": _parse_book_side(ob.get("yes_dollars")),
+        "no": _parse_book_side(ob.get("no_dollars")),
+    }
 
 
 def discover_series_for_sport(cfg: sports.SportConfig) -> list[str]:

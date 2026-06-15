@@ -185,3 +185,73 @@ def test_endpoints_are_read_only(client):
     c.get("/api/terminal/diagnostics")
     c.post("/api/terminal/export", json={"opportunity_ids": ["a"]})
     assert store.latest_snapshot_id(db_path=db) == before                          # no new snapshot written
+
+
+# --- live order book (GET /api/terminal/orderbook) ----------------------------------------------------
+@pytest.fixture(autouse=False)
+def _reset_orderbook():
+    api._orderbook_cache.clear()
+    api._orderbook_limiter.reset()
+    yield
+    api._orderbook_cache.clear()
+    api._orderbook_limiter.reset()
+
+
+def test_orderbook_returns_parsed_book(client, monkeypatch, _reset_orderbook):
+    c, _ = client
+    seen = {}
+    def fake(ticker, depth=10):
+        seen["ticker"], seen["depth"] = ticker, depth
+        return {"ticker": ticker, "yes": [[60, 100]], "no": [[37, 80]]}
+    monkeypatch.setattr(api.kalshi_client, "get_orderbook", fake)
+    r = c.get("/api/terminal/orderbook", params={"ticker": "KXNBA-27-BOS"})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["ok"] is True and body["yes"] == [[60, 100]] and body["no"] == [[37, 80]]
+    assert seen["ticker"] == "KXNBA-27-BOS"
+
+
+def test_orderbook_clamps_depth(client, monkeypatch, _reset_orderbook):
+    c, _ = client
+    seen = {}
+    monkeypatch.setattr(api.kalshi_client, "get_orderbook",
+                        lambda ticker, depth=10: seen.update(depth=depth) or {"ticker": ticker, "yes": [], "no": []})
+    c.get("/api/terminal/orderbook", params={"ticker": "TKAAA", "depth": 9999})
+    assert seen["depth"] == api._ORDERBOOK_MAX_DEPTH                  # clamped to 100, never unbounded
+
+
+def test_orderbook_rejects_bad_ticker(client, _reset_orderbook):
+    c, _ = client
+    assert c.get("/api/terminal/orderbook", params={"ticker": "a b!"}).status_code == 400
+    assert c.get("/api/terminal/orderbook", params={"ticker": "x"}).status_code == 400   # too short
+
+
+def test_orderbook_degrades_honestly_on_upstream_error(client, monkeypatch, _reset_orderbook):
+    c, _ = client
+    def boom(*_a, **_k):
+        raise api.kalshi_client.KalshiError("HTTP 503")
+    monkeypatch.setattr(api.kalshi_client, "get_orderbook", boom)
+    r = c.get("/api/terminal/orderbook", params={"ticker": "TKAAA"})
+    assert r.status_code == 200                                      # never a 500 to the SPA
+    assert r.json()["ok"] is False and "unavailable" in r.json()["error"]
+
+
+def test_orderbook_caches_within_ttl(client, monkeypatch, _reset_orderbook):
+    c, _ = client
+    calls = {"n": 0}
+    def fake(ticker, depth=10):
+        calls["n"] += 1
+        return {"ticker": ticker, "yes": [[60, 1]], "no": []}
+    monkeypatch.setattr(api.kalshi_client, "get_orderbook", fake)
+    c.get("/api/terminal/orderbook", params={"ticker": "TKAAA"})
+    c.get("/api/terminal/orderbook", params={"ticker": "TKAAA"})
+    assert calls["n"] == 1                                           # second poll served from the TTL cache
+
+
+def test_orderbook_rate_limited(client, monkeypatch, _reset_orderbook):
+    c, _ = client
+    monkeypatch.setattr(api.kalshi_client, "get_orderbook",
+                        lambda *a, **k: {"ticker": "T", "yes": [], "no": []})
+    monkeypatch.setattr(api._orderbook_limiter, "allow", lambda _now: False)
+    r = c.get("/api/terminal/orderbook", params={"ticker": "TKAAA"})
+    assert r.status_code == 200 and r.json()["ok"] is False and "rate limited" in r.json()["error"]

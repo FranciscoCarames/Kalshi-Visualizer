@@ -23,6 +23,8 @@ export default function Inspector({ row, lens, snapshotId, showNet, longShort }:
   const isSpec = row.zone === "spec";
   const w = rankWhy(row);
   const legs = row.legs ?? [];
+  const condPct = row.cond_child ?? row.cond;
+  const hasCond = condPct != null;
   return (
     <div className="des">
       <div className="dtitle">
@@ -68,6 +70,13 @@ export default function Inspector({ row, lens, snapshotId, showNet, longShort }:
               <span className="l">Est. net edge</span><span className="v">{cents(row.net_edge)}</span></>
           : null}
       </div>
+
+      {hasCond ? (
+        <div className="note" style={{ marginTop: 6 }}>
+          <b className="violet">Conditional (market-implied):</b> P(deeper │ reached) ≈ <span className="violet">{n1(condPct as number)}%</span>
+          {" "}— the raw price ratio. See the <b>Participant Detail</b> tab for the full table. <span className="uncal">uncalibrated · not fair value</span>
+        </div>
+      ) : null}
 
       <div className="sect">WHY RANKED HERE · {(lens || "ENGINE ORDER").toUpperCase()}</div>
       <div className="why"><b>Promotes:</b><span className="green">{w.up}</span></div>
@@ -138,15 +147,19 @@ export function Detail({ row, showIds, showRules = true }: { row: FeedRow | null
       {hasCond ? (
         <>
           <div className="sect">CONDITIONAL PROBABILITY <span className="uncal">UNCALIBRATED · DISPLAY-ONLY · NOT FAIR VALUE</span></div>
+          <div className="note" style={{ marginBottom: 4 }}>
+            The market-implied chance the <b>deeper</b> outcome happens <i>given</i> the <b>broader</b> one
+            already did — just the raw price ratio (deeper ÷ broader), uncalibrated and not a fair-value model.
+          </div>
           <table className="condtbl"><tbody>
             <tr><th>Stage</th><th>raw (price ratio)</th></tr>
-            <tr><td>{row.pnode || row.detail || "parent"}</td><td>{row.pbid != null ? row.pbid + "¢" : "—"}</td></tr>
-            <tr><td>Deeper given reached</td><td className="violet">{row.cond_child != null ? n1(row.cond_child) + "%" : (raw != null ? raw + "%" : "—")}</td></tr>
-            <tr><td>Success given reached</td><td>{row.cond_success != null ? n1(row.cond_success) + "%" : "—"}</td></tr>
+            <tr><td>Broader: {row.pnode || row.detail || "parent"}</td><td>{row.pbid != null ? row.pbid + "¢" : "—"}</td></tr>
+            <tr><td>P(deeper │ broader reached)</td><td className="violet">{row.cond_child != null ? n1(row.cond_child) + "%" : (raw != null ? raw + "%" : "—")}</td></tr>
+            <tr><td>P(success │ broader reached)</td><td>{row.cond_success != null ? n1(row.cond_success) + "%" : "—"}</td></tr>
           </tbody></table>
           <div className="formula">P(deeper│reached) = price(deeper) ÷ price(parent){row.cask != null && row.pbid ? ` = ${row.cask}/${row.pbid} = ${row.cond}%` : ""}</div>
         </>
-      ) : <div className="note" style={{ marginTop: 6 }}>No parent/child containment node on this row (e.g. a dutch-book field/game). Conditional probability applies to ladder rows.</div>}
+      ) : <div className="note" style={{ marginTop: 6 }}>No parent/child containment node on this row (e.g. a dutch-book field/game). Conditional probability applies to ladder (containment) rows only.</div>}
 
       {!key ? (
         <div className="note" style={{ marginTop: 8 }}>No single-participant anchor on this row — drill-down tables (chain / spreads / contracts) apply to ladder rows with a participant key + tournament.</div>

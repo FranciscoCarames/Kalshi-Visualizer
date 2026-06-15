@@ -95,7 +95,7 @@ export default function Blotter() {
         {ZONES.map(([z, label, hint]) => (
           <div key={z} className={"zone" + (t.zone === z ? " on" : "")} data-z={z}
                onClick={() => t.goSection(z, SUBTABS[z][0][0])}>
-            {label} <span className="zc">{t.count(z, z === "diag" ? "diag" : SUBTABS[z][0][0]).toLocaleString()}</span> <span className="zt">{hint}</span>
+            {label} <span className="zc">{t.zoneCount(z).toLocaleString()}</span> <span className="zt">{hint}</span>
           </div>
         ))}
       </div>

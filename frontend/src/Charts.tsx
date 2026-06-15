@@ -1,58 +1,67 @@
-/* Hand-rolled inline-SVG charts (no charting lib — the bundle is already ~1.5MB and the spark()/Ladder
- * patterns already prove inline SVG fits the terminal aesthetic). Pure display of viz.py JSON. */
+/* Participant-Detail data tables (replaced the old cramped inline-SVG bar charts — owner preferred exact
+ * numbers over bars). Pure display of the viz.py JSON: no charting lib, no SVG. Reuses the `.condtbl`
+ * table style already used elsewhere in the inspector. DISPLAY-ONLY (gross, top-of-book, uncalibrated). */
 import type { PayoffData, LadderData } from "./detail";
 
-/** Per-unit payoff: a bar per settlement scenario vs a dashed cost reference line (clears cost = profit). */
+const pct = (v: number) => (Number.isInteger(v) ? v.toFixed(0) : v.toFixed(1));
+const signed = (c: number) => (c > 0 ? "+" : "") + Math.round(c) + "¢";
+
+/** Per-unit payoff by settlement scenario — exact payout + profit (= payout − cost), profit colored.
+ * "Settles" names the role (floor / bonus) instead of a bar colour you have to decode. */
 export function PayoffChart({ data }: { data: PayoffData | null }) {
   const recs = (data?.scenarios || []).filter((s) => s.role !== "Risk" && s.payout_c != null);
   if (!recs.length) return <div className="note">No payoff scenarios (dutch-book / non-containment row).</div>;
   const cost = data?.cost_c ?? null;
-  const max = Math.max(...recs.map((r) => r.payout_c as number), cost ?? 0, 1);
-  const W = 280, H = 120, pad = 20, bw = (W - pad * 2) / recs.length;
-  const y = (v: number) => H - pad - (v / max) * (H - pad * 2);
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="chart" preserveAspectRatio="xMidYMid meet">
-      {cost != null ? (
-        <>
-          <line x1={pad} x2={W - pad} y1={y(cost)} y2={y(cost)} stroke="#ff453a" strokeDasharray="3 3" />
-          <text x={W - pad} y={y(cost) - 2} textAnchor="end" className="cl">cost {Math.round(cost)}¢</text>
-        </>
-      ) : null}
-      {recs.map((r, i) => {
-        const x = pad + i * bw + 2;
-        const yy = y(r.payout_c as number);
-        const h = Math.max(0, (H - pad) - yy);
-        return (
-          <g key={i}>
-            <rect x={x} y={yy} width={bw - 4} height={h} fill={r.role === "Bonus" ? "#43d9ff" : "#33ff7a"} opacity={0.85} />
-            <text x={x + (bw - 4) / 2} y={H - 6} textAnchor="middle" className="cl">{r.scenario.slice(0, 7)}</text>
-          </g>
-        );
-      })}
-    </svg>
+    <>
+      {cost != null ? <div className="note">Cost <span className="white">{Math.round(cost)}¢</span> · per unit · gross</div> : null}
+      <table className="condtbl"><tbody>
+        <tr><th>Scenario</th><th>Settles</th><th>Payout</th><th>Profit</th></tr>
+        {recs.map((r, i) => {
+          const profit = r.profit_c != null ? r.profit_c : (cost != null && r.payout_c != null ? r.payout_c - cost : null);
+          return (
+            <tr key={i}>
+              <td>{r.scenario}</td>
+              <td className="dim">{r.role || "—"}</td>
+              <td className="white">{r.payout_c != null ? Math.round(r.payout_c) + "¢" : "—"}</td>
+              <td className={profit == null ? "" : profit >= 0 ? "green" : "red"}>{profit == null ? "—" : signed(profit)}</td>
+            </tr>
+          );
+        })}
+      </tbody></table>
+    </>
   );
 }
 
-/** Containment ladder display prices (broad→deep). Bars should step DOWN; a layer priced above its
- * broader neighbour is flagged red (the visual signature of a consistency violation). */
+/** Containment step-down check (broad → deep): a deeper layer must price ≤ its broader parent. Shows the
+ * exact display %, the Δ vs the broader neighbour, and an explicit step verdict — an inversion (deeper
+ * priced ABOVE broader, the violation signature) reads "↑ INVERTED" in red, no chart needed. */
 export function LadderChart({ data }: { data: LadderData | null }) {
   const recs = (data?.layers || []).filter((l) => l.display_pct != null);
   if (recs.length < 2) return <div className="note">No priced ladder (need ≥2 priced layers).</div>;
-  const W = 280, rowH = 18, pad = 4, labelW = 120, barMax = W - labelW - pad * 2 - 26;
-  const H = recs.length * rowH + pad * 2;
+  let prev: number | null = null;
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="chart" preserveAspectRatio="xMidYMid meet">
-      {recs.map((l, i) => {
-        const yy = pad + i * rowH;
-        const w = Math.max(1, ((l.display_pct as number) / 100) * barMax);
-        return (
-          <g key={i}>
-            <text x={pad} y={yy + 12} className="cl" style={{ textAnchor: "start" }}>{l.layer.slice(0, 17)}</text>
-            <rect x={labelW} y={yy + 3} width={w} height={rowH - 7} fill={l.inverted ? "#ff453a" : "#43d9ff"} opacity={0.85} />
-            <text x={labelW + w + 3} y={yy + 12} className="cl">{(l.display_pct as number).toFixed(0)}%</text>
-          </g>
-        );
-      })}
-    </svg>
+    <>
+      <div className="note" style={{ marginTop: 4 }}>Step-down check — Δ is this layer minus its broader parent (negative = consistent).</div>
+      <table className="condtbl"><tbody>
+        <tr><th>Layer</th><th>Disp %</th><th>Δ parent</th><th>Step</th></tr>
+        {recs.map((l, i) => {
+          const v = l.display_pct as number;
+          const delta = prev == null ? null : v - prev;
+          prev = v;
+          const step = l.inverted
+            ? <span className="red">↑ INVERTED</span>
+            : delta == null ? <span className="dim">broadest</span> : <span className="green">↓ ok</span>;
+          return (
+            <tr key={i}>
+              <td>{l.layer}</td>
+              <td className="white">{pct(v)}%</td>
+              <td className={delta == null ? "dim" : l.inverted ? "red" : "green"}>{delta == null ? "—" : (delta > 0 ? "+" : "") + pct(delta)}</td>
+              <td>{step}</td>
+            </tr>
+          );
+        })}
+      </tbody></table>
+    </>
   );
 }

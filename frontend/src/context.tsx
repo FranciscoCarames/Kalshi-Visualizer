@@ -10,7 +10,7 @@ import { encodeUrl, decodeUrl } from "./url";
 import { CompareView, OverlapView, LaddersView } from "./panels";
 import { postScan, getScanStatus } from "./scan";
 import { diffSnapshot, edgeMap, type Change } from "./diff";
-import { type FilterState, type BandState, emptyFilters, emptyBand, applyBand, filteredCount, passAll, passMembership, tournamentOptions } from "./filters";
+import { type FilterState, type BandState, emptyFilters, defaultBand, isDefaultBand, applyBand, passAll, passMembership, tournamentOptions } from "./filters";
 
 export interface ExtraPanel { title: string; body: ReactNode; }
 export interface Settings { longShort: boolean; showIds: boolean; resolutionCriteria: boolean; tz: string; autoRefresh: string; }
@@ -23,14 +23,16 @@ interface TerminalState {
   theme: "amber" | "hc"; paletteOpen: boolean; multi: FeedRow[];
   surface: "opp" | "res" | "ops" | "alrt"; showNet: boolean; itab: "card" | "detail" | "formula";
   extra: ExtraPanel | null; panelsMenuOpen: boolean; scanText: string | null; settings: Settings;
-  band: BandState; split: string;
+  band: BandState; bandIsDefault: boolean; split: string;
   changeOf: (id: string) => "new" | "up" | "down" | "returned" | null;   // change-signal vs the prev snapshot
   flashIds: Set<string>;                                    // rows to one-shot green-flash this snapshot
   count: (zone: string, section: string) => number;
+  zoneCount: (zone: string) => number;                      // sum of the zone's section counts (band-aware)
   inScope: (zone: string, section: string) => number;       // membership-only count (thresholds not applied)
   runScan: (force: boolean) => void;
   setSetting: <K extends keyof Settings>(k: K, v: Settings[K]) => void;
   setBand: (patch: Partial<BandState>) => void;
+  resetBand: () => void;
   setSplit: (v: string) => void;
   goSection: (z: string, s: string) => void;
   setSection: (s: string) => void;
@@ -90,7 +92,9 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
   const [panelsMenuOpen, setPanelsMenuOpen] = useState(false);
   const [scanText, setScanText] = useState<string | null>(null);
   const [settings, setSettings] = useState<Settings>({ longShort: false, showIds: false, resolutionCriteria: true, tz: "local", autoRefresh: "10s" });
-  const [band, setBand] = useState<BandState>(emptyBand);
+  // Per-section band overrides (bounded/nearmiss/cheapno). Untouched sections fall back to the engine's
+  // default band (from meta.defaults), so bounded max-loss 5¢ and cheap-NO max-loss 15¢ never collide.
+  const [bands, setBands] = useState<Record<string, BandState>>({});
   const [split, setSplit] = useState("all");            // bounded-loss All / Vertical / Calendar
   const scanning = useRef(false);
   const [, tick] = useState(0);
@@ -141,6 +145,14 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
 
   const meta = feed?.meta ?? null;
   const opps = useMemo(() => feed?.opps ?? [], [feed]);
+
+  // Effective band for the active section = the user's override, else the engine default (config-sourced
+  // via meta.defaults). setBand patches the active section; resetBand drops its override (back to default).
+  const band = useMemo(() => bands[section] ?? defaultBand(section, meta?.defaults), [bands, section, meta?.defaults]);
+  const setBand = (patch: Partial<BandState>) =>
+    setBands((m) => ({ ...m, [section]: { ...(m[section] ?? defaultBand(section, meta?.defaults)), ...patch } }));
+  const resetBand = () => setBands((m) => { const n = { ...m }; delete n[section]; return n; });
+  const bandIsDefault = isDefaultBand(section, band, meta?.defaults);
 
   // Change-signal vs the PREVIOUS snapshot — diff only when snapshot_id actually advances (NOT on every
   // same-snapshot poll), and never on the first load (no all-NEW flash). Stored as edge-by-id (NaN = no
@@ -211,8 +223,18 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
     }
     return sorted;
   }, [opps, zone, section, filters, lens, band, split]);
-  // Tile/tab counts over the filtered set (Actionable membership-only — see filters.ts).
-  const count = (z: string, s: string) => filteredCount(opps, z, s, filters);
+  // Tile/tab counts. Actionable stays membership-only (passThreshold auto-passes act/diag — see filters.ts);
+  // the speculative band sections (bounded/nearmiss/cheapno) also apply their SecBar band so the badge
+  // matches the rows you'll actually see (e.g. the BOUNDED-RISK count tracks the Max-loss control).
+  const count = (z: string, s: string) => {
+    const base = rowsFor(opps, z, s).filter((o) => passAll(o, filters));
+    return (s === "bounded" || s === "nearmiss" || s === "cheapno")
+      ? applyBand(base, s, bands[s] ?? defaultBand(s, meta?.defaults)).length
+      : base.length;
+  };
+  // Zone badge = the true total across the zone's sections (NOT just the first one), so SPECULATIVE equals
+  // the sum of bounded + near-miss + qualifier + cheap-no rather than mirroring the bounded count.
+  const zoneCount = (z: string) => SUBTABS[z].reduce((sum, [s]) => sum + count(z, s), 0);
   // Membership-only count (thresholds NOT applied) — the "in scope" denominator for "X shown / Y in scope".
   const inScope = (z: string, s: string) => rowsFor(opps, z, s).filter((o) => passMembership(o, filters)).length;
   const patch = (p: Partial<FilterState>) => setFilters((f) => ({ ...f, ...p }));
@@ -223,9 +245,9 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
   const value: TerminalState = {
     meta, opps, err, sports, zone, section, lens, filters, part: filters.part, tourOptions,
     sel, colKey, visible, rows, theme, paletteOpen, multi, surface, showNet, itab,
-    extra, panelsMenuOpen, scanText, settings, band, split, count, inScope, runScan, setSetting,
+    extra, panelsMenuOpen, scanText, settings, band, bandIsDefault, split, count, zoneCount, inScope, runScan, setSetting,
     changeOf: (id) => change.get(id) ?? null, flashIds,
-    setBand: (patch) => setBand((b) => ({ ...b, ...patch })), setSplit,
+    setBand, resetBand, setSplit,
     goSection: (z, s) => { setZone(z); setSectionRaw(s); },
     setSection: setSectionRaw,
     toggleLens: (l) => setLens((cur) => (cur === l ? "" : l)),

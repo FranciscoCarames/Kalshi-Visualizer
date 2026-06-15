@@ -205,6 +205,13 @@ function BacklogSurface() {
   );
 }
 
+// Per-section default hints (mirror config.py, surfaced via meta.defaults) — shown so non-zero defaults
+// that intentionally hide rows are visible + resettable.
+const BAND_HINT: Record<string, string> = {
+  bounded: "defaults: max-loss 5¢", nearmiss: "defaults: max-overpay 3¢",
+  cheapno: "defaults: max-loss 15¢ · max-Buy-NO 15¢",
+};
+
 function SecBar() {
   const t = useTerminal();
   const b = t.band;
@@ -212,15 +219,20 @@ function SecBar() {
     <label>{label} <input type="number" min={0} step={step} value={v || 0}
       onChange={(e) => t.setBand({ [key]: Math.max(0, Number(e.target.value) || 0) })} /></label>
   );
+  // The defaults hint + a "reset band" that drops the section's override back to the config default.
+  const hint = (
+    <span className="bandhint">{BAND_HINT[t.section]}{t.bandIsDefault ? " (active)" : null}
+      {!t.bandIsDefault ? <a onClick={() => t.resetBand()}> · reset band</a> : null}</span>
+  );
   if (t.section === "bounded") return (
     <div className="secbar"><span className="tag">BOUNDED-LOSS</span>
       {numI(b.maxLoss, "maxLoss", "Max loss ¢")}
       {numI(b.minRatio, "minRatio", "Min upside:risk", 0.1)}
       {numI(b.minChildOutright, "minChildOutright", "Min child-outright ¢")}
-      {numI(b.maxSpreadOverChild, "maxSpreadOverChild", "Max spread÷child", 0.1)}</div>
+      {numI(b.maxSpreadOverChild, "maxSpreadOverChild", "Max spread÷child", 0.1)}{hint}</div>
   );
   if (t.section === "nearmiss") return (
-    <div className="secbar"><span className="tag">NEAR-MISS</span>{numI(b.maxOverpay, "maxOverpay", "Max overpay ¢")}</div>
+    <div className="secbar"><span className="tag">NEAR-MISS</span>{numI(b.maxOverpay, "maxOverpay", "Max overpay ¢")}{hint}</div>
   );
   if (t.section === "cheapno") return (
     <div className="secbar"><span className="tag">CHEAP-NO</span>
@@ -229,7 +241,7 @@ function SecBar() {
       {numI(b.maxLoss, "maxLoss", "Max loss ¢")}
       {numI(b.maxBuyNo, "maxBuyNo", "Max Buy-NO ¢")}
       <label className="chk"><input type="checkbox" checked={b.groupByLadder}
-        onChange={(e) => t.setBand({ groupByLadder: e.target.checked })} />Group by ladder</label></div>
+        onChange={(e) => t.setBand({ groupByLadder: e.target.checked })} />Group by ladder</label>{hint}</div>
   );
   return <div className="secbar" />;
 }

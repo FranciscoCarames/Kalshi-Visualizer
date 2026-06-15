@@ -261,6 +261,12 @@ SCAN_BUDGET_COOLDOWN_SECONDS = 300
 SCAN_HTTP_MAX_PER_WINDOW = 10
 SCAN_HTTP_WINDOW_SECONDS = 60
 
+# Live order-book fetch for the Terminal SPA depth ladder (GET /api/terminal/orderbook). Read-only public
+# market data; the endpoint serves a short per-ticker TTL cache and is sliding-window rate-limited so the
+# ~5s frontend poll across tabs can never overwhelm the process-wide Kalshi throttle. Process-local.
+ORDERBOOK_HTTP_MAX_PER_WINDOW = 30          # max live order-book fetches per window (per process)
+ORDERBOOK_HTTP_WINDOW_SECONDS = 10
+
 # --- NiceGUI dashboard (Stage 5) -----------------------------------------------------
 # NiceGUI needs a storage secret to sign its per-user session cookie. There is NO auth/multi-user here,
 # so this is not a real secret — the REAL value comes from the NICEGUI_STORAGE_SECRET env var (read in

@@ -21,8 +21,20 @@ import hashlib
 from collections import Counter
 from typing import Any
 
+import config
 import store
 import webui.viewmodel as vm
+
+
+def _band_defaults() -> dict[str, int]:
+    """The old-dashboard band-control defaults, single-sourced from config so the SPA SecBar never drifts
+    (bounded max-loss 5¢, near-miss overpay 3¢, cheap-NO max-loss 15¢, cheap-NO max-Buy-NO 15¢)."""
+    return {
+        "bounded_max_loss_c": int(config.RISK_BUDGET_DEFAULT_MAX_LOSS_C),
+        "nearmiss_overpay_c": int(config.NEAR_MISS_DEFAULT_OVER_C),
+        "cheapno_max_loss_c": int(config.NO_STRUCTURE_DEFAULT_MAX_LOSS_C),
+        "cheapno_max_buy_no_c": int(config.NO_STRUCTURE_DEFAULT_MAX_BUY_NO_C),
+    }
 
 # bucket -> (zone, section-key). Mirrors the engine's bucket set; diagnostic buckets collapse to one
 # "diag" section. An unknown bucket falls back to diag (never silently dropped).
@@ -61,12 +73,27 @@ def _spark(oid: str) -> list[int]:
     return [base + ((h[i] % 11) - 5) for i in range(7)]
 
 
+def _leg_deep_link(url: str | None, ticker: str | None, side: str | None) -> str | None:
+    """Per-participant + per-side Kalshi deep link (owner-confirmed format):
+    ``<event_url>?op_market_ticker=<FULL_TICKER>&op_order_side=<yes|no>`` — opens the exact contract with the
+    buy side preselected. The engine is BUY-ONLY, so the side is always the buy's yes/no (never a sell).
+    Falls back to the bare event url when the ticker is missing (keeps the link working). Does NOT touch
+    ``data.kalshi_url`` (the event url stays canonical for link_audit)."""
+    if not url or not ticker:
+        return url
+    side_param = "yes" if "yes" in (side or "").lower() else "no"
+    sep = "&" if "?" in url else "?"
+    return f"{url}{sep}op_market_ticker={ticker}&op_order_side={side_param}"
+
+
 def _trim_legs(o: dict[str, Any]) -> list[dict[str, Any]]:
-    """The opportunity's legs, trimmed to the fields the ladder/trade-card need (read-only, ≤24 legs)."""
+    """The opportunity's legs, trimmed to the fields the ladder/trade-card need (read-only, ≤24 legs).
+    Each leg's ``u`` is the per-participant + per-side deep link (see ``_leg_deep_link``)."""
     out: list[dict[str, Any]] = []
     for leg in (o.get("legs") or [])[:24]:
         out.append({"side": leg.get("side"), "c": leg.get("contract"), "p": _num(leg.get("price_c")),
-                    "sz": _num(leg.get("size")) or 0, "tk": leg.get("ticker"), "u": leg.get("url")})
+                    "sz": _num(leg.get("size")) or 0, "tk": leg.get("ticker"),
+                    "u": _leg_deep_link(leg.get("url"), leg.get("ticker"), leg.get("side"))})
     return out
 
 
@@ -150,7 +177,8 @@ def feed_from_snapshot(snap: dict[str, Any] | None) -> dict[str, Any]:
     cap. Honest empty feed when there's no snapshot."""
     if not snap:
         return {"meta": {"snapshot_id": None, "fetched_at": None, "n_total": 0, "totals": {},
-                         "sports": {}, "resolution_counts": {}, "scope_counts": {}}, "opps": []}
+                         "sports": {}, "resolution_counts": {}, "scope_counts": {},
+                         "defaults": _band_defaults()}, "opps": []}
     opps = snap.get("opportunities") or []
     meta = snap.get("meta") or {}
     rows = [_build_row(o) for o in opps]
@@ -166,6 +194,7 @@ def feed_from_snapshot(snap: dict[str, Any] | None) -> dict[str, Any]:
         "sports": dict(Counter(o.get("sport_label") or o.get("sport") for o in opps)),
         "resolution_counts": dict(res_counts), "scope_counts": dict(scope_counts),
         "series_errors": meta.get("series_errors"),
+        "defaults": _band_defaults(),
     }
     return {"meta": feed_meta, "opps": rows}
 

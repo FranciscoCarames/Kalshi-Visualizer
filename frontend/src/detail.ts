@@ -26,11 +26,19 @@ export function detailKey(row: FeedRow | null): { sport: string; player_key: str
   return sport && player_key && tournament ? { sport, player_key, tournament } : null;
 }
 
-async function getJson<T>(url: string): Promise<T> {
-  const r = await fetch(url, { headers: { Accept: "application/json" } });
+async function getJson<T>(url: string, signal?: AbortSignal): Promise<T> {
+  const r = await fetch(url, { headers: { Accept: "application/json" }, signal });
   if (!r.ok) throw new Error(`${url} → ${r.status}`);
   return r.json();
 }
+
+/** Live resting order book for one market (the SPA depth ladder). yes/no are [price_c, size] ascending
+ * (best bid last). DISPLAY-ONLY depth — gross/top-of-book limits still apply; not net executable capacity. */
+export interface OrderbookData {
+  ticker: string; yes: number[][]; no: number[][]; ok: boolean; error: string | null; age_s: number;
+}
+export const loadOrderbook = (ticker: string, signal?: AbortSignal) =>
+  getJson<OrderbookData>(`/api/terminal/orderbook?ticker=${encodeURIComponent(ticker)}`, signal);
 
 export const loadDetail = (k: { sport: string; player_key: string; tournament: string }) =>
   getJson<DetailBundle>(`/api/terminal/detail?sport=${encodeURIComponent(k.sport)}&player_key=${encodeURIComponent(k.player_key)}&tournament=${encodeURIComponent(k.tournament)}`);

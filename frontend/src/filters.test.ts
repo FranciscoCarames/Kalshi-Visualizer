@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { passAll, passThreshold, applyBand, emptyFilters, emptyBand, type FilterState, type BandState } from "./filters";
-import type { FeedRow } from "./feed";
+import { passAll, passThreshold, applyBand, emptyFilters, emptyBand, defaultBand, isDefaultBand, type FilterState, type BandState } from "./filters";
+import type { BandDefaults, FeedRow } from "./feed";
 
 const row = (o: Partial<FeedRow>): FeedRow =>
   ({ id: Math.random().toString(), bucket: "x", zone: "spec", section: "bounded", ...o });
@@ -45,5 +45,23 @@ describe("applyBand (fail-open on missing fields)", () => {
     const rows = [row({ overpay: 2 }), row({ overpay: 8 })];
     expect(applyBand(rows, "nearmiss", { ...base(), maxOverpay: 5 }).length).toBe(1);
     expect(applyBand(rows, "nearmiss", base()).length).toBe(2);
+  });
+});
+
+describe("defaultBand (old-UI parity, per-section, from meta.defaults)", () => {
+  const D: BandDefaults = { bounded_max_loss_c: 5, nearmiss_overpay_c: 3, cheapno_max_loss_c: 15, cheapno_max_buy_no_c: 15 };
+  it("seeds bounded max-loss 5¢, near-miss overpay 3¢, cheap-NO 15¢/15¢ (no collision on maxLoss)", () => {
+    expect(defaultBand("bounded", D).maxLoss).toBe(5);
+    expect(defaultBand("nearmiss", D).maxOverpay).toBe(3);
+    expect(defaultBand("cheapno", D).maxLoss).toBe(15);
+    expect(defaultBand("cheapno", D).maxBuyNo).toBe(15);
+  });
+  it("falls back to the config literals when meta.defaults is absent", () => {
+    expect(defaultBand("bounded").maxLoss).toBe(5);
+    expect(defaultBand("cheapno").maxLoss).toBe(15);
+  });
+  it("isDefaultBand detects an untouched vs edited band", () => {
+    expect(isDefaultBand("bounded", defaultBand("bounded", D), D)).toBe(true);
+    expect(isDefaultBand("bounded", { ...defaultBand("bounded", D), maxLoss: 9 }, D)).toBe(false);
   });
 });

@@ -38,6 +38,12 @@ def _opp(oid, *, bucket="actionable", status="OK", sport="tennis", **kw):
     return base
 
 
+def _snapshot_with_legs(legs):
+    """A one-opportunity snapshot whose single opp carries the given engine legs (for deep-link tests)."""
+    return {"snapshot_id": 8, "fetched_at": "2026-06-03 12:00:00 UTC",
+            "opportunities": [_opp("z", legs=legs)], "meta": {}}
+
+
 def _snapshot():
     opps = [
         _opp("a", bucket="actionable"),
@@ -93,7 +99,42 @@ def test_display_only_derived_fields():
 
 def test_legs_trimmed_to_view_fields():
     a = next(r for r in feed.feed_from_snapshot(_snapshot())["opps"] if r["id"] == "a")
-    assert a["legs"] == [{"side": "buy_yes", "c": "A", "p": 60.0, "sz": 100.0, "tk": "TA", "u": "ua"}]
+    # `u` is now the per-participant + per-side deep link (see test_leg_deep_link_*); other fields verbatim.
+    assert a["legs"] == [{"side": "buy_yes", "c": "A", "p": 60.0, "sz": 100.0, "tk": "TA",
+                          "u": "ua?op_market_ticker=TA&op_order_side=yes"}]
+
+
+def test_leg_deep_link_yes_and_no_sides():
+    legs = [{"side": "buy_yes", "contract": "A", "price_c": 60, "size": 100, "ticker": "TA", "url": "ua"},
+            {"side": "buy_no", "contract": "B", "price_c": 41, "size": 80, "ticker": "TB", "url": "ub"}]
+    a = next(r for r in feed.feed_from_snapshot(_snapshot_with_legs(legs))["opps"] if r["id"] == "z")
+    assert a["legs"][0]["u"] == "ua?op_market_ticker=TA&op_order_side=yes"
+    assert a["legs"][1]["u"] == "ub?op_market_ticker=TB&op_order_side=no"
+
+
+def test_leg_deep_link_falls_back_when_ticker_missing():
+    # no ticker → keep the bare event url (the link still works, just not per-market)
+    legs = [{"side": "buy_yes", "contract": "A", "price_c": 60, "size": 100, "ticker": "", "url": "ua"}]
+    a = next(r for r in feed.feed_from_snapshot(_snapshot_with_legs(legs))["opps"] if r["id"] == "z")
+    assert a["legs"][0]["u"] == "ua"
+
+
+def test_leg_deep_link_appends_with_ampersand_when_url_has_query():
+    legs = [{"side": "buy_yes", "contract": "A", "price_c": 60, "size": 100, "ticker": "TA", "url": "ua?x=1"}]
+    a = next(r for r in feed.feed_from_snapshot(_snapshot_with_legs(legs))["opps"] if r["id"] == "z")
+    assert a["legs"][0]["u"] == "ua?x=1&op_market_ticker=TA&op_order_side=yes"
+
+
+def test_meta_exposes_config_band_defaults():
+    import config
+    f = feed.feed_from_snapshot(_snapshot())
+    d = f["meta"]["defaults"]
+    assert d == {"bounded_max_loss_c": config.RISK_BUDGET_DEFAULT_MAX_LOSS_C,
+                 "nearmiss_overpay_c": config.NEAR_MISS_DEFAULT_OVER_C,
+                 "cheapno_max_loss_c": config.NO_STRUCTURE_DEFAULT_MAX_LOSS_C,
+                 "cheapno_max_buy_no_c": config.NO_STRUCTURE_DEFAULT_MAX_BUY_NO_C}
+    # present on the empty feed too, so the SPA always has defaults to seed the SecBar
+    assert feed.feed_from_snapshot(None)["meta"]["defaults"] == d
 
 
 # --- parity -------------------------------------------------------------------------------------------
