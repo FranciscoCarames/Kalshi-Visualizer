@@ -8,7 +8,7 @@ import { applyLens } from "./lens";
 import { downloadCsv } from "./csv";
 import { CompareView, OverlapView, LaddersView } from "./panels";
 import { postScan, getScanStatus } from "./scan";
-import { type FilterState, emptyFilters, filteredCount, passAll, tournamentOptions } from "./filters";
+import { type FilterState, type BandState, emptyFilters, emptyBand, applyBand, filteredCount, passAll, tournamentOptions } from "./filters";
 
 export interface ExtraPanel { title: string; body: ReactNode; }
 export interface Settings { longShort: boolean; showIds: boolean; tz: string; autoRefresh: string; }
@@ -21,11 +21,11 @@ interface TerminalState {
   theme: "amber" | "hc"; paletteOpen: boolean; multi: FeedRow[];
   surface: "opp" | "res" | "ops" | "alrt"; showNet: boolean; itab: "card" | "detail" | "formula";
   extra: ExtraPanel | null; panelsMenuOpen: boolean; scanText: string | null; settings: Settings;
-  band: { maxLoss: number; minRatio: number; maxOverpay: number };
+  band: BandState;
   count: (zone: string, section: string) => number;
   runScan: (force: boolean) => void;
   setSetting: <K extends keyof Settings>(k: K, v: Settings[K]) => void;
-  setBand: (k: "maxLoss" | "minRatio" | "maxOverpay", v: number) => void;
+  setBand: (patch: Partial<BandState>) => void;
   goSection: (z: string, s: string) => void;
   setSection: (s: string) => void;
   toggleLens: (l: string) => void;
@@ -84,7 +84,7 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
   const [panelsMenuOpen, setPanelsMenuOpen] = useState(false);
   const [scanText, setScanText] = useState<string | null>(null);
   const [settings, setSettings] = useState<Settings>({ longShort: false, showIds: false, tz: "local", autoRefresh: "10s" });
-  const [band, setBand] = useState({ maxLoss: 0, minRatio: 0, maxOverpay: 0 });
+  const [band, setBand] = useState<BandState>(emptyBand);
   const scanning = useRef(false);
   const [, tick] = useState(0);
   const layoutRef = useRef<((preset: string) => void) | null>(null);
@@ -147,17 +147,13 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
   }, [colsByKey, colKey, defVis, showNet]);
   const tourOptions = useMemo(() => tournamentOptions(opps, filters.sports), [opps, filters.sports]);
   const rows = useMemo(() => {
-    let r = rowsFor(opps, zone, section).filter((o) => passAll(o, filters));
-    const num = (x: unknown) => (typeof x === "number" && !Number.isNaN(x) ? x : NaN);
-    if (section === "bounded") {
-      if (band.maxLoss > 0) r = r.filter((o) => !(num(o.max_loss) > band.maxLoss));
-      if (band.minRatio > 0) r = r.filter((o) => num(o.ratio) >= band.minRatio);
-    } else if (section === "nearmiss" && band.maxOverpay > 0) {
-      r = r.filter((o) => !(num(o.overpay) > band.maxOverpay));
-    } else if (section === "cheapno" && band.maxLoss > 0) {
-      r = r.filter((o) => !(num(o.max_loss) > band.maxLoss));
+    const r = applyBand(rowsFor(opps, zone, section).filter((o) => passAll(o, filters)), section, band);
+    const sorted = applyLens(r, lens);
+    // Cheap-NO "group by ladder" is a final display grouping (after the lens), by tournament/ladder.
+    if (section === "cheapno" && band.groupByLadder) {
+      return [...sorted].sort((a, b) => String(a.sub || "").localeCompare(String(b.sub || "")));
     }
-    return applyLens(r, lens);
+    return sorted;
   }, [opps, zone, section, filters, lens, band]);
   // Tile/tab counts over the filtered set (Actionable membership-only — see filters.ts).
   const count = (z: string, s: string) => filteredCount(opps, z, s, filters);
@@ -170,7 +166,7 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
     meta, opps, err, sports, zone, section, lens, filters, part: filters.part, tourOptions,
     sel, colKey, visible, rows, theme, paletteOpen, multi, surface, showNet, itab,
     extra, panelsMenuOpen, scanText, settings, band, count, runScan, setSetting,
-    setBand: (k, v) => setBand((b) => ({ ...b, [k]: v })),
+    setBand: (patch) => setBand((b) => ({ ...b, ...patch })),
     goSection: (z, s) => { setZone(z); setSectionRaw(s); },
     setSection: setSectionRaw,
     toggleLens: (l) => setLens((cur) => (cur === l ? "" : l)),

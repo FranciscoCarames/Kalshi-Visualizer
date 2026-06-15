@@ -56,6 +56,39 @@ export function filteredCount(opps: FeedRow[], zone: string, section: string, f:
   return filteredRows(opps, zone, section, f).length;
 }
 
+/* Per-section band controls (the SecBar). These are THRESHOLDS scoped to one speculative section — they
+ * never touch Actionable/Diagnostics (those sections don't render a SecBar). All numeric "off" value is 0.
+ * Fail-OPEN on missing/NaN fields: a row is dropped only when the field is a finite number AND violates,
+ * so a missing metric never silently hides a row (audit). Cheap-NO band vs outright are distinct row types
+ * (o.kind), so the kind filter selects type explicitly and max-loss applies to the band's capped risk. */
+export interface BandState {
+  maxLoss: number; minRatio: number; maxOverpay: number;
+  minChildOutright: number; maxSpreadOverChild: number;
+  cheapKind: string;            // "all" | "band" | "outright"
+  groupByLadder: boolean;
+}
+export const emptyBand = (): BandState =>
+  ({ maxLoss: 0, minRatio: 0, maxOverpay: 0, minChildOutright: 0, maxSpreadOverChild: 0, cheapKind: "all", groupByLadder: false });
+
+const fnum = (x: unknown): number => (typeof x === "number" && !Number.isNaN(x) ? x : NaN);
+const overMax = (x: unknown, lim: number) => lim > 0 && fnum(x) > lim;        // present & exceeds the cap
+const underMin = (x: unknown, lim: number) => lim > 0 && fnum(x) < lim;       // present & below the floor
+
+/** Apply the active section's band thresholds (pure; fail-open on missing fields). */
+export function applyBand(rows: FeedRow[], section: string, b: BandState): FeedRow[] {
+  if (section === "bounded") {
+    return rows.filter((o) => !overMax(o.max_loss, b.maxLoss) && !underMin(o.ratio, b.minRatio)
+      && !underMin(o.child_outright, b.minChildOutright) && !overMax(o.spread_over_child, b.maxSpreadOverChild));
+  }
+  if (section === "nearmiss") return rows.filter((o) => !overMax(o.overpay, b.maxOverpay));
+  if (section === "cheapno") {
+    let r = rows.filter((o) => !overMax(o.max_loss, b.maxLoss));
+    if (b.cheapKind !== "all") r = r.filter((o) => String(o.kind || "").toLowerCase().includes(b.cheapKind));
+    return r;
+  }
+  return rows;
+}
+
 /** Distinct tournaments present in the feed, cascaded to the selected sports (mockup behavior). */
 export function tournamentOptions(opps: FeedRow[], sportsSel: Set<string>): string[] {
   const set = new Set<string>();

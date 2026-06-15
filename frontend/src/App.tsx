@@ -144,19 +144,27 @@ function BacklogSurface() {
 function SecBar() {
   const t = useTerminal();
   const b = t.band;
-  const numI = (v: number, set: (n: number) => void, label: string, step = 1) => (
-    <label>{label} <input type="number" min={0} step={step} value={v || 0} onChange={(e) => set(Math.max(0, Number(e.target.value) || 0))} /></label>
+  const numI = (v: number, key: string, label: string, step = 1) => (
+    <label>{label} <input type="number" min={0} step={step} value={v || 0}
+      onChange={(e) => t.setBand({ [key]: Math.max(0, Number(e.target.value) || 0) })} /></label>
   );
   if (t.section === "bounded") return (
     <div className="secbar"><span className="tag">BOUNDED-LOSS</span>
-      {numI(b.maxLoss, (n) => t.setBand("maxLoss", n), "Max loss ¢")}
-      {numI(b.minRatio, (n) => t.setBand("minRatio", n), "Min upside:risk", 0.1)}</div>
+      {numI(b.maxLoss, "maxLoss", "Max loss ¢")}
+      {numI(b.minRatio, "minRatio", "Min upside:risk", 0.1)}
+      {numI(b.minChildOutright, "minChildOutright", "Min child-outright ¢")}
+      {numI(b.maxSpreadOverChild, "maxSpreadOverChild", "Max spread÷child", 0.1)}</div>
   );
   if (t.section === "nearmiss") return (
-    <div className="secbar"><span className="tag">NEAR-MISS</span>{numI(b.maxOverpay, (n) => t.setBand("maxOverpay", n), "Max overpay ¢")}</div>
+    <div className="secbar"><span className="tag">NEAR-MISS</span>{numI(b.maxOverpay, "maxOverpay", "Max overpay ¢")}</div>
   );
   if (t.section === "cheapno") return (
-    <div className="secbar"><span className="tag">CHEAP-NO</span>{numI(b.maxLoss, (n) => t.setBand("maxLoss", n), "Max loss ¢")}</div>
+    <div className="secbar"><span className="tag">CHEAP-NO</span>
+      <label>Kind <select value={b.cheapKind} onChange={(e) => t.setBand({ cheapKind: e.target.value })}>
+        <option value="all">all</option><option value="band">band</option><option value="outright">outright</option></select></label>
+      {numI(b.maxLoss, "maxLoss", "Max loss ¢")}
+      <label className="chk"><input type="checkbox" checked={b.groupByLadder}
+        onChange={(e) => t.setBand({ groupByLadder: e.target.checked })} />Group by ladder</label></div>
   );
   return <div className="secbar" />;
 }

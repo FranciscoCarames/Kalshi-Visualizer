@@ -2,10 +2,11 @@
  * the look is pixel-exact). Zones + bucket tabs + split + sparkline name cell + selection bar + column
  * chooser, all on the mockup's classes. Rows are engine-ranked + lens-sorted (no click-sort — matches the
  * mockup; AG-Grid's sort/virtualization are intentionally not reproduced at this gate). */
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTerminal } from "./context";
 import { ZONES, SUBTABS, type FeedRow } from "./feed";
 import { COLS, fmtVal, qhClass, type Col } from "./columns";
+import { sortRows, nextSort, type SortState } from "./sort";
 
 const cssv = (n: string) => getComputedStyle(document.documentElement).getPropertyValue(n).trim() || "#ffb000";
 
@@ -38,8 +39,13 @@ function Cell({ row, col }: { row: FeedRow; col: Col }) {
 export default function Blotter() {
   const t = useTerminal();
   const [chooser, setChooser] = useState(false);
+  const [sort, setSort] = useState<SortState | null>(null);
   const dragF = useRef<string | null>(null);
   const cols: Col[] = t.visible.map((f) => COLS[t.colKey].find((c) => c.f === f)).filter((c): c is Col => !!c);
+  // Click-sort is a display override; reset to engine/lens order when the section/catalog changes.
+  useEffect(() => { setSort(null); }, [t.colKey]);
+  const fmtOf = (f: string) => COLS[t.colKey].find((c) => c.f === f)?.fmt ?? "num";
+  const rows = sortRows(t.rows, sort, fmtOf);
 
   const onRowClick = (e: React.MouseEvent, o: FeedRow) => {
     if (e.ctrlKey || e.metaKey || e.shiftKey) {
@@ -100,10 +106,14 @@ export default function Blotter() {
           : (
           <table>
             <thead><tr>{cols.map((c) => (
-              <th key={c.f} className={c.fmt !== "text" && c.fmt !== "name" ? "r" : ""} draggable title={(c.tip ? c.tip + " — " : "") + "drag to reorder"}
-                  onDragStart={() => { dragF.current = c.f; }} onDragOver={(e) => e.preventDefault()} onDrop={() => onDrop(c.f)}>{c.l}</th>
+              <th key={c.f} className={c.fmt !== "text" && c.fmt !== "name" ? "r" : ""} draggable
+                  aria-sort={sort?.field === c.f ? (sort.dir === "asc" ? "ascending" : "descending") : "none"}
+                  title={(c.tip ? c.tip + " — " : "") + "click to sort · drag to reorder"}
+                  onClick={() => setSort((s) => nextSort(s, c.f))}
+                  onDragStart={() => { dragF.current = c.f; }} onDragOver={(e) => e.preventDefault()} onDrop={() => onDrop(c.f)}>
+                {c.l}{sort?.field === c.f ? (sort.dir === "asc" ? " ▲" : " ▼") : ""}</th>
             ))}</tr></thead>
-            <tbody>{t.rows.map((o) => {
+            <tbody>{rows.map((o) => {
               const zc = o.zone === "spec" ? " zspec" : o.zone === "diag" ? " zdiag" : "";
               const sc = t.sel?.id === o.id ? " sel" : "";
               const mc = mids.has(o.id) ? " msel" : "";
@@ -115,8 +125,9 @@ export default function Blotter() {
         )}
       </div>
       <div className="showing">
-        Showing <b className="white">{t.rows.length.toLocaleString()}</b> · {t.visible.length} cols
-        {t.lens ? <> · lens <b className="amber">{t.lens}</b></> : <> · engine order</>}
+        Showing <b className="white">{rows.length.toLocaleString()}</b> · {t.visible.length} cols
+        {sort ? <> · sort <b className="amber">{sort.field} {sort.dir === "asc" ? "▲" : "▼"}</b></>
+              : t.lens ? <> · lens <b className="amber">{t.lens}</b></> : <> · engine order</>}
       </div>
     </div>
   );
