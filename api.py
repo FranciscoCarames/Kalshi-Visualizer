@@ -21,7 +21,9 @@ from typing import Any, Callable
 from fastapi import Depends, FastAPI, Header, HTTPException, Response
 from fastapi.responses import RedirectResponse, StreamingResponse
 from pydantic import BaseModel, ConfigDict
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 
+import auth
 import config
 import data
 import fetch
@@ -35,7 +37,23 @@ import sports
 import store
 from webui import diagnostics, feed
 
-app = FastAPI(title="Kalshi Structured Scanner", version="4.0")
+
+def _doc_urls() -> dict[str, str | None]:
+    """OpenAPI docs are open by default (dev). In an auth-on deployment they are DISABLED — the schema
+    leaks the full API shape — unless ``APP_DEV=1`` is set. Read at import (the app is built once); a unit
+    test asserts the logic directly. The SPA's type pipeline generates from a dev/CI server, not prod."""
+    if os.getenv("AUTH_ENABLED") == "1" and os.getenv("APP_DEV") != "1":
+        return {"docs_url": None, "redoc_url": None, "openapi_url": None}
+    return {"docs_url": "/docs", "redoc_url": "/redoc", "openapi_url": "/openapi.json"}
+
+
+app = FastAPI(title="Kalshi Structured Scanner", version="4.0", **_doc_urls())
+# Host allowlist (default "*" — no restriction until an operator sets APP_ALLOWED_HOSTS) + the
+# deny-by-default auth gate / security-headers middleware. Both are no-ops for loopback/dev and the test
+# client until AUTH_ENABLED / APP_ALLOWED_HOSTS are set; see auth.py.
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=auth.allowed_hosts())
+app.middleware("http")(auth.gate_and_harden)
+app.include_router(auth.router)
 logger = logging.getLogger("kalshi.api")
 
 

@@ -399,6 +399,18 @@ def revoke_device_token(token_id: int, *, now: float, user_id: int | None = None
         conn.close()
 
 
+def revoke_device_by_selector(selector: str, *, now: float, db_path: str | None = None) -> None:
+    """Revoke a single device token by its public selector (used by logout — clears THIS device only,
+    without the theft-revoke-all semantics of a bad-validator ``consume``)."""
+    conn = _connect(db_path)
+    try:
+        conn.execute("UPDATE device_tokens SET revoked_ts = ? WHERE selector = ? AND revoked_ts IS NULL",
+                     (now, selector))
+        conn.commit()
+    finally:
+        conn.close()
+
+
 def _revoke_all_device_tokens(conn: sqlite3.Connection, user_id: int, now: float) -> None:
     conn.execute("UPDATE device_tokens SET revoked_ts = ? WHERE user_id = ? AND revoked_ts IS NULL",
                  (now, user_id))
