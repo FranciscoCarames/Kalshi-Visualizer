@@ -17,7 +17,6 @@ Layers used (all UI-free, so `api.py` can import this without a cycle): `store` 
 """
 from __future__ import annotations
 
-import hashlib
 from collections import Counter
 from typing import Any
 
@@ -65,14 +64,6 @@ def _num(x: Any) -> float | None:
         return None
 
 
-def _spark(oid: str) -> list[int]:
-    """A deterministic PLACEHOLDER sparkline (md5 of the opp id) — NOT real intraday data; the engine stores
-    no time series yet (§11). Labelled as a placeholder in the UI; kept so the column renders stably."""
-    h = hashlib.md5(oid.encode()).digest()
-    base = h[0] % 30 + 10
-    return [base + ((h[i] % 11) - 5) for i in range(7)]
-
-
 def _leg_deep_link(url: str | None, ticker: str | None, side: str | None) -> str | None:
     """Per-participant + per-side Kalshi deep link (owner-confirmed format):
     ``<event_url>?op_market_ticker=<FULL_TICKER>&op_order_side=<yes|no>`` — opens the exact contract with the
@@ -97,14 +88,17 @@ def _trim_legs(o: dict[str, Any]) -> list[dict[str, Any]]:
     return out
 
 
-def _conditional(parent: float | None, child: float | None) -> tuple[float | None, float | None, float | None]:
-    """DISPLAY-ONLY market-implied conditional from firm prices: P(deeper│reached) = child/parent.
-    Returns (cond, cond_child, cond_success) in %, or (None, None, None) when not a priceable parent/child
-    pair. Uncalibrated, gross, not fair value — never feeds classification/ranking."""
-    if not (parent and child and parent > 0):
-        return None, None, None
-    cond = round(child / parent * 100, 1)
-    return cond, cond, round(100 - cond, 1)
+def _cond_pair(parent: float | None, child: float | None) -> tuple[float | None, float | None]:
+    """DISPLAY-ONLY market-implied conditional for ONE like-for-like price pair (both display, or both
+    firm): P(deeper│reached) = child/parent. Returns ``(cond_child%, cond_success%)`` or ``(None, None)``.
+    GUARDED with explicit bounds (never truthiness, so a legitimate ``child == 0`` yields ``0.0%``, not
+    None): fails closed when a price is missing, the parent is non-positive, or the pair is inverted
+    (``child > parent`` is a display inconsistency, never a 'chance'). Uncalibrated, gross, top-of-book,
+    not fair value — never feeds classification/ranking."""
+    if parent is None or child is None or parent <= 0 or child < 0 or child > parent:
+        return None, None
+    child_pct = round(child / parent * 100, 1)
+    return child_pct, round(100 - child_pct, 1)
 
 
 def _ripeness(o: dict[str, Any]) -> float | None:
@@ -140,8 +134,18 @@ def _build_row(o: dict[str, Any]) -> dict[str, Any]:
     except Exception as e:                         # a row builder must never sink the whole feed
         base = {"name": o.get("name"), "sport": o.get("sport_label"), "caveat": f"(row err: {e})"}
     nf = vm.net_of_fees(o)                          # existing DISPLAY-ONLY estimate (never ranks)
-    parent, child = _num(o.get("parent_yes_bid_c")), _num(o.get("child_yes_ask_c"))
-    cond, cond_child, cond_success = _conditional(parent, child)
+    # Conditional P(deeper│reached) on TWO bases, both display-only / gross / uncalibrated (never rank):
+    #   • display — the dashboard's display price (midpoint when the spread is reasonable, else last trade);
+    #   • firm — the executable bid/ask. For risk-budget rows the row builder already emits the display
+    #     pair (`cond_child`/`cond_success`) from the engine's own fields, so we keep those VERBATIM (exact
+    #     old-dashboard parity, never a re-derivation); other containment buckets get a derived display pair
+    #     for the Inspector only. Both bases share the same guarded `_cond_pair` (impossible values closed).
+    pdisp, cdisp = _num(o.get("parent_display_c")), _num(o.get("child_display_c"))
+    pbid, cask = _num(o.get("parent_yes_bid_c")), _num(o.get("child_yes_ask_c"))
+    cc_disp, cs_disp = _cond_pair(pdisp, cdisp)
+    cond_child = base["cond_child"] if "cond_child" in base else cc_disp
+    cond_success = base["cond_success"] if "cond_success" in base else cs_disp
+    cond_child_firm, cond_success_firm = _cond_pair(pbid, cask)
     base.update({
         "id": o["opportunity_id"], "bucket": bucket, "zone": zone, "section": sec,
         "scope": o.get("no_structure_scope"), "resolution_mode": o.get("resolution_mode"),
@@ -157,10 +161,13 @@ def _build_row(o: dict[str, Any]) -> dict[str, Any]:
         "legs": _trim_legs(o),
         "nlegs": int(o["n_legs"]) if _num(o.get("n_legs")) else len(o.get("legs") or []),
         "url": o.get("url"), "url2": o.get("url_2"),
-        "pnode": o.get("parent_node"), "cnode": o.get("child_node"), "pbid": parent, "cask": child,
-        # DISPLAY-ONLY derived fields (computed in this adapter only — never in the engine):
-        "cond": cond, "cond_child": cond_child, "cond_success": cond_success,
-        "parent_over_maxloss": _ripeness(o), "spark": _spark(o["opportunity_id"]),
+        "pnode": o.get("parent_node"), "cnode": o.get("child_node"),
+        "pbid": pbid, "cask": cask, "pdisp": pdisp, "cdisp": cdisp,
+        # DISPLAY-ONLY derived fields (computed in this adapter only — never in the engine). The firm-basis
+        # conditional is a DIAGNOSTIC, NOT an executable edge — do not feed it into ranking/classification.
+        "cond_child": cond_child, "cond_success": cond_success,
+        "cond_child_firm": cond_child_firm, "cond_success_firm": cond_success_firm,
+        "parent_over_maxloss": _ripeness(o),
         "fees": nf.get("total_fees_c"), "net_edge": nf.get("net_edge_c"),
         "net_profit": nf.get("net_profit_dollars"),
     })

@@ -26,6 +26,7 @@ interface TerminalState {
   band: BandState; bandIsDefault: boolean; split: string;
   changeOf: (id: string) => "new" | "up" | "down" | "returned" | null;   // change-signal vs the prev snapshot
   flashIds: Set<string>;                                    // rows to one-shot green-flash this snapshot
+  hasBaseline: boolean;                                     // a real diff vs a prior snapshot has run (≥2 snaps)
   count: (zone: string, section: string) => number;
   zoneCount: (zone: string) => number;                      // sum of the zone's section counts (band-aware)
   inScope: (zone: string, section: string) => number;       // membership-only count (thresholds not applied)
@@ -162,11 +163,14 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
   const seenEverRef = useRef<Set<string>>(new Set());     // ids seen any time this session → "returned" vs "new"
   const [change, setChange] = useState<Map<string, Change>>(new Map());
   const [flashIds, setFlashIds] = useState<Set<string>>(new Set());
+  const [baselineReady, setBaselineReady] = useState(false);          // true once a real diff vs a prior snap ran
   useEffect(() => {
     const sid = meta?.snapshot_id ?? null;
     if (sid == null || sid === prevSnapRef.current) return;          // no snapshot / unchanged → keep flags
-    const { change: chg, flash } = diffSnapshot(prevEdgeRef.current, opps, prevSnapRef.current === null, seenEverRef.current);
+    const isFirst = prevSnapRef.current === null;
+    const { change: chg, flash } = diffSnapshot(prevEdgeRef.current, opps, isFirst, seenEverRef.current);
     setChange(chg); setFlashIds(flash);
+    if (!isFirst) setBaselineReady(true);                            // a prior snapshot existed → changeOf is real
     prevEdgeRef.current = edgeMap(opps);
     prevSnapRef.current = sid;
     for (const o of opps) seenEverRef.current.add(o.id);            // remember after diffing
@@ -246,7 +250,7 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
     meta, opps, err, sports, zone, section, lens, filters, part: filters.part, tourOptions,
     sel, colKey, visible, rows, theme, paletteOpen, multi, surface, showNet, itab,
     extra, panelsMenuOpen, scanText, settings, band, bandIsDefault, split, count, zoneCount, inScope, runScan, setSetting,
-    changeOf: (id) => change.get(id) ?? null, flashIds,
+    changeOf: (id) => change.get(id) ?? null, flashIds, hasBaseline: baselineReady,
     setBand, resetBand, setSplit,
     goSection: (z, s) => { setZone(z); setSectionRaw(s); },
     setSection: setSectionRaw,

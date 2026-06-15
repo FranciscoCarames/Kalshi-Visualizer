@@ -1184,8 +1184,11 @@ def _num_or_none(x: Any) -> float | None:
 # UI labels every net number "Est." and "general taker-fee estimate"; rank_opps / _edge / bucket_of never
 # read these fields (see test_net_of_fees_does_not_affect_ranking).
 def kalshi_fee_c(contracts: float, price_c: float) -> int:
-    """Estimated Kalshi general taker fee for `contracts` at `price_c` cents, in integer cents (rounded up).
-    Zero at the 0¢/100¢ endpoints. Returns 0 for non-positive/invalid contracts."""
+    """Estimated Kalshi GENERAL TAKER fee for `contracts` at `price_c` cents, in integer cents (rounded up):
+    ``ceil(0.07 · C · P · (1−P))`` — matches Kalshi's published general formula. This is an ESTIMATE, not
+    realized net P&L: special-schedule markets, maker fills (resting orders), centicent rounding, and series
+    fee changes may differ. The authoritative per-series source is Kalshi's ``GET /series/fee_changes`` (not
+    wired — display-only estimate by design). Zero at the 0¢/100¢ endpoints; 0 for non-positive/invalid C."""
     c, p = _num_or_none(contracts), _num_or_none(price_c)
     if c is None or p is None or c <= 0 or p <= 0 or p >= 100:
         return 0

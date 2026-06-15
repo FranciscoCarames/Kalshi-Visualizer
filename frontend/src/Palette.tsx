@@ -31,10 +31,19 @@ export default function Palette() {
     out.push({ cat: "Toggle", k: "Long / short wording", tag: "toggle", run: () => t.setSetting("longShort", !t.settings.longShort) });
     out.push({ cat: "Toggle", k: "Show IDs & codes", tag: "toggle", run: () => t.setSetting("showIds", !t.settings.showIds) });
     out.push({ cat: "Help", k: "Keyboard: Ctrl-K · 1-6 lens · J/K rows · ↵ open", tag: "help", run: () => {} });
-    t.opps.slice(0, 400).forEach((o) => out.push({
-      cat: "Participant", k: o.name || "", d: `${o.sport} · ${o.bucket}`, tag: "row",
-      run: () => { t.setSurface("opp"); t.goSection(o.zone, o.section); t.setSel({ ...o }); },
-    }));
+    // Index ALL participants (no silent cap), deduped by a STABLE key — player_key+sport when present (so two
+    // distinct entities sharing a display name never merge), else name+sport. First (highest-ranked) wins.
+    const seen = new Set<string>();
+    for (const o of t.opps) {
+      if (!o.name) continue;
+      const key = `${o.player_key || o.name}__${o.sport || ""}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push({
+        cat: "Participant", k: o.name, d: `${o.sport} · ${o.bucket}`, tag: "row",
+        run: () => { t.setSurface("opp"); t.goSection(o.zone, o.section); t.setSel({ ...o }); },
+      });
+    }
     return out;
   }, [t]);
 
@@ -43,15 +52,19 @@ export default function Palette() {
     if (!s) return items;
     return items.filter((it) => (it.k + " " + (it.d || "") + " " + it.cat + " " + it.tag).toLowerCase().includes(s));
   }, [items, q]);
+  // Cap the RENDERED rows (never the index) so a big result set can't lag the input; honest "+N more" hint.
+  const PAL_RENDER_CAP = 250;
+  const shown = filtered.slice(0, PAL_RENDER_CAP);
+  const hiddenCount = filtered.length - shown.length;
 
   useEffect(() => { if (t.paletteOpen) setTimeout(() => inputRef.current?.focus(), 0); }, [t.paletteOpen]);
   if (!t.paletteOpen) return null;
 
   const onKey = (e: React.KeyboardEvent) => {
     if (e.key === "Escape") return close();
-    if (e.key === "ArrowDown") { e.preventDefault(); setActive((a) => Math.min(filtered.length - 1, a + 1)); }
+    if (e.key === "ArrowDown") { e.preventDefault(); setActive((a) => Math.min(shown.length - 1, a + 1)); }
     else if (e.key === "ArrowUp") { e.preventDefault(); setActive((a) => Math.max(0, a - 1)); }
-    else if (e.key === "Enter") { e.preventDefault(); filtered[active]?.run && run(filtered[active].run); }
+    else if (e.key === "Enter") { e.preventDefault(); shown[active]?.run && run(shown[active].run); }
   };
 
   let lastCat = "";
@@ -62,7 +75,7 @@ export default function Palette() {
           <input ref={inputRef} value={q} onChange={(e) => { setQ(e.target.value); setActive(0); }} onKeyDown={onKey}
                  placeholder="Type a function, participant, lens, layout… (e.g. OPS · golf · ripeness · triage · HELP)" /></div>
         <div className="plist">
-          {filtered.length === 0 ? <div className="pitem">No match.</div> : filtered.map((it, i) => {
+          {shown.length === 0 ? <div className="pitem">No match.</div> : shown.map((it, i) => {
             const header = it.cat !== lastCat ? <div className="pcat" key={"c" + it.cat}>{it.cat.toUpperCase()}</div> : null;
             lastCat = it.cat;
             return (
@@ -74,6 +87,7 @@ export default function Palette() {
               </div>
             );
           })}
+          {hiddenCount > 0 ? <div className="pitem dim">+{hiddenCount} more — keep typing to narrow</div> : null}
         </div>
         <div className="pfoot"><span><b>↑↓</b> move</span><span><b>↵</b> run</span><span><b>esc</b> close</span><span className="amber">discoverable — start typing</span></div>
       </div>

@@ -6,6 +6,9 @@ export function downloadCsv(filename: string, rows: FeedRow[], cols: Col[]): voi
   const esc = (v: string) => (/[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v);
   const header = cols.map((c) => esc(c.l)).join(",");
   const body = rows.map((r) => cols.map((c) => {
+    if (c.f === "basis_flags") {           // synthetic column: export the honesty chips, not an (empty) field
+      return esc([r.midpoint_only ? "MID-ONLY" : "", r.wide_basis ? "WIDE" : ""].filter(Boolean).join(" "));
+    }
     const v = r[c.f];
     return esc(v == null ? "" : String(v));
   }).join(",")).join("\n");

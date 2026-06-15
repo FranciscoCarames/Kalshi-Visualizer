@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Terminal Pro — the Kalshi opportunity workstation SPA (React, pixel-exact port of ui-mockup-final-spa.html), served at /terminal.",
+  "description": "Kalshi Structured Scanner — the read-only opportunity workstation SPA (React), served at /terminal.",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

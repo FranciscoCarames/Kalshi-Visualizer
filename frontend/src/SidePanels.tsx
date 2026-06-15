@@ -1,7 +1,9 @@
 /* Watch / Movers + Alerts side panels — ported from the mockup's watch()/alerts().
- * Derived from the live feed rows (read-only). Real new-actionable/bucket-change alerts via engine.alerts
- * land in Phase C; here they are derived from the current snapshot, clearly a snapshot view. */
-import type { FeedRow, FeedMeta } from "./feed";
+ * Watch is a read-only view of the current top rows. Alerts shows REAL changes since the previous scan,
+ * derived by the pure `deriveAlerts` helper from the existing `changeOf` diff (never fabricated). */
+import type { FeedRow } from "./feed";
+import { useTerminal } from "./context";
+import { deriveAlerts, ALERT_LABEL, type AlertSeverity } from "./alerts";
 
 export function Watch({ opps, onPick }: { opps: FeedRow[]; onPick: (r: FeedRow) => void }) {
   const act = opps.filter((o) => o.section === "act").slice(0, 7);
@@ -28,21 +30,22 @@ export function Watch({ opps, onPick }: { opps: FeedRow[]; onPick: (r: FeedRow) 
   );
 }
 
-export function Alerts({ opps, meta }: { opps: FeedRow[]; meta: FeedMeta | null }) {
-  const firstAct = opps.find((o) => o.section === "act");
-  const firstBounded = opps.find((o) => o.section === "bounded");
-  const A: [string, string, string, string][] = [
-    ["became executable", firstAct?.name || "—", "firm both legs", "green"],
-    ["bucket changed", "→ Review · rule-check", "settlement check", "amber"],
-    ["series failed", (meta?.failed || 0) + " series", "coverage partial", meta?.failed ? "red" : "green"],
-    ["new bounded-loss", firstBounded?.name || "—", "watchlist", "cyan"],
-  ];
+const SEV_COLOR: Record<AlertSeverity, string> = { info: "green", review: "amber", warn: "red" };
+
+export function Alerts() {
+  const { opps, changeOf, meta, hasBaseline } = useTerminal();
+  const alerts = deriveAlerts(opps, changeOf, meta, hasBaseline);
+  if (!alerts.length) {
+    return <div className="note" style={{ padding: 6 }}>
+      {hasBaseline ? "No changes since last scan." : "No prior scan baseline yet — alerts appear after the next scan."}
+    </div>;
+  }
   return (
     <>
-      {A.map((a, i) => (
+      {alerts.map((a, i) => (
         <div className="arow" key={i}>
-          <span className="ic" style={{ background: `var(--${a[3]})` }} />
-          <div><div><b className="white">{a[0]}</b> — {a[1]}</div><div className="meta">{a[2]}</div></div>
+          <span className="ic" style={{ background: `var(--${SEV_COLOR[a.severity]})` }} />
+          <div><div><b className="white">{ALERT_LABEL[a.kind]}</b> — {a.label}</div><div className="meta">{a.basis}</div></div>
         </div>
       ))}
     </>

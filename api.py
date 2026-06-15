@@ -19,7 +19,7 @@ import time
 from typing import Any, Callable
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Response
-from fastapi.responses import StreamingResponse
+from fastapi.responses import RedirectResponse, StreamingResponse
 from pydantic import BaseModel, ConfigDict
 
 import config
@@ -35,8 +35,15 @@ import sports
 import store
 from webui import diagnostics, feed
 
-app = FastAPI(title="Kalshi opportunity engine", version="4.0")
+app = FastAPI(title="Kalshi Structured Scanner", version="4.0")
 logger = logging.getLogger("kalshi.api")
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon() -> RedirectResponse:
+    """Redirect the browser's implicit /favicon.ico probe to the SPA's SVG icon (kills the root 404 on both
+    the dashboard at "/" and the SPA). Registered before NiceGUI's "/" mount so this explicit route wins."""
+    return RedirectResponse(url="/terminal/favicon.svg")
 
 # Per-process HTTP `/scan` rate limiter (PR 26b) — distinct from the ScanManager scan TTL. Guards the
 # endpoint itself; the in-process dashboard button (engine.run_scan_now) never touches it.

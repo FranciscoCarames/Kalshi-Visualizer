@@ -17,7 +17,7 @@ function fmtField(o: FeedRow, f: string): string {
 }
 
 const COMPARE_FIELDS: [string, string][] = [
-  ["sport", "Sport"], ["section", "Zone"], ["sub", "Tournament"], ["cost", "Cost ¢"], ["max_loss", "Max loss ¢"],
+  ["sport", "Sport"], ["section", "Section"], ["sub", "Tournament"], ["cost", "Cost ¢"], ["max_loss", "Max loss ¢"],
   ["max_profit", "Max profit ¢"], ["roi", "ROI %"], ["edge", "Edge ¢"], ["cond_child", "Deeper|reached %"],
   ["parent_over_maxloss", "Ripeness"], ["quote_health", "Quote"], ["tradable", "Tradable"],
 ];
@@ -36,24 +36,43 @@ export function CompareView({ opps }: { opps: FeedRow[] }) {
   );
 }
 
+const yesNo = (s: unknown): "yes" | "no" | "" => {
+  const v = String(s || "").toLowerCase();
+  return v.includes("yes") ? "yes" : v.includes("no") ? "no" : "";
+};
+
 export function OverlapView({ opps }: { opps: FeedRow[] }) {
   const warns: ReactNode[] = [];
   for (let i = 0; i < opps.length; i++) {
     for (let j = i + 1; j < opps.length; j++) {
       const A = opps[i], B = opps[j], why: string[] = [];
       if (A.name && A.name === B.name && A.sport === B.sport) why.push(`same participant ${A.name}`);
-      const ta = new Set((A.legs || []).map((l) => l.tk).filter(Boolean));
-      const shared = (B.legs || []).map((l) => l.tk).filter((tk) => tk && ta.has(tk));
-      if (shared.length) why.push(`${shared.length} shared market${shared.length > 1 ? "s" : ""}`);
+      // Shared markets, side-aware: same side on the shared ticker = doubling; opposite = offsetting (a hedge).
+      const sideA = new Map<string, string>();
+      (A.legs || []).forEach((l) => { if (l.tk) sideA.set(l.tk, yesNo(l.side)); });
+      const known: boolean[] = []; let shared = 0;
+      (B.legs || []).forEach((l) => {
+        if (!l.tk || !sideA.has(l.tk)) return;
+        shared++;
+        const sa = sideA.get(l.tk) || "", sb = yesNo(l.side);
+        if (sa && sb) known.push(sa === sb);     // true = same side, false = opposite
+      });
+      if (shared) {
+        const verdict = !known.length ? "overlapping exposure — check sides"
+          : known.every(Boolean) ? "doubling exposure"
+          : known.every((s) => !s) ? "offsetting exposure (hedge)"
+          : "mixed overlap — inspect legs";
+        why.push(`${shared} shared market${shared > 1 ? "s" : ""} → ${verdict}`);
+      }
       if (why.length) warns.push(
-        <div className="arow" key={`${i}-${j}`}><span className="ic" style={{ background: "var(--red)" }} />
-          <div><b className="white">{String(A.name).slice(0, 18)}</b> &amp; <b className="white">{String(B.name).slice(0, 18)}</b> — {why.join(", ")} → doubling exposure</div>
+        <div className="arow" key={`${i}-${j}`}><span className="ic" style={{ background: "var(--amber)" }} />
+          <div><b className="white">{String(A.name).slice(0, 18)}</b> &amp; <b className="white">{String(B.name).slice(0, 18)}</b> — {why.join(", ")}</div>
         </div>);
     }
   }
   return (
     <div>
-      <div className="note" style={{ padding: "4px 6px" }}>Flags selected opportunities that share a participant or market — you'd be <b>doubling exposure</b>, not diversifying. Read-only heuristic, never changes ranking.</div>
+      <div className="note" style={{ padding: "4px 6px" }}>Flags selected opportunities that share a participant or market. Shared markets are checked side-aware — same side <b>doubles</b> exposure, opposite sides <b>offset</b> (a hedge). Read-only heuristic, never changes ranking.</div>
       {warns.length ? warns : <div className="note" style={{ padding: 6 }}><span className="green">No shared participant or market</span> among the {opps.length} selected — they look independent.</div>}
     </div>
   );

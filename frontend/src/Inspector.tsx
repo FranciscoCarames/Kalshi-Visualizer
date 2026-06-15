@@ -23,7 +23,7 @@ export default function Inspector({ row, lens, snapshotId, showNet, longShort }:
   const isSpec = row.zone === "spec";
   const w = rankWhy(row);
   const legs = row.legs ?? [];
-  const condPct = row.cond_child ?? row.cond;
+  const condPct = row.cond_child;                 // display-basis P(deeper│reached); firm shown in Detail
   const hasCond = condPct != null;
   return (
     <div className="des">
@@ -73,8 +73,9 @@ export default function Inspector({ row, lens, snapshotId, showNet, longShort }:
 
       {hasCond ? (
         <div className="note" style={{ marginTop: 6 }}>
-          <b className="violet">Conditional (market-implied):</b> P(deeper │ reached) ≈ <span className="violet">{n1(condPct as number)}%</span>
-          {" "}— the raw price ratio. See the <b>Participant Detail</b> tab for the full table. <span className="uncal">uncalibrated · not fair value</span>
+          <b className="violet">Conditional (market-implied · display basis):</b> P(deeper │ reached) ≈ <span className="violet">{n1(condPct as number)}%</span>
+          {row.cond_child_firm != null ? <> · firm <span className="violet">{n1(row.cond_child_firm)}%</span></> : null}
+          {" "}— price ratio. See the <b>Participant Detail</b> tab for the full table. <span className="uncal">uncalibrated · not fair value</span>
         </div>
       ) : null}
 
@@ -137,8 +138,7 @@ export function Detail({ row, showIds, showRules = true }: { row: FeedRow | null
 
   if (!row) return <div className="empty">Click a blotter row.</div>;
   const z = ZB[row.zone] ?? ZB.diag;
-  const raw = row.cond ?? row.cond_child;
-  const hasCond = row.cond != null || row.cond_child != null;
+  const hasCond = row.cond_child != null || row.cond_child_firm != null;
   return (
     <div className="des">
       <div className="dtitle"><span className={"bk " + z[0]}>{z[1]}</span><span className="t">{row.name}</span></div>
@@ -149,15 +149,21 @@ export function Detail({ row, showIds, showRules = true }: { row: FeedRow | null
           <div className="sect">CONDITIONAL PROBABILITY <span className="uncal">UNCALIBRATED · DISPLAY-ONLY · NOT FAIR VALUE</span></div>
           <div className="note" style={{ marginBottom: 4 }}>
             The market-implied chance the <b>deeper</b> outcome happens <i>given</i> the <b>broader</b> one
-            already did — just the raw price ratio (deeper ÷ broader), uncalibrated and not a fair-value model.
+            already did — the price ratio (deeper ÷ broader) on two bases: <b>display</b> (the dashboard
+            price) and <b>firm</b> (executable bid/ask). Uncalibrated, not a fair-value model; the firm
+            figure is a diagnostic, not an executable edge.
           </div>
           <table className="condtbl"><tbody>
-            <tr><th>Stage</th><th>raw (price ratio)</th></tr>
-            <tr><td>Broader: {row.pnode || row.detail || "parent"}</td><td>{row.pbid != null ? row.pbid + "¢" : "—"}</td></tr>
-            <tr><td>P(deeper │ broader reached)</td><td className="violet">{row.cond_child != null ? n1(row.cond_child) + "%" : (raw != null ? raw + "%" : "—")}</td></tr>
-            <tr><td>P(success │ broader reached)</td><td>{row.cond_success != null ? n1(row.cond_success) + "%" : "—"}</td></tr>
+            <tr><th>Stage</th><th>display</th><th>firm (bid/ask)</th></tr>
+            <tr><td>P(deeper │ broader reached)</td>
+              <td className="violet">{row.cond_child != null ? n1(row.cond_child) + "%" : "—"}</td>
+              <td>{row.cond_child_firm != null ? n1(row.cond_child_firm) + "%" : "—"}</td></tr>
+            <tr><td>P(success │ broader reached)</td>
+              <td>{row.cond_success != null ? n1(row.cond_success) + "%" : "—"}</td>
+              <td>{row.cond_success_firm != null ? n1(row.cond_success_firm) + "%" : "—"}</td></tr>
           </tbody></table>
-          <div className="formula">P(deeper│reached) = price(deeper) ÷ price(parent){row.cask != null && row.pbid ? ` = ${row.cask}/${row.pbid} = ${row.cond}%` : ""}</div>
+          <div className="formula">display: P(deeper│reached) = price(deeper) ÷ price(parent){row.cdisp != null && row.pdisp ? ` = ${row.cdisp}/${row.pdisp} = ${n1(row.cond_child as number)}%` : ""}</div>
+          {row.cask != null && row.pbid ? <div className="formula">firm: child ask ÷ parent bid = {row.cask}/{row.pbid}{row.cond_child_firm != null ? ` = ${n1(row.cond_child_firm)}%` : ""}</div> : null}
         </>
       ) : <div className="note" style={{ marginTop: 6 }}>No parent/child containment node on this row (e.g. a dutch-book field/game). Conditional probability applies to ladder (containment) rows only.</div>}
 
@@ -231,10 +237,12 @@ export function Formulas({ row }: { row: FeedRow | null }) {
       <div className="formula">max profit = {cents(row.max_profit ?? row.profit)} · max loss = {cents(row.max_loss)} · upside:risk = {num(row.ratio) == null ? "—" : n1(row.ratio as number)}</div>
       <div className="sect">RIPENESS (parent ÷ max loss)</div>
       <div className="formula">parent_display ÷ (cost − 100) = {row.parent_over_maxloss != null ? (row.parent_over_maxloss as number).toFixed(2) : "n/a"} — in-the-money chance per ¢ at risk</div>
-      <div className="sect">CONDITIONAL <span className="uncal">UNCALIBRATED</span></div>
-      <div className="formula">P(deeper│reached) = price(deeper)/price(parent) = {row.cond != null ? `${row.cask}/${row.pbid} = ${row.cond}%` : "n/a"}</div>
+      <div className="sect">CONDITIONAL <span className="uncal">UNCALIBRATED · DISPLAY-ONLY</span></div>
+      <div className="formula">display: P(deeper│reached) = price(deeper)/price(parent) = {row.cond_child != null && row.cdisp != null && row.pdisp ? `${row.cdisp}/${row.pdisp} = ${n1(row.cond_child)}%` : "n/a"}</div>
+      <div className="formula">firm: child ask/parent bid = {row.cond_child_firm != null && row.cask != null && row.pbid ? `${row.cask}/${row.pbid} = ${n1(row.cond_child_firm)}%` : "n/a"} <span className="uncal">diagnostic, not an executable edge</span></div>
       <div className="sect">FEES (estimate, display-only)</div>
       <div className="formula">kalshi taker fee ≈ 0.07·c·p·(1−p) → fees {cents(row.fees)} · net edge {cents(row.net_edge)} · never affects ranking</div>
+      <div className="note"><span className="uncal">general taker estimate only · not net P&L · special schedules / maker fills / rounding / series fee changes may differ</span></div>
       <div className="note" style={{ marginTop: 6 }}>All gross & top-of-book; fees, collateral, full-depth execution are documented limits.</div>
     </div>
   );

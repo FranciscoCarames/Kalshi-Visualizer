@@ -129,6 +129,9 @@ tbody tr.zspec{border-left:2px solid rgba(255,176,0,.35)}tbody tr.zdiag{border-l
 @keyframes flash{from{background:rgba(51,255,122,.5)}to{background:transparent}}
 tbody tr.fl td{animation:flash 1.8s ease-out 1}
 @media (prefers-reduced-motion: reduce){tbody tr.fl td{animation:none}.scanbar{animation:none}}
+/* Visible keyboard focus (WCAG 2.4.7) — interactive elements set outline:none for the mouse; restore a
+   ring for keyboard nav only via :focus-visible so the terminal stays clean under the pointer. */
+:focus-visible{outline:1px solid var(--amber);outline-offset:1px}
 .nm{color:var(--white);font-weight:600;font-family:var(--sans)}.sub{color:var(--tx3);font-size:9px;font-family:var(--sans)}
 .nw{background:var(--green);color:#04130a;font-weight:800;font-size:8px;padding:0 3px}
 .ty{color:var(--green)}.tn{color:var(--tx3)}.tr2{color:var(--amber)}

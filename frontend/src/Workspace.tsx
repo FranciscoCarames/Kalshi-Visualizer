@@ -33,12 +33,12 @@ function InspectorBody() {
 function LadderBody() {
   const t = useTerminal();
   return <>
-    <div className="ladwarn">READ-ONLY · TOP-OF-BOOK + DERIVED · POLL-REFRESHED · LIVE BOOK = FUTURE</div>
+    <div className="ladwarn">READ-ONLY · LIVE KALSHI ORDER BOOK · TOP-OF-BOOK · POLL-REFRESHED</div>
     <Ladder row={t.sel} />
   </>;
 }
 function WatchBody() { const t = useTerminal(); return <div className="pbody"><Watch opps={t.opps} onPick={t.setSel} /></div>; }
-function AlertsBody() { const t = useTerminal(); return <div className="pbody"><Alerts opps={t.opps} meta={t.meta} /></div>; }
+function AlertsBody() { return <div className="pbody"><Alerts /></div>; }
 function ResearchBody() {
   const t = useTerminal();
   const m = t.meta;
@@ -59,7 +59,7 @@ const PANELS: PanelDef[] = [
   { id: "p-blotter", n: "1", title: "BLOTTER", col: "L", hint: "click row · J/K · ENTER · drag splitters · ⚙ columns", body: <Blotter /> },
   { id: "p-des", n: "2", title: "INSPECTOR", col: "L", hint: "read-only · buy-only · gross", body: <InspectorBody /> },
   { id: "p-ladder", n: "3", title: "DEPTH LADDER", col: "M", hint: "top-of-book + derived", body: <LadderBody /> },
-  { id: "p-watch", n: "★", title: "RECENTLY ACTIONABLE", col: "R", body: <WatchBody /> },
+  { id: "p-watch", n: "★", title: "WATCHLIST · TOP ACTIONABLE", col: "R", body: <WatchBody /> },
   { id: "p-alerts", n: "!", title: "ALERTS", col: "R", body: <AlertsBody /> },
   { id: "p-research", n: "≈", title: "RESEARCH", col: "R", hint: "read-only · P5", body: <ResearchBody /> },
 ];

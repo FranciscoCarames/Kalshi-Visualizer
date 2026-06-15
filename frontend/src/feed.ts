@@ -15,11 +15,16 @@ export interface FeedRow {
   edge?: number; roi?: number; units?: number; profit?: number; cost?: number;
   max_loss?: number; max_profit?: number; max_units?: number; quote_health?: string; caveat?: string;
   settlement_caveat?: string; blk?: string; scope?: string; resolution_mode?: string;
-  // display-only derived (computed in the adapter):
-  cond?: number | null; cond_child?: number | null; cond_success?: number | null;
+  // display-only derived (computed in the adapter; uncalibrated · gross · never rank). Conditional on two
+  // bases: display (dashboard price) and firm (executable bid/ask) — the firm pair is a DIAGNOSTIC, not an
+  // executable edge. midpoint_only / wide_basis are honesty flags from the engine row builder.
+  cond_child?: number | null; cond_success?: number | null;
+  cond_child_firm?: number | null; cond_success_firm?: number | null;
+  ev?: number | null; breakeven?: number | null; midpoint_only?: boolean; wide_basis?: boolean;
   parent_over_maxloss?: number | null; ratio?: number;
-  pnode?: string; cnode?: string; pbid?: number | null; cask?: number | null;
-  legs?: FeedLeg[]; nlegs?: number; spark?: number[]; url?: string;
+  pnode?: string; cnode?: string;
+  pbid?: number | null; cask?: number | null; pdisp?: number | null; cdisp?: number | null;
+  legs?: FeedLeg[]; nlegs?: number; url?: string;
   [k: string]: unknown;
 }
 

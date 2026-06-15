@@ -1,5 +1,5 @@
 /* The blotter — a plain HTML <table>, ported from ui-mockup-final-spa.html blotter() (replaces AG-Grid so
- * the look is pixel-exact). Zones + bucket tabs + split + sparkline name cell + selection bar + column
+ * the look is pixel-exact). Zones + bucket tabs + split + name cell + selection bar + column
  * chooser, all on the mockup's classes. Rows are engine-ranked + lens-sorted (no click-sort — matches the
  * mockup; AG-Grid's sort/virtualization are intentionally not reproduced at this gate). */
 import { useEffect, useRef, useState } from "react";
@@ -7,16 +7,6 @@ import { useTerminal } from "./context";
 import { ZONES, SUBTABS, type FeedRow } from "./feed";
 import { COLS, fmtVal, qhClass, type Col } from "./columns";
 import { sortRows, nextSort, type SortState } from "./sort";
-
-const cssv = (n: string) => getComputedStyle(document.documentElement).getPropertyValue(n).trim() || "#ffb000";
-
-function Spark({ pts }: { pts?: number[] }) {
-  if (!pts || pts.length < 2) return null;
-  const w = 44, h = 12, mn = Math.min(...pts), rg = Math.max(1, Math.max(...pts) - mn), st = w / (pts.length - 1);
-  const d = pts.map((p, i) => `${i ? "L" : "M"}${(i * st).toFixed(1)},${(h - 2 - ((p - mn) / rg) * (h - 4)).toFixed(1)}`).join(" ");
-  return <svg width={w} height={h} style={{ verticalAlign: "middle", marginLeft: 5 }}>
-    <path d={d} fill="none" stroke={cssv("--amber")} strokeWidth={1.2} opacity={0.65} /></svg>;
-}
 
 function severityOf(o: FeedRow): { cls: string; txt: string } | null {
   if (o.blk) return { cls: "sev-blk", txt: "Blocker" };
@@ -32,7 +22,16 @@ function Cell({ row, col, chg }: { row: FeedRow; col: Col; chg?: "new" | "up" | 
       {chg === "new" ? <span className="nw">NEW</span> : chg === "returned" ? <span className="amber" title="returned to this set">↶ </span> : null}
       {chg === "up" ? <span className="green" title="edge up since last scan">▲ </span>
         : chg === "down" ? <span className="red" title="edge down since last scan">▼ </span> : null}
-      <span className="nm">{String(row.name ?? "")}</span> <span className="sub">{String(row.sub ?? row.detail ?? "")}</span><Spark pts={row.spark} />
+      <span className="nm">{String(row.name ?? "")}</span> <span className="sub">{String(row.sub ?? row.detail ?? "")}</span>
+    </td>;
+  }
+  if (col.f === "basis_flags") {
+    const mid = !!row.midpoint_only, wide = !!row.wide_basis;
+    if (!mid && !wide) return <td className="dim">—</td>;
+    return <td>
+      {mid ? <span className="sev sev-rev" title="positive only on the display (midpoint) basis; firm bid/ask does not confirm">MID-ONLY</span> : null}
+      {mid && wide ? " " : null}
+      {wide ? <span className="sev sev-adv" title="rests on a wide quote — low confidence">WIDE</span> : null}
     </td>;
   }
   if (col.f === "caveat") {

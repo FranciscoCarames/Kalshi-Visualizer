@@ -52,6 +52,7 @@ def _snapshot():
              rule_flag="SETTLEMENT_CHECK_REQUIRED"),
         _opp("k", bucket="risk_budget", extra={"worst_case_profit_c": -4, "best_case_profit_c": 20,
              "parent_display_c": 30, "child_display_c": 18, "resolution_mode": "vertical",
+             "spread_over_parent": 0.4,    # engine field = 1 − child/parent; drives the viewmodel cond_success
              "parent_yes_bid_c": 30, "child_yes_ask_c": 18}),
         _opp("n", bucket="no_structure", extra={"no_structure_scope": "championship"}),
         _opp("d", bucket="data_quality"),
@@ -70,9 +71,11 @@ def test_feed_shape_and_json_serializable():
         assert k in f["meta"]
     assert f["meta"]["snapshot_id"] == 7 and f["meta"]["n_total"] == 6
     row = next(r for r in f["opps"] if r["id"] == "a")
-    for k in ("id", "bucket", "zone", "section", "sport", "sub", "status", "tradable", "legs", "spark",
-              "cond", "cond_child", "cond_success", "parent_over_maxloss", "fees", "net_edge", "nlegs"):
+    for k in ("id", "bucket", "zone", "section", "sport", "sub", "status", "tradable", "legs",
+              "cond_child", "cond_success", "cond_child_firm", "cond_success_firm",
+              "parent_over_maxloss", "fees", "net_edge", "nlegs"):
         assert k in row
+    assert "spark" not in row and "cond" not in row     # fabricated sparkline + single-basis cond removed
     json.dumps(f, default=str)        # no circular refs; wire-serializable (the route uses FastAPI's encoder)
 
 
@@ -88,13 +91,59 @@ def test_zone_section_mapping():
 
 def test_display_only_derived_fields():
     k = next(r for r in feed.feed_from_snapshot(_snapshot())["opps"] if r["id"] == "k")
-    # conditional: child/parent = 18/30 = 60% deeper-given-reached; 40% success-given-reached
-    assert k["cond"] == 60.0 and k["cond_child"] == 60.0 and k["cond_success"] == 40.0
+    # conditional on BOTH bases: child/parent = 18/30 = 60% deeper-given-reached; 40% success-given-reached
+    # (the fixture's display and firm prices happen to match).
+    assert k["cond_child"] == 60.0 and k["cond_success"] == 40.0
+    assert k["cond_child_firm"] == 60.0 and k["cond_success_firm"] == 40.0
+    assert "cond" not in k                       # the buggy single-basis field is gone
     # ripeness: parent_display 30 ÷ max loss 4 (= -worst_case_profit_c) = 7.5
     assert k["parent_over_maxloss"] == 7.5
-    # an exec row with no parent/child priceable pair has no conditional / ripeness
+    # an exec row with no parent/child priceable pair has no conditional (either basis) / ripeness
     a = next(r for r in feed.feed_from_snapshot(_snapshot())["opps"] if r["id"] == "a")
-    assert a["cond"] is None and a["parent_over_maxloss"] is None
+    assert a["cond_child"] is None and a["cond_child_firm"] is None and a["parent_over_maxloss"] is None
+
+
+def test_display_conditional_is_viewmodel_value_verbatim():
+    """Parity (audit point 4): the feed's DISPLAY conditional is the viewmodel value verbatim, not a
+    re-derivation — so the SPA's '(display)' columns can never silently drift from the old dashboard."""
+    from webui import viewmodel as vm
+    k_opp = next(o for o in _snapshot()["opportunities"] if o["opportunity_id"] == "k")
+    k_row = next(r for r in feed.feed_from_snapshot(_snapshot())["opps"] if r["id"] == "k")
+    assert k_row["cond_child"] == vm._cond_child_pct(k_opp)
+    assert k_row["cond_success"] == vm._cond_success_pct(k_opp)
+
+
+def test_conditional_guards_fail_closed_and_preserve_zero():
+    """Both bases (audit point 2): an inverted pair (child > parent) fails closed to None; a legitimate
+    child == 0 yields 0.0% (NOT None — the old truthiness bug dropped it)."""
+    snap = {"snapshot_id": 9, "fetched_at": "2026-06-03 12:00:00 UTC", "meta": {}, "opportunities": [
+        _opp("inv", bucket="risk_budget", extra={                       # inverted: child > parent
+            "worst_case_profit_c": -4, "best_case_profit_c": 20,
+            "parent_display_c": 30, "child_display_c": 40,
+            "parent_yes_bid_c": 30, "child_yes_ask_c": 40}),
+        _opp("zero", bucket="risk_budget", extra={                      # child == 0 → 0% / 100%
+            "worst_case_profit_c": -4, "best_case_profit_c": 20,
+            "parent_display_c": 30, "child_display_c": 0, "spread_over_parent": 1.0,
+            "parent_yes_bid_c": 30, "child_yes_ask_c": 0})]}
+    by = {r["id"]: r for r in feed.feed_from_snapshot(snap)["opps"]}
+    assert by["inv"]["cond_child"] is None and by["inv"]["cond_child_firm"] is None
+    assert by["inv"]["cond_success"] is None and by["inv"]["cond_success_firm"] is None
+    assert by["zero"]["cond_child"] == 0.0 and by["zero"]["cond_success"] == 100.0
+    assert by["zero"]["cond_child_firm"] == 0.0 and by["zero"]["cond_success_firm"] == 100.0
+
+
+def test_feed_is_display_only_isolation():
+    """Isolation (audit point 3): the adapter never mutates the engine rows, and the display-only
+    diagnostics live ONLY in the feed row — they are never written back onto the engine opportunity."""
+    snap = _snapshot()
+    before = copy.deepcopy(snap["opportunities"])
+    feed.feed_from_snapshot(snap)
+    assert snap["opportunities"] == before          # no mutation of engine rows
+    display_only = ("cond_child", "cond_success", "cond_child_firm", "cond_success_firm",
+                    "parent_over_maxloss", "spark", "ev", "breakeven", "midpoint_only", "wide_basis")
+    for o in snap["opportunities"]:
+        for k in display_only:
+            assert k not in o
 
 
 def test_legs_trimmed_to_view_fields():

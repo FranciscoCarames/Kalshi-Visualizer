@@ -477,7 +477,7 @@ _LEG_COLUMNS = [
 ]
 
 
-@ui.page("/")
+@ui.page("/", title="Kalshi Structured Scanner")
 def dashboard(sport: str = "", tournament: str = "", participant: str = "",
               min_size: str = "", active: str = "") -> None:
     # Compact URL state -> initial control values (validated against the snapshot in `_seed`).
