@@ -4,6 +4,42 @@ The redesigned trader workstation (mockup `ui-mockup-final-spa.html`), built as 
 client-side SPA on the owner's bake-off-proven stack and served at **`/terminal`**. The legacy NiceGUI
 dashboard is untouched at **`/`**. This doc is the pick-up point for a fresh session.
 
+---
+
+## ⏭️ NEXT SESSION — START HERE (5 inspector/links/ladder/defaults fixes)
+
+Branch **`feat/terminal-spa-parity`** (full parity DONE + pushed to origin, HEAD `032c9e1`). The full
+mockup-exact port + NiceGUI parity is complete; these are 5 owner-requested polish/correctness fixes.
+**Full plan:** `~/.claude/plans/delightful-hopping-aurora.md`. Order: 1 → 2 → 5 (quick FE) → 3 → 4.
+
+1. **Charts too big** (Participant-Detail) — `tokens.css .chart` is `width:100%`. Cap `max-width:300px;
+   max-height:160px`, shrink viewBoxes (payoff `W240 H96`, ladder `rowH14`, cap ~8 layers).
+2. **Conditional probs hard to find** — they're in the **PARTICIPANT DETAIL** tab, ladder rows only
+   (`Inspector.tsx` `Detail`, `hasCond`). Add a Trade-Card pointer + plain-English explainer.
+3. **Per-participant + per-side deep links** — CONFIRMED format (owner examples):
+   `<event_url>?op_market_ticker=<FULL_TICKER>&op_order_side=<yes|no>`. All parts already in each feed leg
+   (`u`=event url, `tk`=`KXNBA-27-BOS`, `side`=`buy_yes/buy_no`). Build in `webui/feed.py` `_trim_legs`
+   (`legs[].u`); keep `data.kalshi_url` (event url) intact for link_audit. Engine is BUY-ONLY → side is
+   always the buy's yes/no (no sell). + a feed test.
+4. **Depth ladder — DROP synthetic, show ACTUAL Kalshi order book** (owner: "I want the actual depth").
+   Snapshot has only top-of-book → fetch live. CONFIRMED endpoint:
+   `GET /trade-api/v2/markets/{ticker}/orderbook?depth=N` → `{orderbook_fp:{yes_dollars:[[price$,size]…],
+   no_dollars:[[price$,size]…]}}` (resting bids/side; dollar strings → cents). Add
+   `kalshi_client.get_orderbook()` + read-only `GET /api/terminal/orderbook?ticker=` (throttled/rate-
+   limited). Rewrite `Ladder.tsx`: delete the fabricated `book()`; render YES bids from `yes_dollars`,
+   YES asks = `100 − no_price` (invert `no_dollars`), sizes verbatim; re-fetch ~5s while a row is selected;
+   footer "LIVE · refreshed Ns ago"; empty book → honest "no resting orders".
+5. **Band defaults ≠ old UI (bug)** — SPA SecBar defaults all to 0 (off); old UI uses
+   `config.RISK_BUDGET_DEFAULT_MAX_LOSS_C=5`, `NEAR_MISS_DEFAULT_OVER_C=3`,
+   `NO_STRUCTURE_DEFAULT_MAX_LOSS_C=15`, `NO_STRUCTURE_DEFAULT_MAX_BUY_NO_C=15`. Expose via
+   `feed.meta.defaults`; seed `filters.emptyBand()` from it; add a defaults hint + "reset band". The
+   SecBar (thin bar under the filter row, shown for Bounded-loss/Near-miss/Cheap-NO) is where they live.
+
+Verify: `tsc`+`vitest`+`npm run build`; `pytest -q`+`ruff`; Playwright `/terminal` (compact charts; leg ↗
+opens the exact market+side; ladder shows real bid/ask sizes; bounded-loss opens with max-loss 5¢).
+
+---
+
 ## Where it lives
 - **Branch:** `feat/terminal-spa` (based off `feat/ui-prototype-bakeoff`, which has the Vite scaffold +
   `ui-prototypes/shared`). `main` is frozen — owner merges manually (branch-only delivery).
