@@ -166,10 +166,14 @@ if __name__ == "__main__":
     # headless 24/7 server (no browser ever connected) set AUTO_SCAN_PAUSE_WHEN_IDLE=0 to scan regardless.
     _pause_when_idle = resolve_pause_when_idle(
         os.getenv("AUTO_SCAN_PAUSE_WHEN_IDLE"), config.AUTO_SCAN_PAUSE_WHEN_IDLE)
-    _gate = (lambda: presence.count() > 0) if _pause_when_idle else None
+    # Idle gate: scan when a NiceGUI viewer is connected OR the Terminal Pro SPA polled its feed recently
+    # (the SPA isn't a NiceGUI client; its feed poll heartbeats presence). When idle-pause is OFF, gate=None
+    # (headless 24/7 scanning, unchanged).
+    _gate = (lambda: presence.count() > 0
+             or presence.recently_active(config.TERMINAL_PRESENCE_WINDOW_S)) if _pause_when_idle else None
     # ASCII-only (Windows cp1252 consoles can't encode some punctuation and would crash the print).
     print("Auto-scan presence gate: "
-          + ("ON (paused while no viewer connected)" if _pause_when_idle
+          + ("ON (paused while no viewer connected; terminal feed poll counts as a viewer)" if _pause_when_idle
              else "OFF (headless - scanning 24/7 regardless of viewers)"))
     scan_scheduler.scheduler.start(lambda: engine.run_scan_now(force=False), gate=_gate)
     uvicorn.run(api.app, host=_host, port=_port)

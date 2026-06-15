@@ -337,7 +337,11 @@ def get_terminal_feed(db_path: str | None = Depends(db_path_dep)) -> dict[str, A
     A faithful 1:1 view, NOT a second engine: `webui.feed.build_feed` re-presents `store.latest()` through
     the existing display-row builders and adds only DISPLAY-ONLY fields (ripeness / conditional / net-of-
     fees estimate). `bucket`/`status`/`tradable_now`/`rule_flag` are copied verbatim from the same rows
-    `/opportunities` serves — parity is asserted in tests/test_feed.py. No re-bucketing, no re-ranking."""
+    `/opportunities` serves — parity is asserted in tests/test_feed.py. No re-bucketing, no re-ranking.
+
+    Records a presence heartbeat (the SPA isn't a NiceGUI client) so the background scan's idle-gate keeps
+    refreshing the snapshot while this terminal is open. ONLY this endpoint touches terminal presence."""
+    presence.touch()
     return feed.build_feed(db_path=db_path)
 
 

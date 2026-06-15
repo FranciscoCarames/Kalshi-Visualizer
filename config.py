@@ -296,3 +296,9 @@ AUTO_SCAN_DEFAULT_ENABLED = True                      # auto-refresh on by defau
 # AUTO_SCAN_PAUSE_WHEN_IDLE=0 (read in serve.resolve_pause_when_idle) selects the headless 24/7 mode at
 # deploy time without editing code.
 AUTO_SCAN_PAUSE_WHEN_IDLE = True
+
+# The Terminal Pro SPA (/terminal) is not a NiceGUI client, so it can't bump the presence COUNTER; instead
+# its feed poll touches a heartbeat and the idle-gate treats a touch within this window as presence (so the
+# background scan refreshes the snapshot while the SPA is open, and re-pauses this long after it closes).
+# Kept > the SPA poll interval so an open tab stays active across one missed beat (hidden-tab throttling).
+TERMINAL_PRESENCE_WINDOW_S = 30

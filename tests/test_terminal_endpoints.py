@@ -18,6 +18,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 import api
+import presence
 import scan_manager
 import store
 from webui import engine
@@ -143,6 +144,18 @@ def test_export_matches_posted_ids(client):
 def test_export_409_without_snapshot(client):
     c, _ = client
     assert c.post("/api/terminal/export", json={"opportunity_ids": ["a"]}).status_code == 409
+
+
+def test_feed_touches_terminal_presence_others_do_not(client):
+    c, db = client
+    _seed_two_tournaments(db)
+    presence.reset()
+    for path in ("/healthz", "/opportunities", "/coverage", "/metrics"):
+        c.get(path)
+    assert presence.recently_active(30) is False        # unrelated endpoints never heartbeat the terminal
+    c.get("/api/terminal/feed")
+    assert presence.recently_active(30) is True          # only the feed poll does
+    presence.reset()
 
 
 def test_endpoints_are_read_only(client):
