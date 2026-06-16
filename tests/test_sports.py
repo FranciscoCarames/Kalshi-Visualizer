@@ -90,7 +90,9 @@ def test_round_parser_hyphenated_variants_not_finals_wnba():
 
 # --- NBA classification (grounded in live discovery) ---------------------------------
 def _mc(series, title):
-    return sports.NBA.classify(series, {"title": title})
+    # Production markets always carry a ticker prefixed by their series (e.g. KXNBAEAST-26-BOS); the NBA
+    # advance stage keys on that prefix (audit A8 explicit map), so supply a realistic ticker.
+    return sports.NBA.classify(series, {"title": title, "ticker": f"{series}-26-X"})
 
 
 def test_nba_ladder_families_map_to_nodes():
@@ -581,6 +583,17 @@ def test_soccer_winner_rung_live_outright():
     assert sports.SOCCER.ladder.node_order[0] == "Reach Round of 32"
     assert sports.SOCCER.ladder.node_order[-1] == "Win the World Cup"
     assert ("Win the World Cup", "Reach Finals") in sports.SOCCER.ladder.adjacent_pairs
+
+
+def test_a8_nba_nhl_unknown_advance_series_is_unmapped_not_conference():
+    # A8: the explicit advance-stage map returns "" for an unrecognized series (→ surfaced by A6's
+    # unmapped-advance diagnostic), instead of the old blanket `else "Conference"` mislabel.
+    assert sports._nba_stage(sports.NBA, "advance", {"ticker": "KXNBAEAST-26-BOS"}) == "Conference"
+    assert sports._nba_stage(sports.NBA, "advance", {"ticker": "KXNBAPLAYOFF-26-BOS"}) == "Playoffs"
+    assert sports._nba_stage(sports.NBA, "advance", {"ticker": "KXNBAPLAYIN-26-BOS"}) == ""
+    assert sports._nhl_stage(sports.NHL, "advance", {"ticker": "KXNHLWEST-26-COL"}) == "Conference"
+    assert sports._nhl_stage(sports.NHL, "advance", {"ticker": "KXNHLPLAYOFF-26-COL"}) == "Playoffs"
+    assert sports._nhl_stage(sports.NHL, "advance", {"ticker": "KXNHLWILDCARD-26-COL"}) == ""
 
 
 def test_soccer_tournament_key_unifies_ladder_across_series():

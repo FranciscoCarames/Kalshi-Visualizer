@@ -6,6 +6,8 @@ from __future__ import annotations
 
 import pandas as pd
 
+from config import DISPLAY_TOL_C
+
 
 def payoff_chart_data(pay: dict | None) -> pd.DataFrame:
     """Tidy frame for the per-opportunity payoff bar chart — the visual twin of the scenario table.
@@ -43,6 +45,11 @@ def ladder_prices(chain_rows: list[dict]) -> pd.DataFrame:
 
     Columns: ``layer`` (node name), ``display_pct`` (0–100, None if no price), ``rank`` (broad→deep
     order index), ``inverted`` (bool). NaN prices are normalised to None.
+
+    Audit A8: a layer is flagged ``inverted`` only when it prices ABOVE its nearest broader neighbour by
+    more than ``DISPLAY_TOL_C`` (the engine's display-test tolerance, in cents == percentage points), so
+    the chart's inversion matches what `consistency._classify` would call a display inconsistency — not a
+    sub-cent rounding wobble the engine ignores.
     """
     cols = ["layer", "display_pct", "rank", "inverted"]
     if not chain_rows:
@@ -53,7 +60,7 @@ def ladder_prices(chain_rows: list[dict]) -> pd.DataFrame:
         pct = r.get("Display %")
         if pct is None or (isinstance(pct, float) and pct != pct):   # NaN-safe
             pct = None
-        inverted = prev is not None and pct is not None and pct > prev
+        inverted = prev is not None and pct is not None and pct > prev + DISPLAY_TOL_C
         rows.append({"layer": r.get("Layer", ""), "display_pct": pct, "rank": i, "inverted": bool(inverted)})
         if pct is not None:
             prev = pct

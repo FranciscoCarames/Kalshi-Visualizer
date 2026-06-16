@@ -650,6 +650,38 @@ def _winner(name, key, *, yes_bid_c, series="KXNBA", event="KXNBA-26", me=True,
     }
 
 
+# --- A8: latent hardening guards ---------------------------------------------------------------------
+def test_a8_field_rejects_mixed_series_and_family():
+    import sports
+    base = [_winner("A", "a", yes_bid_c=40), _winner("B", "b", yes_bid_c=35), _winner("C", "c", yes_bid_c=30)]
+    # Same event, but one leg from a different series → not a single provable field.
+    mixed_series = [dict(base[0]), dict(base[1]), {**base[2], "series": "KXNHL"}]
+    assert dutchbook.prove_field_mece(mixed_series, sports.NBA).ok is False
+    # Same event/series, but one leg a different field family (kind) → reject.
+    mixed_fam = [dict(base[0]), dict(base[1]), {**base[2], "kind": "pole"}]
+    assert dutchbook.prove_field_mece(mixed_fam, sports.NBA).ok is False
+    # Divergent settlement rule tokens → reject (one leg voids on a walkover the others don't).
+    mixed_rules = [dict(base[0]), dict(base[1]), {**base[2], "rules_primary": "voids on a walkover"}]
+    base_rules = [{**r, "rules_primary": "standard"} for r in base]
+    assert dutchbook.prove_field_mece(base_rules, sports.NBA).ok is True       # control: homogeneous
+    assert dutchbook.prove_field_mece(mixed_rules, sports.NBA).ok is False
+
+
+def test_a8_more_than_two_two_way_markets_is_recorded_in_diag():
+    ev = "KXATPMATCH-26JUN03ABC"
+    rows = [market(n, event=ev, yes_bid_c=20, yes_ask_c=22) for n in ("A", "B", "C")]
+    diag = {}
+    assert dutchbook.find_dutch_books(rows, diag) == []
+    assert any(">2 two-way markets" in r["reason"] for r in diag.get("rejected", []))
+
+
+def test_a8_n_way_dutch_book_is_a_capability_flag_not_hardcoded_soccer():
+    import sports
+    assert sports.SOCCER.n_way_dutch_book is True
+    # Every other sport keeps the strict 2-market path (flag defaults False).
+    assert all((not c.n_way_dutch_book) for c in sports.all_sports() if c.sport_id != "soccer")
+
+
 def test_winner_field_overround_fires():
     # yes_bid 40+35+30 = 105 > 100 -> overround on 3 legs: floor (3-1)*100=200, cost no_ask 195, gap 5.
     f = dutchbook.find_dutch_books([_winner("A", "a", yes_bid_c=40), _winner("B", "b", yes_bid_c=35),
