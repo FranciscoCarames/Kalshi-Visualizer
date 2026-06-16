@@ -9,12 +9,14 @@ Companion docs (not repeated here): `docs/REVIEW_PROTOCOL.md` (risk classes + ve
 
 ## 0. Near-term delivery policy (owner, 2026-06-09)
 
-**Branch-only delivery — supersedes the per-PR cadence below until the owner lifts it.** Do NOT open a PR per
-change. Implement the **full scope** of a work item across **one or more feature branches**, verify
-(`pytest -q`, `ruff`, `serve.py` boot), then hand the branch(es) back. The owner **tests manually** and
-**merges to `main` only when satisfied**; `main` stays frozen until then. Branch off latest `main` or off the
-unmerged branch a feature depends on (note the base). The "small PRs / WIP limits / one PR per change"
-guidance in §1–§2 applies again only once this policy is lifted.
+**Branch from the latest `origin/main` — current policy (owner 2026-06-16, supersedes the "main is frozen →
+stack on unmerged branches" rule).** `origin/main` is the single source of truth ("main" = `origin/main`,
+never stale local `main`). Before any new work: `git fetch origin` and branch off **`origin/main`**
+(`git checkout -b <feature> origin/main`). Each feature → its own branch, **pushed to origin**
+(`git push -u origin <feature>`); the owner reviews/merges it to `origin/main`. **Never push/merge to
+`origin/main` directly**, and **never stack a new feature on an unmerged branch** (that drift caused a large
+SPA‑vs‑NiceGUI reconciliation in June 2026). Verify before handoff (`pytest -q`, `ruff`, `vitest`+`build` for
+frontend, `serve.py` boot, browser check); note the base branch.
 
 ## 1. Default workflow
 

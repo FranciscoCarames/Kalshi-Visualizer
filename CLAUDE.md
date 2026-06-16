@@ -20,8 +20,10 @@ engine — the SPA reads it solely through `GET /api/terminal/feed` (+ thin `/ap
   (private), default branch `main`.
 - **Platform:** Windows 11, PowerShell, Python 3.13. (The Bash tool is also available.)
 - **Scope guard — do NOT add unless explicitly asked:** trading, order placement,
-  conditional-probability/de-vig models, net-of-fees math. Adding a **new sport** is in scope via a
-  `SportConfig` drop-in; non-sport-config work is not. **Per-user authentication is now IN SCOPE**
+  conditional-probability/de-vig models, net-of-fees math. **Exception (owner‑approved 2026‑06‑16):** the
+  field‑implied **de‑vig conditional‑probability panel exists in the legacy NiceGUI `/dashboard/`** (merged
+  from `origin/main`); the React **SPA stays display‑only / no de‑vig**. Adding a **new sport** is in scope
+  via a `SportConfig` drop-in; non-sport-config work is not. **Per-user authentication is now IN SCOPE**
   (owner-requested 2026-06) — app-level login over the read-only surface, gated behind `AUTH_ENABLED`;
   see `docs/AUTH.md` (`auth_store.py`/`auth.py`/`manage_users.py`). It must NOT alter engine logic.
 
@@ -324,17 +326,28 @@ collapsed Diagnostics & debug expander. `viewmodel.py` + `diagnostics.py` are th
 - Verify with `pytest -q` + a `serve.py` boot (see Run & verify).
 - `.gitignore` covers `.env`, `*.pem`, `.venv`, `__pycache__`, `*.db`, `.claude/`, `.kss/`.
 
-## Git workflow (strict — owner confirmed)
+## Git workflow (strict — owner confirmed 2026-06-16)
 
-- **Never commit, push, or merge to `main`.** The owner merges manually.
-- **Branch-only delivery (near-term policy, owner 2026-06-09 — supersedes "one PR per change"):** do NOT
-  open a PR per change. Implement the **full scope** of a work item across **one or more feature branches**;
-  verify (`pytest -q`, `ruff check .`, `serve.py` boot); then hand the branch back. The owner **tests
-  manually** and **merges to `main` only when satisfied**. `main` stays frozen until then.
-- Branch off the latest `main` — or, since `main` is frozen, off the unmerged branch a feature depends on
-  (state the base in the handoff). Keep verifying before handing back; commits on the branch are fine.
+**`origin/main` is the single source of truth — always the most up‑to‑date code.** Whenever the owner says
+"main" / "the main" they mean **`origin/main`** (the remote), NOT local `main` (which is often stale —
+treat it as untrustworthy).
+
+- **Always start from the latest code.** Before beginning any new work: `git fetch origin`, then branch off
+  **`origin/main`** (`git checkout -b <feature> origin/main`). Never stack new work on a stale local `main`
+  or on an unmerged feature branch.
+- **Each new feature → its own branch, pushed to origin** (`git push -u origin <feature-branch>`). A pushed
+  origin feature branch is the delivery unit; the owner reviews/merges it to `origin/main` when satisfied.
+- **Never push or merge to `origin/main` directly** — the owner merges (PR). The agent only delivers
+  verified feature branches on origin.
+- Verify before handing back: `pytest -q`, `ruff check .`, `npm run build` + `npx vitest run` (if frontend),
+  a `serve.py` boot, and a browser check of any UI change. State the base branch in the handoff.
 - Commit messages end with: `Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>`.
-  If a PR is opened for review, its body ends with the Claude Code footer.
+  PR bodies end with the Claude Code footer.
+- **Why this policy (lesson, 2026-06-16):** the prior "main is frozen → stack features on unmerged branches"
+  rule let a long SPA feature stack drift ~8 days behind `origin/main`'s parallel NiceGUI work, forcing a
+  large reconciliation merge. Branching from the latest `origin/main` every time prevents that.
+- **Staging hygiene:** stage explicit paths (`git add <files>`), never `git add -A`/`git add .` — the working
+  tree carries untracked scratch (`.playwright-mcp/`, screenshots, mockups, `*.log`) that must NOT be committed.
 
 ## Status & history
 

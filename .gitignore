@@ -32,6 +32,11 @@ auth.db
 
 # Scratch / temp working dirs (audits, throwaway docs) — never tracked
 .codex_tmp/
+# Playwright MCP browser artifacts (snapshots, console logs, screenshots) — session scratch, never tracked
+.playwright-mcp/
+# Session scratch: boot logs + screenshots produced while verifying (never tracked)
+serve_*.log
+*.err.log
 
 # Local kss planning shell (topics, milestones, codebase snapshots) — keep out of the repo
 .kss/
