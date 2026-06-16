@@ -19,6 +19,10 @@ export interface Prefs {
   bands?: Record<string, Record<string, unknown>>;
   split?: string;
   layoutPreset?: string;
+  // Full custom workspace layout (column widths / per-panel height+collapse+hide / panel order). Validated by
+  // layout.cleanLayout on hydrate and auth_store._clean_layout on save. Additive: an older client just ignores
+  // it (no PREFS_VERSION bump — a bump would make older clients discard the whole prefs blob).
+  layout?: Record<string, unknown>;
 }
 
 export async function loadPrefs(): Promise<Prefs> {

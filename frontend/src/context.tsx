@@ -12,6 +12,7 @@ import { postScan, getScanStatus } from "./scan";
 import { diffSnapshot, edgeMap, type Change } from "./diff";
 import { type FilterState, type BandState, emptyFilters, defaultBand, isDefaultBand, applyBand, passAll, passMembership, hiddenByFee, tournamentOptions } from "./filters";
 import { loadPrefs, savePrefs, PREFS_VERSION, THEMES, LAYOUT_PRESETS, SPLITS, type Prefs } from "./prefs";
+import { cleanLayout, presetSnapshot, type LayoutSnapshot } from "./layout";
 import { apiFetch } from "./http";
 
 export interface ExtraPanel { title: string; body: ReactNode; }
@@ -56,8 +57,10 @@ interface TerminalState {
   setColOrder: (order: string[]) => void;
   setTheme: (t: "amber" | "hc") => void;
   setPaletteOpen: (v: boolean) => void;
-  registerLayout: (fn: (preset: string) => void) => void;
-  applyLayout: (preset: string) => void;
+  layout: LayoutSnapshot;
+  setLayout: (s: LayoutSnapshot) => void;
+  applyLayout: (preset: string) => void;       // reseed the layout from a named preset
+  resetLayout: () => void;                      // restore the current preset's default layout
   setMulti: (rows: FeedRow[]) => void;
   setExtra: (e: ExtraPanel | null) => void;
   setPanelsMenuOpen: (v: boolean) => void;
@@ -107,11 +110,13 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
   // default band (from meta.defaults), so bounded max-loss 5¢ and cheap-NO max-loss 15¢ never collide.
   const [bands, setBands] = useState<Record<string, BandState>>({});
   const [split, setSplit] = useState("all");            // bounded-loss All / Vertical / Calendar
-  const [layoutPreset, setLayoutPreset] = useState("default");   // persisted workspace preset (per user)
+  const [layoutPreset, setLayoutPreset] = useState("default");   // the preset SEED (per user)
+  // The full custom workspace layout (column widths, per-panel height/collapse/hide, panel order). Persisted
+  // per user; a preset just reseeds it. Workspace edits a local draft and commits back here.
+  const [layout, setLayout] = useState<LayoutSnapshot>(() => presetSnapshot("default"));
   const scanning = useRef(false);
   const scanPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const mountedRef = useRef(true);                       // guards setState after unmount (logout/expiry)
-  const layoutRef = useRef<((preset: string) => void) | null>(null);
   const setSetting = <K extends keyof Settings>(k: K, v: Settings[K]) => setSettings((s) => ({ ...s, [k]: v }));
   const refreshFeed = () => loadFeed()
     .then((f) => { if (mountedRef.current) { setFeed(f); setErr(null); } })
@@ -217,7 +222,12 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
       setBands(cleanBands);
     }
     if (p.split && (SPLITS as readonly string[]).includes(p.split)) setSplit(p.split);
+    const preset = p.layoutPreset && (LAYOUT_PRESETS as readonly string[]).includes(p.layoutPreset) ? p.layoutPreset : "default";
     if (p.layoutPreset && (LAYOUT_PRESETS as readonly string[]).includes(p.layoutPreset)) setLayoutPreset(p.layoutPreset);
+    // A valid saved custom layout wins; otherwise seed from the saved preset. cleanLayout fail-opens (→ null)
+    // on garbage, so an invalid blob never blanks the workspace.
+    const cl = cleanLayout(p.layout);
+    setLayout(cl ?? presetSnapshot(preset));
   };
   useEffect(() => {
     loadPrefs().then(applyPrefs).finally(() => { hydratedRef.current = true; });
@@ -229,12 +239,11 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
         version: PREFS_VERSION, theme, showNet, columns: colsByKey, split, layoutPreset,
         settings: settings as unknown as Record<string, unknown>,
         bands: bands as unknown as Record<string, Record<string, unknown>>,
+        layout: layout as unknown as Record<string, unknown>,
       });
     }, 600);
     return () => clearTimeout(t);
-  }, [theme, settings, showNet, colsByKey, bands, split, layoutPreset]);
-  // Apply the (hydrated or user-chosen) layout preset once Workspace has registered its applier.
-  useEffect(() => { layoutRef.current?.(layoutPreset); }, [layoutPreset]);
+  }, [theme, settings, showNet, colsByKey, bands, split, layoutPreset, layout]);
 
   const meta = feed?.meta ?? null;
   const opps = useMemo(() => feed?.opps ?? [], [feed]);
@@ -372,8 +381,10 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
     resetCols: () => setColsByKey((m) => { const n = { ...m }; delete n[colKey]; return n; }),
     setColOrder: (order) => setColsByKey((m) => ({ ...m, [colKey]: order })),
     setTheme, setPaletteOpen, setMulti, setExtra, setPanelsMenuOpen,
-    registerLayout: (fn) => { layoutRef.current = fn; },
-    applyLayout: (preset) => setLayoutPreset(preset),    // state-driven so the choice persists per user
+    layout, setLayout,
+    // Picking a preset reseeds the full layout AND records the preset (so Reset knows the seed); both persist.
+    applyLayout: (preset) => { setLayoutPreset(preset); setLayout(presetSnapshot(preset)); },
+    resetLayout: () => setLayout(presetSnapshot(layoutPreset)),
     openCompare: () => setExtra({ title: `COMPARE (${multi.length})`, body: <CompareView opps={multi} /> }),
     openOverlap: () => setExtra({ title: "DON'T-TAKE-BOTH", body: <OverlapView opps={multi} /> }),
     openLadders: () => setExtra({ title: `LADDERS (${Math.min(8, multi.length)})`, body: <LaddersView opps={multi} /> }),

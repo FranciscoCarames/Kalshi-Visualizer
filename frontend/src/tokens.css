@@ -100,6 +100,13 @@ select.in,input.in{background:var(--bg1);border:1px solid var(--line2);color:var
 .panel.collapsed{flex:0 0 24px!important}.panel.collapsed>:not(.ph){display:none}
 .panel.maxed{position:absolute;inset:4px;z-index:25;flex:1 1 auto!important}
 .panel.dragover{outline:2px dashed var(--amber);outline-offset:-2px}
+/* Place-anywhere drop targets between/around panels: zero-height until a drag is active (.on), then a clearly
+ * visible dashed band; the hovered slot fills amber so the drop point is obvious. */
+.dropslot{flex:0 0 0;min-height:0;transition:flex-basis .08s}
+.dropslot.on{flex:0 0 12px;margin:2px 0;border:1px dashed var(--amber-d);border-radius:2px}
+.dropslot.on.over{flex:0 0 22px;background:var(--amber-d);border-color:var(--amber)}
+.palchip{padding:4px 9px;margin:2px 6px;border:1px solid var(--line2);border-radius:3px;background:var(--bg1);cursor:grab;white-space:nowrap}
+.palchip:hover{background:var(--hover);border-color:var(--amber-d)}
 .ph{display:flex;align-items:center;gap:7px;padding:0 6px;height:23px;background:linear-gradient(180deg,#14120a,#0a0908);border-bottom:1px solid var(--line2);flex:0 0 auto;cursor:grab}
 .ph:active{cursor:grabbing}
 html[data-theme="hc"] .ph{background:var(--bg2)}

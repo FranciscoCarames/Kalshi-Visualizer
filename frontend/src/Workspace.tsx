@@ -1,16 +1,18 @@
 /* The OPP workspace — a React port of the mockup's own panel/window manager (replaces Dockview), so the
  * chrome (3 columns · drag-resize splitters · per-panel ⧉ pop / ▢ max / ▁ collapse / ✕ close · presets ·
- * ▦ELEMENTS show/hide) is pixel-exact. Layout is imperative by nature; kept isolated here. */
+ * ▦ELEMENTS show/hide · ＋ADD palette) is pixel-exact. Layout is imperative by nature; kept isolated here.
+ * The full layout (column widths, per-panel height/collapse/hide, panel order) is a serializable snapshot
+ * owned by context (persisted per user); this component edits a LOCAL DRAFT for smooth live drag and commits
+ * back on discrete actions / pointer-up. */
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useTerminal } from "./context";
 import Blotter from "./Blotter";
 import Inspector, { Detail, Formulas } from "./Inspector";
 import Ladder from "./Ladder";
 import { Watch, Alerts } from "./SidePanels";
+import { type Col, type LayoutSnapshot, type PanelState } from "./layout";
 
-type Col = "L" | "M" | "R";
-interface PanelDef { id: string; n: string; title: string; col: Col; hint?: string; body: ReactNode; }
-interface PState { collapsed: boolean; maxed: boolean; hidden: boolean; basis?: number; }
+interface PanelDef { id: string; n: string; title: string; hint?: string; body: ReactNode; }
 
 function InspectorBody() {
   const t = useTerminal();
@@ -56,62 +58,53 @@ function ResearchBody() {
 }
 
 const PANELS: PanelDef[] = [
-  { id: "p-blotter", n: "1", title: "SCANNER", col: "L", hint: "click row · J/K · ENTER · drag splitters · ⚙ columns", body: <Blotter /> },
-  { id: "p-des", n: "2", title: "INSPECTOR", col: "L", hint: "read-only · buy-only · gross", body: <InspectorBody /> },
-  { id: "p-ladder", n: "3", title: "DEPTH LADDER", col: "M", hint: "live order book · top-of-book", body: <LadderBody /> },
-  { id: "p-watch", n: "★", title: "WATCHLIST · TOP ACTIONABLE", col: "R", body: <WatchBody /> },
-  { id: "p-alerts", n: "!", title: "ALERTS", col: "R", body: <AlertsBody /> },
-  { id: "p-research", n: "≈", title: "RESEARCH", col: "R", hint: "read-only · P5", body: <ResearchBody /> },
+  { id: "p-blotter", n: "1", title: "SCANNER", hint: "click row · J/K · ENTER · drag splitters · ⚙ columns", body: <Blotter /> },
+  { id: "p-des", n: "2", title: "INSPECTOR", hint: "read-only · buy-only · gross", body: <InspectorBody /> },
+  { id: "p-ladder", n: "3", title: "DEPTH LADDER", hint: "live order book · top-of-book", body: <LadderBody /> },
+  { id: "p-watch", n: "★", title: "WATCHLIST · TOP ACTIONABLE", body: <WatchBody /> },
+  { id: "p-alerts", n: "!", title: "ALERTS", body: <AlertsBody /> },
+  { id: "p-research", n: "≈", title: "RESEARCH", hint: "read-only · P5", body: <ResearchBody /> },
 ];
-
-const DEFAULT_STATE = (): Record<string, PState> =>
-  Object.fromEntries(PANELS.map((p) => [p.id, { collapsed: false, maxed: false, hidden: false }]));
-const DEFAULT_COLS = (): Record<Col, string[]> => ({
-  L: PANELS.filter((p) => p.col === "L").map((p) => p.id),
-  M: PANELS.filter((p) => p.col === "M").map((p) => p.id),
-  R: PANELS.filter((p) => p.col === "R").map((p) => p.id),
-});
 const BY_ID: Record<string, PanelDef> = Object.fromEntries(PANELS.map((p) => [p.id, p]));
 
 export default function Workspace() {
   const t = useTerminal();
-  const [st, setSt] = useState<Record<string, PState>>(DEFAULT_STATE);
-  const [colHidden, setColHidden] = useState<{ M: boolean; R: boolean }>({ M: false, R: false });
-  const [colW, setColW] = useState<{ M: number; R: number }>({ M: 330, R: 290 });
-  const [cols, setCols] = useState<Record<Col, string[]>>(DEFAULT_COLS);
+  const [draft, setDraft] = useState<LayoutSnapshot>(t.layout);
+  const [dragActive, setDragActive] = useState(false);       // true while a panel/palette chip is being dragged
+  const draftRef = useRef(draft);
+  const appliedRef = useRef<LayoutSnapshot>(t.layout);        // last snapshot synced to/from context (loop guard)
+  const draggingRef = useRef(false);                          // true during a splitter resize (defer commit)
   const dragId = useRef<string | null>(null);
   const refs = useRef<Record<string, HTMLDivElement | null>>({});
-  const patch = (id: string, p: Partial<PState>) => setSt((s) => ({ ...s, [id]: { ...s[id], ...p } }));
 
-  // header drag-to-move a panel between/within columns (mockup wirePanelDrag). dragId set on .ph dragstart.
+  useEffect(() => { draftRef.current = draft; }, [draft]);
+  // Pull EXTERNAL context-layout changes (hydration / preset / reset) into the local draft; skip our own commits.
+  useEffect(() => {
+    if (t.layout !== appliedRef.current) { appliedRef.current = t.layout; setDraft(t.layout); draftRef.current = t.layout; }
+  }, [t.layout]);
+
+  const commit = (s: LayoutSnapshot) => { appliedRef.current = s; t.setLayout(s); };   // persist (debounced in context)
+  const apply = (s: LayoutSnapshot) => { draftRef.current = s; setDraft(s); commit(s); };
+  const st = draft.st, colW = draft.colW, colHidden = draft.colHidden, cols = draft.cols;
+  const pstate = (id: string): PanelState => st[id] ?? { collapsed: false, maxed: false, hidden: false };
+
+  const patch = (id: string, p: Partial<PanelState>) =>
+    apply({ ...draftRef.current, st: { ...draftRef.current.st, [id]: { ...pstate(id), ...p } } });
+
+  // Move a panel (an existing one being reordered, OR a hidden one dragged from the palette) into `col` at
+  // `idx`, un-hiding it. Singleton: the id is removed from every column first, so it never appears twice.
   const move = (col: Col, idx: number) => {
     const from = dragId.current; if (!from) return;
-    setCols((c) => {
-      const next: Record<Col, string[]> = { L: [...c.L], M: [...c.M], R: [...c.R] };
-      (["L", "M", "R"] as Col[]).forEach((k) => { const i = next[k].indexOf(from); if (i >= 0) next[k].splice(i, 1); });
-      next[col].splice(Math.max(0, Math.min(next[col].length, idx)), 0, from);
-      return next;
-    });
+    const s = draftRef.current;
+    const next = { L: [...s.cols.L], M: [...s.cols.M], R: [...s.cols.R] };
+    (["L", "M", "R"] as Col[]).forEach((k) => { const i = next[k].indexOf(from); if (i >= 0) next[k].splice(i, 1); });
+    next[col].splice(Math.max(0, Math.min(next[col].length, idx)), 0, from);
+    const stNext = pstate(from).hidden ? { ...s.st, [from]: { ...pstate(from), hidden: false } } : s.st;
+    apply({ ...s, cols: next, st: stNext });
   };
 
-  // presets — mirror the mockup applyPreset()
-  const applyPreset = (name: string) => {
-    const s = DEFAULT_STATE();
-    if (name === "triage") { s["p-des"].collapsed = true; setColHidden({ M: false, R: true }); setColW({ M: 220, R: 290 }); }
-    else if (name === "inspect") { s["p-watch"].collapsed = s["p-alerts"].collapsed = s["p-research"].collapsed = true; s["p-des"].basis = 430; setColHidden({ M: false, R: false }); setColW({ M: 470, R: 290 }); }
-    else if (name === "research") { s["p-alerts"].collapsed = true; s["p-des"].basis = 200; setColHidden({ M: false, R: false }); setColW({ M: 330, R: 360 }); }
-    else if (name === "blotterfull") { s["p-des"].hidden = true; setColHidden({ M: true, R: true }); }
-    else { setColHidden({ M: false, R: false }); setColW({ M: 330, R: 290 }); }
-    setCols(DEFAULT_COLS());
-    setSt(s);
-  };
-  useEffect(() => { t.registerLayout(applyPreset); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
-
-  // pop-out: a window with the panel's current DOM + the page's stylesheets. We CLONE nodes (importNode)
-  // rather than serializing node.innerHTML into document.write: a string round-trip would re-parse the
-  // panel's HTML in a fresh same-origin document, re-interpreting any untrusted feed text (names, labels,
-  // URLs) as markup. Cloning preserves React's already-escaped DOM; title/theme are set as text/attribute,
-  // never interpolated into an HTML string.
+  // pop-out: a window with the panel's current DOM + the page's stylesheets (cloned, never serialized — see
+  // the original note about not re-parsing untrusted feed text as markup).
   const popOut = (id: string, title: string) => {
     const node = refs.current[id]; if (!node) return;
     const w = window.open("", "_blank", "width=560,height=600"); if (!w) return;
@@ -119,45 +112,64 @@ export default function Workspace() {
     doc.documentElement.setAttribute("data-theme", document.documentElement.dataset.theme ?? "");
     doc.title = `${title} — popout`;
     document.querySelectorAll('link[rel="stylesheet"],style').forEach((n) => doc.head.appendChild(doc.importNode(n, true)));
-    doc.body.style.height = "100vh";
-    doc.body.style.margin = "0";
-    const wrap = doc.createElement("div");
-    wrap.className = "panel";
-    wrap.style.height = "100%";
-    wrap.appendChild(doc.importNode(node, true));
-    doc.body.appendChild(wrap);
+    doc.body.style.height = "100vh"; doc.body.style.margin = "0";
+    const wrap = doc.createElement("div"); wrap.className = "panel"; wrap.style.height = "100%";
+    wrap.appendChild(doc.importNode(node, true)); doc.body.appendChild(wrap);
   };
 
+  // Column-WIDTH resize (M/R). Live on the draft; committed once on pointer-up/cancel (no per-tick persist).
   const dragV = (which: "M" | "R") => (e: React.PointerEvent) => {
     e.preventDefault(); const sp = e.currentTarget as HTMLElement; sp.setPointerCapture(e.pointerId); sp.classList.add("drag");
-    const x0 = e.clientX, w0 = colW[which];
-    const mv = (ev: PointerEvent) => setColW((c) => ({ ...c, [which]: Math.max(60, Math.min(1000, w0 - (ev.clientX - x0))) }));
-    const up = () => { sp.classList.remove("drag"); document.removeEventListener("pointermove", mv); document.removeEventListener("pointerup", up); };
-    document.addEventListener("pointermove", mv); document.addEventListener("pointerup", up);
+    draggingRef.current = true;
+    const x0 = e.clientX, w0 = draftRef.current.colW[which];
+    const mv = (ev: PointerEvent) => setDraft((d) => {
+      const nd = { ...d, colW: { ...d.colW, [which]: Math.max(60, Math.min(1000, w0 - (ev.clientX - x0))) } };
+      draftRef.current = nd; return nd;
+    });
+    const up = () => { sp.classList.remove("drag"); draggingRef.current = false; commit(draftRef.current); cleanup(); };
+    const cleanup = () => { document.removeEventListener("pointermove", mv); document.removeEventListener("pointerup", up); document.removeEventListener("pointercancel", up); };
+    document.addEventListener("pointermove", mv); document.addEventListener("pointerup", up); document.addEventListener("pointercancel", up);
   };
+  // Panel-HEIGHT resize. Renders after EVERY panel (incl. the last/lone one), so a single panel — e.g. the
+  // DEPTH LADDER alone in a column — can be shortened, freeing space below it.
   const dragH = (id: string) => (e: React.PointerEvent) => {
     e.preventDefault(); const sp = e.currentTarget as HTMLElement; sp.setPointerCapture(e.pointerId); sp.classList.add("drag");
+    draggingRef.current = true;
     const node = refs.current[id]; const y0 = e.clientY, h0 = node ? node.getBoundingClientRect().height : 200;
-    const mv = (ev: PointerEvent) => patch(id, { basis: Math.max(24, h0 + (ev.clientY - y0)) });
-    const up = () => { sp.classList.remove("drag"); document.removeEventListener("pointermove", mv); document.removeEventListener("pointerup", up); };
-    document.addEventListener("pointermove", mv); document.addEventListener("pointerup", up);
+    const mv = (ev: PointerEvent) => setDraft((d) => {
+      const nd = { ...d, st: { ...d.st, [id]: { ...(d.st[id] ?? { collapsed: false, maxed: false, hidden: false }), basis: Math.max(24, Math.min(2000, h0 + (ev.clientY - y0))) } } };
+      draftRef.current = nd; return nd;
+    });
+    const up = () => { sp.classList.remove("drag"); draggingRef.current = false; commit(draftRef.current); cleanup(); };
+    const cleanup = () => { document.removeEventListener("pointermove", mv); document.removeEventListener("pointerup", up); document.removeEventListener("pointercancel", up); };
+    document.addEventListener("pointermove", mv); document.addEventListener("pointerup", up); document.addEventListener("pointercancel", up);
   };
 
-  const clearDragover = () => document.querySelectorAll(".panel.dragover").forEach((n) => n.classList.remove("dragover"));
+  const onChipDragStart = (id: string) => (e: React.DragEvent) => { dragId.current = id; setDragActive(true); e.dataTransfer.effectAllowed = "move"; };
+  const endDrag = () => { dragId.current = null; setDragActive(false); };
+
+  // A drop target between/around panels — visible only while a drag is active, highlighted on hover. Dropping
+  // places the dragged window at exactly this slot (and un-hides it if it came from the palette).
+  const dropSlot = (c: Col, idx: number) => (
+    <div key={`${c}-slot-${idx}`} className={"dropslot" + (dragActive ? " on" : "")}
+         onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add("over"); }}
+         onDragLeave={(e) => e.currentTarget.classList.remove("over")}
+         onDrop={(e) => { e.preventDefault(); e.stopPropagation(); e.currentTarget.classList.remove("over"); move(c, idx); endDrag(); }} />
+  );
+
   const renderCol = (c: Col) => {
-    const list = cols[c].map((id) => BY_ID[id]).filter((p) => p && !st[p.id].hidden);
-    return list.map((p, idx) => {
-      const s = st[p.id];
+    const list = cols[c].map((id) => BY_ID[id]).filter((p) => p && !pstate(p.id).hidden);
+    const out: ReactNode[] = [];
+    list.forEach((p, idx) => {
+      const s = pstate(p.id);
       const cls = "panel" + (s.collapsed ? " collapsed" : "") + (s.maxed ? " maxed" : "");
       const style: React.CSSProperties = s.basis != null && !s.collapsed && !s.maxed ? { flex: `0 0 ${s.basis}px` } : {};
-      const panel = (
-        <div className={cls} id={p.id} style={style} ref={(el) => { refs.current[p.id] = el; }}
-             onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add("dragover"); }}
-             onDragLeave={(e) => e.currentTarget.classList.remove("dragover")}
-             onDrop={(e) => { e.preventDefault(); e.stopPropagation(); clearDragover(); move(c, cols[c].indexOf(p.id)); }}>
+      out.push(dropSlot(c, idx));        // drop ABOVE this panel
+      out.push(
+        <div className={cls} id={p.id} key={p.id} style={style} ref={(el) => { refs.current[p.id] = el; }}>
           <div className="ph" draggable
-               onDragStart={(e) => { if ((e.target as HTMLElement).closest(".dock")) { e.preventDefault(); return; } dragId.current = p.id; e.dataTransfer.effectAllowed = "move"; }}
-               onDragEnd={() => { dragId.current = null; clearDragover(); }}>
+               onDragStart={(e) => { if ((e.target as HTMLElement).closest(".dock")) { e.preventDefault(); return; } dragId.current = p.id; setDragActive(true); e.dataTransfer.effectAllowed = "move"; }}
+               onDragEnd={endDrag}>
             <span className="n">{p.n}</span><h3>{p.title}</h3>
             <span className="hint">{p.hint || ""}</span>
             <span className="dock">
@@ -170,13 +182,17 @@ export default function Workspace() {
           {p.body}
         </div>
       );
-      return <div key={p.id} style={{ display: "contents" }}>{panel}{idx < list.length - 1 ? <div className="hsplit" onPointerDown={dragH(p.id)} /> : null}</div>;
+      if (!s.maxed) out.push(<div className="hsplit" key={`${p.id}-hs`} onPointerDown={dragH(p.id)} />);   // resize THIS panel's height (incl. last/lone)
     });
+    out.push(dropSlot(c, list.length));  // drop at the BOTTOM of the column
+    return out;
   };
   const colDrop = (c: Col) => ({
     onDragOver: (e: React.DragEvent) => e.preventDefault(),
-    onDrop: (e: React.DragEvent) => { e.preventDefault(); clearDragover(); move(c, cols[c].length); },
+    onDrop: (e: React.DragEvent) => { e.preventDefault(); move(c, draftRef.current.cols[c].length); endDrag(); },
   });
+
+  const hidden = PANELS.filter((p) => pstate(p.id).hidden);
 
   return (
     <div className="workspace" id="ws">
@@ -198,11 +214,20 @@ export default function Workspace() {
         </div>
       ) : null}
 
+      {t.paletteOpen ? (
+        <div className="menu on" style={{ top: 0, left: 8 }} onMouseLeave={() => t.setPaletteOpen(false)}>
+          <div className="mh">ADD A WINDOW — drag onto a drop-zone</div>
+          {hidden.length ? hidden.map((p) => (
+            <div key={p.id} className="palchip" draggable onDragStart={onChipDragStart(p.id)} onDragEnd={endDrag}>＋ {p.title}</div>
+          )) : <div className="note" style={{ padding: "4px 8px" }}>All windows are already visible. Drag a window's header to move it, or ✕ to remove it.</div>}
+        </div>
+      ) : null}
+
       {t.panelsMenuOpen ? (
         <div className="menu on" style={{ top: 0, left: 8 }} onMouseLeave={() => t.setPanelsMenuOpen(false)}>
           <div className="mh">SHOW / HIDE PANELS</div>
           {PANELS.map((p) => (
-            <label key={p.id}><input type="checkbox" checked={!st[p.id].hidden} onChange={() => patch(p.id, { hidden: !st[p.id].hidden })} />{p.title}</label>
+            <label key={p.id}><input type="checkbox" checked={!pstate(p.id).hidden} onChange={() => patch(p.id, { hidden: !pstate(p.id).hidden })} />{p.title}</label>
           ))}
         </div>
       ) : null}

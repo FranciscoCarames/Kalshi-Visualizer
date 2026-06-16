@@ -549,6 +549,58 @@ def _clean_bands(value: object) -> dict:
     return out
 
 
+def _clean_layout(value: object) -> dict:
+    """Workspace layout snapshot (column widths / per-panel state / panel order). Defense-in-depth vs a hostile
+    or stale blob: clamp colW 60..1000 and basis 24..2000; booleans for collapse/max/hidden; keep ONLY known
+    panel ids (``config.PREFS_PANEL_IDS``) and DEDUPE so a panel never persists in two columns (singleton). The
+    client also validates on hydrate, and the whole prefs blob is size-capped. Returns {} when not a dict."""
+    if not isinstance(value, dict):
+        return {}
+    ids = set(config.PREFS_PANEL_IDS)
+
+    def _numf(v: object) -> "float | None":
+        return float(v) if isinstance(v, (int, float)) and not isinstance(v, bool) else None
+
+    out: dict = {}
+    cw = value.get("colW")
+    if isinstance(cw, dict):
+        out["colW"] = {"M": max(60.0, min(1000.0, _numf(cw.get("M")) or 330.0)),
+                       "R": max(60.0, min(1000.0, _numf(cw.get("R")) or 290.0))}
+    ch = value.get("colHidden")
+    if isinstance(ch, dict):
+        out["colHidden"] = {"M": ch.get("M") is True, "R": ch.get("R") is True}
+    rst = value.get("st")
+    if isinstance(rst, dict):
+        st: dict = {}
+        for pid in config.PREFS_PANEL_IDS:
+            s = rst.get(pid)
+            if not isinstance(s, dict):
+                continue
+            entry = {"collapsed": s.get("collapsed") is True, "maxed": s.get("maxed") is True,
+                     "hidden": s.get("hidden") is True}
+            basis = _numf(s.get("basis"))
+            if basis is not None:
+                entry["basis"] = max(24.0, min(2000.0, basis))
+            st[pid] = entry
+        if st:
+            out["st"] = st
+    rcols = value.get("cols")
+    if isinstance(rcols, dict):
+        seen: set = set()
+        cols: dict = {}
+        for key in ("L", "M", "R"):
+            arr = rcols.get(key)
+            lst: list = []
+            if isinstance(arr, list):
+                for x in arr:
+                    if isinstance(x, str) and x in ids and x not in seen:   # known + singleton (no dupes)
+                        seen.add(x)
+                        lst.append(x)
+            cols[key] = lst[:50]
+        out["cols"] = cols
+    return out
+
+
 def sanitize_prefs(prefs: object) -> dict:
     """Validate + sanitize a preferences blob into a versioned envelope, server-side (NEVER trust the
     client). Unknown top-level keys are dropped; values are type/enum-checked; the result is a clean dict
@@ -573,6 +625,9 @@ def sanitize_prefs(prefs: object) -> dict:
         out["split"] = prefs["split"]
     if prefs.get("layoutPreset") in config.PREFS_LAYOUT_PRESETS:
         out["layoutPreset"] = prefs["layoutPreset"]
+    layout = _clean_layout(prefs.get("layout"))
+    if layout:
+        out["layout"] = layout
     return out
 
 

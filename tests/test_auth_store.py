@@ -269,3 +269,23 @@ def test_sanitize_prefs_keeps_valid_text_size_drops_invalid():
     # textSize is whitelisted against config.PREFS_TEXT_SIZES (fail-closed to the known steps).
     assert auth_store.sanitize_prefs({"settings": {"textSize": "large"}})["settings"] == {"textSize": "large"}
     assert auth_store.sanitize_prefs({"settings": {"textSize": "gigantic"}}).get("settings") is None  # dropped
+
+
+def test_sanitize_prefs_layout_clamps_dedupes_drops_unknown_and_fails_open():
+    v = {"layout": {"colW": {"M": 99999, "R": 10}, "colHidden": {"M": True, "R": "x"},
+                    "st": {"p-ladder": {"collapsed": True, "basis": 9000}, "evil": {"hidden": True}},
+                    "cols": {"L": ["p-blotter", "p-blotter", "evil"], "M": ["p-ladder"], "R": ["p-watch"]}}}
+    out = auth_store.sanitize_prefs(v)["layout"]
+    assert out["colW"]["M"] == 1000.0 and out["colW"]["R"] == 60.0      # clamped
+    assert out["colHidden"] == {"M": True, "R": False}                  # non-bool → False
+    assert out["st"]["p-ladder"]["basis"] == 2000.0 and "evil" not in out["st"]
+    assert out["cols"]["L"] == ["p-blotter"]                            # dedup + unknown dropped
+    # garbage / missing layout is simply absent (caller fails open to a preset client-side)
+    assert "layout" not in auth_store.sanitize_prefs({"layout": "nope"})
+    assert "layout" not in auth_store.sanitize_prefs({"theme": "amber"})
+
+
+def test_sanitize_prefs_keeps_layout_preset_without_a_custom_layout():
+    # an old account that only saved a preset name still round-trips (back-compat).
+    out = auth_store.sanitize_prefs({"layoutPreset": "triage"})
+    assert out["layoutPreset"] == "triage" and "layout" not in out

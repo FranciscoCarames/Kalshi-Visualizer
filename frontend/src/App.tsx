@@ -304,8 +304,9 @@ function Shell() {
             <option value="default">Default</option><option value="triage">Triage</option><option value="inspect">Inspect</option>
             <option value="research">Research</option><option value="blotterfull">Scanner full</option>
           </select>
-          <button className="tbtn" onClick={() => t.setPanelsMenuOpen(true)}>＋ ADD ▾</button>
+          <button className="tbtn" onClick={() => t.setPaletteOpen(true)}>＋ ADD ▾</button>
           <button className="tbtn" onClick={() => t.setPanelsMenuOpen(true)}>▦ ELEMENTS ▾</button>
+          <button className="tbtn" title="Reset the workspace to the selected layout preset" onClick={() => t.resetLayout()}>⟲ RESET</button>
           <span className="dim" style={{ fontSize: 9 }}>LENS</span>
           <div className="lens">{LENSES.map(([l, lbl, tip]) => (
             <button key={l} className={t.lens === l ? "on" : ""} title={tip} onClick={() => t.toggleLens(l)}>{lbl}</button>
