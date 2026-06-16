@@ -163,6 +163,35 @@ def duplicate_node_sources(player_rows: list[dict[str, Any]]) -> list[dict[str, 
     ]
 
 
+def unmapped_advance_stages(player_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Diagnostic (audit A6): advance-family contracts whose stage does NOT map to a tracked ladder node.
+
+    An advance market (e.g. NBA "First Round", a tennis bracket round we don't track yet) whose stage has
+    no node silently DROPS out of the containment ladder (`build_player_nodes` skips a None node). Surface
+    these as a COVERAGE signal — a round/stage worth adding — so they're acknowledged, never silently lost,
+    and never the primary opportunity table. One row per distinct (series, stage)."""
+    seen: set[tuple[str, str]] = set()
+    out: list[dict[str, Any]] = []
+    for row in player_rows or []:
+        if (row.get("market_family") or row.get("kind")) != "advance":
+            continue
+        if node_of(row):                                  # maps to a tracked node → not a coverage gap
+            continue
+        key = (str(row.get("series") or ""), str(row.get("stage") or ""))
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append({
+            "player": row.get("player") or "",
+            "series": row.get("series") or "",
+            "stage": row.get("stage") or "",
+            "event_ticker": row.get("event_ticker") or "",
+            "reason": f"advance stage '{row.get('stage') or 'unknown'}' has no tracked ladder node",
+        })
+    out.sort(key=lambda r: (r["series"], r["stage"]))
+    return out
+
+
 def _isna(x: Any) -> bool:
     """True for None or float NaN. Needed because a `None` price round-trips to float NaN
     through pandas (`DataFrame` → `to_dict("records")`), so a plain `is None` check misses it."""

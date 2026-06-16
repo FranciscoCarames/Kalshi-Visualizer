@@ -1666,6 +1666,25 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             else:
                 ui.label("Every loaded contract maps to a ladder.").classes("text-sm text-gray-500")
 
+            # Coverage diagnostic (audit A6): advance contracts whose stage maps to no ladder node — a
+            # round/stage we don't track yet. These would otherwise silently drop out of the ladder.
+            unmapped_adv = vm.unmapped_advance_rows(contracts)
+            ui.label(f"Unmapped advance stages ({len(unmapped_adv)})").classes("text-sm font-medium mt-3")
+            if unmapped_adv:
+                ui.aggrid(_aggrid_options(unmapped_adv, [
+                    ("player", "Participant"), ("series", "Series"), ("stage", "Stage"),
+                    ("event_ticker", "Event"), ("reason", "Why unmapped"),
+                ])).classes("w-full h-64")
+            else:
+                ui.label("Every advance contract maps to a tracked ladder rung.").classes("text-sm text-gray-500")
+
+            # Coverage alert (audit A7): motorsport-tagged series outside the family allow-list — a new
+            # scope to classify (kept "other" / never a field until reviewed, so a prop can't false-fire).
+            motor_gaps = vm.motorsport_coverage_gaps(contracts)
+            if motor_gaps:
+                ui.label(f"Unknown motorsport series ({len(motor_gaps)}): {', '.join(motor_gaps)}").classes(
+                    "text-sm font-medium mt-3 text-amber-700")
+
     # --- data load vs render split (P2) -------------------------------------------------------------
     # reload_data(): the ONLY path that touches the store — offloaded via run.io_bound so it never blocks
     # the event loop; runs on a new snapshot (poll), a scan, first load, or a store-parameterized control.

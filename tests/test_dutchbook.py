@@ -540,10 +540,31 @@ def test_soccer_reject_not_mutually_exclusive():
     assert any("mutually_exclusive" in r["reason"] for r in diag["rejected"])
 
 
-def test_soccer_reject_missing_draw_phrase():
+def test_soccer_missing_draw_phrase_fails_closed_as_coverage_alert():
+    # A5: a MECE-SHAPED event (mutually_exclusive, 2 teams + tie) with an UNRECOGNIZED regulation-only
+    # phrasing fails CLOSED (no finding) but surfaces as a COVERAGE alert — never a silent drop, never fired.
     diag = {}
     assert dutchbook.find_dutch_books(_wc3([40, 30, 25], draw=False), diag) == []
-    assert any("draw-excluded" in r["reason"] for r in diag["rejected"])
+    assert diag.get("coverage_alert")
+    assert any("unrecognized regulation-only phrasing" in r["reason"] for r in diag["coverage_alert"])
+    assert not diag.get("rejected")              # routed to coverage, not the generic reject bucket
+
+
+def test_soccer_broadened_draw_phrase_set_accepts_alternate_wording():
+    # A5: an alternate regulation-only phrasing (not the original literal) still proves the 3-way MECE.
+    rows = _wc3([40, 30, 25], draw=False)
+    for r in rows:
+        r["rules_primary"] = "Team with more goals after 90 minutes; extra time and penalties are not included"
+    f = dutchbook.find_dutch_books(rows)
+    assert len(f) == 1 and f[0]["direction"] == "underround"
+    assert f[0]["settlement_rules_hash"]          # provenance hash stamped on the finding
+
+
+def test_soccer_non_mece_shape_still_rejected_not_coverage_alert():
+    # A genuinely non-MECE event (not flagged mutually_exclusive) is a hard reject, NOT a coverage alert.
+    diag = {}
+    assert dutchbook.find_dutch_books(_wc3([40, 30, 25], me=False, draw=False), diag) == []
+    assert diag.get("rejected") and not diag.get("coverage_alert")
 
 
 def test_soccer_reject_settlement_basis_mismatch():
