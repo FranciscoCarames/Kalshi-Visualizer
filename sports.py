@@ -1035,6 +1035,25 @@ def _soccer_tie(cfg, market):
         str(market.get("yes_sub_title") or "").strip().lower() == "tie"
 
 
+def _soccer_tournament_key(cfg, event):
+    """Canonical season-scoped grouping key for EVERY World Cup series (audit A2).
+
+    All WC scopes — reach-stage (``KXWCROUND``), group qualifier (``KXWCGROUPQUAL``), the outright
+    winner (``KXMENWORLDCUP``), games, group baskets — carry DIFFERENT ``competition`` strings, so the
+    default ``data.tournament_of`` keys them apart and a team's containment ladder (Reach RO16 ⊇ … ⊇ Win
+    the World Cup) fragments across ``(player_key, tournament)`` groups and never forms. Mirroring
+    motorsport's ``tournament_key_fn``, this collapses them onto one ``"World Cup · <season>"`` key (season
+    token = the leading digit run after the series prefix, e.g. ``KXWCROUND-26RO16-PAR`` → ``26``), so the
+    ladder groups correctly while co-loaded editions (a future ``-30``) still stay separate."""
+    et = str(event.get("event_ticker") or "")
+    token = ""
+    if "-" in et:
+        m = re.match(r"(\d+)", et.split("-", 1)[1])
+        token = m.group(1) if m else ""
+    key = f"World Cup · {token}" if token else "World Cup"
+    return key, "soccer_event"
+
+
 SOCCER = register(SportConfig(
     sport_id="soccer", label="Soccer (World Cup)", emoji="⚽",
     # default_series is the bounded fetch subset — the SUPPORTED series only. Known-other tickers are owned
@@ -1063,6 +1082,9 @@ SOCCER = register(SportConfig(
     # identity from custom_strike) → non-selectable, per-market key.
     non_participant_families=frozenset({"exact_order"}),
     winner_label="Win the World Cup",
+    # Audit A2: collapse every WC scope onto one season-scoped tournament key so a team's containment
+    # ladder (Reach RO16 ⊇ … ⊇ Win the World Cup) groups instead of fragmenting by per-series competition.
+    tournament_key_fn=_soccer_tournament_key,
     # Each KXWCGROUPQUAL-26<G> event is a group of 4 teams; the 2026 format guarantees >=2 qualify (top-2
     # auto-advance) and >=1 fails (the 4th-placed team never advances) → a hard YES floor of 200¢ and NO
     # floor of 100¢ for the all-four basket. The CONDITIONAL ceilings: up to 3 qualify when the 3rd-placed

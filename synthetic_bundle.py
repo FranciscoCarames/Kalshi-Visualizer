@@ -66,6 +66,10 @@ CHECK_TYPE = "synthetic_bundle"
 # A set score is "<sets won by winner>-<sets won by loser>", each a single digit (0–3 in practice).
 _SCORELINE_RE = re.compile(r"\b([0-9])\s*-\s*([0-9])\b")
 _NO_FIRM_QUALITY = ("No quote", "Crossed")  # a leg with this quote has no usable resting order
+# A "One-sided" book is not firm enough to BUY NO (audit A1 — mirrors dutchbook). Gated per buy leg: an
+# ask-only exact-score state leg keeps its genuine firm YES ask, so a valid bundle leg is never suppressed
+# just because its opposite (NO) side is empty.
+_ONE_SIDED_QUALITY = "One-sided"
 
 # Legs of one bundle must settle together for the hedge to hold. `close_time` is the SCHEDULED close,
 # identical across markets of the same match, so a generous tolerance suppresses only clearly-different
@@ -145,8 +149,13 @@ def _firm_yes_ask_c(row: dict[str, Any]) -> int | None:
 
 
 def _firm_no_ask_c(row: dict[str, Any]) -> int | None:
-    """Cents to BUY NO — the real ``no_ask_c``, else the structural identity ``100 − yes_bid_c``."""
-    if row.get("quote_quality") in _NO_FIRM_QUALITY:
+    """Cents to BUY NO — the real ``no_ask_c``, else the structural identity ``100 − yes_bid_c``.
+
+    A "One-sided" book yields no firm NO (audit A1): the direct ``no_ask_c`` and the ``100 − yes_bid``
+    fallback both rest on a single un-paired order. Blocks ONLY the NO side — a genuine one-sided YES ask
+    (a valid exact-score state leg) is still tradable via ``_firm_yes_ask_c``."""
+    q = row.get("quote_quality")
+    if q in _NO_FIRM_QUALITY or q == _ONE_SIDED_QUALITY:
         return None
     api = _num(row.get("no_ask_c"))
     if api is not None:

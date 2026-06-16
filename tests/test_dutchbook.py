@@ -150,6 +150,34 @@ def test_crossed_book_is_excluded():
     assert dutchbook.find_dutch_books([a, b]) == []
 
 
+# --- A1: a one-sided book can't fabricate a firm NO into an overround -----------------
+def test_one_sided_leg_cannot_fabricate_overround_no_price():
+    # A is bid-only ('One-sided'): its NO would be 100-yes_bid = 100-90 = 10c, which with B's NO
+    # (100-51=49c) sums to 59c < 100 and would FALSELY fire an overround. A1 blocks the NO side of a
+    # one-sided book, so no book fires.
+    a = market("A", yes_bid_c=90, yes_ask_c=None, no_ask_c=None, quality="One-sided")
+    b = market("B", yes_bid_c=51, yes_ask_c=53, no_ask_c=49)
+    assert dutchbook.find_dutch_books([a, b]) == []
+
+
+def test_one_sided_leg_blocks_no_even_with_direct_no_ask():
+    # Even a bare no_ask_c on a one-sided leg is distrusted (no corroborating two-sided book).
+    a = market("A", yes_bid_c=90, yes_ask_c=None, no_ask_c=10, quality="One-sided")
+    b = market("B", yes_bid_c=51, yes_ask_c=53, no_ask_c=49)
+    assert dutchbook.find_dutch_books([a, b]) == []
+
+
+def test_one_sided_ask_only_leg_still_prices_buy_yes():
+    # The gate is per buy leg: an ask-only one-sided leg keeps a genuine firm YES ask, so an
+    # underround (Buy YES both) still prices. A: ask 45 (bid empty), B: ask 48 -> 93 < 100.
+    a = market("A", yes_bid_c=None, yes_ask_c=45, quality="One-sided")
+    b = market("B", yes_bid_c=46, yes_ask_c=48)
+    out = dutchbook.find_dutch_books([a, b])
+    assert len(out) == 1
+    assert out[0]["direction"] == "underround"
+    assert out[0]["action_1_price_c"] in (45, 48) and out[0]["action_2_price_c"] in (45, 48)
+
+
 def test_single_market_event_is_skipped():
     a = market("A", yes_bid_c=43, yes_ask_c=45)
     assert dutchbook.find_dutch_books([a]) == []
