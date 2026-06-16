@@ -2581,6 +2581,18 @@ def non_laddered_rows(contract_rows: list[dict[str, Any]] | None) -> list[dict[s
     return out
 
 
+def unmapped_advance_rows(contract_rows: list[dict[str, Any]] | None) -> list[dict[str, Any]]:
+    """Coverage diagnostic (audit A6): advance-family contracts whose stage maps to no ladder node — a
+    round/stage we don't track yet that would otherwise silently drop. Delegates to the pure engine."""
+    return consistency.unmapped_advance_stages(list(contract_rows or []))
+
+
+def motorsport_coverage_gaps(contract_rows: list[dict[str, Any]] | None) -> list[str]:
+    """Coverage diagnostic (audit A7): motorsport-tagged series not in the family allow-list — surfaced so
+    the allow-list can't silently rot as Kalshi adds scopes. Delegates to the pure engine."""
+    return sports.motorsport_coverage_gaps([r.get("series") for r in (contract_rows or [])])
+
+
 def considered_inventory(contract_rows: list[dict[str, Any]] | None) -> dict[str, list[dict[str, Any]]]:
     """Distinct coverage over the latest snapshot's CONTRACT rows — *everything the app is currently
     considering* (the full fetched universe), independent of whether a row becomes an opportunity. One

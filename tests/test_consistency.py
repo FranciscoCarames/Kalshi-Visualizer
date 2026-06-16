@@ -588,6 +588,21 @@ def test_build_player_nodes_duplicate_is_deterministic():
     ]
 
 
+# --- A6: unmapped advance stages surface as a coverage diagnostic, not silent drops ---
+def test_unmapped_advance_stages_are_surfaced_not_dropped():
+    # A mapped advance rung (soccer "Round of 16") is fine; an unrecognized advance stage is surfaced.
+    mapped = {"market_family": "advance", "series": "KXWCROUND", "stage": "Reach Round of 16",
+              "ladder_node": "Reach Round of 16", "player": "Brazil", "event_ticker": "E1"}
+    unmapped = {"market_family": "advance", "series": "KXWCROUND", "stage": "Reach Round of 64",
+                "ladder_node": None, "player": "Brazil", "event_ticker": "E2", "kind": "advance"}
+    diag = consistency.unmapped_advance_stages([mapped, unmapped])
+    assert len(diag) == 1
+    assert diag[0]["stage"] == "Reach Round of 64" and diag[0]["series"] == "KXWCROUND"
+    assert "no tracked ladder node" in diag[0]["reason"]
+    # A non-advance row (e.g. a prop) is never reported here.
+    assert consistency.unmapped_advance_stages([{"market_family": "other", "stage": "x"}]) == []
+
+
 # --- v1.3: buy-only action plan + "tradable now" + blockers --------------------------
 def test_executable_containment_is_buy_yes_parent_buy_no_child():
     # child bid 37 > parent ask 35 -> Buy YES on the broader (parent), Buy NO on the deeper (child).

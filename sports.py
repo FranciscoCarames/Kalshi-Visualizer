@@ -1441,31 +1441,53 @@ _MOTOR_LADDERS = {
 _MOTOR_EMPTY_LADDER = LadderSpec((), (), {}, {})
 
 
+# Motorsport family resolution is an EXACT-TICKER ALLOW-LIST (audit A7), not substring matching. The old
+# form routed ANY ticker containing "RACE"/"SERIES" into a one-winner FIELD family (race_winner/winner),
+# so a NEW prop (e.g. a hypothetical "KXF1RACEMARGIN") could be mis-routed into a field dutch book. Here a
+# ticker is field-eligible ONLY if it is explicitly listed; anything unrecognized is "other" (never a
+# field) and `motorsport_coverage_gaps` surfaces it so the allow-list can't silently rot.
+_MOTOR_FAMILY_BY_SERIES: dict[str, str] = {
+    # season-champion futures — one-winner FIELD
+    "KXF1": "winner", "KXMOTOGP": "winner", "KXNASCAR": "winner",
+    "KXNASCARCUPSERIES": "winner", "KXNASCARTRUCKSERIES": "winner", "KXINDYCARSERIES": "winner",
+    # per-race winner — one-winner FIELD
+    "KXF1RACE": "race_winner", "KXF1RACESPRINT": "race_winner", "KXNASCARRACE": "race_winner",
+    "KXINDYCARRACE": "race_winner", "KXINDY500": "race_winner", "KXMOTOGPRACE": "race_winner",
+    # pole / fastest lap — one-winner FIELD
+    "KXF1POLE": "pole", "KXNASCARPOLE": "pole",
+    "KXF1FASTLAP": "fastest_lap", "KXNASCARFASTLAP": "fastest_lap",
+    # constructor / team championships — one-winner FIELD
+    "KXF1CONSTRUCTORS": "constructor", "KXF1TOPCONSTRUCTOR": "constructor",
+    "KXNASCARTOPTEAM": "team", "KXNASCARTOPMANU": "team", "KXMOTOGPTEAMS": "team",
+    # finishing-position rungs — `advance` ladder, NOT a field (never enters _detect_field)
+    "KXF1RACEPODIUM": "advance", "KXF1TOP5": "advance", "KXF1TOP10": "advance",
+    "KXNASCARTOP3": "advance", "KXNASCARTOP5": "advance", "KXNASCARTOP10": "advance",
+    "KXNASCARTOP20": "advance", "KXINDYCARTOP3": "advance", "KXINDYCARTOP10": "advance",
+}
+# Recognized props / deprecated scopes that are deliberately "other" — so a coverage alert fires only for
+# a GENUINELY unknown motorsport-tagged series, not for these known exclusions.
+_MOTOR_KNOWN_OTHER_TOKENS = ("H2H", "DELAY", "OCCUR", "RETIRE", "QUALIFY", "CHINA", "RACEOLD", "TOPX")
+
+
 def _motor_family(cfg: SportConfig, series_ticker: str) -> str:
-    """Family from the SERIES ticker alone (each Kalshi scope owns its series). Order matters: specific
-    scope tokens before the generic RACE/SERIES checks."""
-    t = (series_ticker or "").upper()
-    if "H2H" in t:
-        return "other"                                          # head-to-head: listed, deferred
-    if any(x in t for x in ("DELAY", "OCCUR", "RETIRE", "QUALIFY", "CHINA", "RACEOLD", "TOPX")):
-        return "other"                                          # props / deprecated / ambiguous
-    if "POLE" in t:
-        return "pole"
-    if "FASTLAP" in t or "FASTESTLAP" in t:
-        return "fastest_lap"
-    if "TOPCONSTRUCTOR" in t or t.endswith("CONSTRUCTORS"):
-        return "constructor"
-    if "TOPTEAM" in t or "TOPMANU" in t or t.endswith("TEAMS"):
-        return "team"
-    if "PODIUM" in t:
-        return "advance"
-    if any(x in t for x in ("TOP20", "TOP10", "TOP5", "TOP3")):
-        return "advance"                                        # finishing-position rung (NOT a field)
-    if "RACE" in t or "INDY500" in t:
-        return "race_winner"                                    # the "Games" scope: one-winner race field
-    if "SERIES" in t or "CUPCHAMP" in t or t in ("KXF1", "KXMOTOGP", "KXNASCAR"):
-        return "winner"                                         # season champion futures
-    return "other"
+    """Family from the SERIES ticker via the exact allow-list (audit A7). An unlisted ticker is "other"
+    and can never be routed into a one-winner field dutch book."""
+    return _MOTOR_FAMILY_BY_SERIES.get((series_ticker or "").upper(), "other")
+
+
+def motorsport_coverage_gaps(series_tickers: Any) -> list[str]:
+    """Coverage alert (audit A7): motorsport-prefixed series that are neither in the family allow-list nor a
+    recognized prop/deprecated scope — surfaced so the allow-list can't silently rot as Kalshi adds scopes.
+    De-duplicated, order-preserving. Empty for the current known universe."""
+    out: list[str] = []
+    for tk in dict.fromkeys(series_tickers or []):
+        T = (tk or "").upper()
+        if not T.startswith(_MOTOR_PREFIXES):
+            continue
+        if T in _MOTOR_FAMILY_BY_SERIES or any(tok in T for tok in _MOTOR_KNOWN_OTHER_TOKENS):
+            continue
+        out.append(tk)
+    return out
 
 
 def _motor_stage(cfg: SportConfig, family: str, market: dict[str, Any]) -> str:

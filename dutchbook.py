@@ -43,6 +43,7 @@ module is independently testable.
 """
 from __future__ import annotations
 
+import hashlib
 from typing import Any, NamedTuple
 
 import data
@@ -428,7 +429,44 @@ def _detect_pair(event_ticker: str, markets: list[dict[str, Any]],
 #     payout floor is (n-1)*100c (needs MUTUALLY EXCLUSIVE). Fires if sum(no_ask) < (n-1)*100c.
 # (n=2 reduces to `_detect_pair`'s 100c floor.) Exact integer cents throughout.
 
-_DRAW_EXCLUDED_PHRASE = "does not include extra time or penalties"
+# A regulation-90-minute 3-way book lists a real Tie outcome BECAUSE extra time / penalties don't decide
+# it (those would collapse the draw and make the set a 2-way). We only trust the n-way MECE proof when a
+# leg's settlement rules explicitly say so. Audit A5 broadens the single literal to a PHRASE SET (live
+# wording varies) — but it stays FAIL-CLOSED: an unrecognized phrasing on an otherwise MECE-shaped event
+# does NOT fire; `_detect_n_way` instead raises a coverage alert so the new phrasing surfaces for review.
+_DRAW_EXCLUDED_PHRASES = (
+    "does not include extra time or penalties",
+    "does not include extra time",
+    "excludes extra time and penalties",
+    "excluding extra time and penalties",
+    "not include extra time or penalty",
+    "extra time and penalties are not included",
+    "extra time and penalty kicks are not included",
+    "result at the end of regulation",
+    "end of regulation time",
+    "regulation time only",
+)
+
+
+def _draw_excluded_phrase(event_rows: list[dict[str, Any]]) -> tuple[dict[str, Any], str] | None:
+    """The first (leg, matched phrase) proving a regulation 90-min 3-way (the Tie is a real outcome, not
+    collapsed by ET/penalties), or None when no recognized phrasing is present on any leg."""
+    for r in event_rows:
+        text = str(r.get("rules_primary") or "").lower()
+        for phrase in _DRAW_EXCLUDED_PHRASES:
+            if phrase in text:
+                return r, phrase
+    return None
+
+
+def _settlement_rules_hash(event_rows: list[dict[str, Any]]) -> str:
+    """A short, stable hash of the rule text that PASSED the draw-excluded probe (audit A5 provenance) —
+    so a finding records exactly which settlement wording proved its MECE shape and a later wording change
+    is detectable. '' when no phrase matched (the finding is then never emitted anyway)."""
+    matched = _draw_excluded_phrase(event_rows)
+    if matched is None:
+        return ""
+    return hashlib.sha256((matched[0].get("rules_primary") or "").encode("utf-8")).hexdigest()[:12]
 
 
 class MeceProof(NamedTuple):
@@ -455,7 +493,11 @@ def prove_mece(event_rows: list[dict[str, Any]], cfg: Any) -> MeceProof:
         return MeceProof(False, False, False, "", "duplicate participant keys")
     if not all(bool(r.get("mutually_exclusive")) for r in event_rows):
         return MeceProof(False, False, False, "", "event not flagged mutually_exclusive")
-    if not any(_DRAW_EXCLUDED_PHRASE in str(r.get("rules_primary") or "").lower() for r in event_rows):
+    if _draw_excluded_phrase(event_rows) is None:
+        # Fail CLOSED: the shape is MECE (3 distinct legs = 2 teams + tie, all mutually_exclusive) but no
+        # recognized regulation-only phrasing proves the tie survives ET/penalties. `mutually_exclusive`
+        # stays True so `_detect_n_way` can tell "shape OK, phrasing unrecognized" (a coverage alert) from
+        # a genuinely non-MECE event.
         return MeceProof(False, True, False, "", "missing draw-excluded settlement phrase")
     bases = {frozenset(data.rule_tokens(r.get("rules_primary"))) for r in event_rows}
     if len(bases) != 1:
@@ -494,7 +536,14 @@ def _detect_n_way(event_ticker: str, rows: list[dict[str, Any]], cfg: Any,
     """Detect an n-outcome dutch book on one MECE event (currently soccer 3-way games), or None."""
     proof = prove_mece(rows, cfg)
     if not proof.ok:
-        _record(diag, "rejected", event_ticker, proof.reason)
+        # A MECE-SHAPED event (mutually_exclusive, 2 teams + tie) that fails ONLY the regulation-only
+        # phrase check is a COVERAGE alert (a phrasing we should recognize), distinct from a genuine
+        # rejection — surfaced separately in Debug so it can be reviewed, never silently dropped (A5).
+        if proof.mutually_exclusive and "draw-excluded settlement phrase" in proof.reason:
+            _record(diag, "coverage_alert", event_ticker,
+                    "3-way MECE shape but unrecognized regulation-only phrasing — review settlement rules")
+        else:
+            _record(diag, "rejected", event_ticker, proof.reason)
         return None
     n = len(rows)
     candidates = [_n_direction_candidate("buy_yes", rows), _n_direction_candidate("buy_no", rows)]
@@ -575,6 +624,8 @@ def _detect_n_way(event_ticker: str, rows: list[dict[str, Any]], cfg: Any,
         # Non-blocking settlement caveat (soccer 3-way games are per-game → carry it; + flat-loss note on a
         # near-miss); advisory only.
         "settlement_caveat": settlement_caveat,
+        # Provenance (A5): hash of the rule text that proved the draw-excluded MECE shape.
+        "settlement_rules_hash": _settlement_rules_hash(rows),
         # Full N-leg plan in `legs`; action_1/2 backfilled from the first two legs so the unified 2-leg
         # columns + lifecycle still render. payout_floor_c is the (n-1)*100 (overround) / 100 (underround).
         "legs": legs, "n_legs": n, "payout_floor_c": floor,
