@@ -520,6 +520,8 @@ def _clean_settings(value: object) -> dict:
         out["tz"] = tz
     if value.get("autoRefresh") in config.PREFS_AUTOREFRESH:
         out["autoRefresh"] = value["autoRefresh"]
+    if value.get("textSize") in config.PREFS_TEXT_SIZES:
+        out["textSize"] = value["textSize"]
     return out
 
 

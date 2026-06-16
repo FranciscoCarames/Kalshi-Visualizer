@@ -27,7 +27,8 @@ export default function Palette() {
     out.push({ cat: "Theme", k: "Amber", tag: "theme", run: () => t.setTheme("amber") });
     out.push({ cat: "Theme", k: "High contrast", tag: "theme", run: () => t.setTheme("hc") });
     out.push({ cat: "Toggle", k: "Net of fees (est.)", tag: "toggle", run: () => t.setShowNet(!t.showNet) });
-    out.push({ cat: "Toggle", k: "Larger text", tag: "toggle", run: () => document.body.classList.toggle("big") });
+    for (const z of ["compact", "normal", "large", "xlarge"] as const)
+      out.push({ cat: "Text size", k: `Text size: ${z}`, tag: "set", run: () => t.setSetting("textSize", z) });
     out.push({ cat: "Toggle", k: "Long / short wording", tag: "toggle", run: () => t.setSetting("longShort", !t.settings.longShort) });
     out.push({ cat: "Toggle", k: "Show IDs & codes", tag: "toggle", run: () => t.setSetting("showIds", !t.settings.showIds) });
     out.push({ cat: "Help", k: "Keyboard: Ctrl-K · 1-6 lens · J/K rows · ↵ open", tag: "help", run: () => {} });

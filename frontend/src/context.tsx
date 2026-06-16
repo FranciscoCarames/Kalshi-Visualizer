@@ -15,7 +15,9 @@ import { loadPrefs, savePrefs, PREFS_VERSION, THEMES, LAYOUT_PRESETS, SPLITS, ty
 import { apiFetch } from "./http";
 
 export interface ExtraPanel { title: string; body: ReactNode; }
-export interface Settings { longShort: boolean; showIds: boolean; resolutionCriteria: boolean; hideNetNegExec: boolean; tz: string; autoRefresh: string; }
+export const TEXT_SIZES = ["compact", "normal", "large", "xlarge"] as const;
+export type TextSize = (typeof TEXT_SIZES)[number];
+export interface Settings { longShort: boolean; showIds: boolean; resolutionCriteria: boolean; hideNetNegExec: boolean; textSize: TextSize; tz: string; autoRefresh: string; }
 const AUTO_MS: Record<string, number> = { "10s": 10000, "30s": 30000, off: 0 };
 
 interface TerminalState {
@@ -100,7 +102,7 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
   // hideNetNegExec defaults OFF: all rows show by default. Opting the SETTINGS toggle ON hides executable
   // rows whose TAKER net-of-fees estimate is negative (a display-only declutter — never re-buckets; the
   // hidden-count chip reveals them again).
-  const [settings, setSettings] = useState<Settings>({ longShort: false, showIds: false, resolutionCriteria: true, hideNetNegExec: false, tz: "local", autoRefresh: "10s" });
+  const [settings, setSettings] = useState<Settings>({ longShort: false, showIds: false, resolutionCriteria: true, hideNetNegExec: false, textSize: "normal", tz: "local", autoRefresh: "10s" });
   // Per-section band overrides (bounded/nearmiss/cheapno). Untouched sections fall back to the engine's
   // default band (from meta.defaults), so bounded max-loss 5¢ and cheap-NO max-loss 15¢ never collide.
   const [bands, setBands] = useState<Record<string, BandState>>({});
@@ -150,6 +152,9 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => { document.documentElement.dataset.theme = theme; }, [theme]);
+  // Text size rides the same <html data-*> mechanism as the theme; tokens.css maps it to --fs and every
+  // font-size derives from --fs, so the whole UI scales (not just the Inspector).
+  useEffect(() => { document.documentElement.dataset.textsize = settings.textSize; }, [settings.textSize]);
 
   // Track mount + tear down a running scan poll on unmount (logout / session expiry unmounts the provider
   // mid-scan): without this the status setInterval keeps firing and would setState on a dead component.
@@ -187,6 +192,7 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
         }
         if (typeof p.settings!.tz === "string") next.tz = p.settings!.tz as string;
         if (["10s", "30s", "off"].includes(p.settings!.autoRefresh as string)) next.autoRefresh = p.settings!.autoRefresh as string;
+        if ((TEXT_SIZES as readonly string[]).includes(p.settings!.textSize as string)) next.textSize = p.settings!.textSize as TextSize;
         return next;
       });
     }

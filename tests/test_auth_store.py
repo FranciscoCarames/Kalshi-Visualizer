@@ -263,3 +263,9 @@ def test_delete_user_cascades_to_prefs_and_tokens(tmp_path):
                             (uid,)).fetchone()[0] == 0
     finally:
         conn.close()
+
+
+def test_sanitize_prefs_keeps_valid_text_size_drops_invalid():
+    # textSize is whitelisted against config.PREFS_TEXT_SIZES (fail-closed to the known steps).
+    assert auth_store.sanitize_prefs({"settings": {"textSize": "large"}})["settings"] == {"textSize": "large"}
+    assert auth_store.sanitize_prefs({"settings": {"textSize": "gigantic"}}).get("settings") is None  # dropped

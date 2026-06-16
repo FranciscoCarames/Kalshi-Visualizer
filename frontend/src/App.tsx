@@ -146,14 +146,17 @@ function Surface({ id }: { id: "res" | "ops" }) {
 
 function SettingsMenu({ close }: { close: () => void }) {
   const t = useTerminal();
-  const [big, setBig] = useState(document.body.classList.contains("big"));
   const s = t.settings;
   return (
     <div className="menu on" style={{ right: 6, top: 28 }} onMouseLeave={close}>
       <div className="mh">SETTINGS</div>
       <label><input type="checkbox" checked={t.showNet} onChange={(e) => t.setShowNet(e.target.checked)} />Show net of fees (est.)</label>
       <label><input type="checkbox" checked={s.hideNetNegExec} onChange={(e) => t.setSetting("hideNetNegExec", e.target.checked)} />Hide fee-negative (taker est.)</label>
-      <label><input type="checkbox" checked={big} onChange={(e) => { setBig(e.target.checked); document.body.classList.toggle("big", e.target.checked); }} />Larger text</label>
+      <div className="mi">Text size
+        <select value={s.textSize} onChange={(e) => t.setSetting("textSize", e.target.value)}>
+          <option value="compact">Compact</option><option value="normal">Normal</option>
+          <option value="large">Large</option><option value="xlarge">X-Large</option>
+        </select></div>
       <label><input type="checkbox" checked={s.showIds} onChange={(e) => t.setSetting("showIds", e.target.checked)} />Show IDs &amp; codes</label>
       <label><input type="checkbox" checked={s.resolutionCriteria} onChange={(e) => t.setSetting("resolutionCriteria", e.target.checked)} />Resolution criteria</label>
       <label><input type="checkbox" checked={s.longShort} onChange={(e) => t.setSetting("longShort", e.target.checked)} />Long / short wording</label>
