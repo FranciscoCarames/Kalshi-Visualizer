@@ -1004,3 +1004,17 @@ def test_detail_expected_adds_possible_cause_reason_for_missing_rungs():
     assert missing and all(r["reason"].startswith("possible cause:") for r in missing)
     # a match-only player has no applicable ladder -> empty (no spurious MISSING noise)
     assert vm.detail_expected([{"kind": "match"}]) == []
+
+
+def test_detail_chain_exposes_market_ticker_for_present_and_missing_rungs():
+    # a present rung carries its representative market_ticker so the depth ladder can load that rung's book;
+    # a missing rung carries "" (shape symmetry, never None-as-ticker).
+    rows = [{"kind": "advance", "player_key": "P", "tournament": "T", "stage": "Semifinal",
+             "series": "KXATPADVANCE", "sport": "tennis", "contract": "Reach the semifinal",
+             "market_ticker": "KXATPADVANCE-SF", "display_pct": 40.0, "quote_quality": "OK"}]
+    chain = vm.detail_chain(rows, "tennis")
+    by = {r["layer"]: r for r in chain}
+    assert by["Reach Semifinal"]["market_ticker"] == "KXATPADVANCE-SF"
+    # the unfilled rungs (Reach Final / Win Tournament) are present-but-missing → empty ticker, not None
+    missing = [r for r in chain if r["source"] == "— missing —"]
+    assert missing and all(r["market_ticker"] == "" for r in missing)

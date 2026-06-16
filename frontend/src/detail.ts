@@ -41,8 +41,25 @@ export interface OrderbookData {
 export const loadOrderbook = (ticker: string, signal?: AbortSignal) =>
   getJson<OrderbookData>(`/api/terminal/orderbook?ticker=${encodeURIComponent(ticker)}`, signal);
 
-export const loadDetail = (k: { sport: string; player_key: string; tournament: string }) =>
-  getJson<DetailBundle>(`/api/terminal/detail?sport=${encodeURIComponent(k.sport)}&player_key=${encodeURIComponent(k.player_key)}&tournament=${encodeURIComponent(k.tournament)}`);
+export const loadDetail = (k: { sport: string; player_key: string; tournament: string }, signal?: AbortSignal) =>
+  getJson<DetailBundle>(`/api/terminal/detail?sport=${encodeURIComponent(k.sport)}&player_key=${encodeURIComponent(k.player_key)}&tournament=${encodeURIComponent(k.tournament)}`, signal);
+
+/** Selectable ladder rungs (broad→deep) for the depth-ladder rung picker: each rung of the player's
+ * containment ladder that has a real market ticker, so its live order book can be shown. Tickerless rungs
+ * (a missing layer, or a match-implied node with no own market) are dropped. Pure + display-only. */
+export interface LadderRung { layer: string; ticker: string; display_pct: number | null; }
+export function chainRungs(bundle: DetailBundle | null): LadderRung[] {
+  const rows = bundle?.chain ?? [];
+  const out: LadderRung[] = [];
+  for (const r of rows) {
+    const ticker = String(r.market_ticker ?? "");
+    if (!ticker) continue;            // keep only rungs whose own market we can fetch a book for
+    const dp = r.display_pct;
+    out.push({ layer: String(r.layer ?? ""), ticker,
+               display_pct: typeof dp === "number" ? dp : null });
+  }
+  return out;                          // chain is already broad→deep (node_order); preserve that order
+}
 
 export const loadLadder = (k: { sport: string; player_key: string; tournament: string }) =>
   getJson<LadderData>(`/api/terminal/ladder?sport=${encodeURIComponent(k.sport)}&player_key=${encodeURIComponent(k.player_key)}&tournament=${encodeURIComponent(k.tournament)}`);

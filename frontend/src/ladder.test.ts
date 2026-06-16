@@ -56,3 +56,46 @@ describe("legLabel — book-only pseudo-legs read as 'book · …', not a trade 
     expect(legLabel({ side: "buy_no", c: "No fade", p: 12 }, 0)).toBe("NO · No fade @ 12¢");
   });
 });
+
+import { chainRungs } from "./detail";
+import { resolveBookTicker } from "./Ladder";
+import type { DetailBundle } from "./detail";
+
+const bundle = (chain: Record<string, unknown>[]): DetailBundle =>
+  ({ chain, indicators: [], spreads: [], expected: [], contracts: [], raw_fields: [], link_audit: [], duplicates: [], rules: [] });
+
+describe("chainRungs — selectable ladder rungs with a real ticker, broad→deep", () => {
+  it("keeps only ticker-bearing rungs and preserves chain order", () => {
+    const r = chainRungs(bundle([
+      { layer: "Reach R32", market_ticker: "KX-R32", display_pct: 75.5 },
+      { layer: "Reach R16", market_ticker: "", display_pct: 33.6 },       // no ticker → dropped
+      { layer: "Win", market_ticker: "KX-WIN", display_pct: 0.4 },
+    ]));
+    expect(r.map((x) => x.layer)).toEqual(["Reach R32", "Win"]);
+    expect(r[0]).toEqual({ layer: "Reach R32", ticker: "KX-R32", display_pct: 75.5 });
+    expect(r[1].display_pct).toBe(0.4);
+  });
+  it("null bundle / empty chain → no rungs", () => {
+    expect(chainRungs(null)).toEqual([]);
+    expect(chainRungs(bundle([]))).toEqual([]);
+  });
+  it("non-numeric display_pct → null", () => {
+    expect(chainRungs(bundle([{ layer: "X", market_ticker: "KX-X", display_pct: null }]))[0].display_pct).toBeNull();
+  });
+});
+
+describe("resolveBookTicker — picked rung overrides leg, else leg, else first rung", () => {
+  const rungs = [{ layer: "R32", ticker: "KX-R32", display_pct: 75 }, { layer: "Win", ticker: "KX-WIN", display_pct: 1 }];
+  it("a picked rung wins", () => {
+    expect(resolveBookTicker("KX-WIN", "KX-LEG", rungs)).toBe("KX-WIN");
+  });
+  it("no pick → the row's own leg ticker", () => {
+    expect(resolveBookTicker(null, "KX-LEG", rungs)).toBe("KX-LEG");
+  });
+  it("no pick and no leg → the first rung", () => {
+    expect(resolveBookTicker(null, "", rungs)).toBe("KX-R32");
+  });
+  it("nothing available → empty", () => {
+    expect(resolveBookTicker(null, "", [])).toBe("");
+  });
+});

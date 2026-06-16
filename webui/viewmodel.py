@@ -1885,13 +1885,15 @@ def detail_chain(prows: list[dict[str, Any]], sport: str) -> list[dict[str, Any]
         primary = consistency.representative(src)
         if primary is None:
             out.append({"layer": node, "source": "— missing —", "display_pct": None,
-                        "bid_pct": None, "ask_pct": None, "quote": ""})
+                        "bid_pct": None, "ask_pct": None, "quote": "", "market_ticker": ""})
         else:
             out.append({"layer": node,
                         "source": "advance/winner" if "market" in src else "match-implied",
                         "display_pct": _num(primary.get("display_pct")),
                         "bid_pct": _num(primary.get("yes_bid_pct")), "ask_pct": _num(primary.get("yes_ask_pct")),
-                        "quote": primary.get("quote_quality") or ""})
+                        "quote": primary.get("quote_quality") or "",
+                        # DISPLAY-ONLY: the rung's market ticker so the depth ladder can load this rung's book.
+                        "market_ticker": primary.get("market_ticker") or ""})
     return out
 
 
