@@ -570,6 +570,29 @@ def test_soccer_stage_of_elim_owned_classified_non_laddered():
         assert c.eligible_for_ladder_checks is False and c.stage == label
 
 
+_H2H_FIX = Path(__file__).parent / "fixtures" / "wc_team_h2h"
+
+
+def test_wc_team_h2h_recognized_other_never_detected():
+    # Wave 2 #10 (live-probed 2026-06-16). KXWCTEAMH2H is OWNED (resolves to soccer, not UNKNOWN) and
+    # classified "other" → visible in the coverage audit but NEVER fetched/detected. The live shape is a
+    # 3-way same-stage-tie set with mutually_exclusive UNSET, so no executable detector may touch it yet.
+    import dutchbook
+    assert sports.sport_for_series("KXWCTEAMH2H").sport_id == "soccer"
+    assert sports.SOCCER.family_of("KXWCTEAMH2H") == "other"
+    assert "KXWCTEAMH2H" not in sports.SOCCER.default_series          # owned but never fetched
+    assert "KXWCTEAMH2H" in sports.SOCCER.exact_series
+    # The captured live event flows through build_contracts (3 distinct teams incl. the same-stage leg) and
+    # produces NO dutch-book / group-basket finding (it is not a recognized detector family).
+    ev = json.loads((_H2H_FIX / "KXWCTEAMH2H-26USAMEX.json").read_text(encoding="utf-8"))
+    rows = data.build_contracts("KXWCTEAMH2H", [ev])
+    assert len(rows) == 3 and all(r["market_family"] == "other" for r in rows)
+    assert all(r["ladder_eligible"] is False for r in rows)
+    recs = pd.DataFrame(rows).to_dict("records")
+    assert dutchbook.find_dutch_books(recs) == []
+    assert dutchbook.find_group_baskets(recs) == []
+
+
 def test_soccer_winner_rung_live_outright():
     # The LIVE tournament outright (KXMENWORLDCUP-26) classifies as the deepest ladder rung "Win the World
     # Cup" (node == display label). The dead lookalike KXMWORLDCUP and the retired dormant guess KXWC are

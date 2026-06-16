@@ -937,6 +937,14 @@ _SOCCER_KNOWN_OTHER = frozenset({
     "KXWCTEAMGOALS",          # per-team goals scalar — out of scope
     "KXWCGROUPGOALS",         # per-group goals scalar — out of scope
     "KXWCGROUPWINNER",        # "Group to Win" — a DIFFERENT contract from KXWCGROUPWIN; not modeled
+    # KXWCTEAMH2H "Who Will Go Further" (Wave 2 #10). LIVE PROBE 2026-06-16 (the acceptance-gate /events
+    # probe; fixture tests/fixtures/wc_team_h2h/) CORRECTS the plan's 2-way assumption: each event is a
+    # THREE-way set — "<A> advances further", "<B> advances further", "Eliminated same stage" — with the
+    # markets NOT flagged mutually_exclusive (me=None) and a tournament-long, same-stage-tie settlement.
+    # So it is NOT safe for any executable detector yet: recognized + "other" (visible in the coverage
+    # audit, never fetched/detected, never a false edge). Promotion to a REVIEW-ONLY 3-way detector is
+    # gated on Kalshi flagging mutually_exclusive + confirming the same-stage outcome is exhaustive.
+    "KXWCTEAMH2H",
 })
 _SOCCER_EXACT = frozenset({"KXWCGAME", "KXWCROUND", "KXWCGROUPQUAL", "KXWCGROUPWIN", "KXMENWORLDCUP",
                            "KXWCGROUPORDER", "KXWCGROUPBOTTOM",

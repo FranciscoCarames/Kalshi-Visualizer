@@ -1,0 +1,80 @@
+{
+  "event_ticker": "KXWCTEAMH2H-26USAMEX",
+  "title": "USA vs Mexico: Who Will Go Further",
+  "sub_title": "USA vs MEX (2026)",
+  "product_metadata": {
+    "competition": "FIFA World Cup",
+    "competition_scope": "Head to Head"
+  },
+  "markets": [
+    {
+      "ticker": "KXWCTEAMH2H-26USAMEX-USA",
+      "yes_sub_title": "USA advances further than Mexico",
+      "status": "active",
+      "mutually_exclusive": null,
+      "market_type": "binary",
+      "custom_strike": {
+        "soccer_team": "d7a243f5-e50d-47ed-87b0-b027c71fca22"
+      },
+      "yes_bid_dollars": "0.4200",
+      "yes_ask_dollars": "0.4400",
+      "no_bid_dollars": "0.5600",
+      "no_ask_dollars": "0.5800",
+      "last_price_dollars": "0.4400",
+      "yes_bid_size_fp": "1308.40",
+      "yes_ask_size_fp": "3878.00",
+      "volume_fp": "7180.13",
+      "open_interest_fp": "6779.42",
+      "rules_primary": "If USA advances to a further stage than Mexico in the 2026 Men's FIFA World Cup, then the market resolves to Yes.",
+      "title": "Will USA advance further than Mexico in the 2026 Men's FIFA World Cup?",
+      "close_time": "2026-08-03T14:00:00Z",
+      "expiration_time": "2026-08-03T14:00:00Z"
+    },
+    {
+      "ticker": "KXWCTEAMH2H-26USAMEX-MEX",
+      "yes_sub_title": "Mexico advances further than USA",
+      "status": "active",
+      "mutually_exclusive": null,
+      "market_type": "binary",
+      "custom_strike": {
+        "soccer_team": "8caf91d0-aafc-4d95-8788-72947e76e667"
+      },
+      "yes_bid_dollars": "0.3500",
+      "yes_ask_dollars": "0.3600",
+      "no_bid_dollars": "0.6400",
+      "no_ask_dollars": "0.6500",
+      "last_price_dollars": "0.3400",
+      "yes_bid_size_fp": "27.60",
+      "yes_ask_size_fp": "4835.00",
+      "volume_fp": "5260.63",
+      "open_interest_fp": "4277.72",
+      "rules_primary": "If Mexico advances to a further stage than USA in the 2026 Men's FIFA World Cup, then the market resolves to Yes.",
+      "title": "Will Mexico advance further than USA in the 2026 Men's FIFA World Cup?",
+      "close_time": "2026-08-03T14:00:00Z",
+      "expiration_time": "2026-08-03T14:00:00Z"
+    },
+    {
+      "ticker": "KXWCTEAMH2H-26USAMEX-TIE",
+      "yes_sub_title": "Eliminated same stage",
+      "status": "active",
+      "mutually_exclusive": null,
+      "market_type": "binary",
+      "custom_strike": {
+        "soccer_team": "904ecd8c-567c-4b42-9827-59d5d5ef2335"
+      },
+      "yes_bid_dollars": "0.1000",
+      "yes_ask_dollars": "0.2200",
+      "no_bid_dollars": "0.7800",
+      "no_ask_dollars": "0.9000",
+      "last_price_dollars": "0.2800",
+      "yes_bid_size_fp": "1289.00",
+      "yes_ask_size_fp": "19.99",
+      "volume_fp": "796.62",
+      "open_interest_fp": "688.62",
+      "rules_primary": "If USA and Mexico are eliminated in the same stage in the 2026 Men's FIFA World Cup, then the market resolves to Yes.",
+      "title": "Will USA be eliminated in the same stage as Mexico in the 2026 Men's FIFA World Cup?",
+      "close_time": "2026-08-03T14:00:00Z",
+      "expiration_time": "2026-08-03T14:00:00Z"
+    }
+  ]
+}
