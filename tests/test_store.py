@@ -700,7 +700,9 @@ def test_db_housekeeping_bounds_file_under_retention(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "SNAPSHOT_OPP_TIER_ENABLED", False)
     monkeypatch.setattr(config, "SNAPSHOT_HOUSEKEEPING_EVERY_N", 1)
     big = "z" * 2000
-    rows = lambda i: [_opp(f"x-{i}-{j}", bucket="clean", blob=big) for j in range(120)]
+
+    def rows(i):
+        return [_opp(f"x-{i}-{j}", bucket="clean", blob=big) for j in range(120)]
     import os
     for i in range(15):
         store.write_snapshot(i * 1000, rows(i), db_path=db)

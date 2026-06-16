@@ -331,7 +331,7 @@ def test_feed_no_fee_rates_falls_back_labeled():
 
 
 def test_cond_pair_with_reason_explains_each_missing_cause():
-    from webui.feed import _cond_pair_with_reason, _cond_pair
+    from webui.feed import _cond_pair, _cond_pair_with_reason
     assert _cond_pair_with_reason(60, 30) == (50.0, 50.0, "")        # computable -> empty reason
     assert _cond_pair_with_reason(None, 30)[2] == "no valid parent quote"
     assert _cond_pair_with_reason(60, None)[2] == "no valid child quote"
