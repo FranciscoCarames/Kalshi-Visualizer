@@ -72,6 +72,12 @@ NEAR_MISS_DUTCH_BOOK = "NEAR_MISS_DUTCH_BOOK"
 CHECK_TYPE = "dutch_book"
 
 _NO_FIRM_QUALITY = ("No quote", "Crossed")  # a leg with this quote has no usable resting order
+# A "One-sided" book (only a bid OR only an ask, never both) is NOT firm enough to BUY NO: the reciprocal
+# 100−yes_bid is synthesized from a lone resting bid, and a bare no_ask_dollars without a corroborating
+# yes_bid can't be trusted to clear — either would inflate an overround into firing on a thin book
+# (audit A1). It is gated PER BUY LEG, not blanket: a one-sided ASK-only leg keeps a genuine firm YES ask
+# (so a valid exact-score "buy YES" leg is never suppressed just because its opposite side is empty).
+_ONE_SIDED_QUALITY = "One-sided"
 
 
 def _isna(x: Any) -> bool:
@@ -97,8 +103,13 @@ def _firm_yes_ask_c(row: dict[str, Any]) -> int | None:
 
 def _firm_no_ask_c(row: dict[str, Any]) -> int | None:
     """Cents to BUY NO on this leg — the real ``no_ask_c``, else the structural identity
-    ``100 − yes_bid_c`` (equal by construction on Kalshi's unified book). None when no usable order."""
-    if row.get("quote_quality") in _NO_FIRM_QUALITY:
+    ``100 − yes_bid_c`` (equal by construction on Kalshi's unified book). None when no usable order.
+
+    A "One-sided" book yields no firm NO (audit A1): both the direct ``no_ask_c`` and the
+    ``100 − yes_bid`` fallback rest on a single un-paired order that can't be trusted to clear for a
+    dutch-book floor. This blocks ONLY the NO side — buying YES off a genuine one-sided ask still works."""
+    q = row.get("quote_quality")
+    if q in _NO_FIRM_QUALITY or q == _ONE_SIDED_QUALITY:
         return None
     api = _num(row.get("no_ask_c"))
     if api is not None:
