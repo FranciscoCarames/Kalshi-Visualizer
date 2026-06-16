@@ -228,6 +228,11 @@ class SportConfig:
     # settlement-rule proof (dutchbook._proves_fixed_sum) that the tie settles fixed-sum ($0.50 each) or
     # cannot occur — otherwise the book is skipped (never a false dutch book on a tie-capable game).
     game_mece_by_shape: bool = True
+    # Capability flag (audit A8): this sport's two-way group can carry an n-OUTCOME (n>2) MECE event — a
+    # 3-way Home/Away/Tie soccer game — so dutchbook dispatches it to `_detect_n_way` instead of the strict
+    # 2-market `_detect_pair`. Replaces a hardcoded `sport_id == "soccer"` check, so a future 3-way sport is
+    # one flag, not a detector edit. False (default) = every 2-way sport keeps `_detect_pair` byte-for-byte.
+    n_way_dutch_book: bool = False
     # Optional cardinality-floor "group basket" rules, keyed by EXACT series ticker (e.g. World Cup group
     # qualifiers). Maps a series to its per-group ``GroupBasketRule`` (team count + guaranteed YES/NO settle
     # floors, derived from the tournament format). Empty (default) = no basket for this sport, so adding it
@@ -630,8 +635,16 @@ def _nba_stage(cfg: SportConfig, family: str, market: dict[str, Any]) -> str:
     if family == "winner":
         return "Champion"
     if family == "advance":
-        # NBA has no title round, so the advance "stage" comes from which series the market is in.
-        return "Playoffs" if (market.get("ticker") or "").upper().startswith("KXNBAPLAYOFF") else "Conference"
+        # NBA has no title round, so the advance "stage" comes from which series the market is in. Audit
+        # A8: EXPLICIT map (no blanket `else "Conference"`) — an unrecognized advance series returns ""
+        # (unmapped → surfaced by consistency.unmapped_advance_stages) rather than being silently
+        # mislabeled "Conference".
+        t = (market.get("ticker") or "").upper()
+        if t.startswith("KXNBAPLAYOFF"):
+            return "Playoffs"
+        if t.startswith(("KXNBAEAST", "KXNBAWEST")):
+            return "Conference"
+        return ""
     if family == "match":
         return extract_round(cfg.round_patterns, market.get("title"), market.get("rules_primary"))
     return ""
@@ -1067,6 +1080,7 @@ SOCCER = register(SportConfig(
     stage_rank=_SOCCER_STAGE_RANK,
     ladder_families=frozenset({"advance", "winner", "group_winner"}),
     match_family="",                           # no 2-way head-to-head; the 3-way game rides the "game" family
+    n_way_dutch_book=True,                      # 3-way Home/Away/Tie games → dutchbook._detect_n_way (A8)
     divisions={},
     division_label="",
     family_fn=_soccer_family,
@@ -1252,8 +1266,15 @@ def _nhl_stage(cfg: SportConfig, family: str, market: dict[str, Any]) -> str:
     if family == "winner":
         return "Champion"
     if family == "advance":
-        # NHL has no title round, so the advance "stage" comes from which series the market is in.
-        return "Playoffs" if (market.get("ticker") or "").upper().startswith("KXNHLPLAYOFF") else "Conference"
+        # NHL has no title round, so the advance "stage" comes from which series the market is in. Audit
+        # A8: EXPLICIT map (no blanket `else "Conference"`) — an unrecognized advance series returns ""
+        # (unmapped → surfaced by consistency.unmapped_advance_stages) rather than mislabeled "Conference".
+        t = (market.get("ticker") or "").upper()
+        if t.startswith("KXNHLPLAYOFF"):
+            return "Playoffs"
+        if t.startswith(("KXNHLEAST", "KXNHLWEST")):
+            return "Conference"
+        return ""
     if family == "match":
         return extract_round(cfg.round_patterns, market.get("title"), market.get("rules_primary"))
     return ""

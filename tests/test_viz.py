@@ -65,6 +65,16 @@ def test_ladder_prices_missing_price_compares_to_nearest_broader():
     assert list(out["inverted"]) == [False, False, True]
 
 
+def test_ladder_prices_sub_tolerance_inversion_is_not_flagged():
+    # A8: a sub-cent (≤ DISPLAY_TOL_C) "inversion" is rounding noise the engine ignores → not flagged.
+    chain = [
+        {"Layer": "Reach Final", "Display %": 50.0},
+        {"Layer": "Win Tournament", "Display %": 50.5},   # only 0.5pp above → within tolerance
+    ]
+    out = viz.ladder_prices(chain)
+    assert list(out["inverted"]) == [False, False]
+
+
 def test_ladder_prices_empty():
     out = viz.ladder_prices([])
     assert out.empty and list(out.columns) == ["layer", "display_pct", "rank", "inverted"]

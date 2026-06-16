@@ -290,7 +290,7 @@ def _direction_candidate(side: str, a: dict[str, Any], b: dict[str, Any]) -> dic
 
 
 def _detect_pair(event_ticker: str, markets: list[dict[str, Any]],
-                 near_miss_max_over_c: int = 0) -> dict[str, Any] | None:
+                 near_miss_max_over_c: int = 0, diag: dict | None = None) -> dict[str, Any] | None:
     """Detect a dutch book on a single 2-outcome match event, or None.
 
     Requires EXACTLY two distinct-participant markets (the only shape we can prove MECE for the
@@ -298,6 +298,11 @@ def _detect_pair(event_ticker: str, markets: list[dict[str, Any]],
     additionally surfaces a near-miss watchlist row when no strict book fires (see `_select_edge`).
     """
     if len(markets) != 2:
+        # Audit A8: a >2-market two-way group is NOT a provable 2-outcome MECE (a draw-prone or
+        # mis-grouped event) — record it so it surfaces in Debug instead of vanishing silently.
+        if len(markets) > 2:
+            _record(diag, "rejected", event_ticker,
+                    f">2 two-way markets in event ({len(markets)}) — not a provable 2-outcome MECE")
         return None
     a, b = markets
     # Two distinct participants of the same match (defensive against duplicate rows).
@@ -491,6 +496,10 @@ def prove_mece(event_rows: list[dict[str, Any]], cfg: Any) -> MeceProof:
         return MeceProof(False, False, False, "", "expected exactly 2 participants + 1 tie")
     if len({str(r.get("player_key") or "") for r in event_rows}) != 3:
         return MeceProof(False, False, False, "", "duplicate participant keys")
+    # Audit A8: same-event grouping is necessary but not sufficient — require all legs to share the SERIES
+    # so an event-ticker collision can't fuse legs from two different books into one bogus 3-way.
+    if len({str(r.get("series") or "").upper() for r in event_rows}) != 1:
+        return MeceProof(False, False, False, "", "legs span multiple series")
     if not all(bool(r.get("mutually_exclusive")) for r in event_rows):
         return MeceProof(False, False, False, "", "event not flagged mutually_exclusive")
     if _draw_excluded_phrase(event_rows) is None:
@@ -672,6 +681,16 @@ def prove_field_mece(event_rows: list[dict[str, Any]], cfg: Any) -> MeceProof:
         return MeceProof(False, False, False, "", "duplicate participant keys")
     if not all(bool(r.get("mutually_exclusive")) for r in event_rows):
         return MeceProof(False, False, False, "", "event not flagged mutually_exclusive")
+    # Audit A8: same-event grouping (by event_ticker) is NECESSARY but NOT SUFFICIENT. Require every leg to
+    # share the SERIES, the FIELD FAMILY (kind), and the SETTLEMENT RULE CLASS (rule_tokens) — so a single
+    # event ticker can never fuse two scopes (e.g. a winner field + a pole field, or legs that void on
+    # different conditions) into one bogus field overround.
+    if len({str(r.get("series") or "").upper() for r in event_rows}) != 1:
+        return MeceProof(False, False, False, "", "field legs span multiple series")
+    if len({str(r.get("kind") or "") for r in event_rows}) != 1:
+        return MeceProof(False, False, False, "", "field legs span multiple families")
+    if len({frozenset(data.rule_tokens(r.get("rules_primary"))) for r in event_rows}) != 1:
+        return MeceProof(False, False, False, "", "field legs span multiple settlement rule classes")
     return MeceProof(True, True, False, "one-winner field (exactly one winner)", "")
 
 
@@ -1006,7 +1025,9 @@ def find_dutch_books(rows: list[dict[str, Any]],
         if not markets:
             continue
         cfg = sports.sport_for_series(markets[0].get("series"))
-        if cfg.sport_id == "soccer":
+        if cfg.n_way_dutch_book:
+            # A8: capability flag (was a hardcoded `sport_id == "soccer"`) — any sport whose two-way group
+            # can be an n-outcome MECE event (3-way Home/Away/Tie) dispatches to the n-way detector.
             finding = _detect_n_way(event_ticker, markets, cfg, _diag, near_miss_max_over_c)
         elif (not cfg.game_mece_by_shape) and markets and markets[0].get("kind") == _GAME_FAMILY:
             # Tie-capable game (e.g. NFL): the 2-way book is valid ONLY if settlement proves a fixed-sum
@@ -1023,7 +1044,7 @@ def find_dutch_books(rows: list[dict[str, Any]],
                     finding["settlement_caveat"] = "; ".join(
                         p for p in (finding.get("settlement_caveat", ""), proof.text) if p)
         else:
-            finding = _detect_pair(event_ticker, markets, near_miss_max_over_c)
+            finding = _detect_pair(event_ticker, markets, near_miss_max_over_c, _diag)
         if finding is not None:
             out.append(finding)
     for event_ticker, markets in field_groups.items():
