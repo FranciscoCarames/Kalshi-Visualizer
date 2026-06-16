@@ -191,6 +191,33 @@ function Tbl({ rows, cols }: { rows: Record<string, unknown>[]; cols: [string, s
   );
 }
 
+// Single-sourced so the conditional displays don't each repeat the long warning (owner asked to de-noise it).
+const CONDITIONAL_DISCLAIMER =
+  "Market-implied display ratios — uncalibrated, gross, top-of-book; not a fair-value model and never an executable edge.";
+
+/** One readable row per ladder rung (broad→deep) for the LADDER PROBABILITY table: the absolute chance of
+ * reaching the rung (its display price) and the conditional chance GIVEN the prior rung (price ratio). The
+ * conditional is suppressed — with a visible reason, never silently — when a price is missing or the ladder
+ * inverts (deeper priced above broader), so a ratio is never shown above 100%. Pure + display-only. */
+export interface CondRow { stage: string; reaching: number | null; given: number | null; quote: string; note: string; }
+export function condRungRows(chain: Record<string, unknown>[]): CondRow[] {
+  const out: CondRow[] = [];
+  let prev: number | null = null;
+  for (let i = 0; i < (chain?.length ?? 0); i++) {
+    const c = chain[i];
+    const reaching = typeof c.display_pct === "number" ? c.display_pct : null;
+    let given: number | null = null;
+    let note = "";
+    if (i === 0) note = "broadest";
+    else if (reaching == null || prev == null || prev <= 0) note = "no quote";
+    else if (reaching > prev) note = "inverted — suppressed";   // deeper above broader = display inconsistency
+    else given = (reaching / prev) * 100;
+    out.push({ stage: String(c.layer ?? ""), reaching, given, quote: String(c.quote ?? ""), note });
+    prev = reaching;
+  }
+  return out;
+}
+
 export function Detail({ row, showIds, showRules = true }: { row: FeedRow | null; showIds?: boolean; showRules?: boolean }) {
   const key = detailKey(row);
   const [bundle, setBundle] = useState<DetailBundle | null>(null);
@@ -260,12 +287,29 @@ export function Detail({ row, showIds, showRules = true }: { row: FeedRow | null
         <div className="note" style={{ marginTop: 8 }}>loading participant detail…</div>
       ) : (
         <>
-          {bundle.indicators.length ? (
-            <><div className="sect">DERIVED MARKET-IMPLIED INDICATORS <span className="uncal">DISPLAY-ONLY BOUND</span></div>
-              {bundle.indicators.map((ind, i) => (
-                <div className="note" key={i}>{gv(ind, "label")} {gv(ind, "comparator")} {gv(ind, "value_pct")}{ind.value_pct != null ? "%" : ""} <span className="dim">{gv(ind, "note")}</span></div>
-              ))}</>
-          ) : null}
+          {bundle.chain.length ? (() => {
+            const cr = condRungRows(bundle.chain);
+            const bounds = bundle.indicators.filter((ind) => ind.kind === "bound");   // golf make-cut etc.
+            return (
+              <><div className="sect">LADDER PROBABILITY <span className="uncal">market-implied display ratio · not fair value</span></div>
+                <table className="condtbl"><tbody>
+                  <tr><th>Stage</th><th>Chance of reaching</th><th>Given prior stage</th><th>Quote</th></tr>
+                  {cr.map((r, i) => (
+                    <tr key={i}>
+                      <td>{r.stage}</td>
+                      <td className="violet">{r.reaching != null ? n1(r.reaching) + "%" : "—"}</td>
+                      <td>{r.given != null ? <span className="violet">{n1(r.given)}%</span> : <span className="dim">{r.note || "—"}</span>}</td>
+                      <td className="dim">{r.quote || "—"}</td>
+                    </tr>
+                  ))}
+                </tbody></table>
+                {bounds.map((ind, i) => (
+                  <div className="note" key={i}>{gv(ind, "label")} {gv(ind, "comparator")} {gv(ind, "value_pct")}{ind.value_pct != null ? "%" : ""} <span className="dim">(bound, not a traded market)</span></div>
+                ))}
+                <div className="note" style={{ marginTop: 4 }}>{CONDITIONAL_DISCLAIMER}</div>
+              </>
+            );
+          })() : null}
 
           {bundle.chain.length ? (
             <><div className="sect">CONTAINMENT CHAIN (BROAD → DEEP)</div>

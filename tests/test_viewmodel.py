@@ -1018,3 +1018,16 @@ def test_detail_chain_exposes_market_ticker_for_present_and_missing_rungs():
     # the unfilled rungs (Reach Final / Win Tournament) are present-but-missing → empty ticker, not None
     missing = [r for r in chain if r["source"] == "— missing —"]
     assert missing and all(r["market_ticker"] == "" for r in missing)
+
+
+def test_derived_indicators_carry_kind_discriminator():
+    # the table/bounds split is by a structured `kind` tag, not fragile label string-matching.
+    rows = [{"kind": "advance", "player_key": "P", "tournament": "T", "stage": "Semifinal",
+             "series": "KXATPADVANCE", "sport": "tennis", "contract": "Reach the semifinal",
+             "market_ticker": "X", "display_pct": 40.0, "quote_quality": "OK"}]
+    chain = vm.detail_chain(rows, "tennis")
+    inds = vm.derived_indicators(chain, "tennis")
+    kinds = {i.get("kind") for i in inds}
+    assert kinds and kinds <= {"absolute", "conditional", "bound"}
+    # the broadest present rung yields an "absolute" in-contention indicator
+    assert any(i.get("kind") == "absolute" for i in inds)
