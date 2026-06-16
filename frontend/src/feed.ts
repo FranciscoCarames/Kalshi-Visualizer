@@ -39,6 +39,8 @@ export interface FeedRow {
   // executable edge. midpoint_only / wide_basis are honesty flags from the engine row builder.
   cond_child?: number | null; cond_success?: number | null;
   cond_child_firm?: number | null; cond_success_firm?: number | null;
+  // Why the conditional is blank ("" when a number shows) — lets the Inspector explain the dash. Display-only.
+  cond_reason?: string; cond_reason_firm?: string;
   ev?: number | null; breakeven?: number | null; midpoint_only?: boolean; wide_basis?: boolean;
   parent_over_maxloss?: number | null; ratio?: number;
   pnode?: string; cnode?: string;

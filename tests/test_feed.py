@@ -328,3 +328,15 @@ def test_feed_no_fee_rates_falls_back_labeled():
     out = feed.feed_from_snapshot(snap)
     assert out["opps"][0]["fee_source"] == "fallback"
     assert out["meta"]["fee_data_status"] == "fallback"
+
+
+def test_cond_pair_with_reason_explains_each_missing_cause():
+    from webui.feed import _cond_pair_with_reason, _cond_pair
+    assert _cond_pair_with_reason(60, 30) == (50.0, 50.0, "")        # computable -> empty reason
+    assert _cond_pair_with_reason(None, 30)[2] == "no valid parent quote"
+    assert _cond_pair_with_reason(60, None)[2] == "no valid child quote"
+    assert _cond_pair_with_reason(0, 30)[2] == "empty book (no parent midpoint)"
+    assert "inverted" in _cond_pair_with_reason(30, 60)[2]            # child > parent
+    # the value-only wrapper keeps its original 2-tuple contract
+    assert _cond_pair(60, 30) == (50.0, 50.0)
+    assert _cond_pair(None, 30) == (None, None)

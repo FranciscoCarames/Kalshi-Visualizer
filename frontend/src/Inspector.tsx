@@ -146,6 +146,11 @@ export default function Inspector({ row, lens, snapshotId, showNet, longShort }:
           {row.cond_child_firm != null ? <> · firm <span className="violet">{n1(row.cond_child_firm)}%</span></> : null}
           {" "}— price ratio. See the <b>Participant Detail</b> tab for the full table. <span className="uncal">uncalibrated · not fair value</span>
         </div>
+      ) : (row.pnode || row.cnode) ? (
+        <div className="note" style={{ marginTop: 6 }}>
+          <b className="violet">Conditional</b> unavailable — {row.cond_reason || row.cond_reason_firm || "missing quote"}.
+          {" "}<span className="uncal">needs a price on both legs</span>
+        </div>
       ) : null}
 
       <div className="sect">WHY RANKED HERE · {(lens || "ENGINE ORDER").toUpperCase()}</div>
@@ -233,6 +238,17 @@ export function Detail({ row, showIds, showRules = true }: { row: FeedRow | null
           </tbody></table>
           <div className="formula">display: P(deeper│reached) = price(deeper) ÷ price(parent){row.cdisp != null && row.pdisp ? ` = ${row.cdisp}/${row.pdisp} = ${n1(row.cond_child as number)}%` : ""}</div>
           {row.cask != null && row.pbid ? <div className="formula">firm: child ask ÷ parent bid = {row.cask}/{row.pbid}{row.cond_child_firm != null ? ` = ${n1(row.cond_child_firm)}%` : ""}</div> : null}
+          {row.cond_child == null && row.cond_reason
+            ? <div className="note" style={{ marginTop: 4 }}>Display conditional unavailable — {row.cond_reason}.</div> : null}
+        </>
+      ) : (row.pnode || row.cnode) ? (
+        <>
+          <div className="sect">CONDITIONAL PROBABILITY <span className="uncal">UNCALIBRATED · DISPLAY-ONLY</span></div>
+          <div className="note" style={{ marginTop: 6 }}>
+            Conditional unavailable — {row.cond_reason || row.cond_reason_firm || "missing quote"}.
+            {row.pnode && row.cnode ? <> ({String(row.cnode)} ÷ {String(row.pnode)})</> : null} A price is needed
+            on both the broader and deeper legs to imply P(deeper │ reached).
+          </div>
         </>
       ) : <div className="note" style={{ marginTop: 6 }}>No parent/child containment node on this row (e.g. a dutch-book field/game). Conditional probability applies to ladder (containment) rows only.</div>}
 

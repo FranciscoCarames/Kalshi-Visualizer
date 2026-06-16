@@ -110,17 +110,33 @@ def _trim_legs(o: dict[str, Any]) -> list[dict[str, Any]]:
     return out[:24]
 
 
-def _cond_pair(parent: float | None, child: float | None) -> tuple[float | None, float | None]:
-    """DISPLAY-ONLY market-implied conditional for ONE like-for-like price pair (both display, or both
-    firm): P(deeper│reached) = child/parent. Returns ``(cond_child%, cond_success%)`` or ``(None, None)``.
-    GUARDED with explicit bounds (never truthiness, so a legitimate ``child == 0`` yields ``0.0%``, not
-    None): fails closed when a price is missing, the parent is non-positive, or the pair is inverted
-    (``child > parent`` is a display inconsistency, never a 'chance'). Uncalibrated, gross, top-of-book,
-    not fair value — never feeds classification/ranking."""
-    if parent is None or child is None or parent <= 0 or child < 0 or child > parent:
-        return None, None
+def _cond_pair_with_reason(
+        parent: float | None, child: float | None) -> tuple[float | None, float | None, str]:
+    """SINGLE SOURCE for the display-only market-implied conditional P(deeper│reached) = child/parent over
+    ONE like-for-like price pair (both display, or both firm). Returns ``(cond_child%, cond_success%,
+    reason)``: a value pair with ``reason == ""`` when computable, or ``(None, None, <why>)`` when a guard
+    trips. Guard ORDER (mirrored exactly by `_cond_pair`): missing parent → missing child → non-positive
+    parent (empty book) → invalid child → inverted pair. The reason is a DISPLAY annotation only (so a bare
+    "—" can say WHY); it never affects the numbers. Uncalibrated, gross, top-of-book, not fair value —
+    never feeds classification/ranking."""
+    if parent is None:
+        return None, None, "no valid parent quote"
+    if child is None:
+        return None, None, "no valid child quote"
+    if parent <= 0:
+        return None, None, "empty book (no parent midpoint)"
+    if child < 0:
+        return None, None, "no valid child quote"
+    if child > parent:
+        return None, None, "inverted display (deeper above broader) — a display inconsistency, not a probability"
     child_pct = round(child / parent * 100, 1)
-    return child_pct, round(100 - child_pct, 1)
+    return child_pct, round(100 - child_pct, 1), ""
+
+
+def _cond_pair(parent: float | None, child: float | None) -> tuple[float | None, float | None]:
+    """Value-only wrapper over `_cond_pair_with_reason` (unchanged contract for existing callers/tests)."""
+    child_pct, success_pct, _ = _cond_pair_with_reason(parent, child)
+    return child_pct, success_pct
 
 
 def _ripeness(o: dict[str, Any]) -> float | None:
@@ -218,10 +234,10 @@ def _build_row(o: dict[str, Any], fee_rates: dict[str, Any] | None = None,
     #     for the Inspector only. Both bases share the same guarded `_cond_pair` (impossible values closed).
     pdisp, cdisp = _num(o.get("parent_display_c")), _num(o.get("child_display_c"))
     pbid, cask = _num(o.get("parent_yes_bid_c")), _num(o.get("child_yes_ask_c"))
-    cc_disp, cs_disp = _cond_pair(pdisp, cdisp)
+    cc_disp, cs_disp, cond_reason = _cond_pair_with_reason(pdisp, cdisp)
     cond_child = base["cond_child"] if "cond_child" in base else cc_disp
     cond_success = base["cond_success"] if "cond_success" in base else cs_disp
-    cond_child_firm, cond_success_firm = _cond_pair(pbid, cask)
+    cond_child_firm, cond_success_firm, cond_reason_firm = _cond_pair_with_reason(pbid, cask)
     base.update({
         "id": o["opportunity_id"], "bucket": bucket, "zone": zone, "section": sec,
         "scope": o.get("no_structure_scope"), "resolution_mode": o.get("resolution_mode"),
@@ -243,6 +259,10 @@ def _build_row(o: dict[str, Any], fee_rates: dict[str, Any] | None = None,
         # conditional is a DIAGNOSTIC, NOT an executable edge — do not feed it into ranking/classification.
         "cond_child": cond_child, "cond_success": cond_success,
         "cond_child_firm": cond_child_firm, "cond_success_firm": cond_success_firm,
+        # DISPLAY-ONLY: why a conditional is blank ("" when a number is shown), so the Inspector can explain
+        # the dash instead of leaving it opaque. The display reason describes the cond_child/cond_success
+        # pair; for risk-budget rows that pair is the engine's verbatim value (same inputs → same reason).
+        "cond_reason": cond_reason, "cond_reason_firm": cond_reason_firm,
         "parent_over_maxloss": _ripeness(o),
         # Fees: TWO execution scenarios (taker=immediate-fill primary, maker=resting-order). Display-only,
         # per-leg (event override -> series -> fallback), never ranks. `fees`/`net_edge`/`net_profit` keep
