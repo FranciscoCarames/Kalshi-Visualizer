@@ -1911,8 +1911,18 @@ def detail_spreads(prows: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 def detail_expected(prows: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Expected-vs-found ladder checklist (Layer / found / source). Reuses consistency.expected_nodes."""
-    return consistency.expected_nodes(list(prows or []))
+    """Expected-vs-found ladder checklist (Layer / found / source). Reuses consistency.expected_nodes and
+    adds a DISPLAY-ONLY ``reason`` for each MISSING rung so the Inspector can explain the gap instead of a
+    bare "no". The wording is a POSSIBLE cause (a rung can be missing for many reasons — not listed, closed,
+    family not fetched, between rounds, grouping/identity, API hiccup); it never asserts one definitive
+    cause. Rung labels come from the sport's own ``ladder.node_order`` (sport-specific, not hardcoded). No
+    engine change."""
+    rows = consistency.expected_nodes(list(prows or []))
+    for r in rows:
+        r["reason"] = ("" if r.get("found")
+                       else "possible cause: no active market loaded for this rung "
+                            "(not listed, closed, between rounds, or its contract family not fetched)")
+    return rows
 
 
 def detail_contracts(prows: list[dict[str, Any]]) -> list[dict[str, Any]]:

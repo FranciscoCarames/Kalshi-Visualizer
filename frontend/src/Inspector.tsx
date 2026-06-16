@@ -270,6 +270,10 @@ export function Detail({ row, showIds, showRules = true }: { row: FeedRow | null
           {bundle.chain.length ? (
             <><div className="sect">CONTAINMENT CHAIN (BROAD → DEEP)</div>
               <Tbl rows={bundle.chain} cols={[["layer", "Layer"], ["source", "Source"], ["display_pct", "Disp %"], ["bid_pct", "Bid %"], ["ask_pct", "Ask %"], ["quote", "Quote"]]} />
+              <div className="note" style={{ marginTop: 4 }}>
+                A blank rung means <b>missing layer</b> (no market loaded for that rung), <b>missing quote</b>
+                {" "}(a market with no usable price), or an <b>unverifiable</b> round mapping — never a violation.
+              </div>
               <LadderChart data={ladder} /></>
           ) : null}
 
@@ -284,7 +288,17 @@ export function Detail({ row, showIds, showRules = true }: { row: FeedRow | null
 
           {bundle.expected.length ? (
             <><div className="sect">EXPECTED VS FOUND</div>
-              <Tbl rows={bundle.expected} cols={[["layer", "Layer"], ["found", "Found"], ["source", "Source"]]} /></>
+              <Tbl rows={bundle.expected} cols={[["layer", "Layer"], ["found", "Found"], ["source", "Source"], ["reason", "If missing"]]} />
+              {bundle.expected.some((e) => !e.found) ? (
+                <div className="note" style={{ marginTop: 4 }}>
+                  Missing rungs are a coverage gap, not an error.
+                  {row.sport_key === "tennis" ? (
+                    <> Tennis ladders are short (Reach Semifinal → Reach Final → Win Tournament) and ATP/WTA
+                    advance markets are often sparse or closed between rounds, so cheap-NO bands form less
+                    often than in a dense live ladder such as the World Cup round ladder.</>
+                  ) : null}
+                </div>
+              ) : null}</>
           ) : null}
 
           {bundle.contracts.length ? (

@@ -991,3 +991,16 @@ def test_kalshi_fee_estimate_endpoints_and_per_leg_sum():
     # Missing a leg price -> every net is BLANK (never treated as 0 fees, per the mini-spec).
     blank = vm.net_of_fees({"exec_gap_c": 1, "exec_min_size": 100, "action_1_price_c": 50})
     assert blank["missing"] is True and blank["total_fees_c"] is None
+
+
+def test_detail_expected_adds_possible_cause_reason_for_missing_rungs():
+    # a containment player with one advance market: found rung -> no reason; missing rungs -> possible cause.
+    rows = [{"kind": "advance", "player_key": "P", "tournament": "T", "stage": "Semifinal",
+             "series": "KXATPADVANCE", "sport": "tennis", "contract": "Reach the semifinal"}]
+    out = vm.detail_expected(rows)
+    found = {r["layer"]: r for r in out}
+    assert found["Reach Semifinal"]["found"] is True and found["Reach Semifinal"]["reason"] == ""
+    missing = [r for r in out if not r["found"]]
+    assert missing and all(r["reason"].startswith("possible cause:") for r in missing)
+    # a match-only player has no applicable ladder -> empty (no spurious MISSING noise)
+    assert vm.detail_expected([{"kind": "match"}]) == []
