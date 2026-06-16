@@ -263,6 +263,29 @@ def test_gating_is_exhaustive(env):
     assert checked >= 8                               # sanity: the data surface was actually exercised
 
 
+def test_dashboard_public_flag_opens_only_the_dashboard_mount(env, monkeypatch):
+    """Transition escape hatch: DASHBOARD_PUBLIC=1 serves the legacy NiceGUI /dashboard/ mount to anon while
+    the SPA's engine data (/api/terminal/feed) stays gated. Off by default — the dashboard is gated like any
+    other non-public path. The "gate opens" direction is asserted via `is_public()` (the pure decision the
+    gate consults) rather than by requesting /dashboard/: once an earlier test imports `serve`, that path
+    routes into the real NiceGUI sub-app, which isn't TestClient-drivable. The deny direction (401) is
+    request-level and safe — the gate short-circuits before reaching the mount."""
+    c, _ = env
+    # Default (flag unset): the dashboard mount is gated, and so is the SPA data.
+    assert auth.is_public("/dashboard/") is False
+    assert c.get("/dashboard/").status_code == 401
+    assert c.get("/api/terminal/feed").status_code == 401
+
+    monkeypatch.setenv("DASHBOARD_PUBLIC", "1")
+    # The whole sub-app prefix is now public (page + _nicegui resources + websocket all share the mount)...
+    assert auth.is_public("/dashboard") is True
+    assert auth.is_public("/dashboard/") is True
+    assert auth.is_public("/dashboard/_nicegui/anything") is True
+    # ...but the carve-out is scoped: the SPA data surface is untouched and still requires login.
+    assert auth.is_public("/api/terminal/feed") is False
+    assert c.get("/api/terminal/feed").status_code == 401
+
+
 def test_security_headers_and_vary_present(env):
     """A5/E2: _harden stamps all five security headers (incl. Vary: Cookie) on gated AND public responses."""
     c, _ = env

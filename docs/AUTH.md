@@ -74,7 +74,7 @@ allowlist. `tests/test_routes_deny_by_default.py` fails if a new route lands und
 | `POST /auth/logout`, `GET /auth/me`, `POST /auth/password`, `GET/PUT /auth/preferences`, `GET /auth/devices`, `POST /auth/devices/{id}/revoke` | **gate-exempt but session-required** (enforce their own auth; user-only → machine token gets 403) |
 | `/opportunities(/{id})`, `/coverage`, `/metrics`, `/readyz`, `/scan`, `/scan/status`, `/alerts`, `/backlog(/events)` | **gated** (session or machine token) |
 | all `/api/terminal/*` — `feed`, `detail`, `payoff`, `ladder`, `diagnostics`, `telemetry`, `orderbook`, **`export` (ZIP)** | **gated** |
-| the NiceGUI `/dashboard*` mount | **gated** (anon HTML nav → redirect to `/`) |
+| the NiceGUI `/dashboard*` mount | **gated** (anon HTML nav → redirect to `/`) — unless `DASHBOARD_PUBLIC=1` (transition escape hatch, see env-var table) makes it **public** |
 | `/docs`, `/redoc`, `/openapi.json` | **disabled** when `AUTH_ENABLED` & not `APP_DEV=1` |
 
 **Machine token** (`X-API-Token`) reaches the *data* routes but is **403** on the user-only `/auth/*`
@@ -179,4 +179,5 @@ python serve.py
 | `TRUST_PROXY=1` | declare an HTTPS-terminating reverse proxy (satisfies the TLS requirement) |
 | `APP_ALLOWED_HOSTS` | comma-separated Host allowlist for `TrustedHostMiddleware` (default `*`) |
 | `APP_DEV=1` | re-enable `/docs` `/redoc` `/openapi.json` in an auth-on deployment |
+| `DASHBOARD_PUBLIC=1` | **transition escape hatch** — serve the legacy NiceGUI `/dashboard/` mount WITHOUT auth even while `AUTH_ENABLED`, so users hitting `…/dashboard/` get the old engine view login-free while the SPA at `/` keeps its login + per-user settings. Off by default. ⚠️ the dashboard reads the snapshot store in-process, so this exposes the same read-only engine data unauthenticated — a deliberate bypass, remove once the NiceGUI→SPA migration is done |
 | `AUTH_PREFS_MAX_BYTES` | cap on a stored preferences blob (default 32 KiB; in `config.py`) |

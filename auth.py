@@ -55,6 +55,16 @@ def auth_enabled() -> bool:
     return os.getenv("AUTH_ENABLED") == "1"
 
 
+def dashboard_public() -> bool:
+    """Transition-period escape hatch: when ``DASHBOARD_PUBLIC=1``, the legacy NiceGUI dashboard mount
+    (``/dashboard/``) is served WITHOUT auth even while ``AUTH_ENABLED`` — so an operator migrating from the
+    NiceGUI UI to the SPA can expose the old engine view at ``…/dashboard/`` while the SPA at ``/`` keeps its
+    login + per-user settings. Read at request time so the secure default holds (unset → the dashboard stays
+    gated). WARNING: the dashboard reads the snapshot store IN-PROCESS, so this exposes the same read-only
+    engine data unauthenticated — a deliberate bypass, intended to be removed once the migration is done."""
+    return os.getenv("DASHBOARD_PUBLIC") == "1"
+
+
 def auth_db_path() -> str:
     return os.getenv("AUTH_DB_PATH", config.AUTH_DB_PATH)
 
@@ -219,6 +229,10 @@ def _origin_ok(request: Request) -> bool:
 
 def is_public(path: str) -> bool:
     if path in _PUBLIC_EXACT:
+        return True
+    # Transition-only carve-out: the whole NiceGUI sub-app (its page + `_nicegui` resources + websocket)
+    # lives under the `/dashboard` mount, so one prefix opens the entire dashboard. Off by default.
+    if dashboard_public() and (path == "/dashboard" or path.startswith("/dashboard/")):
         return True
     return any(path.startswith(pre) for pre in _PUBLIC_PREFIXES)
 
