@@ -189,8 +189,13 @@ TIMEZONE_OPTIONS = [
     "Europe/Lisbon", "UTC", "Europe/London", "Europe/Paris",
     "America/New_York", "America/Chicago", "America/Los_Angeles",
 ]
-# Data older than this many seconds is flagged stale in the main-dashboard freshness strip.
+# Data older than this many seconds is flagged stale in the main-dashboard freshness strip, and (Wave 1b)
+# downgrades an otherwise-actionable opportunity's `tradable_now` to "No — stale snapshot".
 STALE_AFTER_SECONDS = 300
+# Optional per-sport staleness overrides (audit Wave 1b). The global 300s is fine for outright/futures
+# books but loose for thin in-game books — override per sport_id here (e.g. {"soccer": 120}). Empty = the
+# global value applies to every sport. Keyed by sport_id (see sports.SportConfig.sport_id).
+STALE_AFTER_SECONDS_BY_SPORT: dict[str, int] = {}
 
 # --- Snapshot store (Stage 1 — opportunity history) ----------------------------------
 # Standalone single-writer SQLite file persisting one snapshot of opportunities per refresh

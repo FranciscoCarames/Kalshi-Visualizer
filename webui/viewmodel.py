@@ -270,6 +270,16 @@ def _detail_with_badge(o: dict[str, Any]) -> str:
     return detail
 
 
+def opp_row_taker_net_negative(row: dict[str, Any]) -> bool:
+    """True when a built actionable display row's TAKER net-of-fees estimate is complete and ≤ 0 — the
+    dashboard's fee row-hide criterion (audit Wave 1b). Mirrors the SPA feed's taker-basis `net_negative`
+    EXACTLY (so both UIs hide the same rows): a blank/incomplete fee estimate (`net_profit` None) is never
+    hidden. (Maker-positive rows: the shared estimate is taker-primary today — a maker-aware refinement is a
+    future change to net_of_fees applied to BOTH UIs together, to keep parity.)"""
+    np_ = row.get("net_profit")
+    return np_ is not None and np_ <= 0
+
+
 def opp_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str] | None = None,
             flash_ids: set[str] | None = None, *, long_short: bool = False) -> dict[str, Any]:
     nf = net_of_fees(o)            # PR E: DISPLAY-ONLY net-of-fees estimate (default-hidden columns)

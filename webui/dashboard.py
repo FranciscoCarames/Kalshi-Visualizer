@@ -682,6 +682,11 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             show_net_sw = ui.switch("Show net of fees", value=False).tooltip(
                 "Reveal estimated net-of-fees columns (general taker-fee estimate). Display only — does not "
                 "affect ranking, bucketing, or actionability.")
+            # Wave 1b: default-ON row-hide for fee-negative actionable rows (parity with the SPA). Taker-
+            # basis; never re-buckets — purely a display declutter. The hidden count surfaces in the title.
+            hide_fee_neg_sw = ui.switch("Hide fee-negative", value=True).tooltip(
+                "Hide Actionable rows whose estimated TAKER net-of-fees edge is ≤ 0 (a display declutter — "
+                "never re-buckets; the count of hidden rows shows in the Actionable title).")
         ui.label("Sections").classes("text-sm font-bold mt-2")
         with ui.row().classes("items-end gap-4 flex-wrap"):
             show_review_sw = ui.switch("Review", value=True).tooltip(
@@ -2122,6 +2127,13 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         ls = pos_framing_sw.value      # Long/Short YES display wording (default off → Buy YES/Buy NO)
         _t_build = time.monotonic()    # build the always-visible row-models (Actionable + backlog)
         act_rows = [vm.opp_row(o, new_ids, chg, flash, long_short=ls) for o in view if o.get("bucket") == "actionable"]
+        # Wave 1b: default-ON fee-negative row-hide (parity with the SPA). Taker-basis, display-only — never
+        # re-buckets; the hidden count goes in the title so the rows are never silently dropped.
+        fee_hidden = 0
+        if hide_fee_neg_sw.value:
+            kept = [r for r in act_rows if not vm.opp_row_taker_net_negative(r)]
+            fee_hidden = len(act_rows) - len(kept)
+            act_rows = kept
         bl_rows = [vm.backlog_row(b, tz) for b in (state.get("backlog") or [])]
         ble_rows = [vm.backlog_event_row(b, tz) for b in (state.get("backlog_events") or [])]
         state["last_row_build_ms"] = round((time.monotonic() - _t_build) * 1000, 1)
@@ -2131,7 +2143,8 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         # (rb/nm/ns) are rebuilt via their scoped, self-gating refreshers.
         _t_apply = time.monotonic()
         actionable.rows = act_rows
-        act_title.set_text(f"Actionable — executable gross edges ({len(act_rows):,})")
+        _fee_hint = f" · {fee_hidden:,} fee-negative hidden" if fee_hidden else ""
+        act_title.set_text(f"Actionable — executable gross edges ({len(act_rows):,}){_fee_hint}")
         _apply_gated_sections()
         refresh_bounded_loss()
         refresh_near_miss()
@@ -2288,6 +2301,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         (ns_group, "Group cheap NO fades by participant ladder"), (ns_sort, "NO-fade ladder sort"),
         (ns_wide, "Include wide-quote cheap NO fades"), (ns_cards, "NO-fade ladder cards"),
         (show_net_sw, "Show estimated net-of-fees columns"),
+        (hide_fee_neg_sw, "Hide fee-negative actionable rows"),
         (actionable, "Actionable opportunities"), (review, "Review-required opportunities"),
         (blocked, "Blocked opportunities"), (qs_table, "Qualifier setups"),
         (rb_all, "Bounded-loss bets (all)"),
@@ -2338,7 +2352,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
     # re-renders mid-cascade. Single-interaction controls (selects/switches) fire once → full re-render now.
     # The NUMBER inputs fire per keystroke/spin → DEBOUNCED, and the bounded-loss/near-miss bands are SCOPED
     # to their own tables (a Max-loss change no longer rebuilds the other tables or reads the store).
-    for ctrl in (tz_select, rank_sel, show_ids, participant_sel, active_sw):
+    for ctrl in (tz_select, rank_sel, show_ids, participant_sel, active_sw, hide_fee_neg_sw):
         ctrl.on_value_change(lambda _=None: None if state.get("_suppress_cascade") else rerender())
     # Phase 1c: section show/hide toggles rebuild ONLY their own section + counts from the cached view
     # (cheap), never the full rerender — so toggling Review/Blocked/Qualifier/RB/NM/NO no longer pays the

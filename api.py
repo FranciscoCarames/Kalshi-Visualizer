@@ -339,7 +339,14 @@ def fetch_dep() -> Callable[[str], tuple]:
 
 def _opps(db_path: str | None) -> list[dict[str, Any]]:
     snap = store.latest(db_path=db_path)
-    return snap["opportunities"] if snap else []
+    if not snap:
+        return []
+    # Wave 1b staleness gate: downgrade actionability (tradable_now) on a stale snapshot; bucket/status
+    # untouched. Applied here AND in webui.feed.feed_from_snapshot with the same snapshot age, so the
+    # /opportunities ↔ feed parity (tests/test_feed.py) holds.
+    age = data.data_age_seconds(snap["fetched_at"])
+    return data.gate_stale_tradability(snap["opportunities"], age, config.STALE_AFTER_SECONDS,
+                                       by_sport=config.STALE_AFTER_SECONDS_BY_SPORT)
 
 
 # --- endpoints (thin: each only calls the engine) ------------------------------------
