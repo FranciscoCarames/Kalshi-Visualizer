@@ -149,8 +149,37 @@ def test_feed_is_display_only_isolation():
 def test_legs_trimmed_to_view_fields():
     a = next(r for r in feed.feed_from_snapshot(_snapshot())["opps"] if r["id"] == "a")
     # `u` is now the per-participant + per-side deep link (see test_leg_deep_link_*); other fields verbatim.
-    assert a["legs"] == [{"side": "buy_yes", "c": "A", "p": 60.0, "sz": 100.0, "tk": "TA",
+    assert a["legs"] == [{"side": "buy_yes", "c": "A", "p": 60.0, "sz": 100.0, "tk": "TA", "bo": False,
                           "u": "ua?op_market_ticker=TA&op_order_side=yes"}]
+
+
+def test_trim_legs_backfills_outright_ticker_from_slot_1():
+    # cheap-NO outright: real market in ticker_1, only an action_2 (Buy-NO) leg → synthesized with empty tk.
+    # The leg must gain the ticker so the depth panel can load its book (and it stays a real trade leg).
+    o = {"ticker_1": "KX-MKT", "ticker_2": "", "url": "http://e",
+         "legs": [{"side": "buy_no", "contract": "No fade", "price_c": 12, "ticker": "", "url": "http://e"}]}
+    legs = feed._trim_legs(o)
+    assert len(legs) == 1
+    assert legs[0]["tk"] == "KX-MKT" and legs[0]["bo"] is False
+    assert legs[0]["u"] == "http://e?op_market_ticker=KX-MKT&op_order_side=no"
+
+
+def test_trim_legs_appends_book_only_leg_for_unrepresented_market():
+    # single-sided containment: parent leg has its ticker; the deeper child market (ticker_2) has no leg →
+    # a BOOK-ONLY pseudo-leg so the panel can show its book, flagged bo=True (never an executable instruction).
+    o = {"ticker_1": "KX-P", "ticker_2": "KX-C",
+         "legs": [{"side": "buy_yes", "contract": "Parent", "price_c": 40, "ticker": "KX-P", "url": "http://p"}]}
+    legs = feed._trim_legs(o)
+    assert [(x["tk"], x["bo"]) for x in legs] == [("KX-P", False), ("KX-C", True)]
+    assert legs[1]["side"] == "" and legs[1]["p"] is None       # book-only carries no trade side/price
+
+
+def test_trim_legs_leaves_full_nleg_field_untouched():
+    o = {"legs": [{"side": "buy_no", "contract": "A", "price_c": 5, "ticker": "KX-A", "url": "u"},
+                  {"side": "buy_no", "contract": "B", "price_c": 6, "ticker": "KX-B", "url": "u"}]}
+    legs = feed._trim_legs(o)
+    assert [x["tk"] for x in legs] == ["KX-A", "KX-B"]
+    assert all(x["bo"] is False for x in legs)
 
 
 def test_leg_deep_link_yes_and_no_sides():

@@ -10,9 +10,17 @@ import { loadOrderbook, type OrderbookData } from "./detail";
 
 const REFRESH_MS = 5000;
 
-function legLabel(l: FeedLeg, i: number): string {
+export function legLabel(l: FeedLeg, i: number): string {
+  if (l.bo) return `book · ${l.c || l.tk || "leg " + (i + 1)}`;   // book-only pseudo-leg (no trade side)
   const side = String(l.side || "").includes("yes") ? "YES" : "NO";
   return `${side} · ${l.c || "leg " + (i + 1)} @ ${l.p != null ? l.p + "¢" : "—"}`;
+}
+
+/** First leg that can actually load a book (a non-empty single-contract ticker). Tie/Draw legs are REAL
+ * markets and carry tickers, so they qualify — only comparator/synthetic legs with no ticker are skipped. */
+export function firstBookableLeg(legs: FeedLeg[]): number {
+  const i = legs.findIndex((l) => l.tk);
+  return i >= 0 ? i : 0;
 }
 
 interface Level { p: number; bid: number; ask: number; }
@@ -43,7 +51,9 @@ export default function Ladder({ row }: { row: FeedRow | null }) {
   const idx = Math.min(leg, Math.max(0, legs.length - 1));
   const ticker = legs[idx]?.tk || "";
 
-  useEffect(() => { setLeg(0); }, [row?.id]);            // reset to leg 0 when the selected row changes
+  // Select the first BOOKABLE leg (not blindly leg 0) when the row changes, so a row whose leg 0 is a
+  // comparator/no-ticker leg still shows a book.
+  useEffect(() => { setLeg(firstBookableLeg(legs)); }, [row?.id]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   // Fetch the live book for the selected ticker; re-poll ~5s; abort the in-flight request on change/unmount
   // (debounces rapid leg switches). Paused implicitly when nothing is selected (no ticker → no fetch).
@@ -55,7 +65,9 @@ export default function Ladder({ row }: { row: FeedRow | null }) {
     const pull = () => {
       setLoading(true);
       loadOrderbook(ticker, ctrl.signal)
-        .then((d) => { if (alive) { setOb(d); setSecsAgo(0); } })
+        // Race guard: ignore a response whose ticker no longer matches the selected one (a slow reply from a
+        // previous leg landing after a fast switch) on top of the AbortController.
+        .then((d) => { if (alive && d.ticker === ticker) { setOb(d); setSecsAgo(0); } })
         .catch((e) => { if (alive && e?.name !== "AbortError") setOb({ ticker, yes: [], no: [], ok: false, error: "order book unavailable", age_s: 0 }); })
         .finally(() => { if (alive) setLoading(false); });
     };
@@ -66,9 +78,12 @@ export default function Ladder({ row }: { row: FeedRow | null }) {
   }, [ticker]);
 
   if (!row) return <div className="empty">—</div>;
-  if (!legs.length) return (<>
-    <div className="ladhdr"><div className="t">{row.name}</div><div className="s">no executable book</div></div>
-    <div className="empty">research / field — no single-contract book</div>
+  const anyBookable = legs.some((l) => l.tk);
+  if (!legs.length || !anyBookable) return (<>
+    <div className="ladhdr"><div className="t">{row.name}</div><div className="s">no single-contract book</div></div>
+    <div className="empty">{legs.length
+      ? "multi-leg field — no single-contract book for any leg"
+      : "research / field — no single-contract book"}</div>
   </>);
 
   const { rows, bestBid, bestAsk, maxsz } = levelsFrom(ob);
@@ -86,7 +101,8 @@ export default function Ladder({ row }: { row: FeedRow | null }) {
       </div>
       <div className="pbody">
         {!ticker ? <div className="empty">research / field — no single-contract book</div>
-          : ob && !ob.ok ? <div className="empty">{ob.error || "order book unavailable"}</div>
+          : ob && !ob.ok ? <div className="empty">{/rate.?limit/i.test(ob.error || "")
+              ? "rate-limited — retrying shortly" : (ob.error || "order book unavailable")}</div>
           : !ob && loading ? <div className="empty">loading live order book…</div>
           : !hasBook ? <div className="empty">no resting orders (empty or closed book)</div>
           : (

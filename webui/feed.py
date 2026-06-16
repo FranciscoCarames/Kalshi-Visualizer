@@ -79,13 +79,35 @@ def _leg_deep_link(url: str | None, ticker: str | None, side: str | None) -> str
 
 def _trim_legs(o: dict[str, Any]) -> list[dict[str, Any]]:
     """The opportunity's legs, trimmed to the fields the ladder/trade-card need (read-only, ≤24 legs).
-    Each leg's ``u`` is the per-participant + per-side deep link (see ``_leg_deep_link``)."""
+    Each leg's ``u`` is the per-participant + per-side deep link (see ``_leg_deep_link``).
+
+    Ticker reconciliation (so the depth ladder can load a book wherever one EXISTS): a leg may carry an
+    empty ``tk`` even though the row holds the real market ticker in a positional slot — notably the
+    cheap-NO OUTRIGHT, whose market sits in ``ticker_1`` while its only action is ``action_2`` (Buy-NO), so
+    the synthesized leg lands in slot 2 with an empty ticker. We (1) fill an existing action leg's empty
+    ``tk`` from an unused positional ticker (the leg stays a real trade leg — just gains its book), and
+    (2) append any STILL-unused positional ticker as a BOOK-ONLY pseudo-leg (``bo: True``, never an
+    executable instruction — e.g. the deeper child market of a single-sided containment row). Display-only;
+    no engine change."""
+    legs = (o.get("legs") or [])[:24]
+    have = {str(leg.get("ticker") or "") for leg in legs if leg.get("ticker")}
+    spare = [t for t in (o.get("ticker_1"), o.get("ticker_2"),
+                         o.get("parent_ticker"), o.get("child_ticker"))
+             if t and str(t) not in have]           # positional tickers no leg represents, in priority order
+    si = 0
     out: list[dict[str, Any]] = []
-    for leg in (o.get("legs") or [])[:24]:
+    for leg in legs:
+        tk = leg.get("ticker") or ""
+        if not tk and si < len(spare):              # (1) backfill an existing leg's missing book ticker
+            tk = spare[si]
+            si += 1
         out.append({"side": leg.get("side"), "c": leg.get("contract"), "p": _num(leg.get("price_c")),
-                    "sz": _num(leg.get("size")) or 0, "tk": leg.get("ticker"),
-                    "u": _leg_deep_link(leg.get("url"), leg.get("ticker"), leg.get("side"))})
-    return out
+                    "sz": _num(leg.get("size")) or 0, "tk": tk, "bo": False,
+                    "u": _leg_deep_link(leg.get("url"), tk, leg.get("side"))})
+    for t in spare[si:]:                            # (2) book-only legs for any still-unused market ticker
+        out.append({"side": "", "c": "", "p": None, "sz": 0, "tk": str(t), "bo": True,
+                    "u": _leg_deep_link(o.get("url") or o.get("url_2"), str(t), None)})
+    return out[:24]
 
 
 def _cond_pair(parent: float | None, child: float | None) -> tuple[float | None, float | None]:
