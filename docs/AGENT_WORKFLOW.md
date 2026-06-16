@@ -11,12 +11,13 @@ Companion docs (not repeated here): `docs/REVIEW_PROTOCOL.md` (risk classes + ve
 
 **Branch from the latest `origin/main` — current policy (owner 2026-06-16, supersedes the "main is frozen →
 stack on unmerged branches" rule).** `origin/main` is the single source of truth ("main" = `origin/main`,
-never stale local `main`). Before any new work: `git fetch origin` and branch off **`origin/main`**
-(`git checkout -b <feature> origin/main`). Each feature → its own branch, **pushed to origin**
-(`git push -u origin <feature>`); the owner reviews/merges it to `origin/main`. **Never push/merge to
-`origin/main` directly**, and **never stack a new feature on an unmerged branch** (that drift caused a large
-SPA‑vs‑NiceGUI reconciliation in June 2026). Verify before handoff (`pytest -q`, `ruff`, `vitest`+`build` for
-frontend, `serve.py` boot, browser check); note the base branch.
+never stale local `main`). Before any new work: `git fetch origin`, then base by the goal — **`origin/main` by default**, or **the
+newest relevant feature branch** when the work builds on un‑merged features (the owner says which; ask if
+unsure). Each feature → its own branch, **pushed to origin** (`git push -u origin <feature>`); the owner
+reviews/merges it to `origin/main`. **Never push/merge to `origin/main` directly.** If you base on an
+unmerged branch, keep it current with `origin/main` so it can't drift far (that drift caused a large
+SPA‑vs‑NiceGUI reconciliation in June 2026). Verify before handoff (`pytest -q`, `ruff`, `vitest`+`build`
+for frontend, `serve.py` boot, browser check); note the base branch.
 
 ## 1. Default workflow
 

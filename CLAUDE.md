@@ -332,9 +332,11 @@ collapsed Diagnostics & debug expander. `viewmodel.py` + `diagnostics.py` are th
 "main" / "the main" they mean **`origin/main`** (the remote), NOT local `main` (which is often stale —
 treat it as untrustworthy).
 
-- **Always start from the latest code.** Before beginning any new work: `git fetch origin`, then branch off
-  **`origin/main`** (`git checkout -b <feature> origin/main`). Never stack new work on a stale local `main`
-  or on an unmerged feature branch.
+- **Always start from the freshest relevant code.** Before any new work: `git fetch origin`, then choose the
+  base by the goal — **`origin/main` by default**, or **the newest relevant feature branch** when the work
+  intentionally builds on un‑merged features (the owner says which; when unsure, ask). Never start from a
+  *stale local* `main`. If you base on an unmerged branch, keep it current (periodically merge `origin/main`
+  in) so it can't drift far behind.
 - **Each new feature → its own branch, pushed to origin** (`git push -u origin <feature-branch>`). A pushed
   origin feature branch is the delivery unit; the owner reviews/merges it to `origin/main` when satisfied.
 - **Never push or merge to `origin/main` directly** — the owner merges (PR). The agent only delivers
@@ -345,7 +347,8 @@ treat it as untrustworthy).
   PR bodies end with the Claude Code footer.
 - **Why this policy (lesson, 2026-06-16):** the prior "main is frozen → stack features on unmerged branches"
   rule let a long SPA feature stack drift ~8 days behind `origin/main`'s parallel NiceGUI work, forcing a
-  large reconciliation merge. Branching from the latest `origin/main` every time prevents that.
+  large reconciliation merge. Stacking on an unmerged branch is fine *when the goal needs it* — the fix is to
+  keep that branch current with `origin/main` so it never drifts that far again.
 - **Staging hygiene:** stage explicit paths (`git add <files>`), never `git add -A`/`git add .` — the working
   tree carries untracked scratch (`.playwright-mcp/`, screenshots, mockups, `*.log`) that must NOT be committed.
 
