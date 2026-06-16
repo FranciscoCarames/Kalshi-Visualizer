@@ -289,3 +289,15 @@ def test_sanitize_prefs_keeps_layout_preset_without_a_custom_layout():
     # an old account that only saved a preset name still round-trips (back-compat).
     out = auth_store.sanitize_prefs({"layoutPreset": "triage"})
     assert out["layoutPreset"] == "triage" and "layout" not in out
+
+
+def test_sanitize_prefs_layout_rejects_non_finite_numbers():
+    # NaN/Infinity (accepted by Python's json) must not survive — they'd serialize to "NaN"/"Infinity"
+    # and break the browser's JSON.parse on prefs load. Non-finite → field falls back to its default.
+    out = auth_store.sanitize_prefs({"layout": {
+        "colW": {"M": float("nan"), "R": float("inf")},
+        "st": {"p-ladder": {"basis": float("nan")}}}})["layout"]
+    assert out["colW"]["M"] == 330.0 and out["colW"]["R"] == 290.0   # defaults, not NaN/inf
+    assert "basis" not in out["st"]["p-ladder"]                      # NaN basis dropped
+    import json as _json
+    _json.dumps(out, allow_nan=False)                               # must be strict-JSON serializable

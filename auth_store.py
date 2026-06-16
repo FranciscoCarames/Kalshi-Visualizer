@@ -23,6 +23,7 @@ import hashlib
 import hmac
 import json
 import logging
+import math
 import re
 import secrets
 import sqlite3
@@ -559,7 +560,9 @@ def _clean_layout(value: object) -> dict:
     ids = set(config.PREFS_PANEL_IDS)
 
     def _numf(v: object) -> "float | None":
-        return float(v) if isinstance(v, (int, float)) and not isinstance(v, bool) else None
+        # Reject bools AND non-finite (NaN/Infinity, which Python's json accepts) — a NaN would survive
+        # clamping and serialize to "NaN", which the browser's JSON.parse rejects → breaks prefs load.
+        return float(v) if isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v) else None
 
     out: dict = {}
     cw = value.get("colW")
