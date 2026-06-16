@@ -617,7 +617,17 @@ def _maintain_backlog_intervals(conn: sqlite3.Connection, records: list[dict[str
             continue
         tracked[(oid, category)] = r
 
-    touched: list[int] = []
+    # Phase 2: ONE bulk read of all currently-open intervals (was a SELECT per tracked row → hundreds of
+    # round-trips per write). At most one interval is open per (oid, category) by construction. Then split
+    # the tracked set into UPDATEs vs INSERTs and issue each as a single executemany.
+    open_map: dict[tuple[str, str], sqlite3.Row] = {}
+    for row in conn.execute(
+            "SELECT id, opportunity_id, category, peak_roi_pct, best_case_profit_c, worst_case_profit_c "
+            "FROM backlog_intervals WHERE left_ts IS NULL"):
+        open_map[(row["opportunity_id"], row["category"])] = row
+
+    updates: list[tuple] = []   # (last_seen_ts, peak, best, worst, *common, id)
+    inserts: list[tuple] = []   # (oid, category, first_ts, last_ts, roi, best, worst, *common)
     for (oid, category), r in tracked.items():
         roi = _num_opt(r.get("roi_pct"))
         best = _num_opt(r.get("best_case_profit_c"))
@@ -630,36 +640,35 @@ def _maintain_backlog_intervals(conn: sqlite3.Connection, records: list[dict[str
             _clean(r.get("sport")), _clean(r.get("name")), _clean(r.get("url")),
             _clean(r.get("settlement_caveat")), legs_json, data_json,
         )
-        open_row = conn.execute(
-            "SELECT id, peak_roi_pct, best_case_profit_c, worst_case_profit_c FROM backlog_intervals "
-            "WHERE opportunity_id = ? AND category = ? AND left_ts IS NULL", (oid, category)).fetchone()
+        open_row = open_map.get((oid, category))
         if open_row is not None:
-            conn.execute(
-                "UPDATE backlog_intervals SET last_seen_ts = ?, peak_roi_pct = ?, best_case_profit_c = ?, "
-                "worst_case_profit_c = ?, last_bucket = ?, last_status = ?, sport = ?, name = ?, url = ?, "
-                "last_settlement_caveat = ?, last_legs = ?, data = ? WHERE id = ?",
-                (ts, _max_opt(open_row["peak_roi_pct"], roi),
-                 _max_opt(open_row["best_case_profit_c"], best),
-                 _max_opt(open_row["worst_case_profit_c"], worst), *common, open_row["id"]))
-            touched.append(open_row["id"])
+            updates.append((ts, _max_opt(open_row["peak_roi_pct"], roi),
+                            _max_opt(open_row["best_case_profit_c"], best),
+                            _max_opt(open_row["worst_case_profit_c"], worst), *common, open_row["id"]))
         else:
-            cur = conn.execute(
-                "INSERT INTO backlog_intervals "
-                "(opportunity_id, category, first_seen_ts, last_seen_ts, left_ts, peak_roi_pct, "
-                "best_case_profit_c, worst_case_profit_c, last_bucket, last_status, sport, name, url, "
-                "last_settlement_caveat, last_legs, data) "
-                "VALUES (?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                (oid, category, ts, ts, roi, best, worst, *common))
-            touched.append(cur.lastrowid)
+            inserts.append((oid, category, ts, ts, roi, best, worst, *common))
 
-    # Close-out: any interval still open but NOT advanced this snapshot dropped out -> stamp left_ts.
-    if touched:
-        marks = ",".join("?" * len(touched))
+    if updates:
+        conn.executemany(
+            "UPDATE backlog_intervals SET last_seen_ts = ?, peak_roi_pct = ?, best_case_profit_c = ?, "
+            "worst_case_profit_c = ?, last_bucket = ?, last_status = ?, sport = ?, name = ?, url = ?, "
+            "last_settlement_caveat = ?, last_legs = ?, data = ? WHERE id = ?", updates)
+    if inserts:
+        conn.executemany(
+            "INSERT INTO backlog_intervals "
+            "(opportunity_id, category, first_seen_ts, last_seen_ts, left_ts, peak_roi_pct, "
+            "best_case_profit_c, worst_case_profit_c, last_bucket, last_status, sport, name, url, "
+            "last_settlement_caveat, last_legs, data) "
+            "VALUES (?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", inserts)
+
+    # Close-out: any interval still open but NOT advanced this snapshot dropped out -> stamp left_ts. These
+    # are exactly the open intervals whose (oid, category) is not tracked now (newly-inserted ones aren't in
+    # open_map, so they're never closed here). Equivalent to the old "NOT IN touched", without lastrowids.
+    to_close = [r["id"] for k, r in open_map.items() if k not in tracked]
+    if to_close:
+        marks = ",".join("?" * len(to_close))
         conn.execute(
-            f"UPDATE backlog_intervals SET left_ts = ? WHERE left_ts IS NULL AND id NOT IN ({marks})",
-            (ts, *touched))
-    else:
-        conn.execute("UPDATE backlog_intervals SET left_ts = ? WHERE left_ts IS NULL", (ts,))
+            f"UPDATE backlog_intervals SET left_ts = ? WHERE id IN ({marks})", (ts, *to_close))
 
     # Retention: drop intervals closed longer than the window ago (measured from this newest write).
     conn.execute("DELETE FROM backlog_intervals WHERE left_ts IS NOT NULL AND left_ts < ?",

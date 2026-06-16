@@ -143,6 +143,15 @@ class Opportunity(BaseModel):
     # Bounded-Loss vertical (simultaneous resolution) vs calendar (sequential). Optional → old stored rows
     # without it read as None and the dashboard treats a missing value as "calendar" (the safe default).
     resolution_mode: str | None = None
+    # NO-fade settlement scope (display-only): "event" | "tournament" | "championship" | None. Must be
+    # DECLARED — extra="ignore" would drop it, creating dashboard/REST drift. None on every non-NO-fade row
+    # (and on excluded prop/other NO fades, which stay in the API audit path but out of the display tables).
+    no_structure_scope: str | None = None
+    # NO-fade faded-leg raw ISO close time (display-only; band = later leg). Declared to avoid REST drift.
+    no_structure_close_time: str | None = None
+    # NO-fade faded-leg ladder node + display price (display-only) for the "Cheapness vs field" comparison.
+    no_structure_faded_node: str | None = None
+    no_structure_faded_display_c: int | None = None
     # Per-leg tickers + the second leg's link (the panel surfaces both legs).
     ticker_1: str | None = None
     ticker_2: str | None = None
@@ -714,8 +723,10 @@ def get_alerts(persistence_s: float | None = None, db_path: str | None = Depends
 
 def _scan_run_fn(fetch_fn: Callable[[str], tuple]) -> Callable[[str], tuple]:
     def run_fn(fetched_at: str) -> tuple:
+        # main: retry_stats for perf instrumentation; branch: the fee-overrides sweep. Keep BOTH.
         unified, coverage, frames = scanner.run_scan(
-            fetch_fn, fetched_at=fetched_at, request_count=kalshi_client.request_count)
+            fetch_fn, fetched_at=fetched_at, request_count=kalshi_client.request_count,
+            retry_stats=kalshi_client.retry_stats)
         # DISPLAY-ONLY event-fee overrides: one bounded, fail-closed sweep of /events/fee_changes (the
         # event object doesn't expose overrides). Done HERE (network layer) so the scanner stays
         # network-free. Stamped into coverage `meta` for the feed; never feeds ranking/bucketing.

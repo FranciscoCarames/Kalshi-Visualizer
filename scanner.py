@@ -85,6 +85,13 @@ UNIFIED_COLUMNS = [
     # Phase 2 E (display-only, containment rows): ladder rung labels for "Wins if …" + worst-leg quote
     # quality for "Quote health". Never read by bucket_of / _rank_key.
     "child_node", "parent_node", "comp_quote_quality",
+    # NO-fade settlement scope (display-only): "event" | "tournament" | "championship" | None. Splits the
+    # Cheap-NO-fades section into three tables; never read by bucket_of / _rank_key.
+    "no_structure_scope",
+    # NO-fade faded-leg raw ISO close time (display-only) → "Days to close" / "Best-case mult/day".
+    "no_structure_close_time",
+    # NO-fade faded-leg ladder node + display price (display-only) → "Cheapness vs field" de-vig column.
+    "no_structure_faded_node", "no_structure_faded_display_c",
     # World Cup Qualifier Setups (PR1): a cross-cutting product tag, SEPARATE from bucket/routing. Read only
     # by a UI badge — never by bucket_of / _rank_key / filters. `setup_family` = product area
     # ("wc_qualifier"); `setup_type` = the specific setup (qualifier_not_winner / qualifier_yes_basket /
@@ -483,6 +490,10 @@ def _to_unified_no_structure(r: dict[str, Any], cfg) -> dict[str, Any]:
         "tournament": r.get("tournament") or "", "tour": r.get("tour") or "",
         "action_1_text": r.get("action_1_text") or "", "action_2_text": r.get("action_2_text") or "",
         "action_1_price_c": _num(r.get("action_1_price_c")), "action_2_price_c": _num(r.get("action_2_price_c")),
+        # Side + contract per leg so `legs_of` (run at scan time below) builds a COMPLETE leg — without
+        # these the synthesized leg's side/contract are blank in the detail panel's leg table.
+        "action_1_side": r.get("action_1_side"), "action_2_side": r.get("action_2_side"),
+        "action_1_contract": r.get("action_1_contract") or "", "action_2_contract": r.get("action_2_contract") or "",
         "cost_c": _num(r.get("cost_c")),
         # NEVER an executable edge — exec_gap_c=None floors it within its own opt-in section.
         "exec_gap_c": None, "exec_min_size": _num(r.get("exec_min_size")), "exec_max_profit_dollars": None,
@@ -495,10 +506,13 @@ def _to_unified_no_structure(r: dict[str, Any], cfg) -> dict[str, Any]:
         # A band is a sequential broader→deeper pair (Calendar); an outright is a single leg (Calendar).
         "resolution_mode": "calendar",
         "opportunity_id": r.get("opportunity_id") or "",
+        # An outright's single Buy-NO leg lives at action_2 (mirroring the band's child leg), so `legs_of`
+        # pairs it with ticker_2/url_2 — they MUST carry the outright's market or the detail-panel link is
+        # blank. ticker_1/url ALSO keep it (the primary link + `_no_leg_ticker`'s ladder-grouping key).
         "ticker_1": (r.get("parent_ticker") if is_band else r.get("ticker")) or "",
-        "ticker_2": (r.get("child_ticker") if is_band else "") or "",
+        "ticker_2": (r.get("child_ticker") if is_band else r.get("ticker")) or "",
         "url": (r.get("parent_url") if is_band else r.get("url")) or "",
-        "url_2": (r.get("child_url") if is_band else "") or "",
+        "url_2": (r.get("child_url") if is_band else r.get("url")) or "",
         "legs": None, "n_legs": None,                  # synthesized into a leg list by _finalize_unified
         # Convex payoff bounds (drive max-loss / breakeven / upside columns); not a risk-budget edge_class.
         "edge_class": "", "worst_case_profit_c": _num(r.get("worst_case_profit_c")),
@@ -510,6 +524,16 @@ def _to_unified_no_structure(r: dict[str, Any], cfg) -> dict[str, Any]:
         "parent_yes_bid_c": _num(r.get("parent_yes_bid_c")), "child_yes_ask_c": _num(r.get("child_yes_ask_c")),
         "child_node": r.get("child_node") or "", "parent_node": r.get("parent_node") or "",
         "comp_quote_quality": r.get("comp_quote_quality") or "",
+        # Settlement-scope tag (display-only): "event" | "tournament" | "championship", or None when the
+        # faded contract's family is excluded (prop/other) / unknown. Drives the dashboard's NO-fade split;
+        # NEVER read by classify / bucket_of / _rank_key. None rows stay in the API/export audit paths.
+        "no_structure_scope": r.get("scope"),
+        # Display-only raw ISO close time of the faded leg (band: the later leg) → "Days to close" /
+        # "Best-case mult/day" columns. NEVER read by classify / bucket_of / _rank_key.
+        "no_structure_close_time": r.get("close_time") or "",
+        # Faded leg's ladder node + display price (display-only) → "Cheapness vs field" de-vig comparison.
+        "no_structure_faded_node": r.get("faded_node") or "",
+        "no_structure_faded_display_c": _num(r.get("faded_display_c")),
     }
     d["participant_keys"], d["participant_labels"] = _participants([(r.get("player_key"), r.get("player"))])
     # A band's broader-YES + deeper-NO guarantees ≥100¢ in every settled state (floor 100); an outright NO
@@ -602,7 +626,8 @@ def unified_opportunities(
 
 
 def run_scan(fetch_fn: Callable[[str], tuple], *, fetched_at: Any = None,
-             request_count: Callable[[], int] | None = None
+             request_count: Callable[[], int] | None = None,
+             retry_stats: Callable[[], tuple[int, float]] | None = None
              ) -> tuple[pd.DataFrame, dict[str, Any], list[dict[str, Any]]]:
     """Fetch every sport, aggregate coverage, and produce the unified ranked frame — the service entry.
 
@@ -617,6 +642,7 @@ def run_scan(fetch_fn: Callable[[str], tuple], *, fetched_at: Any = None,
     no store, no network. A per-sport fetch failure is recorded and that sport contributes nothing.
     """
     before = request_count() if request_count else None
+    retry_before = retry_stats() if retry_stats else None   # Phase 0: (count, seconds) read before/after
     sport_cfgs = list(sports.all_sports())
 
     def _fetch_one(sid: str) -> tuple[str, tuple | None, str | None, float]:
@@ -688,4 +714,8 @@ def run_scan(fetch_fn: Callable[[str], tuple], *, fetched_at: Any = None,
     }
     if before is not None:
         coverage["kalshi_requests"] = request_count() - before
+    if retry_before is not None:
+        rc_now, bs_now = retry_stats()
+        coverage["retry_count"] = rc_now - retry_before[0]
+        coverage["backoff_seconds_total"] = round(bs_now - retry_before[1], 2)
     return unified, coverage, frames

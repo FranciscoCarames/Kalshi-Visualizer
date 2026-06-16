@@ -72,8 +72,10 @@ NEAR_MISS_DEFAULT_OVER_C = 3                 # default UI max-overpay filter (¢
 # The detector caps emission; the NiceGUI UI filters live (max-loss / max Buy-NO / quote / size).
 NO_STRUCTURE_BAND_MAX_LOSS_C = 40           # widest band max-loss persisted (¢; cost ≤ 140¢)
 NO_STRUCTURE_OUTRIGHT_MAX_C = 25            # dearest Buy-NO persisted for the outright watchlist (¢)
-NO_STRUCTURE_DEFAULT_MAX_LOSS_C = 15        # default UI band max-loss filter (¢)
-NO_STRUCTURE_DEFAULT_MAX_BUY_NO_C = 15      # default UI max Buy-NO cost filter (¢, outright + band child leg)
+# Defaults sit at the persisted caps so the section shows every stored NO fade by default (still
+# quote-gated to Tight/OK unless "Include wide quotes" is on); narrow via the UI controls.
+NO_STRUCTURE_DEFAULT_MAX_LOSS_C = NO_STRUCTURE_BAND_MAX_LOSS_C    # default UI band max-loss filter (¢) = 40
+NO_STRUCTURE_DEFAULT_MAX_BUY_NO_C = NO_STRUCTURE_OUTRIGHT_MAX_C   # default UI max Buy-NO cost filter (¢) = 25
 
 # Peer-relative cheapness flags (Phase 2 F) — a DISPLAY-ONLY badge, NOT a ranker and NEVER executable. Among
 # SAME-SPORT bounded-loss bets within PEER_BAND_TOLERANCE_C ¢ of the same implied-payoff band (parent−child
@@ -141,17 +143,23 @@ MAX_PAGES = 100
 # NOTE: this limiter is PROCESS-WIDE only — it bounds one Python process. 15/s is safe for a SINGLE
 # process; do not run WEB_CONCURRENCY>1 / `uvicorn --workers N` / multiple replicas without a shared
 # limiter, since each keeps its own and the aggregate rate is MAX_RPS x process_count (serve.py warns).
-MAX_RPS = 15                # max requests/second issued by this process (~75% of the ~20/s Basic ceiling)
+MAX_RPS = 15                # max requests/second issued by this process (~75% of the ~20/s Basic ceiling).
+                            # Phase 2 tried 18 but the live test was confounded by a 2nd concurrent serve.py
+                            # (per-process throttle ⇒ aggregate 15+18=33 rps ⇒ 109 retries / 182s backoff).
+                            # Kept at the known-safe 15 pending a CLEAN single-process benchmark; use the new
+                            # coverage.retry_count to validate before raising (audit condition #8).
 CONCURRENCY = 4             # thread-pool workers for the per-series fan-out (throttle paces them)
 # Per-SPORT fetch fan-out (scanner.run_scan): how many sports fetch concurrently. Each sport's fetch
 # already fans out across its series at CONCURRENCY, and the process-wide MAX_RPS throttle still caps
 # total issuance — this only fills the idle gaps between sports (no extra Kalshi requests). Kept
-# conservative (3) so nested fan-out stays under the HTTP connection pool; raise to 4 only after a
-# benchmark. SPORT_FETCH_CONCURRENCY=1 reproduces the original serial scan exactly.
-SPORT_FETCH_CONCURRENCY = 3
-MAX_RETRIES = 5             # attempts per request before raising
+# conservative (3) so nested fan-out stays under the HTTP connection pool; raised to 4 so in-flight =
+# SPORT_FETCH_CONCURRENCY × CONCURRENCY = 4×4 = 16 = HTTPAdapter pool_maxsize exactly (do NOT exceed
+# without enlarging the pool). SPORT_FETCH_CONCURRENCY=1 reproduces the original serial scan exactly.
+SPORT_FETCH_CONCURRENCY = 4
+MAX_RETRIES = 3             # attempts per request before raising (was 5; ladder 1+2+4=7s vs 31s — a
+                            # degraded scan no longer balloons toward the budget ceiling / 5-min cooldown)
 BACKOFF_BASE = 1.0          # seconds; exponential backoff base for 429/5xx/network errors
-BACKOFF_MAX = 30.0          # seconds; cap on a single backoff sleep
+BACKOFF_MAX = 8.0           # seconds; cap on a single backoff sleep (was 30; Retry-After still honored)
 
 # --- Fee estimation (DISPLAY-ONLY) ---------------------------------------------------
 # Kalshi's published general fee schedule: taker = ceil(0.07 x C x P x (1-P)),
@@ -285,8 +293,9 @@ SCAN_MIN_INTERVAL_SECONDS = 8
 SCAN_WAIT_TIMEOUT_SECONDS = 60
 # Scan budget: after a scan that blows ANY of these caps, the ScanManager cools down — the next
 # non-forced trigger is skipped (so a pathological scan can't hammer Kalshi every tick). `?force=true`
-# overrides the cooldown.
-SCAN_BUDGET_MAX_SECONDS = 120
+# overrides the cooldown. Raised 120→150: a HEALTHY full scan is ~45-60s (measured), so 120 was only ~2×
+# headroom and a little 429 backoff tripped the 5-min freeze; 150 gives ~3× headroom over a healthy scan.
+SCAN_BUDGET_MAX_SECONDS = 150
 SCAN_BUDGET_MAX_REQUESTS = 2000
 SCAN_BUDGET_MAX_FAILED_SERIES = 20
 SCAN_BUDGET_COOLDOWN_SECONDS = 300

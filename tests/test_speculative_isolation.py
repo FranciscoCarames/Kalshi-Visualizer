@@ -31,6 +31,10 @@ SPECULATIVE_FIELDS = {
     "parent_yes_bid_c": 20, "child_yes_ask_c": 25,
     "cond_success": 40.0, "cond_child": 60.0, "firm_gap": -5, "firm_pct": None, "midpoint_only": True,
     "wide_basis": True, "parent_over_maxloss": 5.0, "flags": [{"label": "Midpoint-only"}],
+    # NO-fade settlement-scope split + Phase 1 days-to-close + Phase 2 cheapness-vs-field (all display-only).
+    "no_structure_scope": "tournament", "scope_label": "Tournament",
+    "no_structure_close_time": "2026-07-01T00:00:00Z", "days_to_close": 20.0, "return_per_day": 0.3,
+    "no_structure_faded_node": "Win Tournament", "no_structure_faded_display_c": 18, "cheapness_vs_field": 3.0,
 }
 
 # The executable fields the invariant protects (the per-row fingerprint).

@@ -115,6 +115,15 @@ class LadderSpec:
     # (tennis/playoff knockouts) settles rungs across successive rounds → SEQUENTIAL (`False`, the
     # conservative default). Per-pair overrides (match-alignment equivalences) live in `_classify`.
     simultaneous: bool = False
+    # Survivor-slot count per node ("k"), the field-de-vig normalizer (DISPLAY-ONLY conditional panel,
+    # never executable): how many participants a node's MECE-ish field resolves to (champion / "Win …"
+    # node = 1, finalist = 2, semifinalist = 4, golf Top-5 = 5, soccer Reach-RO16 = 16…). CONSERVATIVE BY
+    # DESIGN — map a node ONLY when its survivor count is unambiguous; leave fragile nodes ("Reach
+    # Playoffs" with play-in churn, soccer "Win group", dead-heat-capable buckets) UNMAPPED so the de-vig
+    # is skipped there (raw ratio still shown). A node absent from this map ⇒ `survivors_of(node)` is None
+    # ⇒ no field-implied number for that node (fail-soft, never a wrong-k fake-precision). See
+    # `probability.devig_field`.
+    node_survivors: dict[str, int] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -190,6 +199,17 @@ class SportConfig:
     # Default {"winner"} preserves every existing sport; a field sport can add pole/fastest_lap/constructor/
     # team/race_winner so those one-winner fields are detected too.
     field_families: frozenset[str] = field(default_factory=lambda: frozenset({"winner"}))
+    # NO-fade SETTLEMENT LEVEL per family (display-only; consumed by no_structures.scope_for): how many
+    # "grouping" levels a market sits above a single contest — 0=Event, 1=Tournament, 2=Championship. Keyed
+    # on family because the same name differs per sport (tennis "match"=a match=0; NBA "match"=the bo7
+    # series=1). A family absent here is EXCLUDED from the NO-fade tables (fail-closed; registry-guard-tested).
+    # A value may be a ``dict[stage,int]`` (with a ``"*"`` default) when one family spans levels by stage —
+    # e.g. team ``advance``: "Reach Playoffs"=tournament, conference/title=championship.
+    family_levels: dict[str, int | dict[str, int]] = field(default_factory=dict)
+    # Championship TITLE-PATH decomposition (display-only): the CANONICAL longest path to the title as
+    # ``(tournaments_min, tournaments_max, events_min, events_max)``. None for sports with no
+    # Championship-scope market. STATIC sport-format data — re-verify on format changes (see per-sport comment).
+    title_path: tuple[int, int, int, int] | None = None
     # Optional per-sport grouping key, computed ONCE PER EVENT (data.tournament_of). Returns (key, source)
     # or None to fall back to the default competition-based key. Lets a sport build an event-instance key
     # (e.g. motorsport: competition + race/session + season) instead of the broad competition string.
@@ -226,6 +246,20 @@ class SportConfig:
     derived_indicators_fn: Callable[["SportConfig", dict[str, "float | None"]], list[dict[str, Any]]] | None = None
 
     # ---- convenience API (engine calls these) --------------------------------------------
+    def title_path_cells(self) -> dict[str, Any]:
+        """Display cells for the Championship title-path columns (or all-None when the sport has no
+        Championship market). ``title_tournaments`` shows "4" or "3–4"; ``title_events_label`` shows
+        "16–28" or "28" (min==max → single number) and sorts on ``title_events_max``. Display-only."""
+        s = self.title_path
+        if not s:
+            return {"title_tournaments": None, "title_tournaments_max": None,
+                    "title_events_label": None, "title_events_max": None}
+        t_min, t_max, e_min, e_max = s
+        def _rng(a, b):
+            return str(a) if a == b else f"{a}–{b}"
+        return {"title_tournaments": _rng(t_min, t_max), "title_tournaments_max": t_max,
+                "title_events_label": _rng(e_min, e_max), "title_events_max": e_max}
+
     def family_of(self, series_ticker: str) -> str:
         return self.family_fn(self, series_ticker)
 
@@ -266,6 +300,15 @@ class SportConfig:
         """The containment ladder for a specific group's rows — per-group when ``ladder_fn`` is set
         (e.g. motorsport's per-competition ladders), else the static ``cfg.ladder`` (all existing sports)."""
         return self.ladder_fn(self, rows) if self.ladder_fn else self.ladder
+
+    def survivors_of(self, node: str, ladder: "LadderSpec | None" = None) -> int | None:
+        """Survivor-slot count ("k") for a ladder node, or None when the node is deliberately unmapped
+        (fragile / ambiguous count). DISPLAY-ONLY de-vig normalizer — never read by classification,
+        bucketing, or ranking. Pass an explicit ``ladder`` for per-group / dynamic-ladder sports; defaults
+        to the static ``cfg.ladder``."""
+        spec = ladder if ladder is not None else self.ladder
+        k = getattr(spec, "node_survivors", {}).get(node) if spec else None
+        return k if isinstance(k, int) and k > 0 else None
 
     def tournament_key_of(self, event: dict[str, Any]) -> tuple[str, str] | None:
         """Sport-specific event-instance grouping key, or None to use the default competition path."""
@@ -422,6 +465,8 @@ _TENNIS_LADDER = LadderSpec(
     adjacent_pairs=(("Win Tournament", "Reach Final"), ("Reach Final", "Reach Semifinal")),
     match_stage_to_node={"Quarterfinal": "Reach Semifinal", "Semifinal": "Reach Final", "Final": "Win Tournament"},
     advance_stage_to_node={"Semifinal": "Reach Semifinal", "Final": "Reach Final"},
+    # k: a single-elimination draw has exactly 4 semifinalists, 2 finalists, 1 champion — unambiguous.
+    node_survivors={"Reach Semifinal": 4, "Reach Final": 2, "Win Tournament": 1},
 )
 _WOMEN_WINNER_TICKERS = {"KXFOWOMEN", "KXFOWOMENSINGLES", "KXFOPENWMENSINGLE"}
 _MEN_WINNER_TICKERS = {"KXFOMEN", "KXFOMENSINGLES", "KXFOPENMENSINGLE"}
@@ -512,6 +557,12 @@ TENNIS = register(SportConfig(
     divisions={"Women": ["WTA"], "Men": ["ATP"], "Both": ["ATP", "WTA"]},
     division_label="Tour",
     family_fn=_tennis_family,
+    # Settlement level: a match/set/score is one contest (0); reach-a-stage / win the tournament is one
+    # level up (1); the Grand Slam spans multiple tournaments (2).
+    family_levels={"match": 0, "set_winner": 0, "exact_score": 0, "advance": 1, "winner": 1, "grand_slam": 2},
+    # Title path (only on a grand-slam-scope row, never an ordinary major): 4 majors × 7 single-elim rounds
+    # → 4 tournaments, 28 matches (deterministic).
+    title_path=(4, 4, 28, 28),
     stage_fn=_tennis_stage,
     node_fn=_tennis_node,
     division_fn=_tennis_division,
@@ -555,6 +606,9 @@ _NBA_LADDER = LadderSpec(
     adjacent_pairs=(("Win Championship", "Win Conference"), ("Win Conference", "Reach Playoffs")),
     match_stage_to_node={"Finals": "Win Championship", "Conference Finals": "Win Conference"},
     advance_stage_to_node={"Playoffs": "Reach Playoffs", "Conference": "Win Conference"},
+    # k: exactly 1 champion, 2 conference champions (one per conference) league-wide — unambiguous.
+    # "Reach Playoffs" UNMAPPED (count varies / play-in churn) → raw-only.
+    node_survivors={"Win Conference": 2, "Win Championship": 1},
 )
 
 
@@ -612,6 +666,14 @@ NBA = register(SportConfig(
     divisions={},
     division_label="",
     family_fn=_nba_family,
+    # Settlement level: a game (0); the best-of-7 series (1); winning the conference / title spans
+    # "match" == KXNBASERIES = the bo7 series (1). `advance` SPANS levels by stage: "Reach Playoffs"
+    # (regular-season qualification = a group of games) = tournament (1); "Win Conference" (a chain of
+    # series = a group of tournaments) = championship (2). winner (title) = championship.
+    family_levels={"game": 0, "match": 1, "advance": {"Playoffs": 1, "Conference": 2, "*": 2}, "winner": 2},
+    # Title path (current 4-round bracket, each best-of-7): First Round, Conf Semis, Conf Finals, Finals.
+    # Play-in excluded (title teams don't all pass it). VERIFY on format changes.
+    title_path=(4, 4, 16, 28),
     stage_fn=_nba_stage,
     node_fn=_nba_node,
     division_fn=_nba_division,
@@ -655,6 +717,9 @@ _WNBA_LADDER = LadderSpec(
     # reach-a-stage advance markets → their node (stage derived from the series ticker below)
     advance_stage_to_node={"Playoffs": "Reach Playoffs", "Semifinals": "Reach Semifinals",
                            "Finals": "Reach Finals"},
+    # k: single-bracket knockout → exactly 4 semifinalists, 2 finalists, 1 champion. "Reach Playoffs"
+    # UNMAPPED (field size / play-in churn) → raw-only.
+    node_survivors={"Reach Semifinals": 4, "Reach Finals": 2, "Win Championship": 1},
 )
 
 
@@ -718,6 +783,10 @@ WNBA = register(SportConfig(
     divisions={},
     division_label="",
     family_fn=_wnba_family,
+    # advance spans levels by stage: Playoffs (qualify) = tournament; Semifinals/Finals (won a series) = championship.
+    family_levels={"game": 0, "match": 1, "advance": {"Playoffs": 1, "Semifinals": 2, "Finals": 2, "*": 2}, "winner": 2},
+    # Title path: First Round(bo3) + Semifinals(bo5) + Finals(bo7, EFFECTIVE 2025) → 3 series, 9–15 games. VERIFY.
+    title_path=(3, 3, 9, 15),
     stage_fn=_wnba_stage,
     node_fn=_wnba_node,
     division_fn=_wnba_division,
@@ -740,6 +809,10 @@ _GOLF_LADDER = LadderSpec(
     match_stage_to_node={},                    # no head-to-head
     advance_stage_to_node={"Top 20": "Top 20", "Top 10": "Top 10", "Top 5": "Top 5"},
     simultaneous=True,                         # all finishing rungs settle at the tournament's final standings
+    # k = the finishing-position cutoff. DEAD-HEAT CAVEAT: a tie at the cutoff can settle >k players YES
+    # (e.g. a 3-way tie for 5th → Top-5 pays 5+ winners), so golf de-vig is a floor-leaning estimate; the
+    # detail panel labels it accordingly. Champion (Win) is always exactly 1.
+    node_survivors={"Top 20": 20, "Top 10": 10, "Top 5": 5, "Win Tournament": 1},
 )
 
 
@@ -808,6 +881,9 @@ GOLF = register(SportConfig(
     division_label="",
     derived_indicators_fn=_golf_make_cut_indicator,
     family_fn=_golf_family,
+    # A golf tournament is a single FIELD event (no sub-contests), so Top-N / win = Event (0) — same shape
+    # as a motorsport race result. Golf appears only in the Event table.
+    family_levels={"advance": 0, "winner": 0},
     stage_fn=_golf_stage,
     node_fn=_golf_node,
     division_fn=_golf_division,
@@ -886,6 +962,10 @@ _SOCCER_LADDER = LadderSpec(
                            "Quarterfinals": "Reach Quarterfinals", "Semifinals": "Reach Semifinals",
                            "Finals": "Reach Finals"},
     optional_children=frozenset({"Win group"}),
+    # k = knockout-bracket survivor counts (32→16→8→4→2→1), unambiguous. "Win group" is deliberately
+    # UNMAPPED: group cardinality (winners across N groups) differs from a knockout rung — raw-only there.
+    node_survivors={"Reach Round of 32": 32, "Reach Round of 16": 16, "Reach Quarterfinals": 8,
+                    "Reach Semifinals": 4, "Reach Finals": 2, "Win the World Cup": 1},
 )
 
 
@@ -971,6 +1051,9 @@ SOCCER = register(SportConfig(
     divisions={},
     division_label="",
     family_fn=_soccer_family,
+    # A game (0); advancing / winning the group / winning the World Cup are all within the one tournament
+    # (1). exact_order/group_bottom/stage_of_elim are diagnostic-only → absent here → excluded.
+    family_levels={"game": 0, "advance": 1, "group_winner": 1, "winner": 1},
     stage_fn=_soccer_stage,
     node_fn=_soccer_node,
     division_fn=_soccer_division,
@@ -1020,6 +1103,9 @@ _MLB_LADDER = LadderSpec(
     adjacent_pairs=(("Win World Series", "Win League"), ("Win League", "Reach Playoffs")),
     match_stage_to_node={},                    # no head-to-head ladder rung (KXMLBSERIES excluded)
     advance_stage_to_node={"Playoffs": "Reach Playoffs", "League": "Win League"},
+    # k: exactly 1 World Series champion, 2 league champions (AL + NL) → World Series. "Reach Playoffs"
+    # UNMAPPED (12-team field, wild-card churn) → raw-only.
+    node_survivors={"Win League": 2, "Win World Series": 1},
 )
 
 
@@ -1073,6 +1159,13 @@ MLB = register(SportConfig(
     divisions={},
     division_label="",
     family_fn=_mlb_family,
+    # A game (0); the pennant / World Series are won across multiple series (2). MLB has no in-app series
+    # advance spans levels by stage: Playoffs (regular-season qualification) = tournament; League (pennant,
+    # a chain of series) = championship. (KXMLBSERIES excluded, so MLB has no bo-N series Tournament row.)
+    family_levels={"game": 0, "advance": {"Playoffs": 1, "League": 2, "*": 2}, "winner": 2},
+    # Title path: WC(bo3, TOP SEEDS BYE) + LDS(bo5) + LCS(bo7) + WS(bo7) → 3–4 series, 11–22 games (a
+    # wild-card team plays all 4; a bye team plays 3). Canonical longest path. VERIFY on format changes.
+    title_path=(3, 4, 11, 22),
     stage_fn=_mlb_stage,
     node_fn=_mlb_node,
     division_fn=lambda cfg, t: "",
@@ -1114,6 +1207,9 @@ _NHL_LADDER = LadderSpec(
     # Best-effort match rungs; currently unhit (no Final-series wording) → series → UNKNOWN_RELATIONSHIP.
     match_stage_to_node={"Stanley Cup Final": "Win Championship", "Conference Finals": "Win Conference"},
     advance_stage_to_node={"Playoffs": "Reach Playoffs", "Conference": "Win Conference"},
+    # k: exactly 1 Stanley Cup champion, 2 conference champions (East + West). "Reach Playoffs" UNMAPPED
+    # (16-team field) → raw-only.
+    node_survivors={"Win Conference": 2, "Win Championship": 1},
 )
 
 
@@ -1170,6 +1266,9 @@ NHL = register(SportConfig(
     divisions={},
     division_label="",
     family_fn=_nhl_family,
+    # advance spans levels by stage: Playoffs (qualify) = tournament; Conference (series chain) = championship.
+    family_levels={"game": 0, "match": 1, "advance": {"Playoffs": 1, "Conference": 2, "*": 2}, "winner": 2},
+    title_path=(4, 4, 16, 28),   # 4 rounds × best-of-7 (First/Second/Conf Finals/Stanley Cup Final). VERIFY.
     stage_fn=_nhl_stage,
     node_fn=_nhl_node,
     division_fn=_nhl_division,
@@ -1203,6 +1302,9 @@ _NFL_LADDER = LadderSpec(
     adjacent_pairs=(("Win Super Bowl", "Win Conference"), ("Win Conference", "Reach Playoffs")),
     match_stage_to_node={},                                    # no head-to-head series
     advance_stage_to_node={"Playoffs": "Reach Playoffs", "Conference": "Win Conference"},
+    # k: exactly 1 Super Bowl champion, 2 conference champions (AFC + NFC). "Reach Playoffs" UNMAPPED
+    # (14-team field, seeding churn) → raw-only.
+    node_survivors={"Win Conference": 2, "Win Super Bowl": 1},
 )
 
 
@@ -1253,6 +1355,11 @@ NFL = register(SportConfig(
     divisions={},
     division_label="",
     family_fn=_nfl_family,
+    # Single-elimination (no series layer): a game (0); reach playoffs / win conference / win the Super
+    # Bowl are all one level above a game (1). NFL is SINGLE-ELIMINATION (no bo-N series layer) → the whole
+    # playoffs is ONE tournament, so `advance` does NOT span levels (no stage dict needed) and NFL has no
+    # Championship-scope rows.
+    family_levels={"game": 0, "advance": 1, "winner": 1},
     stage_fn=_nfl_stage,
     node_fn=_nfl_node,
     division_fn=_nfl_division,
@@ -1436,6 +1543,10 @@ MOTORSPORT = register(SportConfig(
                "All": ["F1", "NASCAR", "IndyCar", "MotoGP"]},
     division_label="Series",
     family_fn=_motor_family,
+    # A race result is one contest: race winner / pole / fastest lap / Top-N finish = Event (0). The
+    # season champion / top constructor / top team are won across the whole season = Tournament (1).
+    family_levels={"race_winner": 0, "pole": 0, "fastest_lap": 0, "advance": 0,
+                   "winner": 1, "constructor": 1, "team": 1},
     stage_fn=_motor_stage,
     node_fn=_motor_node,
     division_fn=_motor_division,
@@ -1548,6 +1659,8 @@ ESPORTS = register(SportConfig(
     divisions={t: [t] for t in _ESPORTS_TITLES} | {"All": list(_ESPORTS_TITLES)},
     division_label="Title",
     family_fn=_esports_family,
+    # A map/game is one contest (0); a per-title event winner is won across a bracket of matches (1).
+    family_levels={"game": 0, "winner": 1},
     stage_fn=_esports_stage,
     node_fn=_esports_node,
     division_fn=_esports_division,

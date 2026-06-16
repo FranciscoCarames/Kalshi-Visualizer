@@ -23,6 +23,7 @@ from typing import Any, Iterable
 import config
 import consistency
 import data
+import no_structures
 import scanner
 import sports
 import viz
@@ -600,9 +601,11 @@ def no_structure_view(opps: Iterable[dict[str, Any]] | None, *, max_loss_c: floa
                       good_quote_only: bool = True) -> list[dict[str, Any]]:
     """NO-anchored structures whose bounded max-loss ≤ `max_loss_c` ¢. `kind` ∈ {all, band, outright}
     (band == the ladder-bounded structures; outright == single Buy-NO watchlist). `max_buy_no_c` (0 = off)
-    caps the Buy-NO leg cost — the "cheapest NO" gate. `good_quote_only` keeps only Tight/OK books (the
-    default; the wide/one-sided cheap NOs are usually stale, not opportunities). A row missing a gated field
-    is hidden only when that filter is active."""
+    caps the Buy-NO leg cost — the "cheapest NO" gate — for OUTRIGHTS ONLY: a band's risk is its bounded
+    max-loss (already gated by `max_loss_c`), not its deep child-NO price, so gating bands by Buy-NO would
+    wrongly hide bounded-loss bands on expensive deep rungs. `good_quote_only` keeps only Tight/OK books
+    (the default; wide/one-sided cheap NOs are usually stale). A row missing a gated field is hidden only
+    when that filter is active."""
     out: list[dict[str, Any]] = []
     for o in (opps or []):
         if o.get("bucket") != "no_structure":
@@ -616,7 +619,7 @@ def no_structure_view(opps: Iterable[dict[str, Any]] | None, *, max_loss_c: floa
             continue
         if max(0.0, -wc) > max_loss_c:                # bounded max-loss ¢ (band: cost−100; outright: cost)
             continue
-        if max_buy_no_c:
+        if max_buy_no_c and not _is_band(o):           # cheapness cap is an OUTRIGHT gate; bands → max_loss
             no = _num_or_none(o.get("action_2_price_c"))   # the Buy-NO leg cost
             if no is None or no > max_buy_no_c:
                 continue
@@ -624,6 +627,53 @@ def no_structure_view(opps: Iterable[dict[str, Any]] | None, *, max_loss_c: floa
             continue
         out.append(o)
     return out
+
+
+# Settlement-LEVEL tables for the NO-fades section (display-only; see `no_structures.scope_for`).
+_NO_SCOPES = ("event", "tournament", "championship")
+# Human label for the "Level" column on the combined All table (where rows of every scope are merged).
+_NO_SCOPE_LABEL = {"event": "Event", "tournament": "Tournament", "championship": "Championship"}
+# Retired values from the previous (fixture-based) taxonomy. A snapshot still carrying these predates the
+# Event/Tournament/Championship update → treat as legacy and prompt a rescan rather than trust stale rows.
+_RETIRED_NO_SCOPES = frozenset({"series", "match_game"})
+
+
+def no_scope_taxonomy_is_legacy(opps: Iterable[dict[str, Any]] | None) -> bool:
+    """True if any NO-fade row carries a RETIRED scope value (`series`/`match_game`) — i.e. the snapshot
+    was scanned before the settlement-level taxonomy. (Old `championship` is indistinguishable from the
+    new value, so the retired-only values are the reliable legacy signal.) Clears on the next scan."""
+    return any(o.get("bucket") == "no_structure" and o.get("no_structure_scope") in _RETIRED_NO_SCOPES
+               for o in (opps or []))
+
+
+def _scope_of(o: dict[str, Any]) -> str | None:
+    """The NO-fade's settlement scope, or None when excluded/legacy/unmapped (a stored row missing the
+    field — a pre-split snapshot — reads as None, NOT a silent championship default)."""
+    s = o.get("no_structure_scope")
+    return s if s in _NO_SCOPES else None
+
+
+def no_structure_scoped_views(opps: Iterable[dict[str, Any]] | None, *, max_loss_c: float,
+                              max_buy_no_c: float = 0, kind: str = "all",
+                              good_quote_only: bool = True) -> dict[str, Any]:
+    """Partition the filtered NO-fades into the three settlement-scope tables. `kind` is the existing
+    BAND/OUTRIGHT filter (passed through to `no_structure_view`), NOT the scope. Returns
+    ``{"event": [...], "tournament": [...], "championship": [...], "_excluded_count": N}`` (keys ==
+    `_NO_SCOPES`); each list is ordered by `_no_structure_order`, and N counts gated rows whose scope is
+    excluded/unmapped (these stay in the API/export audit paths — only summarised here, never rebucketed)."""
+    gated = no_structure_view(opps, max_loss_c=max_loss_c, max_buy_no_c=max_buy_no_c, kind=kind,
+                              good_quote_only=good_quote_only)
+    buckets: dict[str, list[dict[str, Any]]] = {s: [] for s in _NO_SCOPES}
+    excluded = 0
+    for o in gated:
+        s = _scope_of(o)
+        if s is None:
+            excluded += 1
+            continue
+        buckets[s].append(o)
+    result: dict[str, Any] = {s: _no_structure_order(rows) for s, rows in buckets.items()}
+    result["_excluded_count"] = excluded
+    return result
 
 
 def _no_structure_order(group: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -643,10 +693,41 @@ def _no_structure_order(group: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return sorted(group, key=key)
 
 
+def days_until(close_iso: Any, ref_dt: datetime | None) -> float | None:
+    """Calendar days from `ref_dt` (the snapshot's `fetched_at`) to a raw ISO close time. None when either
+    is missing/unparseable. May be negative (already closed) — the caller blanks the derived ratio then.
+    Pure + deterministic (keyed off the snapshot stamp, NOT wall-clock), so it is unit-testable."""
+    close = data.parse_fetched_at(close_iso)
+    if close is None or ref_dt is None:
+        return None
+    return (close - ref_dt).total_seconds() / 86400.0
+
+
+def return_per_day(o: dict[str, Any], days: float | None) -> float | None:
+    """A gross BEST-CASE PROFIT MULTIPLE per day — NOT expected value, NOT annualized return. Outright:
+    best-case profit ÷ cost ÷ days; band: best-case profit ÷ bounded max-loss ÷ days. None when days ≤ 0,
+    the denominator is missing/zero (e.g. the zero-loss band), or the close is unknown. Display-only; it
+    explodes for short-dated low-cost longshots, which is exactly why it is hidden by default."""
+    if days is None or days <= 0:
+        return None
+    bc = _num_or_none(o.get("best_case_profit_c"))
+    if bc is None:
+        return None
+    if _is_band(o):
+        wc = _num_or_none(o.get("worst_case_profit_c"))
+        denom = max(0.0, -wc) if wc is not None else None     # bounded max-loss
+    else:
+        denom = _num_or_none(o.get("cost_c"))
+    if not denom:                                             # None or 0 → undefined, blank (never ∞)
+        return None
+    return (bc / denom) / days
+
+
 def no_structure_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str] | None = None,
-                     flash_ids: set[str] | None = None) -> dict[str, Any]:
+                     flash_ids: set[str] | None = None, ref_dt: datetime | None = None) -> dict[str, Any]:
     """Display row for the NO-fades table: leads with the Buy-NO cost + bounded max-loss + breakeven chance;
-    convexity is a visible-but-secondary column. Honest: a cheap bounded fade, NOT an edge."""
+    convexity is a visible-but-secondary column. Honest: a cheap bounded fade, NOT an edge. `ref_dt` (the
+    snapshot `fetched_at`, parsed) drives the display-only "Days to close" / "Best-case mult/day" cells."""
     band = _is_band(o)
     cost = _num_or_none(o.get("cost_c"))
     bc = _num_or_none(o.get("best_case_profit_c"))
@@ -657,12 +738,15 @@ def no_structure_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, st
     parent_c = _num_or_none(o.get("action_1_price_c"))
     wins = _wins_if(o) if band else (f"{o.get('detail') or 'the outcome'} does NOT happen")
     _sized = _sized_at_budget(o)
+    days = days_until(o.get("no_structure_close_time"), ref_dt)
+    rpd = return_per_day(o, days)
     return _stamp_severity({
         "opportunity_id": o.get("opportunity_id"),
         "new": o.get("opportunity_id") in new_ids,
         "_change": (changes or {}).get(o.get("opportunity_id"), ""),
         "_flash": o.get("opportunity_id") in (flash_ids or set()),
         "kind": "Band" if band else "Outright",
+        "scope_label": _NO_SCOPE_LABEL.get(_scope_of(o), ""),   # settlement level — shown on the All table
         "sport": o.get("sport_label") or o.get("sport") or "",
         "name": o.get("name") or "", "detail": o.get("detail") or "",
         "wins_if": wins,
@@ -677,6 +761,8 @@ def no_structure_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, st
         "loss_100": round(_sized[1] / 100, 1) if _sized else None,
         "upside_100": round(_sized[2] / 100, 1) if _sized else None,
         "quote_health": str(o.get("comp_quote_quality") or ""),
+        "days_to_close": None if days is None else round(days, 1),   # capital-lock-up horizon (display-only)
+        "return_per_day": None if rpd is None else round(rpd, 4),    # best-case MULTIPLE/day, NOT EV (hidden by default)
         "caveat": "; ".join(p for p in (o.get("settlement_caveat"), o.get("blocked_reason"))
                             if isinstance(p, str) and p),
     }, o)
@@ -713,6 +799,370 @@ def no_structure_explainer(o: dict[str, Any]) -> list[tuple[str, str]]:
                 pc = s.get("profit_c")
                 lines.append((f"  · {s['label']}", "—" if pc is None else f"{pc:+.0f}¢/unit"))
     return lines
+
+
+# --- NO-fade ladder (per-participant) + cascade upside score (DISPLAY-ONLY) ---------------------------
+# A participant's path to a deep outcome is a chain of YES events; a single NO (one elimination) cascades —
+# every deeper outcome reverts to NO. So a cheap NO at a BROAD rung is a maximally-leveraged longshot fade.
+# `cascade_score = (max-win ÷ cost) × (deeper rungs dominated)` is an ORDINAL longshot-upside/consequence
+# score — NOT EV, probability, fair value, or mispricing; a higher score usually means a LOWER implied
+# chance. Pure + display-only: never read by classify / bucket_of / _rank_key.
+def _ladder_rungs(prows: list[dict[str, Any]], sport: str,
+                  oid_by_ticker: dict[str, str]) -> tuple[Any, tuple, dict, list[dict[str, Any]], bool]:
+    """Build a participant's full NO-fade ladder rungs (broad→deep) from stored contract rows. Returns
+    (cfg, order, nodes, rungs, inverted); `order` is () when there is no ≥2-node ladder / no rows. Shared by
+    `no_fade_ladder` (cascade card) and `ladder_metrics_for` (flat-table metric columns). Reuses
+    `consistency.build_player_nodes` + `representative`, `cfg.ladder_for`, `consistency._buy_no_c`,
+    `no_structures._firm`. A rung is `cheap` iff its representative ticker is in `oid_by_ticker`."""
+    cfg = sports.get_sport(sport)
+    rows = list(prows or [])
+    if not rows:
+        return cfg, (), {}, [], False
+    spec = cfg.ladder_for(rows) if cfg else None
+    order = tuple(getattr(spec, "node_order", ()) or ()) if spec else ()
+    if len(order) < 2:
+        return cfg, (), {}, [], False
+    nodes = consistency.build_player_nodes(rows)
+    n = len(order)
+    rungs: list[dict[str, Any]] = []
+    prev_no: float | None = None
+    inverted = False
+    for i, node in enumerate(order):
+        rep = consistency.representative(nodes.get(node))
+        firm = bool(rep) and no_structures._firm(rep)
+        no_c = consistency._buy_no_c(rep) if firm else None
+        ticker = str(rep.get("market_ticker") or "") if rep else ""
+        cheap = bool(ticker) and ticker in oid_by_ticker
+        dominated = (n - 1) - i                               # strictly-deeper rungs this NO collapses
+        zero_cost = no_c is not None and no_c <= 0
+        if no_c is not None and no_c > 0:
+            max_win: float | None = 100 - no_c
+            leverage: float | None = round(max_win / no_c, 2)
+            cascade_score: float | None = round(leverage * dominated, 1)
+            if prev_no is not None and no_c < prev_no:       # NO cost should rise broad→deep
+                inverted = True
+            prev_no = no_c
+        else:
+            max_win = (100 - no_c) if no_c is not None else None
+            leverage = cascade_score = None
+        rungs.append({
+            "rung": node, "reach_pct": _num(rep.get("display_pct")) if rep else None,
+            "no_c": no_c, "max_win": max_win, "leverage": leverage, "dominated": dominated,
+            "cascade_score": cascade_score, "cheap": cheap, "zero_cost": zero_cost,
+            "opportunity_id": oid_by_ticker.get(ticker) if cheap else None,
+            "quote": (rep.get("quote_quality") or "") if rep else "",
+            "size": _num(rep.get("yes_bid_size")) if rep else None,
+            "market_ticker": ticker,
+        })
+    return cfg, order, nodes, rungs, inverted
+
+
+def no_fade_ladder(prows: list[dict[str, Any]], sport: str, *,
+                   oid_by_ticker: dict[str, str] | None = None) -> dict[str, Any] | None:
+    """One participant's full NO-fade ladder card, or None when there is no ≥2-node ladder / no rows / no
+    scorable cheap rung (fail-closed)."""
+    cfg, order, nodes, rungs, inverted = _ladder_rungs(prows, sport, oid_by_ticker or {})
+    if not order:
+        return None
+    scorable = [r for r in rungs if r["cheap"] and r["cascade_score"] is not None]
+    if not scorable:
+        return None                  # gated but no scorable cheap LADDER rung (e.g. cheap NO is a prop)
+    rows = list(prows or [])
+    top = max(scorable, key=lambda r: r["cascade_score"])
+    win_rep = consistency.representative(nodes.get(order[-1]))
+    return {
+        "sport": sport, "sport_label": getattr(cfg, "label", sport) if cfg else sport,
+        "player": next((r.get("player") for r in rows if r.get("player")), ""),
+        "player_key": next((r.get("player_key") for r in rows if r.get("player_key")), ""),
+        "tournament": next((r.get("tournament") for r in rows if r.get("tournament")), ""),
+        "win_label": order[-1],
+        "implied_win_pct": _num(win_rep.get("display_pct")) if win_rep else None,
+        "card_score": top["cascade_score"], "top_rung": top["rung"],
+        "safe_key": min(r["no_c"] for r in scorable),        # cheapest cheap-rung NO = lowest max-loss
+        "inverted": inverted,
+        "rungs": rungs,
+        "metrics": _ladder_metrics(rungs, order),            # descriptive ladder-shape diagnostics
+    }
+
+
+def ladder_metrics_for(prows: list[dict[str, Any]], sport: str,
+                       oid_by_ticker: dict[str, str] | None = None) -> dict[str, Any] | None:
+    """Ladder-shape metrics for a participant's FULL ladder, independent of whether any rung is a cheap-NO
+    finding — so the flat Championship table can show depth/avg-NO/etc. on every row. None when there is no
+    ≥2-node ladder / no rows. `oid_by_ticker` only affects `n_cheap` (the count of cheap-NO rungs)."""
+    _cfg, order, _nodes, rungs, _inv = _ladder_rungs(prows, sport, oid_by_ticker or {})
+    if not order:
+        return None
+    return _ladder_metrics(rungs, order)
+
+
+def _ladder_metrics(rungs: list[dict[str, Any]], order: tuple) -> dict[str, Any]:
+    """Descriptive shape diagnostics over a participant's FULL NO-fade ladder — DISPLAY-ONLY, NOT EV,
+    probability, net-of-fees, or an actionability score. Computed over the FIRM rungs (firm two-sided
+    book, `no_c` > 0), broad→deep. `depth`/`steps` describe the FULL ladder; the per-step normalizers
+    (`deepest_per_step`, `gradient_c_per_step`) use the FIRM endpoints and so divide by `firm_steps`
+    (= firm rungs − 1), NOT the full-ladder step count — otherwise a firm-only spread would be normalized
+    by phantom non-firm steps. All ratio/gradient fields are None-safe (a <2-firm-rung ladder yields the
+    depth + Nones, never a divide-by-zero). `total_fade_c` is Σ NO over the FIRM rungs = the cost to Buy NO
+    on every firm rung (a portfolio), not a single trade."""
+    firm = [r for r in rungs if r.get("no_c") is not None and r["no_c"] > 0]
+    depth = len(rungs)                                       # how deep the ladder is (rungs/nodes)
+    steps = max(0, depth - 1)
+    firm_steps = max(0, len(firm) - 1)                       # steps BETWEEN firm endpoints (the honest divisor)
+    n_cheap = sum(1 for r in rungs if r.get("cheap"))
+    base = {"depth": depth, "steps": steps, "n_cheap": n_cheap,
+            "avg_no_c": None, "deepest_no_c": None, "deepest_per_step": None, "total_fade_c": None,
+            "gradient_c_per_step": None, "cheapest_no_c": None, "cheapest_rung": None, "span_c": None}
+    if not firm:
+        return base
+    nos = [r["no_c"] for r in firm]
+    broadest, deepest = firm[0]["no_c"], firm[-1]["no_c"]    # firm rungs keep broad→deep order
+    cheapest = min(firm, key=lambda r: r["no_c"])
+    base.update({
+        "avg_no_c": round(sum(nos) / len(nos), 1),
+        "deepest_no_c": deepest,
+        "deepest_per_step": round(deepest / firm_steps, 1) if firm_steps else None,
+        "total_fade_c": round(sum(nos), 1),
+        "gradient_c_per_step": round((deepest - broadest) / firm_steps, 1) if firm_steps else None,
+        "cheapest_no_c": cheapest["no_c"], "cheapest_rung": cheapest["rung"],
+        "span_c": round(deepest - broadest, 1),
+    })
+    return base
+
+
+def ladder_summary_row(card: dict[str, Any]) -> dict[str, Any]:
+    """One row of the per-participant ladder summary table from a `no_fade_ladder` card. Numeric fields
+    hold RAW numbers so NiceGUI client-side column sort works; the cell slots format display only."""
+    m = card.get("metrics") or {}
+    return {
+        "player": card.get("player") or card.get("player_key") or "",
+        "player_key": card.get("player_key") or "",         # row_key uniqueness
+        "sport": card.get("sport_label") or card.get("sport") or "",
+        "win_label": card.get("win_label") or "",
+        "depth": m.get("depth"), "avg_no": m.get("avg_no_c"), "deepest_no": m.get("deepest_no_c"),
+        "deepest_per_step": m.get("deepest_per_step"), "total_fade": m.get("total_fade_c"),
+        "gradient": m.get("gradient_c_per_step"), "cheapest_no": m.get("cheapest_no_c"),
+        "cheapest_rung": m.get("cheapest_rung") or "", "n_cheap": m.get("n_cheap"),
+        "span": m.get("span_c"), "max_cascade": card.get("card_score"),
+        "implied_yes": card.get("implied_win_pct"),
+        "inverted": "⚠" if card.get("inverted") else "",
+    }
+
+
+def ladder_breadcrumb(rungs: Iterable[dict[str, Any]] | None) -> str:
+    """Compact path summary for a NO-fade ladder card title: the FULL rung names broad→deep joined by
+    ' › ' (no abbreviation — e.g. 'Win Conference' stays unambiguous). Display-only; '' for an empty
+    ladder."""
+    return " › ".join(str(r.get("rung") or "") for r in (rungs or []) if r.get("rung"))
+
+
+def _no_leg_ticker(o: dict[str, Any]) -> str:
+    """Market ticker of the cheap Buy-NO leg on a UNIFIED NO-fade opp: a band's NO leg is the deeper child
+    (`ticker_2`); an outright's single leg is `ticker_1`."""
+    return str((o.get("ticker_2") if _is_band(o) else o.get("ticker_1")) or "")
+
+
+def _group_no_opps(gated: Iterable[dict[str, Any]]) -> dict[tuple[str, str, str], dict[str, Any]]:
+    """Group gated NO-fade opps by the UNIFIED `(sport, participant_key, tournament)` (NOT `player_key` —
+    the unified row carries `participant_key`), collecting each group's NO-leg ticker → opportunity_id map."""
+    groups: dict[tuple[str, str, str], dict[str, Any]] = {}
+    for o in gated:
+        key = (str(o.get("sport") or ""), str(o.get("participant_key") or ""), str(o.get("tournament") or ""))
+        if not key[1]:
+            continue
+        g = groups.setdefault(key, {"opps": [], "oids": {}})
+        g["opps"].append(o)
+        t = _no_leg_ticker(o)
+        if t:
+            g["oids"][t] = o.get("opportunity_id")
+    return groups
+
+
+def no_fade_ladder_view(opps: Iterable[dict[str, Any]] | None, prows_for, *, max_loss_c: float,
+                        max_buy_no_c: float = 0, kind: str = "all", good_quote_only: bool = True,
+                        sort: str = "safe") -> list[dict[str, Any]]:
+    """Per-participant NO-fade ladder cards. Participants are GATED by the cheap-NO opps (reuse
+    `no_structure_view`) grouped by the unified `(sport, participant_key, tournament)`; each card's full
+    ladder is rebuilt from `prows_for(sport, participant_key, tournament)` (the dashboard injects stored
+    contract rows — keeps this pure). `sort="cascade"` → highest card cascade score first (longshot
+    upside); `sort="safe"` → lowest cheap-rung max-loss first (default)."""
+    gated = no_structure_view(opps, max_loss_c=max_loss_c, max_buy_no_c=max_buy_no_c, kind=kind,
+                              good_quote_only=good_quote_only)
+    cards: list[dict[str, Any]] = []
+    for (sport, pkey, tournament), g in _group_no_opps(gated).items():
+        card = no_fade_ladder(prows_for(sport, pkey, tournament), sport, oid_by_ticker=g["oids"])
+        if card is not None:
+            cards.append(card)
+    if sort == "cascade":
+        cards.sort(key=lambda c: (-(c["card_score"]), c.get("player") or "", c["player_key"]))
+    else:
+        cards.sort(key=lambda c: (c["safe_key"], c.get("player") or "", c["player_key"]))
+    return cards
+
+
+def no_fade_omitted_count(all_rows: list[dict[str, Any]], cards: list[dict[str, Any]]) -> int:
+    """How many of the (scope-gated) flat-table NO fades `all_rows` are NOT represented as a cheap rung in
+    any displayed ladder `card` — i.e. single-contest / field outrights that can't appear in the grouped
+    view. Matches on the NO-leg ticker (structural, no label parsing), so BOTH sides are the same
+    scope-gated set (the old `len(all_rows) − Σ cheap rungs` mixed a scoped count with an unscoped one and
+    could clamp to a wrong 0). Never negative."""
+    cheap_tickers = {str(r.get("market_ticker") or "")
+                     for c in (cards or []) for r in c.get("rungs", []) if r.get("cheap")}
+    cheap_tickers.discard("")
+    represented = sum(1 for o in (all_rows or []) if _no_leg_ticker(o) in cheap_tickers)
+    return max(0, len(all_rows or []) - represented)
+
+
+# Flat Championship table: ladder-shape metric columns annotated onto each row (display-only). Field names
+# are distinct from the per-structure columns so they merge cleanly into `no_structure_row` output.
+_LADDER_METRIC_FIELDS = ("depth", "avg_no", "deepest_no", "deepest_step", "total_fade", "gradient",
+                         "cheapest_no", "n_cheap", "span")
+
+
+def ladder_metrics_view(champ_opps: Iterable[dict[str, Any]] | None, prows_for) -> dict[tuple, dict[str, Any]]:
+    """Map `(sport, participant_key, tournament)` → ladder metrics for the CHAMPIONSHIP flat-table columns.
+    `champ_opps` is the already-scoped/gated championship list; metrics are rebuilt from
+    `prows_for(...)` (frame-backed — empty when frames absent), so every laddered participant gets metrics
+    even when no single rung is a cheap finding (only `n_cheap` depends on the findings)."""
+    out: dict[tuple, dict[str, Any]] = {}
+    for (sport, pkey, tournament), g in _group_no_opps(champ_opps or []).items():
+        m = ladder_metrics_for(prows_for(sport, pkey, tournament), sport, oid_by_ticker=g["oids"])
+        if m is not None:
+            out[(sport, pkey, tournament)] = m
+    return out
+
+
+def ladder_metric_cells(metrics: dict[str, Any] | None) -> dict[str, Any]:
+    """Flat-row cells for the Championship ladder-metric columns. Blank (None) when metrics are
+    unavailable (e.g. evidence frames not captured) so the cells read "—", never a fabricated value."""
+    m = metrics or {}
+    return {
+        "depth": m.get("depth"), "avg_no": m.get("avg_no_c"), "deepest_no": m.get("deepest_no_c"),
+        "deepest_step": m.get("deepest_per_step"), "total_fade": m.get("total_fade_c"),
+        "gradient": m.get("gradient_c_per_step"), "cheapest_no": m.get("cheapest_no_c"),
+        "n_cheap": m.get("n_cheap"), "span": m.get("span_c"),
+    }
+
+
+_BLANK_TITLE_PATH = {"title_tournaments": None, "title_tournaments_max": None,
+                     "title_events_label": None, "title_events_max": None}
+
+
+def title_path_cells_for(o: dict[str, Any]) -> dict[str, Any]:
+    """Championship title-path display cells for a NO-fade row (the sport's canonical title-path
+    decomposition). Blank for any non-championship-scope row — so a "Win French Open" (tournament) or an
+    Event/Tournament row shows nothing. The domain math lives in `SportConfig.title_path_cells`."""
+    if _scope_of(o) != "championship":
+        return dict(_BLANK_TITLE_PATH)
+    return sports.get_sport(str(o.get("sport") or "")).title_path_cells()
+
+
+# --- Cheapness vs field (Phase 2): a field-de-vigged GAP, NOT an edge / fair value / independent estimate.
+# The faded leg's market-implied chance minus the field de-vig at its ladder node (positive = the NO looks
+# cheap vs the de-vigged field). The participant's OWN price is INCLUDED in the field (self-inclusive), so
+# it is a rough peer-relative comparison only. DISPLAY-ONLY — never read by classify / bucket_of / _rank_key.
+def cheapness_vs_field_view(opps: Iterable[dict[str, Any]] | None,
+                            field_rows_for) -> dict[str, dict[str, Any]]:
+    """Map `opportunity_id → {"cheapness_vs_field": pp}` for NO fades whose faded node has a mapped survivor
+    count and a priceable field. `field_rows_for(sport, tournament)` injects the tournament's stored contract
+    rows (keeps this pure; dashboard wraps `engine.tournament_field`). De-vig is computed ONCE per
+    `(sport, tournament)` via `consistency.devig_field_by_node`. A row is BLANK (absent from the map) when:
+    the faded leg's quote isn't Tight/OK (no signal off a stale/wide/one-sided book), the node is unmapped /
+    unpriceable, the de-vig is a sparse floor (`partial`), the field has <2 priceable participants
+    (self-only is meaningless), or the participant/display price is missing."""
+    out: dict[str, dict[str, Any]] = {}
+    groups: dict[tuple[str, str], list[dict[str, Any]]] = {}
+    for o in (opps or []):
+        if o.get("bucket") != "no_structure":
+            continue
+        sport, tournament = str(o.get("sport") or ""), str(o.get("tournament") or "")
+        if sport and tournament:
+            groups.setdefault((sport, tournament), []).append(o)
+    for (sport, tournament), gopps in groups.items():
+        field_rows = field_rows_for(sport, tournament) or []
+        if not field_rows:
+            continue
+        cfg = sports.get_sport(sport)
+        spec = cfg.ladder_for(field_rows) if cfg else None
+        field = consistency.devig_field_by_node(field_rows, cfg, ladder=spec)
+        for o in gopps:
+            if str(o.get("comp_quote_quality") or "") not in ("Tight", "OK"):
+                continue
+            entry = field.get(str(o.get("no_structure_faded_node") or ""))
+            if entry is None or entry.get("partial"):
+                continue
+            probs = entry.get("probs") or {}
+            if len(probs) < 2:                                   # self-only field → no comparison
+                continue
+            field_p = probs.get(str(o.get("participant_key") or ""))
+            disp_c = _num_or_none(o.get("no_structure_faded_display_c"))
+            if field_p is None or disp_c is None:
+                continue
+            # market-implied P(happens) − field de-vig P(happens), in pp; + = NO cheap vs field.
+            out[o.get("opportunity_id")] = {"cheapness_vs_field": round((disp_c / 100.0 - field_p) * 100.0, 1)}
+    return out
+
+
+def cheapness_cells(entry: dict[str, Any] | None) -> dict[str, Any]:
+    """Flat-row cell for the Cheapness-vs-field column. Blank (None) when unavailable (frames absent, node
+    unmapped, sparse field, non-Tight/OK quote) so the cell reads "—", never a fabricated 0."""
+    return {"cheapness_vs_field": (entry or {}).get("cheapness_vs_field")}
+
+
+def group_key_of(o: dict[str, Any]) -> tuple:
+    """The `(sport, participant_key, tournament)` ladder key for a unified NO-fade opp — the merge key
+    between a Championship row and its `ladder_metrics_view` entry."""
+    return (str(o.get("sport") or ""), str(o.get("participant_key") or ""), str(o.get("tournament") or ""))
+
+
+# --- NO-fade basket (Phase 3): a hand-picked what-if, gross/top-of-book — NOT a portfolio model / EV / fees.
+def prune_basket(basket: Iterable[str] | None, present_ids: Iterable[str] | None) -> set[str]:
+    """Drop basket opportunity_ids that no longer exist in the latest snapshot (so a rescan never leaves a
+    stale pick). Pure set intersection."""
+    present = set(present_ids or [])
+    return {i for i in (basket or set()) if i in present}
+
+
+def basket_summary(selected_opps: Iterable[dict[str, Any]] | None,
+                   ref_dt: datetime | None = None) -> dict[str, Any]:
+    """Aggregate what-if over a hand-picked NO-fade basket — GROSS, top-of-book; NOT a portfolio model, NOT
+    EV, NOT net of fees. `max_simultaneous_loss_dollars` assumes EVERY fade loses at once.
+    `ladder_overlaps` are participants picked on ≥2 rungs of the SAME `(sport, participant_key, tournament)`
+    ladder (not independent — one elimination settles them together); `tournament_concentration` are
+    `(sport, tournament)` groups with ≥2 picks (correlated even across different participants). `overlap_oids`
+    flags the per-row badge set. Avg days-to-close needs `ref_dt` (the snapshot stamp)."""
+    opps = list(selected_opps or [])
+    def _c(o, k):
+        v = _num_or_none(o.get(k))
+        return v if v is not None else 0
+    total_cost = sum(_c(o, "cost_c") for o in opps) / 100.0
+    max_loss = sum(max(0.0, -_c(o, "worst_case_profit_c")) for o in opps) / 100.0
+    best = sum(_c(o, "best_case_profit_c") for o in opps) / 100.0
+    day_vals = [d for o in opps if (d := days_until(o.get("no_structure_close_time"), ref_dt)) is not None]
+    # Ladder overlap (same participant ladder) + tournament concentration (same sport+tournament).
+    by_ladder: dict[tuple, list[dict[str, Any]]] = {}
+    by_tournament: dict[tuple, list[dict[str, Any]]] = {}
+    for o in opps:
+        by_ladder.setdefault(group_key_of(o), []).append(o)
+        by_tournament.setdefault((str(o.get("sport") or ""), str(o.get("tournament") or "")), []).append(o)
+    overlaps, overlap_oids = [], set()
+    for (sport, pkey, tournament), grp in by_ladder.items():
+        if pkey and len(grp) >= 2:
+            overlaps.append({"participant": grp[0].get("name") or pkey, "tournament": tournament,
+                             "count": len(grp)})
+            overlap_oids.update(o.get("opportunity_id") for o in grp)
+    concentration = [{"sport": s, "tournament": t, "count": len(grp)}
+                     for (s, t), grp in by_tournament.items() if t and len(grp) >= 2]
+    return {
+        "n": len(opps),
+        "total_cost_dollars": round(total_cost, 2),
+        "max_simultaneous_loss_dollars": round(max_loss, 2),
+        "best_case_if_all_hit_dollars": round(best, 2),
+        "avg_days_to_close": round(sum(day_vals) / len(day_vals), 1) if day_vals else None,
+        "ladder_overlaps": overlaps,
+        "overlap_oids": overlap_oids,
+        "tournament_concentration": concentration,
+    }
 
 
 # World Cup Qualifier Setups — human labels for the setup types (two exact-order tiers + game support).
@@ -1905,6 +2355,98 @@ def derived_indicators(chain: list[dict[str, Any]] | None, sport: str) -> list[d
     cfg = sports.get_sport(sport)
     node_pct = {r.get("layer"): _num(r.get("display_pct")) for r in (chain or [])}
     return cfg.derived_indicators(node_pct)
+
+
+def _cond_ratio(numer_pct: Any, denom_pct: Any) -> tuple[float | None, bool]:
+    """Conditional ratio numer/denom as a %, with an `inverted` flag. Returns (None, False) when a price
+    is missing or the parent is ≤ 0; (None, True) when the ladder is INVERTED (deeper priced above the
+    parent → ratio > 1) — never assert a > 100% 'probability'. Same guard as SportConfig.derived_indicators."""
+    if numer_pct is None or denom_pct is None or denom_pct <= 0:
+        return None, False
+    if numer_pct > denom_pct:
+        return None, True
+    return round(numer_pct / denom_pct * 100, 1), False
+
+
+def _cond_ratio_dv(numer_p: Any, denom_p: Any) -> float | None:
+    """Conditional ratio for de-vigged probabilities (0..1 masses). None when missing, parent ≤ 0, or
+    inverted (deeper mass above parent)."""
+    if numer_p is None or denom_p is None or denom_p <= 0 or numer_p > denom_p:
+        return None
+    return round(numer_p / denom_p * 100, 1)
+
+
+def conditional_probabilities(
+    prows: list[dict[str, Any]],
+    field_rows: list[dict[str, Any]] | None,
+    sport: str,
+) -> list[dict[str, Any]]:
+    """The PDF's core logic, per participant: a head-to-head/outright market IS a conditional probability,
+    `P(deeper | parent) = price(deeper) / price(parent)`. For each parent stage in this participant's
+    ladder emit, computed TWO ways:
+
+    - **Win | stage** — outright-win chance given the stage (the headline conditional);
+    - **Next rung | stage** — the adjacent-rung conversion (identical to `derived_indicators`' adjacent pair);
+
+    each as a **raw** market-price ratio (`*_cond_raw`) and a **field-implied de-vig** ratio (`*_cond_dv`,
+    from `consistency.devig_field_by_node` keyed by this participant's player_key — None when the node's `k`
+    is unmapped or the field is unavailable). `ladder_inverted` marks an inverted ladder (no > 100% value
+    shown); `partial` marks a sparse de-vig field (the de-vig number is a floor). DISPLAY-ONLY: never read
+    by classification, bucketing, or ranking. [] for a sport with no (≥2-node) ladder."""
+    cfg = sports.get_sport(sport)
+    prow_list = list(prows or [])
+    field_list = list(field_rows or [])
+    spec = cfg.ladder_for(field_list or prow_list) if cfg else None
+    order = tuple(getattr(spec, "node_order", ()) or ()) if spec else ()
+    if len(order) < 2:
+        return []
+    win_node = order[-1]
+
+    # This participant's per-node display % (same node set the de-vig uses).
+    pnodes = consistency.build_player_nodes(prow_list)
+    disp = {n: (_num(consistency.representative(pnodes.get(n)).get("display_pct"))
+                if consistency.representative(pnodes.get(n)) else None) for n in order}
+
+    # Field-implied de-vig, indexed by this participant's player_key.
+    pkey = next((r.get("player_key") for r in prow_list if r.get("player_key")), None)
+    field = (consistency.devig_field_by_node(field_list, cfg, ladder=spec)
+             if (field_list and pkey) else {})
+
+    def dv(node: str) -> tuple[float | None, bool]:
+        d = field.get(node)
+        if not d:
+            return None, False
+        return d["probs"].get(pkey), bool(d.get("partial"))
+
+    win_pct = disp.get(win_node)
+    win_dv_p, win_partial = dv(win_node)
+
+    out: list[dict[str, Any]] = []
+    for i, s in enumerate(order[:-1]):
+        parent_pct = disp.get(s)
+        s_dv_p, s_partial = dv(s)
+        win_raw, win_inv = _cond_ratio(win_pct, parent_pct)
+        win_dv = _cond_ratio_dv(win_dv_p, s_dv_p)
+
+        next_node = order[i + 1]
+        next_pct = disp.get(next_node)
+        n_dv_p, n_partial = dv(next_node)
+        next_raw, next_inv = _cond_ratio(next_pct, parent_pct)
+        next_dv = _cond_ratio_dv(n_dv_p, s_dv_p)
+
+        out.append({
+            "parent": s,
+            "parent_pct": parent_pct,
+            "win_node": win_node,
+            "win_cond_raw": win_raw,
+            "win_cond_dv": win_dv,
+            "next_node": next_node,
+            "next_cond_raw": next_raw,
+            "next_cond_dv": next_dv,
+            "ladder_inverted": bool(win_inv or next_inv),
+            "partial": bool(win_partial or s_partial or n_partial),
+        })
+    return out
 
 
 def detail_spreads(prows: list[dict[str, Any]]) -> list[dict[str, Any]]:

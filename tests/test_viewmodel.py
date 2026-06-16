@@ -1031,3 +1031,418 @@ def test_derived_indicators_carry_kind_discriminator():
     assert kinds and kinds <= {"absolute", "conditional", "bound"}
     # the broadest present rung yields an "absolute" in-contention indicator
     assert any(i.get("kind") == "absolute" for i in inds)
+# --- conditional probability (PDF core logic), DISPLAY-ONLY ---------------------------
+def _cc(pk, node, c, pct):
+    return {"player_key": pk, "series": "KXATPADVANCE", "ladder_node": node, "kind": "advance",
+            "display_c": c, "display_pct": pct}
+
+
+def test_conditional_probabilities_raw_matches_derived_indicators():
+    # PDF: P(Win | Reach SF) = 17.5 / 47 = 37.2%. Adjacent-rung raw == derived_indicators exactly.
+    A = [_cc("A", "Reach Semifinal", 47, 47.0), _cc("A", "Reach Final", 30, 30.0),
+         _cc("A", "Win Tournament", 17.5, 17.5)]
+    field = A + [_cc("B", "Reach Semifinal", 43, 43.0), _cc("B", "Win Tournament", 16.0, 16.0),
+                 _cc("C", "Reach Semifinal", 36, 36.0), _cc("C", "Win Tournament", 10.8, 10.8)]
+    rows = vm.conditional_probabilities(A, field, "tennis")
+    sf = next(r for r in rows if r["parent"] == "Reach Semifinal")
+    assert sf["win_cond_raw"] == 37.2
+    # adjacent next-rung raw equals the matching derived_indicators value (no divergence)
+    chain = vm.detail_chain(A, "tennis")
+    di = {i["label"]: round(i["value_pct"], 1) for i in vm.derived_indicators(chain, "tennis")}
+    assert sf["next_cond_raw"] == di["P(Reach Final | Reach Semifinal)"]
+    fin = next(r for r in rows if r["parent"] == "Reach Final")
+    assert fin["win_cond_raw"] == di["P(Win Tournament | Reach Final)"]
+
+
+def test_conditional_probabilities_inverted_ladder_suppresses_value():
+    # Win priced ABOVE Reach Final (inconsistent) ⇒ no value, ladder_inverted flag (never > 100%).
+    A = [_cc("A", "Reach Final", 30, 30.0), _cc("A", "Win Tournament", 40, 40.0)]
+    rows = vm.conditional_probabilities(A, A, "tennis")
+    fin = next(r for r in rows if r["parent"] == "Reach Final")
+    assert fin["win_cond_raw"] is None and fin["ladder_inverted"] is True
+
+
+def test_conditional_probabilities_devig_diverges_from_raw_on_complete_field():
+    # Complete Reach-Final (k=2) + Win (k=1) fields ⇒ de-vig differs from the raw ratio, partial False.
+    rows_in = []
+    for pk in ("A", "B", "C"):
+        rows_in += [_cc(pk, "Reach Final", 70, 70.0), _cc(pk, "Win Tournament", 40, 40.0)]
+    A = [r for r in rows_in if r["player_key"] == "A"]
+    rows = vm.conditional_probabilities(A, rows_in, "tennis")
+    fin = next(r for r in rows if r["parent"] == "Reach Final")
+    assert fin["win_cond_raw"] == 57.1                       # 40/70
+    assert fin["win_cond_dv"] == 50.0                        # (40/120) / (70/210*2)
+    assert fin["win_cond_dv"] != fin["win_cond_raw"] and fin["partial"] is False
+
+
+def test_conditional_probabilities_partial_flag_propagates_on_sparse_field():
+    A = [_cc("A", "Reach Semifinal", 47, 47.0), _cc("A", "Win Tournament", 17.5, 17.5)]
+    rows = vm.conditional_probabilities(A, A, "tennis")     # 1-player field ⇒ sparse ⇒ floor
+    assert any(r["partial"] for r in rows)
+
+
+def test_conditional_probabilities_does_not_mutate_inputs():
+    A = [_cc("A", "Reach Semifinal", 47, 47.0), _cc("A", "Win Tournament", 17.5, 17.5)]
+    before = [dict(r) for r in A]
+    vm.conditional_probabilities(A, A, "tennis")
+    assert A == before
+
+
+def test_conditional_fields_isolated_from_executable_schema():
+    """INVARIANT: the display-only conditional/de-vig fields never leak into the executable surfaces
+    (UNIFIED_COLUMNS / api.Opportunity) that drive classification, bucketing, and ranking."""
+    import api
+    import scanner
+    A = [_cc("A", "Reach Semifinal", 47, 47.0), _cc("A", "Win Tournament", 17.5, 17.5)]
+    cond_fields = set(vm.conditional_probabilities(A, A, "tennis")[0].keys())
+    leaky = {"win_cond_raw", "win_cond_dv", "next_cond_raw", "next_cond_dv", "ladder_inverted"}
+    assert leaky & cond_fields == leaky                                   # the function does emit them
+    assert leaky.isdisjoint(set(scanner.UNIFIED_COLUMNS))                 # ...but not into the unified schema
+    opp_fields = set(getattr(api.Opportunity, "model_fields", None)
+                     or api.Opportunity.__fields__)                       # ...nor the API model
+    assert leaky.isdisjoint(opp_fields)
+
+
+# --- NO-fade ladder + cascade upside score (DISPLAY-ONLY) -----------------------------
+def _lr(pk, player, node, no_c, tkr, tournament="X", series="KXATPADVANCE"):
+    """A firm ladder-rung contract row: reach price = 100 - no_c."""
+    return {"player_key": pk, "player": player, "tournament": tournament, "series": series,
+            "ladder_node": node, "kind": "advance", "market_ticker": tkr,
+            "display_pct": 100 - no_c, "no_ask_c": no_c, "yes_bid_c": 100 - no_c, "yes_bid_size": 500,
+            "quote_quality": "Tight", "status": "active", "subpenny": False}
+
+
+def _nsopp(oid, pk, tkr, no_c, *, sport="tennis", tournament="X"):
+    """A cheap-NO outright opportunity as the UNIFIED scanner row shapes it (participant_key + ticker_1 —
+    NOT the finding-internal player_key/ticker), i.e. exactly what the dashboard feeds the ladder view."""
+    return {"opportunity_id": oid, "bucket": "no_structure", "relationship_type": "no_structure_outright",
+            "sport": sport, "participant_key": pk, "tournament": tournament, "ticker_1": tkr,
+            "no_structure_scope": "championship",
+            "worst_case_profit_c": -no_c, "action_2_price_c": no_c, "comp_quote_quality": "Tight"}
+
+
+def test_ladder_metrics_for_full_ladder_independent_of_cheap_findings():
+    # depth/steps follow the SPORT's full ladder length (node_order), so assert the length-independent
+    # firm-rung aggregates exactly (the exact-value math is locked by test_ladder_metrics_values).
+    rows = [_lr("A", "A", "Reach Semifinal", 10, "SF"), _lr("A", "A", "Reach Final", 20, "FIN"),
+            _lr("A", "A", "Win Tournament", 40, "WIN")]
+    m = vm.ladder_metrics_for(rows, "tennis", oid_by_ticker={"SF": "x"})
+    assert m is not None and m["depth"] >= 3 and m["steps"] == m["depth"] - 1
+    assert m["avg_no_c"] == round((10 + 20 + 40) / 3, 1)          # mean of the 3 FIRM rungs
+    assert m["deepest_no_c"] == 40 and m["cheapest_no_c"] == 10 and m["cheapest_rung"] == "Reach Semifinal"
+    assert m["span_c"] == 30.0 and m["n_cheap"] == 1
+    # Metrics exist even with NO cheap rung flagged (the flat table needs them on every championship row).
+    assert vm.ladder_metrics_for(rows, "tennis")["n_cheap"] == 0
+    # A sport with no containment ladder (esports) yields None (fail-closed).
+    assert vm.ladder_metrics_for(rows, "esports") is None
+
+
+def test_ladder_metrics_view_groups_by_participant_key():
+    a_rows = [_lr("ALC", "Alcaraz", "Reach Final", 10, "A_FIN"),
+              _lr("ALC", "Alcaraz", "Win Tournament", 70, "A_WIN")]
+    out = vm.ladder_metrics_view([_nsopp("opA", "ALC", "A_FIN", 10)],
+                                 lambda s, pk, t: a_rows if pk == "ALC" else [])
+    assert ("tennis", "ALC", "X") in out
+    m = out[("tennis", "ALC", "X")]
+    assert m["avg_no_c"] == round((10 + 70) / 2, 1) and m["deepest_no_c"] == 70 and m["n_cheap"] == 1
+
+
+def test_ladder_metric_cells_blank_when_unavailable():
+    blank = vm.ladder_metric_cells(None)
+    assert blank["depth"] is None and blank["avg_no"] is None and blank["span"] is None
+    filled = vm.ladder_metric_cells({"depth": 3, "avg_no_c": 20.0, "span_c": 30.0, "n_cheap": 1})
+    assert filled["depth"] == 3 and filled["avg_no"] == 20.0 and filled["span"] == 30.0 and filled["n_cheap"] == 1
+
+
+def test_group_key_of_uses_participant_key():
+    assert vm.group_key_of({"sport": "tennis", "participant_key": "k", "tournament": "X"}) == ("tennis", "k", "X")
+
+
+# --- Phase 2: cheapness vs field (field-de-vigged gap, display-only) ----------------------
+def _fr(pk, node, disp_c):
+    """A tournament-field contract row the de-vig reads (player_key + stamped node + display_c)."""
+    return {"player_key": pk, "ladder_node": node, "kind": "advance", "series": "KXATPADVANCE",
+            "display_c": disp_c, "market_ticker": f"{pk}-{node}", "tournament": "X"}
+
+
+def _cvf_opp(oid, pk, node, disp_c, *, quote="Tight", tournament="X", band=False):
+    return {"opportunity_id": oid, "bucket": "no_structure",
+            "relationship_type": "no_structure_band" if band else "no_structure_outright",
+            "sport": "tennis", "tournament": tournament, "participant_key": pk,
+            "no_structure_faded_node": node, "no_structure_faded_display_c": disp_c,
+            "comp_quote_quality": quote}
+
+
+def test_cheapness_vs_field_signed_gap_keyed_by_oid():
+    # Reach Final k=2; field 90/80/70 (Σ implied 2.4 ≥ k → normalized, not a floor). A → 0.9/2.4*2 = 0.75.
+    field = [_fr("A", "Reach Final", 90), _fr("B", "Reach Final", 80), _fr("C", "Reach Final", 70)]
+    out = vm.cheapness_vs_field_view([_cvf_opp("o1", "A", "Reach Final", 90)], lambda s, t: field)
+    assert set(out) == {"o1"}
+    assert out["o1"]["cheapness_vs_field"] == 15.0           # (0.90 market − 0.75 field) * 100
+    # A band resolves the same way via its (child) faded node.
+    band = vm.cheapness_vs_field_view([_cvf_opp("b1", "A", "Reach Final", 90, band=True)], lambda s, t: field)
+    assert band["b1"]["cheapness_vs_field"] == 15.0
+
+
+def test_cheapness_vs_field_blank_conditions():
+    field3 = [_fr("A", "Reach Final", 90), _fr("B", "Reach Final", 80), _fr("C", "Reach Final", 70)]
+    f = lambda s, t: field3                                   # noqa: E731 (test-local)
+    assert vm.cheapness_vs_field_view([_cvf_opp("q", "A", "Reach Final", 90, quote="Wide")], f) == {}   # stale/wide
+    assert vm.cheapness_vs_field_view([_cvf_opp("n", "A", "No Such Node", 90)], f) == {}                # node absent/unmapped
+    assert vm.cheapness_vs_field_view([_cvf_opp("d", "A", "Reach Final", None)], f) == {}               # no display price
+    assert vm.cheapness_vs_field_view(
+        [{**_cvf_opp("t", "A", "Reach Final", 90), "tournament": ""}], f) == {}                         # no tournament
+    sparse = [_fr("A", "Reach Final", 90), _fr("B", "Reach Final", 80)]    # Σ implied 1.7 < k=2 → floor
+    assert vm.cheapness_vs_field_view([_cvf_opp("p", "A", "Reach Final", 90)], lambda s, t: sparse) == {}
+    assert vm.cheapness_vs_field_view(                                                                  # self-only (<2)
+        [_cvf_opp("s", "A", "Reach Final", 90)], lambda s, t: [_fr("A", "Reach Final", 90)]) == {}
+    assert vm.cheapness_vs_field_view([_cvf_opp("f", "A", "Reach Final", 90)], lambda s, t: []) == {}   # no frames
+
+
+def test_cheapness_cells_blank_safe():
+    assert vm.cheapness_cells(None)["cheapness_vs_field"] is None
+    assert vm.cheapness_cells({"cheapness_vs_field": 3.0})["cheapness_vs_field"] == 3.0
+
+
+# --- Phase 3: hand-picked basket what-if -------------------------------------------------
+def _bopp(oid, pk, *, cost, worst, best, sport="tennis", tournament="X", close=""):
+    return {"opportunity_id": oid, "bucket": "no_structure", "sport": sport, "tournament": tournament,
+            "participant_key": pk, "name": pk, "cost_c": cost, "worst_case_profit_c": worst,
+            "best_case_profit_c": best, "no_structure_close_time": close}
+
+
+def test_basket_summary_sums_and_no_overlap():
+    s = vm.basket_summary([_bopp("a", "ALC", cost=10, worst=-10, best=90),
+                           _bopp("b", "SIN", cost=8, worst=-8, best=92)])
+    assert s["n"] == 2 and s["total_cost_dollars"] == 0.18
+    assert s["max_simultaneous_loss_dollars"] == 0.18 and s["best_case_if_all_hit_dollars"] == 1.82
+    assert s["ladder_overlaps"] == [] and s["tournament_concentration"]   # same tournament X → concentration
+    assert s["overlap_oids"] == set()
+
+
+def test_basket_summary_flags_same_ladder_overlap():
+    # Two rungs of the SAME participant ladder (same sport+participant+tournament) → not independent.
+    s = vm.basket_summary([_bopp("a", "ALC", cost=10, worst=-10, best=90),
+                           _bopp("b", "ALC", cost=40, worst=-40, best=60)])
+    assert len(s["ladder_overlaps"]) == 1 and s["ladder_overlaps"][0]["count"] == 2
+    assert s["overlap_oids"] == {"a", "b"}
+
+
+def test_basket_summary_tournament_concentration_without_ladder_overlap():
+    # Different participants, same tournament → concentration line but NO ladder overlap.
+    s = vm.basket_summary([_bopp("a", "ALC", cost=10, worst=-10, best=90),
+                           _bopp("b", "SIN", cost=8, worst=-8, best=92)])
+    assert s["ladder_overlaps"] == []
+    assert s["tournament_concentration"] == [{"sport": "tennis", "tournament": "X", "count": 2}]
+
+
+def test_basket_summary_avg_days_needs_ref_dt():
+    import data
+    ref = data.parse_fetched_at("2026-06-01 00:00:00 UTC")
+    opps = [_bopp("a", "ALC", cost=10, worst=-10, best=90, close="2026-06-11T00:00:00Z"),
+            _bopp("b", "SIN", cost=8, worst=-8, best=92, close="2026-06-21T00:00:00Z")]
+    assert vm.basket_summary(opps, ref_dt=ref)["avg_days_to_close"] == 15.0     # (10 + 20)/2
+    assert vm.basket_summary(opps)["avg_days_to_close"] is None                 # no stamp → blank
+    assert vm.basket_summary([])["n"] == 0                                      # empty basket safe
+
+
+def test_prune_basket_drops_absent_ids():
+    assert vm.prune_basket({"a", "b", "gone"}, {"a", "b", "c"}) == {"a", "b"}
+    assert vm.prune_basket(set(), {"a"}) == set()
+    assert vm.prune_basket({"x"}, []) == set()
+
+
+# --- Phase 1: days-to-close + best-case multiple/day -------------------------------------
+def test_days_until_deterministic_off_snapshot_stamp():
+    import data
+    ref = data.parse_fetched_at("2026-06-01 00:00:00 UTC")
+    assert vm.days_until("2026-06-06T00:00:00Z", ref) == 5.0
+    assert vm.days_until("2026-05-30T00:00:00Z", ref) < 0          # already closed → negative
+    assert vm.days_until("not-a-date", ref) is None
+    assert vm.days_until("2026-06-06T00:00:00Z", None) is None     # no snapshot stamp → blank
+
+
+def test_return_per_day_is_best_case_multiple_not_ev():
+    out = {"relationship_type": "no_structure_outright", "best_case_profit_c": 90, "cost_c": 10}
+    assert vm.return_per_day(out, 30) == 0.3                       # (90/10)/30
+    band = {"relationship_type": "no_structure_band", "best_case_profit_c": 95,
+            "worst_case_profit_c": -5, "cost_c": 105}
+    assert vm.return_per_day(band, 10) == 1.9                      # (95/max_loss 5)/10
+    assert vm.return_per_day(out, 0) is None                       # days ≤ 0 → blank
+    assert vm.return_per_day(out, None) is None                    # unknown close → blank
+    zero_loss = {"relationship_type": "no_structure_band", "best_case_profit_c": 100,
+                 "worst_case_profit_c": 0, "cost_c": 100}
+    assert vm.return_per_day(zero_loss, 10) is None                # zero-loss band denom → blank, never ∞
+
+
+def test_no_structure_row_days_and_return_cells():
+    import data
+    ref = data.parse_fetched_at("2026-06-01 00:00:00 UTC")
+    o = {**_nsopp("o1", "ALC", "T", 10), "cost_c": 10, "best_case_profit_c": 90,
+         "no_structure_close_time": "2026-06-21T00:00:00Z"}
+    row = vm.no_structure_row(o, set(), ref_dt=ref)
+    assert row["days_to_close"] == 20.0 and row["return_per_day"] == round((90 / 10) / 20, 4)
+    # No ref_dt (old caller) → both blank, no crash.
+    blank = vm.no_structure_row(o, set())
+    assert blank["days_to_close"] is None and blank["return_per_day"] is None
+
+
+def test_no_structure_close_time_in_api_model():
+    import api
+    fields = set(getattr(api.Opportunity, "model_fields", None) or api.Opportunity.__fields__)
+    assert "no_structure_close_time" in fields                     # declared → no REST drift
+
+
+# --- Phase 0 review fixes ----------------------------------------------------------------
+def test_ladder_metrics_normalize_by_firm_steps_not_full_steps():
+    # 3-node tennis ladder but the MIDDLE rung (Reach Final) is absent → non-firm; only SF + WIN are firm.
+    rows = [_lr("A", "A", "Reach Semifinal", 10, "SF"), _lr("A", "A", "Win Tournament", 40, "WIN")]
+    m = vm.ladder_metrics_for(rows, "tennis", oid_by_ticker={"SF": "x"})
+    assert m["depth"] >= 3 and m["steps"] == m["depth"] - 1       # FULL-ladder shape is reported unchanged
+    # The per-step normalizers use the FIRM endpoints over firm_steps (=1), NOT the full step count (=2):
+    assert m["gradient_c_per_step"] == 30.0                       # (40−10)/1, not /2 = 15
+    assert m["deepest_per_step"] == 40.0                          # 40/1, not /2 = 20
+
+
+def test_no_fade_omitted_count_uses_scoped_basis():
+    a_rows = [_lr("ALC", "Alcaraz", "Reach Final", 10, "A_FIN"),
+              _lr("ALC", "Alcaraz", "Win Tournament", 70, "A_WIN")]
+    card = vm.no_fade_ladder(a_rows, "tennis", oid_by_ticker={"A_FIN": "opA"})
+    laddered = _nsopp("opA", "ALC", "A_FIN", 10)         # NO-leg ticker == a cheap rung → represented
+    non_laddered = _nsopp("opP", "TM", "PROP1", 8)       # not on any card → omitted
+    assert vm.no_fade_omitted_count([laddered, non_laddered], [card]) == 1
+    assert vm.no_fade_omitted_count([laddered], [card]) == 0
+    assert vm.no_fade_omitted_count([non_laddered], []) == 1
+    assert vm.no_fade_omitted_count([], [card]) == 0     # never negative
+
+
+def test_no_structure_row_scope_label():
+    champ = _nsopp("c", "ALC", "T", 10)                  # _nsopp sets no_structure_scope="championship"
+    assert vm.no_structure_row(champ, set())["scope_label"] == "Championship"
+    none_scope = {**champ, "no_structure_scope": None}
+    assert vm.no_structure_row(none_scope, set())["scope_label"] == ""
+
+
+def test_title_path_cells_expose_numeric_tournament_sort():
+    import sports
+    nba = sports.get_sport("nba").title_path_cells()
+    assert nba["title_tournaments"] == "4" and nba["title_tournaments_max"] == 4
+    mlb = sports.get_sport("mlb").title_path_cells()
+    assert mlb["title_tournaments"] == "3–4" and mlb["title_tournaments_max"] == 4   # label range, numeric max
+    blank = sports.get_sport("golf").title_path_cells()                              # no Championship title path
+    assert blank["title_tournaments"] is None and blank["title_tournaments_max"] is None
+
+
+def test_no_fade_ladder_cascade_score_and_dominated():
+    # France-style ladder: broadest cheap NO has the highest cascade score; win rung scores 0.
+    order = [("Reach Semifinal", 10, "SF"), ("Reach Final", 50, "FIN"), ("Win Tournament", 80, "WIN")]
+    rows = [_lr("FRA", "France", n, c, t) for n, c, t in order]
+    card = vm.no_fade_ladder(rows, "tennis", oid_by_ticker={"SF": "op_sf", "FIN": "op_fin"})
+    by = {r["rung"]: r for r in card["rungs"]}
+    assert by["Reach Semifinal"]["dominated"] == 2 and by["Win Tournament"]["dominated"] == 0
+    assert by["Reach Semifinal"]["cascade_score"] == 18.0          # (90/10) * 2
+    assert by["Win Tournament"]["cascade_score"] == 0.0            # dominated 0
+    assert card["card_score"] == 18.0 and card["top_rung"] == "Reach Semifinal"
+    assert card["inverted"] is False and by["Win Tournament"]["cheap"] is False
+
+
+def test_no_fade_ladder_zero_cost_rung_visible_and_unscored():
+    rows = [_lr("A", "A", "Reach Semifinal", 0, "SF"), _lr("A", "A", "Reach Final", 20, "FIN"),
+            _lr("A", "A", "Win Tournament", 60, "WIN")]
+    card = vm.no_fade_ladder(rows, "tennis", oid_by_ticker={"SF": "z", "FIN": "f"})
+    sf = next(r for r in card["rungs"] if r["rung"] == "Reach Semifinal")
+    assert sf["zero_cost"] is True and sf["cascade_score"] is None   # free NO → flagged, not scored
+    assert card["card_score"] is not None                            # still scored off the Final cheap rung
+
+
+def test_no_fade_ladder_fail_closed_on_missing_rows():
+    assert vm.no_fade_ladder([], "tennis") is None                  # no frames → no card
+    assert vm.no_fade_ladder([_lr("A", "A", "Reach Semifinal", 10, "SF")], "tennis",
+                             oid_by_ticker={"SF": "x"}) is not None  # 3-node ladder, 1 rung present is OK
+
+
+def test_no_fade_ladder_view_cascade_vs_safe_ordering():
+    # A: only the DEEP (Final) rung is a cheap fade → lower cascade, cheaper absolute NO.
+    a_rows = [_lr("ALC", "Alcaraz", "Reach Final", 10, "A_FIN"),
+              _lr("ALC", "Alcaraz", "Win Tournament", 70, "A_WIN")]
+    # B: the BROAD (SF) rung is the cheap fade → higher cascade (dominates more), pricier absolute NO.
+    b_rows = [_lr("SIN", "Sinner", "Reach Semifinal", 15, "B_SF"),
+              _lr("SIN", "Sinner", "Reach Final", 40, "B_FIN"),
+              _lr("SIN", "Sinner", "Win Tournament", 75, "B_WIN")]
+    opps = [_nsopp("opA", "ALC", "A_FIN", 10), _nsopp("opB", "SIN", "B_SF", 15)]
+    prows = {"ALC": a_rows, "SIN": b_rows}
+
+    def prows_for(sport, pk, tour):
+        return prows.get(pk, [])
+
+    casc = vm.no_fade_ladder_view(opps, prows_for, max_loss_c=100, sort="cascade")
+    safe = vm.no_fade_ladder_view(opps, prows_for, max_loss_c=100, sort="safe")
+    assert casc[0]["player_key"] == "SIN"        # broad fade dominates more rungs → higher cascade
+    assert safe[0]["player_key"] == "ALC"        # cheapest absolute NO → safest first
+    assert {c["player_key"] for c in casc} == {"ALC", "SIN"}
+
+
+def test_no_fade_ladder_view_keeps_high_child_no_bands():
+    # The Buy-NO cap is outright-only: a band whose deep child-NO leg is 90¢ (bounded max-loss small) must
+    # still reach the grouped cascade view at Max Buy-NO 15¢ — regression for the second consumer of the gate.
+    rows = [_lr("X", "Xavier", "Reach Final", 10, "X_FIN"),
+            _lr("X", "Xavier", "Win Tournament", 90, "X_WIN")]
+    band = {"opportunity_id": "bx", "bucket": "no_structure", "relationship_type": "no_structure_band",
+            "sport": "tennis", "participant_key": "X", "tournament": "X",
+            "ticker_1": "X_FIN", "ticker_2": "X_WIN",          # band's NO leg = the deeper child = ticker_2
+            "worst_case_profit_c": -15, "action_2_price_c": 90, "comp_quote_quality": "Tight"}
+    cards = vm.no_fade_ladder_view([band], lambda s, pk, t: rows if pk == "X" else [],
+                                   max_loss_c=100, max_buy_no_c=15)
+    assert len(cards) == 1 and cards[0]["player_key"] == "X"
+
+
+def test_ladder_breadcrumb_full_names_broad_to_deep():
+    assert vm.ladder_breadcrumb(
+        [{"rung": "Reach Semifinal"}, {"rung": "Reach Final"}, {"rung": "Win Tournament"}]
+    ) == "Reach Semifinal › Reach Final › Win Tournament"
+    # FULL names — "Win Conference" is NOT abbreviated (it would be ambiguous otherwise).
+    assert vm.ladder_breadcrumb(
+        [{"rung": "Reach Playoffs"}, {"rung": "Win Conference"}, {"rung": "Win Championship"}]
+    ) == "Reach Playoffs › Win Conference › Win Championship"
+    assert vm.ladder_breadcrumb(
+        [{"rung": "Top 20"}, {"rung": "Top 10"}, {"rung": "Top 5"}, {"rung": "Win Tournament"}]
+    ) == "Top 20 › Top 10 › Top 5 › Win Tournament"
+    assert vm.ladder_breadcrumb([]) == ""
+    assert vm.ladder_breadcrumb(None) == ""
+    assert vm.ladder_breadcrumb([{"rung": "Win Tournament"}]) == "Win Tournament"
+    # Blank/None rung entries are skipped, not rendered as empty segments.
+    assert vm.ladder_breadcrumb([{"rung": "A"}, {"rung": ""}, {"rung": None}, {"rung": "B"}]) == "A › B"
+
+
+def test_flat_default_keeps_non_laddered_fade_that_ladder_lens_omits():
+    # Regression for the audit-revised decision: the flat scoped views (the DEFAULT) must keep a
+    # single-contest / field-outright cheap NO that the participant-ladder lens can't show. An esports
+    # title-winner outright has no ≥2-node containment ladder → it produces NO ladder card, but it MUST
+    # still appear in the flat default view.
+    opp = {"opportunity_id": "e1", "bucket": "no_structure",
+           "relationship_type": "no_structure_outright", "sport": "esports",
+           "participant_key": "team1", "tournament": "IEM", "ticker_1": "KXCS2-X",
+           "no_structure_scope": "tournament", "worst_case_profit_c": -10,
+           "action_2_price_c": 10, "comp_quote_quality": "Tight"}
+    flat = vm.no_structure_scoped_views([opp], max_loss_c=100)
+    assert any(o["opportunity_id"] == "e1" for o in flat["tournament"])   # present in the flat default
+    # The ladder lens omits it (no frames / no ladder → no card) — so the flat view is the only place it shows.
+    assert vm.no_fade_ladder_view([opp], lambda s, pk, t: [], max_loss_c=100) == []
+
+
+def test_no_fade_ladder_view_fail_closed_when_frames_empty():
+    opps = [_nsopp("opA", "ALC", "A_FIN", 10)]
+    assert vm.no_fade_ladder_view(opps, lambda *a: [], max_loss_c=100) == []   # no frames → no cards
+
+
+def test_no_fade_ladder_fields_isolated_from_executable_schema():
+    import api
+    import scanner
+    rows = [_lr("A", "A", "Reach Semifinal", 10, "SF"), _lr("A", "A", "Win Tournament", 80, "WIN")]
+    card = vm.no_fade_ladder(rows, "tennis", oid_by_ticker={"SF": "x"})
+    rung_fields = set(card["rungs"][0].keys()) | {"card_score"}
+    leaky = {"cascade_score", "dominated", "card_score", "leverage"}
+    assert leaky & rung_fields == leaky                              # the builder DOES emit them
+    assert leaky.isdisjoint(set(scanner.UNIFIED_COLUMNS))            # ...but never the unified schema
+    opp_fields = set(getattr(api.Opportunity, "model_fields", None) or api.Opportunity.__fields__)
+    assert leaky.isdisjoint(opp_fields)                              # ...nor the API model

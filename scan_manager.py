@@ -55,7 +55,12 @@ class ScanManager:
 
     def status(self) -> dict[str, Any]:
         with self._lock:
-            return dict(self._status)
+            st = dict(self._status)
+            # Phase 2: surface the remaining budget-cooldown so the dashboard can show "cooling down (Xs)"
+            # instead of a silently stale snapshot. 0.0 when not cooling down.
+            left = self._cooldown_until - time.time()
+            st["cooldown_seconds_left"] = round(left, 1) if left > 0 else 0.0
+            return st
 
     def trigger(self, *, run_fn: Callable[[str], tuple], write_fn: Callable[..., Any],
                 force: bool = False, wait_timeout: float = 0.0, db_path: str | None = None
