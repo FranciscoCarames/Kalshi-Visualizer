@@ -97,9 +97,10 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
   const [extra, setExtra] = useState<ExtraPanel | null>(null);
   const [panelsMenuOpen, setPanelsMenuOpen] = useState(false);
   const [scanText, setScanText] = useState<string | null>(null);
-  // hideNetNegExec defaults ON: executable rows whose TAKER net-of-fees estimate is negative are hidden
-  // (a display-only declutter — never re-buckets; the SETTINGS toggle + the hidden-count chip reveal them).
-  const [settings, setSettings] = useState<Settings>({ longShort: false, showIds: false, resolutionCriteria: true, hideNetNegExec: true, tz: "local", autoRefresh: "10s" });
+  // hideNetNegExec defaults OFF: all rows show by default. Opting the SETTINGS toggle ON hides executable
+  // rows whose TAKER net-of-fees estimate is negative (a display-only declutter — never re-buckets; the
+  // hidden-count chip reveals them again).
+  const [settings, setSettings] = useState<Settings>({ longShort: false, showIds: false, resolutionCriteria: true, hideNetNegExec: false, tz: "local", autoRefresh: "10s" });
   // Per-section band overrides (bounded/nearmiss/cheapno). Untouched sections fall back to the engine's
   // default band (from meta.defaults), so bounded max-loss 5¢ and cheap-NO max-loss 15¢ never collide.
   const [bands, setBands] = useState<Record<string, BandState>>({});
