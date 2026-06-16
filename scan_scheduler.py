@@ -19,12 +19,23 @@ without ever killing the loop.
 from __future__ import annotations
 
 import logging
+import os
 import threading
 from typing import Callable
 
 import config
 
 logger = logging.getLogger(__name__)
+
+
+def _default_interval_s() -> int:
+    """Auto-scan cadence: config default (60s, server-safe) with an AUTO_SCAN_DEFAULT_SECONDS env override
+    for rollback / per-deploy tuning without a code change. Bad values fall back to the config default."""
+    try:
+        v = os.getenv("AUTO_SCAN_DEFAULT_SECONDS")
+        return int(v) if v is not None and v.strip() != "" else config.AUTO_SCAN_DEFAULT_SECONDS
+    except (TypeError, ValueError):
+        return config.AUTO_SCAN_DEFAULT_SECONDS
 
 ScanFn = Callable[[], object]
 GateFn = Callable[[], bool]   # optional per-tick predicate; when it returns False the tick is skipped
@@ -96,5 +107,5 @@ class Scheduler:
 
 
 # Process-wide singleton — CONSTRUCTED here, but NOT started (no thread, no scan on import).
-scheduler = Scheduler(interval_s=config.AUTO_SCAN_DEFAULT_SECONDS,
+scheduler = Scheduler(interval_s=_default_interval_s(),
                       enabled=config.AUTO_SCAN_DEFAULT_ENABLED)

@@ -46,6 +46,13 @@ app = FastAPI(title="Kalshi Structured Scanner", version="4.0")
 # deny-by-default auth gate / security-headers middleware. Both are no-ops for loopback/dev and the test
 # client until AUTH_ENABLED / APP_ALLOWED_HOSTS are set; see auth.py.
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=auth.allowed_hosts())
+# Transport compression for the ~5 MB /api/terminal/feed JSON (~5-10x smaller on the wire). Env-gated
+# (FEED_GZIP_ENABLED=0 rolls it back). minimum_size skips tiny bodies; the rare manual ZIP-export download
+# is already-compressed so gzip gains nothing there (negligible CPU, manual + infrequent) — correctness is
+# unaffected (the browser transparently decodes). Network-only: this does NOT reduce the on-disk store.
+if os.getenv("FEED_GZIP_ENABLED", "1").strip().lower() in ("1", "true", "yes", "on"):
+    from starlette.middleware.gzip import GZipMiddleware
+    app.add_middleware(GZipMiddleware, minimum_size=1024)
 app.middleware("http")(auth.gate_and_harden)
 app.include_router(auth.router)
 logger = logging.getLogger("kalshi.api")
@@ -211,6 +218,12 @@ class Metrics(BaseModel):
     scan_in_progress_seconds: float | None = None
     last_scan_error: str | None = None
     viewer_count: int | None = None
+    # Footprint counters (so the owner can see retention + incremental_vacuum bounding the store).
+    db_size_bytes: int | None = None
+    wal_size_bytes: int | None = None
+    snapshot_count: int | None = None
+    opportunity_rows: int | None = None
+    freelist_pages: int | None = None
 
 
 class BacklogItem(BaseModel):
@@ -674,9 +687,10 @@ def get_metrics(db_path: str | None = Depends(db_path_dep)):
     snap = store.latest(db_path=db_path)
     age = data.data_age_seconds(snap["fetched_at"]) if snap else None
     stale = data.is_stale(age, config.STALE_AFTER_SECONDS) if age is not None else None
-    return Metrics(**diagnostics.build_metrics(
+    base = diagnostics.build_metrics(
         snapshot=snap, scan_status=scan_manager.manager.status(), now_age=age,
-        stale=stale, now=time.time(), viewer_count=presence.count()))
+        stale=stale, now=time.time(), viewer_count=presence.count())
+    return Metrics(**base, **store.footprint_stats(db_path=db_path))
 
 
 @app.get("/alerts", response_model=Alerts)

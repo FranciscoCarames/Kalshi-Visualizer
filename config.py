@@ -2,6 +2,10 @@
 
 Everything here is read-only market-data configuration. No credentials are needed:
 Kalshi's market-data endpoints (series/events/markets) are public.
+
+These are DEFAULT constants only — config.py stays import-free by convention; env-var overrides for the
+footprint knobs (retention, cadence, vacuum/checkpoint flags) are read at the boundaries that consume them
+(store.py for the store tier; the scan scheduler for cadence), not here.
 """
 
 # Kalshi public market-data API. NOTE: the reachable host is `external-api.kalshi.com`
@@ -188,7 +192,25 @@ SNAPSHOT_DB_PATH = "snapshots.db"
 # Retention: drop snapshots older than this many seconds (relative to the newest stored snapshot, so
 # retention is deterministic/testable). Sized above the largest planned backlog window (24h, Stage 3)
 # plus margin, so the lifecycle/backlog views always have enough history.
-SNAPSHOT_RETENTION_SECONDS = 30 * 60 * 60   # 30 hours
+# Server-safe default: 6h (was 30h). A left-running server at the old 30h x ~10s cadence steady-stated to
+# ~28 GB and overheated the host (snapshot_count = retention / cadence; rows = 2,224/snapshot). 6h keeps a
+# full day of lifecycle in the durable backlog table while bounding the heavy store. store.py reads the env
+# override SNAPSHOT_RETENTION_SECONDS for rollback without a code change.
+SNAPSHOT_RETENTION_SECONDS = 6 * 60 * 60   # 6 hours
+# Lean opportunity tiering: keep FULL opportunity JSON for the latest N snapshots; for OLDER snapshots drop
+# the heavy SPECULATIVE/diagnostic buckets' row JSON (counts preserved in snapshots.meta) so history stays
+# bounded without touching store.latest() (the live feed). Mirrors the frame-retention tier. store.py reads
+# env overrides (SNAPSHOT_OPP_FULL_RETENTION_N / SNAPSHOT_OPP_TIER_ENABLED) for rollback.
+SNAPSHOT_OPP_FULL_RETENTION_N = 6
+SNAPSHOT_OPP_TIER_ENABLED = True
+SNAPSHOT_OPP_TIER_BUCKETS = ("no_structure", "data_quality", "near_miss")   # the heavy speculative tier
+# Page reclamation: PRAGMA auto_vacuum=INCREMENTAL at init (fresh DBs) + a throttled incremental_vacuum and
+# WAL checkpoint(TRUNCATE) in post-commit housekeeping so a long-running server's file actually shrinks after
+# retention deletes. store.py reads env overrides (SNAPSHOT_INCREMENTAL_VACUUM_ENABLED /
+# SNAPSHOT_WAL_TRUNCATE_ENABLED) for rollback. Housekeeping runs every Nth snapshot to avoid per-write churn.
+SNAPSHOT_INCREMENTAL_VACUUM_ENABLED = True
+SNAPSHOT_WAL_TRUNCATE_ENABLED = True
+SNAPSHOT_HOUSEKEEPING_EVERY_N = 5
 # SQLite busy-timeout (ms): how long a connection waits on a held lock before raising. With WAL mode
 # (set per-connect in store._connect) this lets a reader proceed during a scan write instead of erroring.
 SNAPSHOT_BUSY_TIMEOUT_MS = 5000
@@ -346,9 +368,13 @@ UI_DEBOUNCE_TICK_SECONDS = 0.1
 # auto-refreshes data without an external scheduler. One loop per process regardless of viewer count; each
 # tick rides the ScanManager TTL/budget/singleflight guards. The UI exposes a toggle + interval selector.
 AUTO_SCAN_INTERVAL_OPTIONS = [10, 15, 30, 60, 120]   # selectable seconds (>= SCAN_MIN_INTERVAL_SECONDS)
-AUTO_SCAN_DEFAULT_SECONDS = 10                        # default cadence (P3): aggressive ~10s so the P2
-                                                      # 1s poll has fresh data to surface. 10 > the 8s
-                                                      # SCAN_MIN_INTERVAL (no TTL-skip) and a full scan is
+AUTO_SCAN_DEFAULT_SECONDS = 60                        # server-safe default (was 10). 10s hammered CPU
+                                                      # (overheating) and 30h x 10s steady-stated the store to
+                                                      # ~28 GB. 60s is a calm background refresh; an active
+                                                      # user can still pick 10-15s from the selector and manual
+                                                      # "Scan now" is never cadence-gated. The scan scheduler
+                                                      # reads the env override AUTO_SCAN_DEFAULT_SECONDS.
+                                                      # Original note: 10 > the 8s SCAN_MIN_INTERVAL and a scan is
                                                       # ~3-4s of rate-limited GETs, so ticks never overlap;
                                                       # the budget/cooldown guards stay as the safety floor.
 AUTO_SCAN_DEFAULT_ENABLED = True                      # auto-refresh on by default
