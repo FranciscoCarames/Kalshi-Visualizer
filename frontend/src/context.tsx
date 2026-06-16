@@ -10,12 +10,12 @@ import { encodeUrl, decodeUrl } from "./url";
 import { CompareView, OverlapView, LaddersView } from "./panels";
 import { postScan, getScanStatus } from "./scan";
 import { diffSnapshot, edgeMap, type Change } from "./diff";
-import { type FilterState, type BandState, emptyFilters, defaultBand, isDefaultBand, applyBand, passAll, passMembership, tournamentOptions } from "./filters";
+import { type FilterState, type BandState, emptyFilters, defaultBand, isDefaultBand, applyBand, passAll, passMembership, hiddenByFee, tournamentOptions } from "./filters";
 import { loadPrefs, savePrefs, PREFS_VERSION, THEMES, LAYOUT_PRESETS, SPLITS, type Prefs } from "./prefs";
 import { apiFetch } from "./http";
 
 export interface ExtraPanel { title: string; body: ReactNode; }
-export interface Settings { longShort: boolean; showIds: boolean; resolutionCriteria: boolean; tz: string; autoRefresh: string; }
+export interface Settings { longShort: boolean; showIds: boolean; resolutionCriteria: boolean; hideNetNegExec: boolean; tz: string; autoRefresh: string; }
 const AUTO_MS: Record<string, number> = { "10s": 10000, "30s": 30000, off: 0 };
 
 interface TerminalState {
@@ -31,6 +31,7 @@ interface TerminalState {
   hasBaseline: boolean;                                     // a real diff vs a prior snapshot has run (≥2 snaps)
   count: (zone: string, section: string) => number;
   zoneCount: (zone: string) => number;                      // sum of the zone's section counts (band-aware)
+  hiddenByFeeCount: number;                                 // exec rows hidden by the fee filter (honest chip)
   inScope: (zone: string, section: string) => number;       // membership-only count (thresholds not applied)
   runScan: (force: boolean) => void;
   setSetting: <K extends keyof Settings>(k: K, v: Settings[K]) => void;
@@ -96,7 +97,9 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
   const [extra, setExtra] = useState<ExtraPanel | null>(null);
   const [panelsMenuOpen, setPanelsMenuOpen] = useState(false);
   const [scanText, setScanText] = useState<string | null>(null);
-  const [settings, setSettings] = useState<Settings>({ longShort: false, showIds: false, resolutionCriteria: true, tz: "local", autoRefresh: "10s" });
+  // hideNetNegExec defaults ON: executable rows whose TAKER net-of-fees estimate is negative are hidden
+  // (a display-only declutter — never re-buckets; the SETTINGS toggle + the hidden-count chip reveal them).
+  const [settings, setSettings] = useState<Settings>({ longShort: false, showIds: false, resolutionCriteria: true, hideNetNegExec: true, tz: "local", autoRefresh: "10s" });
   // Per-section band overrides (bounded/nearmiss/cheapno). Untouched sections fall back to the engine's
   // default band (from meta.defaults), so bounded max-loss 5¢ and cheap-NO max-loss 15¢ never collide.
   const [bands, setBands] = useState<Record<string, BandState>>({});
@@ -178,7 +181,7 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
     if (p.settings && typeof p.settings === "object") {
       setSettings((s) => {
         const next = { ...s };
-        for (const k of ["longShort", "showIds", "resolutionCriteria"] as const) {
+        for (const k of ["longShort", "showIds", "resolutionCriteria", "hideNetNegExec"] as const) {
           if (typeof p.settings![k] === "boolean") (next as Record<string, unknown>)[k] = p.settings![k];
         }
         if (typeof p.settings!.tz === "string") next.tz = p.settings!.tz as string;
@@ -297,7 +300,8 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
     if (q !== window.location.search) window.history.replaceState(null, "", q || window.location.pathname);
   }, [surface, zone, section, lens, filters]);
   const rows = useMemo(() => {
-    let r = applyBand(rowsFor(opps, zone, section).filter((o) => passAll(o, filters)), section, band);
+    let r = applyBand(rowsFor(opps, zone, section)
+      .filter((o) => passAll(o, filters) && !hiddenByFee(o, zone, settings.hideNetNegExec)), section, band);
     // Bounded-loss Vertical/Calendar split (resolution_mode; missing → "calendar", the engine default).
     if (section === "bounded" && split !== "all") {
       r = r.filter((o) => (String(o.resolution_mode || "calendar")) === split);
@@ -308,16 +312,25 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
       return [...sorted].sort((a, b) => String(a.sub || "").localeCompare(String(b.sub || "")));
     }
     return sorted;
-  }, [opps, zone, section, filters, lens, band, split]);
+  }, [opps, zone, section, filters, lens, band, split, settings.hideNetNegExec]);
   // Tile/tab counts. Actionable stays membership-only (passThreshold auto-passes act/diag — see filters.ts);
   // the speculative band sections (bounded/nearmiss/cheapno) also apply their SecBar band so the badge
-  // matches the rows you'll actually see (e.g. the BOUNDED-RISK count tracks the Max-loss control).
+  // matches the rows you'll actually see (e.g. the BOUNDED-RISK count tracks the Max-loss control). The
+  // hide-fee-negative filter also reduces the exec-zone counts (the hidden total surfaces via hiddenByFeeCount).
   const count = (z: string, s: string) => {
-    const base = rowsFor(opps, z, s).filter((o) => passAll(o, filters));
+    const base = rowsFor(opps, z, s)
+      .filter((o) => passAll(o, filters) && !hiddenByFee(o, z, settings.hideNetNegExec));
     return (s === "bounded" || s === "nearmiss" || s === "cheapno")
       ? applyBand(base, s, bands[s] ?? defaultBand(s, meta?.defaults)).length
       : base.length;
   };
+  // How many exec rows the fee filter is hiding right now (membership-passing) — drives the honest
+  // "N hidden by fee filter" chip so a dropped ACTIONABLE count never implies "no opportunities".
+  const hiddenByFeeCount = useMemo(() =>
+    settings.hideNetNegExec
+      ? opps.filter((o) => o.zone === "exec" && o.net_negative === true && passAll(o, filters)).length
+      : 0,
+  [opps, filters, settings.hideNetNegExec]);
   // Zone badge = the true total across the zone's sections (NOT just the first one), so SPECULATIVE equals
   // the sum of bounded + near-miss + qualifier + cheap-no rather than mirroring the bounded count.
   const zoneCount = (z: string) => SUBTABS[z].reduce((sum, [s]) => sum + count(z, s), 0);
@@ -331,7 +344,7 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
   const value: TerminalState = {
     meta, opps, err, sports, zone, section, lens, filters, part: filters.part, tourOptions,
     sel, colKey, visible, rows, theme, paletteOpen, multi, surface, showNet, itab,
-    extra, panelsMenuOpen, scanText, settings, band, bandIsDefault, split, count, zoneCount, inScope, runScan, setSetting,
+    extra, panelsMenuOpen, scanText, settings, band, bandIsDefault, split, count, zoneCount, hiddenByFeeCount, inScope, runScan, setSetting,
     changeOf: (id) => change.get(id) ?? null, flashIds, hasBaseline: baselineReady,
     setBand, resetBand, setSplit,
     goSection: (z, s) => { setZone(z); setSectionRaw(s); },

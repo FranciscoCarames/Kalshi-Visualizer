@@ -3,7 +3,7 @@
  * verbatim (it never recomputes them). `hide` = present in the chooser but off by default. The blotter
  * renders these as a plain <table> (see Blotter.tsx); the formatters below are reused there. */
 
-export type Fmt = "c" | "pct" | "money" | "x" | "num" | "text" | "qh" | "trad" | "name";
+export type Fmt = "c" | "cmoney" | "pct" | "money" | "x" | "num" | "text" | "qh" | "trad" | "name";
 export interface Col { f: string; l: string; fmt: Fmt; hide?: boolean; tip?: string; }
 
 const C = (f: string, l: string, fmt: Fmt = "num", hide = false, tip = ""): Col => ({ f, l, fmt, hide, tip });
@@ -13,9 +13,9 @@ export const COLS: Record<string, Col[]> = {
   opp: [NAME, C("sport", "Sport", "text"), C("detail", "Detail", "text", true), C("action", "Action plan", "text", true),
     C("edge", "Gross edge ¢", "c", false, "firm child bid − parent ask (or Σ-floor for dutch)"),
     C("roi", "ROI %", "pct"), C("units", "Max units", "num"), C("profit", "Max gross profit", "money"),
-    C("net_edge", "Est. net edge ¢", "c", true, "gross edge − immediate-fill (taker) fee estimate (0.07 × effective multiplier; event override else series; fallback labeled) · resting-order scenario + breakeven in the Inspector · not net P&L · still gross of depth · never ranks"),
+    C("net_edge", "Est. net edge $", "cmoney", true, "PER-UNIT net edge in $ (gross edge − immediate-fill/taker fee estimate; 0.07 × effective multiplier; event override else series; fallback labeled) · distinct from the total 'Est. net max profit' · resting-order scenario + breakeven in the Inspector · not net P&L · still gross of depth · never ranks"),
     C("net_profit", "Est. net max profit", "money", true, "immediate-fill (taker) estimate only · not net P&L"),
-    C("fees", "Est. fees ¢", "c", true, "immediate-fill (taker) estimate · event override → series → fallback · maker/resting scenario + breakeven in the Inspector · conservative pre-trade estimate"),
+    C("fees", "Est. fees $", "cmoney", true, "immediate-fill (taker) estimate in $ · event override → series → fallback · maker/resting scenario + breakeven in the Inspector · conservative pre-trade estimate"),
     C("tradable", "Tradable", "trad"), C("caveat", "Caveat", "text")],
   risk: [C("signal", "Signal", "text"), C("flags", "Flags", "text"), C("resolution", "Kind", "text"),
     C("cheap", "Cheap vs peers", "text"), C("sport", "Sport", "text"), NAME, C("detail", "Detail", "text", true),
@@ -65,12 +65,22 @@ export function colKeyOf(zone: string, section: string): string {
 
 const n1 = (v: number) => (Number.isInteger(v) ? String(v) : v.toFixed(1));
 const num = (v: unknown) => (typeof v === "number" && !isNaN(v) ? v : null);
+
+/** A cents amount rendered as display dollars: "$1.75", "-$0.12", and "$0.00" (never "-$0.00").
+ *  Shared by the `cmoney` column formatter AND the Inspector fee block so the rule lives in one place. */
+export function centsToDollars(cents: number): string {
+  const d = cents / 100;
+  const s = d.toFixed(2);
+  if (Object.is(d, 0) || s === "0.00" || s === "-0.00") return "$0.00";
+  return d < 0 ? "-$" + Math.abs(d).toFixed(2) : "$" + s;
+}
 export function fmtVal(v: unknown, fmt: Fmt): string {
   const n = num(v);
   if (fmt === "text" || fmt === "name" || fmt === "trad" || fmt === "qh") return v == null ? "—" : String(v);
   if (n === null) return "—";
   switch (fmt) {
     case "c": return Math.round(n) + "¢";
+    case "cmoney": return centsToDollars(n);   // cents value -> "$1.75" / "-$0.12" (display dollars)
     case "pct": return n1(n) + "%";
     case "money": return "$" + n.toFixed(2);
     case "x": return n1(n) + "×";

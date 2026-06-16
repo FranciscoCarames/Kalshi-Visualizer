@@ -4,6 +4,7 @@
 import { useEffect, useState } from "react";
 import type { FeedRow } from "./feed";
 import { rankWhy } from "./lens";
+import { centsToDollars } from "./columns";
 import { detailKey, loadDetail, loadLadder, loadPayoff, type DetailBundle, type LadderData, type PayoffData } from "./detail";
 import { PayoffChart, LadderChart } from "./Charts";
 
@@ -31,18 +32,21 @@ function FeeScenarios({ row }: { row: FeedRow }) {
     fallback: "general-rate fallback (no live fee data)", flat: "flat fee — not estimated",
     unknown: "unknown fee type — incomplete",
   };
+  // Fee totals + net edge shown in DOLLARS (consistent with Cost/Max-profit), reusing the shared
+  // cents->$ rule. Breakeven + per-leg fees stay in ¢ (per-unit price quantities, like "edge").
+  const dol = (c: number | null | undefined) => { const n = num(c); return n == null ? "—" : centsToDollars(n); };
   const takerLine = row.taker_complete === false
     ? <span className="v amber">incomplete — flat/unknown leg</span>
-    : <span className="v">{cents(row.fees_taker ?? row.fees)}</span>;
+    : <span className="v">{dol(row.fees_taker ?? row.fees)}</span>;
   const makerLine = row.maker_complete === false
     ? <span className="v amber">incomplete — flat/unknown leg</span>
-    : <span className="v">{cents(row.fees_maker)}</span>;
+    : <span className="v">{dol(row.fees_maker)}</span>;
   return (
     <>
       <div className="sect">FEES — IMMEDIATE-FILL (TAKER)</div>
       <div className="kv">
         <span className="l">Est. fees</span>{takerLine}
-        <span className="l">Est. net edge</span><span className="v">{row.taker_complete === false ? "—" : cents(row.net_edge)}</span>
+        <span className="l">Est. net edge / unit</span><span className="v">{row.taker_complete === false ? "—" : dol(row.net_edge)}</span>
         <span className="l">Breakeven gross gap</span>
         <span className="v">{row.fee_breakeven == null ? "—" : cents(row.fee_breakeven) + (row.fee_breakeven_approx ? " (approx)" : "")}</span>
       </div>
@@ -51,7 +55,7 @@ function FeeScenarios({ row }: { row: FeedRow }) {
       <div className="sect">FEES — RESTING-ORDER (MAKER)</div>
       <div className="kv">
         <span className="l">Est. fees</span>{makerLine}
-        <span className="l">Est. net edge</span><span className="v">{row.maker_complete === false ? "—" : cents(row.net_edge_maker)}</span>
+        <span className="l">Est. net edge / unit</span><span className="v">{row.maker_complete === false ? "—" : dol(row.net_edge_maker)}</span>
       </div>
       <div className="note dim" style={{ marginTop: 2 }}>
         Resting-order scenario: assumes posted orders later fill; queue position, fill probability, and edge decay are not modeled.
@@ -83,7 +87,7 @@ function FeeScenarios({ row }: { row: FeedRow }) {
 export default function Inspector({ row, lens, snapshotId, showNet, longShort }:
   { row: FeedRow | null; lens: string; snapshotId: number | null; showNet: boolean; longShort?: boolean }) {
   const [basis, setBasis] = useState(1);
-  if (!row) return <div className="empty">Click a blotter row to load the trade card — legs · economics · evidence.</div>;
+  if (!row) return <div className="empty">Click a scanner row to load the trade card — legs · economics · evidence.</div>;
   const cv = (c: unknown) => { const n = num(c); return n == null ? "—" : basis === 100 ? "$" + (n / 100).toFixed(2) : Math.round(n) + "¢"; };
   const z = ZB[row.zone] ?? ZB.diag;
   const isSpec = row.zone === "spec";
@@ -201,7 +205,7 @@ export function Detail({ row, showIds, showRules = true }: { row: FeedRow | null
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [row?.id]);
 
-  if (!row) return <div className="empty">Click a blotter row.</div>;
+  if (!row) return <div className="empty">Click a scanner row.</div>;
   const z = ZB[row.zone] ?? ZB.diag;
   const hasCond = row.cond_child != null || row.cond_child_firm != null;
   return (
@@ -290,7 +294,7 @@ export function Detail({ row, showIds, showRules = true }: { row: FeedRow | null
 }
 
 export function Formulas({ row }: { row: FeedRow | null }) {
-  if (!row) return <div className="empty">Click a blotter row.</div>;
+  if (!row) return <div className="empty">Click a scanner row.</div>;
   const z = ZB[row.zone] ?? ZB.diag;
   return (
     <div className="des">

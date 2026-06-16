@@ -152,6 +152,7 @@ function SettingsMenu({ close }: { close: () => void }) {
     <div className="menu on" style={{ right: 6, top: 28 }} onMouseLeave={close}>
       <div className="mh">SETTINGS</div>
       <label><input type="checkbox" checked={t.showNet} onChange={(e) => t.setShowNet(e.target.checked)} />Show net of fees (est.)</label>
+      <label><input type="checkbox" checked={s.hideNetNegExec} onChange={(e) => t.setSetting("hideNetNegExec", e.target.checked)} />Hide fee-negative (taker est.)</label>
       <label><input type="checkbox" checked={big} onChange={(e) => { setBig(e.target.checked); document.body.classList.toggle("big", e.target.checked); }} />Larger text</label>
       <label><input type="checkbox" checked={s.showIds} onChange={(e) => t.setSetting("showIds", e.target.checked)} />Show IDs &amp; codes</label>
       <label><input type="checkbox" checked={s.resolutionCriteria} onChange={(e) => t.setSetting("resolutionCriteria", e.target.checked)} />Resolution criteria</label>
@@ -298,7 +299,7 @@ function Shell() {
           <span className="dim" style={{ fontSize: 9 }}>LAYOUT</span>
           <select className="in" defaultValue="default" onChange={(e) => t.applyLayout(e.target.value)}>
             <option value="default">Default</option><option value="triage">Triage</option><option value="inspect">Inspect</option>
-            <option value="research">Research</option><option value="blotterfull">Blotter full</option>
+            <option value="research">Research</option><option value="blotterfull">Scanner full</option>
           </select>
           <button className="tbtn" onClick={() => t.setPanelsMenuOpen(true)}>＋ ADD ▾</button>
           <button className="tbtn" onClick={() => t.setPanelsMenuOpen(true)}>▦ ELEMENTS ▾</button>
@@ -325,7 +326,14 @@ function Shell() {
         <label className="chk"><input type="checkbox" checked={t.filters.tradableOnly} onChange={(e) => t.setTradableOnly(e.target.checked)} />Tradable-only</label>
         <button className="tbtn" aria-label="Export current view as CSV" onClick={t.exportView}>⬇ CSV</button>
         <button className="tbtn" aria-label="Export filtered snapshot as ZIP" title="Export filtered snapshot (opportunities + evidence frames + manifest) as ZIP" onClick={t.exportZip}>⬇ ZIP</button>
-        <span className="sp">{t.rows.length.toLocaleString()} shown</span><span className="clr" onClick={t.clearFilters}>clear</span>
+        <span className="sp">{t.rows.length.toLocaleString()} shown</span>
+        {t.hiddenByFeeCount > 0 ? (
+          <span className="clr" title="Executable rows whose taker net-of-fees estimate is negative are hidden — click to show"
+                onClick={() => t.setSetting("hideNetNegExec", false)}>
+            {t.hiddenByFeeCount} hidden by fee filter · show
+          </span>
+        ) : null}
+        <span className="clr" onClick={t.clearFilters}>clear</span>
       </div>
       <SecBar />
       {showBanner ? (

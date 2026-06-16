@@ -7,7 +7,7 @@ import { ZONES, SUBTABS } from "./feed";
 
 interface PItem { cat: string; k: string; d?: string; tag: string; run: () => void; }
 const PRESETS: [string, string][] = [
-  ["default", "Default"], ["triage", "Triage"], ["inspect", "Inspect"], ["research", "Research"], ["blotterfull", "Blotter full"],
+  ["default", "Default"], ["triage", "Triage"], ["inspect", "Inspect"], ["research", "Research"], ["blotterfull", "Scanner full"],
 ];
 
 export default function Palette() {

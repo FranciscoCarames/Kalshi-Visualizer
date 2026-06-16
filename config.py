@@ -315,7 +315,7 @@ PREFS_LAYOUT_PRESETS = ("default", "triage", "inspect", "research", "blotterfull
 PREFS_SPLITS = ("all", "vertical", "calendar")
 PREFS_AUTOREFRESH = ("10s", "30s", "off")
 PREFS_COL_KEYS = ("opp", "risk", "nm", "no", "qs", "diag")   # colKeyOf() catalogs in columns.ts
-PREFS_SETTINGS_BOOL = ("longShort", "showIds", "resolutionCriteria")
+PREFS_SETTINGS_BOOL = ("longShort", "showIds", "resolutionCriteria", "hideNetNegExec")
 # Authenticated-action rate limits (per user) — register uses the login (ip,username) limiter; these guard
 # the post-login state-changers so a debounce burst or a script can't hammer them.
 AUTH_ACTION_LIMITS = {                          # action -> (max_events, window_seconds)

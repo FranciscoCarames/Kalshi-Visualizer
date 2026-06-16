@@ -290,6 +290,27 @@ def test_kalshi_fee_c_effective_coefficient_is_base_times_multiplier():
     assert vm.kalshi_fee_c(100, 50, None) == 0                                    # None coeff -> 0
 
 
+def test_kalshi_fee_c_matches_published_schedule_examples():
+    """Formula-estimate check vs Kalshi's PUBLISHED schedule for cent-priced, whole-contract sizes (NOT
+    exact realized exchange fee, which adds centicent rounding / rebates / accumulator / fragmentation)."""
+    tk = vm.config.FEE_TAKER_BASE_COEFF       # 0.07
+    mk = vm.config.FEE_MAKER_BASE_COEFF       # 0.0175
+    # taker worked examples
+    assert vm.kalshi_fee_c(100, 50, tk) == 175      # $1.75 at the 50c midpoint
+    assert vm.kalshi_fee_c(100, 10, tk) == 63       # $0.63 at 10c
+    assert vm.kalshi_fee_c(100, 90, tk) == 63       # $0.63 at 90c (symmetry)
+    assert vm.kalshi_fee_c(1, 50, tk) == 2          # ceil(1.75) -> 2 (rounds UP per fill)
+    # maker worked example
+    assert vm.kalshi_fee_c(100, 50, mk) == 44       # ceil(43.75) -> 44 (~0.44c/contract)
+    # properties: symmetry, endpoints zero, monotonic increase toward 50c, scales with the multiplier
+    for p in (5, 17, 33, 48):
+        assert vm.kalshi_fee_c(100, p, tk) == vm.kalshi_fee_c(100, 100 - p, tk)
+    assert vm.kalshi_fee_c(100, 0, tk) == 0 and vm.kalshi_fee_c(100, 100, tk) == 0
+    seq = [vm.kalshi_fee_c(1000, p, tk) for p in (10, 20, 30, 40, 50)]
+    assert seq == sorted(seq)                       # rises toward the 50c peak
+    assert vm.kalshi_fee_c(1000, 50, tk * 0.5) == vm.kalshi_fee_c(1000, 50, tk) // 2   # half multiplier
+
+
 def test_effective_coeffs_by_fee_type():
     qwmf = vm.effective_coeffs("quadratic_with_maker_fees", 1)
     assert qwmf["estimable"] and qwmf["status"] == "complete"

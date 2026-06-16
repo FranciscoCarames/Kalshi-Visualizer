@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { passAll, passThreshold, applyBand, emptyFilters, emptyBand, defaultBand, isDefaultBand, type FilterState, type BandState } from "./filters";
+import { passAll, passThreshold, applyBand, hiddenByFee, emptyFilters, emptyBand, defaultBand, isDefaultBand, type FilterState, type BandState } from "./filters";
 import type { BandDefaults, FeedRow } from "./feed";
 
 const row = (o: Partial<FeedRow>): FeedRow =>
@@ -19,6 +19,21 @@ describe("two-pass filter (membership vs threshold)", () => {
     const f: FilterState = { ...emptyFilters(), sports: new Set(["NBA"]) };
     expect(passAll(row({ section: "act", zone: "exec", sport: "NBA" }), f)).toBe(true);
     expect(passAll(row({ section: "act", zone: "exec", sport: "NFL" }), f)).toBe(false);
+  });
+});
+
+describe("hiddenByFee — display-only hide of fee-negative executables", () => {
+  it("hides ONLY exec-zone net_negative rows when on; spares others", () => {
+    const on = true;
+    expect(hiddenByFee(row({ zone: "exec", net_negative: true }), "exec", on)).toBe(true);
+    expect(hiddenByFee(row({ zone: "exec", net_negative: false }), "exec", on)).toBe(false);
+    // incomplete/unknown fee estimate => net_negative undefined => never hidden
+    expect(hiddenByFee(row({ zone: "exec" }), "exec", on)).toBe(false);
+    // not the exec zone => never hidden (speculative/diagnostic)
+    expect(hiddenByFee(row({ zone: "spec", net_negative: true }), "spec", on)).toBe(false);
+  });
+  it("toggle off shows everything", () => {
+    expect(hiddenByFee(row({ zone: "exec", net_negative: true }), "exec", false)).toBe(false);
   });
 });
 

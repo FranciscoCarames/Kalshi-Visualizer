@@ -45,6 +45,15 @@ export function passAll(o: FeedRow, f: FilterState): boolean {
   return passMembership(o, f) && passThreshold(o, f);
 }
 
+/* DISPLAY-ONLY "hide fee-negative executables" predicate (opt-out via the SETTINGS toggle). True ⇒ HIDE.
+ * Keys off the feed's `net_negative` flag, which is TAKER-basis, set ONLY on `actionable` rows, and ONLY
+ * when the (taker) fee estimate is complete — so Review/Blocked and incomplete/flat/unknown-fee rows are
+ * never hidden. A pure view filter: the row stays in the feed (the toggle reveals it); nothing re-buckets.
+ * Centralized so the `rows` memo AND the tile/tab `count()` can't drift. */
+export function hiddenByFee(o: FeedRow, zone: string, on: boolean): boolean {
+  return on && zone === "exec" && o.net_negative === true;
+}
+
 /** Filtered rows for the current (zone, section) — a pure VIEW narrowing, never a re-bucket. */
 export function filteredRows(opps: FeedRow[], zone: string, section: string, f: FilterState): FeedRow[] {
   return rowsFor(opps, zone, section).filter((o) => passAll(o, f));

@@ -213,6 +213,19 @@ def test_sanitize_rejects_non_object(tmp_path):
         auth_store.sanitize_prefs(["not", "a", "dict"])
 
 
+def test_hide_net_neg_exec_setting_persists(tmp_path):
+    """The display-only 'hide fee-negative executable' toggle must round-trip through the server sanitizer
+    (it's in config.PREFS_SETTINGS_BOOL); an unknown bool key is still dropped."""
+    db = str(tmp_path / "auth.db")
+    uid = auth_store.create_user("u", "pw-correct-horse", now=1.0, db_path=db)
+    auth_store.set_preferences(uid, {"settings": {"hideNetNegExec": False, "notASetting": True}},
+                               now=2.0, db_path=db)
+    got = auth_store.get_preferences(uid, db_path=db)
+    assert got["settings"] == {"hideNetNegExec": False}    # kept; unknown bool dropped
+    clean = auth_store.sanitize_prefs({"settings": {"hideNetNegExec": True}})
+    assert clean["settings"] == {"hideNetNegExec": True}
+
+
 def test_preferences_size_cap(tmp_path):
     db = _db(tmp_path)
     uid = auth_store.create_user("jack", "pw-correct-horse", now=1.0, db_path=db)
