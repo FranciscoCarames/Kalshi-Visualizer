@@ -20,6 +20,7 @@ from typing import Any
 import requests
 from requests.adapters import HTTPAdapter
 
+import data
 import sports
 from config import (
     BACKOFF_BASE,
@@ -36,6 +37,15 @@ from config import (
 
 class KalshiError(RuntimeError):
     """Raised when the Kalshi API cannot be reached or returns an error response."""
+
+
+def _scrub_body(text: str) -> str:
+    """Sanitize an upstream error body before it lands in an exception / `last_scan_error` surface. Control
+    chars + newlines are collapsed to single spaces (so an HTML/Cloudflare page can't inject multi-line
+    structure into logs or the OPS view) and the result is capped short. Defense-in-depth: the endpoints
+    that expose `last_scan_error` (`/metrics`, `/coverage`, `/readyz`, `/scan/status`) are auth-gated too."""
+    collapsed = " ".join((text or "").split())
+    return collapsed[:120]
 
 
 _session = requests.Session()
@@ -154,19 +164,21 @@ def _get(path: str, params: dict[str, Any]) -> dict[str, Any]:
             resp = _session.get(url, params=params, timeout=REQUEST_TIMEOUT)
         except requests.RequestException as exc:
             last_error = exc or KalshiError("network error")
-            _delay = _backoff_seconds(None, attempt)
-            _count_retry(_delay)
-            time.sleep(_delay)
+            if attempt < MAX_RETRIES - 1:                  # don't sleep after the FINAL attempt — we raise next
+                _delay = _backoff_seconds(None, attempt)
+                _count_retry(_delay)                       # main: retry/backoff instrumentation
+                time.sleep(_delay)
             continue
 
         if resp.status_code == 429 or resp.status_code >= 500:
             last_error = KalshiError(f"HTTP {resp.status_code} from {url}")
-            _delay = _backoff_seconds(resp, attempt)
-            _count_retry(_delay)
-            time.sleep(_delay)
+            if attempt < MAX_RETRIES - 1:                  # ditto: a final 429/5xx raises, no point sleeping
+                _delay = _backoff_seconds(resp, attempt)
+                _count_retry(_delay)                       # main: retry/backoff instrumentation
+                time.sleep(_delay)
             continue
         if resp.status_code >= 400:
-            raise KalshiError(f"HTTP {resp.status_code} from {url}: {resp.text[:200]}")
+            raise KalshiError(f"HTTP {resp.status_code} from {url}: {_scrub_body(resp.text)}")
         try:
             return resp.json()
         except ValueError as exc:  # non-JSON 200 body — surface as KalshiError, not a raw decode error
@@ -217,6 +229,45 @@ def get_events(series_ticker: str, status: str = "open") -> list[dict[str, Any]]
     )
 
 
+def _parse_book_side(levels: Any) -> list[list[int]]:
+    """Parse one side of the ``orderbook_fp`` book ([[price$, size], …]) into ``[[price_c, size], …]`` —
+    fixed-point dollar STRINGS → exact integer cents via ``data.to_cents`` (NEVER float). A malformed rung
+    (bad price, non-numeric size, non-positive size) is SKIPPED, not raised; a non-list yields []. Kalshi
+    returns levels ascending (best bid last); order is preserved verbatim for the caller to interpret."""
+    out: list[list[int]] = []
+    if not isinstance(levels, list):
+        return out
+    for lvl in levels:
+        if not isinstance(lvl, (list, tuple)) or len(lvl) < 2:
+            continue
+        price_c = data.to_cents(lvl[0])
+        try:
+            size = int(round(float(lvl[1])))
+        except (TypeError, ValueError):
+            continue
+        if price_c is None or size <= 0:
+            continue
+        out.append([price_c, size])
+    return out
+
+
+def get_orderbook(ticker: str, depth: int = 10) -> dict[str, Any]:
+    """Fetch one market's resting order book (read-only market data; no auth required, like /events).
+
+    Endpoint: ``GET /markets/{ticker}/orderbook?depth=N`` → ``{"orderbook_fp": {"yes_dollars":
+    [[price$,size]…], "no_dollars": [[price$,size]…]}}`` — resting BIDS on each side, prices as fixed-point
+    dollar strings, ascending (best bid last). Returns ``{"ticker", "yes": [[price_c,size]…],
+    "no": [[price_c,size]…]}`` with prices in integer cents. An empty/closed book yields empty sides
+    (honest empty — never fabricated). Network/4xx/5xx surface as ``KalshiError`` (the caller degrades)."""
+    payload = _get(f"/markets/{ticker}/orderbook", {"depth": depth})
+    ob = (payload or {}).get("orderbook_fp") or {}
+    return {
+        "ticker": ticker,
+        "yes": _parse_book_side(ob.get("yes_dollars")),
+        "no": _parse_book_side(ob.get("no_dollars")),
+    }
+
+
 def discover_series_for_sport(cfg: sports.SportConfig) -> list[str]:
     """Return the tickers of all series worth scanning for one sport.
 
@@ -247,34 +298,38 @@ def discover_tennis_series() -> list[str]:
     return discover_series_for_sport(sports.TENNIS)
 
 
-# --- Series-title cache (perf/parallel-sport-fetch) ----------------------------------
-# Titles only build slugged web URLs and change rarely, so cache them to skip a /series GET on every
-# scan. Thread-safe (read under the parallel per-sport fetch). Non-empty titles live ~24h; an empty
-# result (miss/transient failure) lives only ~60s so it self-heals. Cache NEVER affects identity,
-# pricing, or detection — only URL building. `reset_title_cache()` is the test/refresh hook.
+# --- Series-meta cache (titles + DISPLAY-ONLY fee metadata) --------------------------
+# The /series/{ticker} GET (made to build slugged web URLs) also returns `fee_type` + `fee_multiplier`
+# (live-confirmed 2026-06-16), so we cache the whole small meta dict and serve both titles and fee rates
+# from one fetch — zero extra requests for fee data. Thread-safe (read under the parallel per-sport
+# fetch). A successful fetch lives ~24h; an empty/failed one lives ~60s so it self-heals. The cache NEVER
+# affects identity, pricing, or detection — titles build URLs and fees are display-only.
+# `reset_title_cache()` is the test/refresh hook.
 TITLE_TTL_OK_SECONDS = 24 * 3600
 TITLE_TTL_MISS_SECONDS = 60
-_title_cache: dict[str, tuple[float, str]] = {}   # UPPER ticker -> (expiry_monotonic, title)
+# UPPER ticker -> (expiry_monotonic, {title, fee_type, fee_multiplier}). fee_type/fee_multiplier are None
+# when the series payload omits them (the fee resolver then marks the estimate incomplete — never assumes).
+_title_cache: dict[str, tuple[float, dict[str, Any]]] = {}
 _title_lock = threading.Lock()
 
 
 def reset_title_cache() -> None:
-    """Drop all cached series titles (test hook / forced refresh)."""
+    """Drop all cached series meta (test hook / forced refresh)."""
     with _title_lock:
         _title_cache.clear()
 
 
-def get_series_titles(tickers: list[str], max_workers: int = CONCURRENCY) -> dict[str, str]:
-    """Fetch the human title for each series (used to build slugged Kalshi web URLs).
+def get_series_meta(tickers: list[str], max_workers: int = CONCURRENCY) -> dict[str, dict[str, Any]]:
+    """Fetch ``{UPPER_ticker: {"title", "fee_type", "fee_multiplier"}}`` for each series in ONE GET each.
 
-    Returns ``{ticker: title}``. A series whose metadata can't be fetched degrades to an empty
-    string (the URL builder then falls back to the series page) — this never raises, because a
-    missing title must not break the data load. Titles are cached with a TTL (see above) so repeat
-    scans skip the /series round-trip.
+    `title` builds slugged web URLs; `fee_type`/`fee_multiplier` drive the DISPLAY-ONLY fee estimate. A
+    series whose metadata can't be fetched degrades to an empty dict (title "", fees None) — this never
+    raises, because a missing title/fee must not break the data load. Cached with a TTL so repeat scans
+    skip the round-trip.
     """
-    titles: dict[str, str] = {}
+    out: dict[str, dict[str, Any]] = {}
 
-    def _title(ticker: str) -> str:
+    def _meta(ticker: str) -> dict[str, Any]:
         key = ticker.upper()
         now = time.monotonic()
         with _title_lock:
@@ -284,20 +339,109 @@ def get_series_titles(tickers: list[str], max_workers: int = CONCURRENCY) -> dic
         payload = _get(f"/series/{ticker}", {})
         series = payload.get("series") or payload
         title = str(series.get("title") or "")
+        meta = {
+            "title": title,
+            "fee_type": series.get("fee_type"),            # None when absent -> resolver marks incomplete
+            "fee_multiplier": series.get("fee_multiplier"),
+        }
         ttl = TITLE_TTL_OK_SECONDS if title else TITLE_TTL_MISS_SECONDS
         with _title_lock:
-            _title_cache[key] = (now + ttl, title)
-        return title
+            _title_cache[key] = (now + ttl, meta)
+        return meta
 
     with ThreadPoolExecutor(max_workers=max_workers) as pool:
-        futures = {pool.submit(_title, t): t for t in tickers}
+        futures = {pool.submit(_meta, t): t for t in tickers}
         for future in as_completed(futures):
             ticker = futures[future]
             try:
-                titles[ticker] = future.result()
-            except Exception:  # noqa: BLE001 - a missing title is non-fatal (URL falls back)
-                titles[ticker] = ""
-    return titles
+                out[ticker] = future.result()
+            except Exception:  # noqa: BLE001 - missing meta is non-fatal (URL + fee fall back)
+                out[ticker] = {"title": "", "fee_type": None, "fee_multiplier": None}
+    return out
+
+
+def get_series_titles(tickers: list[str], max_workers: int = CONCURRENCY) -> dict[str, str]:
+    """Back-compat wrapper over :func:`get_series_meta` returning just ``{ticker: title}``."""
+    return {t: m.get("title", "") for t, m in get_series_meta(tickers, max_workers).items()}
+
+
+# --- Event-level fee overrides (DISPLAY-ONLY) ----------------------------------------
+# Event fees override the parent series fee. The event OBJECT does NOT expose the override fields
+# (live-confirmed: absent even with with_nested_markets); the only source is GET /events/fee_changes
+# (currently returns []). ONE unfiltered, page-capped sweep builds {event_ticker: latest override} and is
+# fail-closed: any error/cap -> {} so a scan never breaks and the UI falls back to series-level + a label.
+_fee_override_cache: dict[str, Any] = {}          # {"expiry": monotonic, "map": {...}, "status": str}
+_fee_override_lock = threading.Lock()
+
+
+def reset_fee_override_cache() -> None:
+    """Drop the cached event-fee-override sweep (test hook / forced refresh)."""
+    with _fee_override_lock:
+        _fee_override_cache.clear()
+
+
+def _pick_active_override(changes: list[dict[str, Any]], now_iso: str) -> dict[str, Any]:
+    """From a single event's fee-change records, pick the one with the latest scheduled_ts <= now."""
+    active = [c for c in changes if str(c.get("scheduled_ts") or "") <= now_iso]
+    if not active:
+        return {}
+    latest = max(active, key=lambda c: str(c.get("scheduled_ts") or ""))
+    return {
+        "fee_type_override": latest.get("fee_type_override"),
+        "fee_multiplier_override": latest.get("fee_multiplier_override"),
+        "scheduled_ts": latest.get("scheduled_ts"),
+    }
+
+
+def get_event_fee_overrides(max_pages: int | None = None) -> tuple[dict[str, dict[str, Any]], str]:
+    """Sweep ``GET /events/fee_changes`` and return ``({UPPER_event_ticker: active_override}, status)``.
+
+    ONE unfiltered paginated sweep, page-capped (``config.FEE_EVENT_OVERRIDE_MAX_PAGES``); per event keeps
+    the latest change with ``scheduled_ts <= now``. ``status`` ∈ {"ok", "capped", "failed", "disabled"}.
+    Fail-closed: on any error or cap-hit the map is ``{}`` and the caller uses series-level fees + a label.
+    TTL-cached like series meta.
+    """
+    import config as _cfg
+    if not getattr(_cfg, "FEE_EVENT_OVERRIDE_FETCH_ENABLED", True):
+        return {}, "disabled"
+    cap = max_pages if max_pages is not None else getattr(_cfg, "FEE_EVENT_OVERRIDE_MAX_PAGES", 10)
+    now = time.monotonic()
+    with _fee_override_lock:
+        cached = _fee_override_cache.get("map")
+        if cached is not None and _fee_override_cache.get("expiry", 0) > now:
+            return cached, _fee_override_cache.get("status", "ok")
+
+    by_event: dict[str, list[dict[str, Any]]] = {}
+    status = "ok"
+    try:
+        cursor: str | None = None
+        for _ in range(cap):
+            params: dict[str, Any] = {"limit": 1000}
+            if cursor:
+                params["cursor"] = cursor
+            payload = _get("/events/fee_changes", params)
+            for rec in payload.get("event_fee_changes", []) or []:
+                et = str(rec.get("event_ticker") or "").upper()
+                if et:
+                    by_event.setdefault(et, []).append(rec)
+            cursor = payload.get("cursor") or None
+            if not cursor:
+                break
+        else:
+            if cursor:                              # cap hit with a cursor still pending -> fail closed
+                status = "capped"
+                by_event = {}
+    except Exception:  # noqa: BLE001 - an override fetch failure must never break a scan
+        status = "failed"
+        by_event = {}
+
+    now_iso = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    result = {et: _pick_active_override(recs, now_iso) for et, recs in by_event.items()}
+    result = {et: ov for et, ov in result.items() if ov}      # drop events with no active change
+    ttl = TITLE_TTL_OK_SECONDS if status == "ok" else TITLE_TTL_MISS_SECONDS
+    with _fee_override_lock:
+        _fee_override_cache.update({"expiry": now + ttl, "map": result, "status": status})
+    return result, status
 
 
 def get_events_for_series(

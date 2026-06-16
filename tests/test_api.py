@@ -319,3 +319,21 @@ def test_scan_status_not_gated(client):
     c, _ = client
     os.environ["SCAN_TOKEN"] = "s3cret"
     assert c.get("/scan/status").status_code == 200     # read-only status stays open
+
+
+def test_telemetry_computed_once_per_snapshot(client, monkeypatch):
+    # B6: the per-snapshot telemetry cache (now lock-guarded) computes the heavy liquidity_panel at most
+    # once per snapshot — a second poll is served from cache.
+    c, db = client
+    store.write_snapshot("2026-06-03 12:00:00 UTC", [op("a", bucket="actionable")], db_path=db)
+    api._telemetry_cache["snapshot_id"], api._telemetry_cache["data"] = object(), None   # isolate the global
+    from webui import viewmodel
+    calls = []
+    real = viewmodel.liquidity_panel
+    monkeypatch.setattr(viewmodel, "liquidity_panel", lambda contracts: (calls.append(1), real(contracts))[1])
+    r1 = c.get("/api/terminal/telemetry")
+    r2 = c.get("/api/terminal/telemetry")
+    assert r1.status_code == 200 and r2.status_code == 200
+    assert r1.json()["snapshot_id"] == r2.json()["snapshot_id"]
+    assert len(calls) == 1                       # second poll hit the cache — computed once
+    api._telemetry_cache["snapshot_id"], api._telemetry_cache["data"] = object(), None

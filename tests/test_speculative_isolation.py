@@ -108,6 +108,24 @@ def test_peer_cheapness_ignores_phase1_likelihood_fields():
         assert (b.get("cheap_cost"), b.get("cheap_ratio")) == (a.get("cheap_cost"), a.get("cheap_ratio"))
 
 
+def test_terminal_feed_is_a_readonly_view_not_a_second_engine():
+    """The Terminal Pro feed (webui.feed) re-presents the engine rows for the SPA. It must NOT perturb the
+    executable view (read-only) and must copy bucket/status verbatim — never re-derive them."""
+    import copy
+
+    from webui import feed
+    opps = [_exec_row("a", "EXECUTABLE_VIOLATION", gap=5),
+            _exec_row("b", "EXECUTABLE_VIOLATION", bucket="blocked", tradable_now="No", gap=9),
+            _exec_row("c", "EXECUTABLE_VIOLATION", gap=2)]
+    before = copy.deepcopy(opps)
+    f = feed.feed_from_snapshot({"snapshot_id": 1, "fetched_at": "t", "opportunities": opps, "meta": {}})
+    assert_executable_unchanged(before, opps)          # the feed never mutates the engine rows
+    by = {r["id"]: r for r in f["opps"]}
+    for o in opps:                                      # bucket/status are COPIED, not recomputed
+        assert by[o["opportunity_id"]]["bucket"] == o["bucket"]
+        assert by[o["opportunity_id"]]["status"] == o["status"]
+
+
 def test_speculative_zone_basis_is_conservative():
     txt = glossary.SPECULATIVE_ZONE_BASIS.lower()
     assert "not actionable" in txt and "can lose money" in txt and "uncalibrated" in txt

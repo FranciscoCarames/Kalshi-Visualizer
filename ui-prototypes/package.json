@@ -1,0 +1,16 @@
+{
+  "name": "terminal-pro-bakeoff",
+  "private": true,
+  "version": "0.0.0",
+  "workspaces": [
+    "shared",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev:react":  "npm -w @bakeoff/react run dev",
+    "dev:solid":  "npm -w @bakeoff/solid run dev",
+    "dev:svelte": "npm -w @bakeoff/svelte run dev",
+    "dev:vue":    "npm -w @bakeoff/vue run dev",
+    "dev:canvas": "npm -w @bakeoff/react-canvas run dev"
+  }
+}

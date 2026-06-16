@@ -17,13 +17,26 @@ from typing import Any, Iterable
 
 from scanner import UNIFIED_COLUMNS  # stable column order for opportunities.csv
 
+# Leading characters a spreadsheet (Excel/Sheets/LibreOffice) may interpret as a FORMULA when it opens a
+# CSV. A Kalshi-supplied string (player/contract/rules text) that starts with one of these could execute
+# on open → CSV formula injection. We neutralize STRING cells by prefixing a single quote (numbers are left
+# alone, so a negative value like -5 is unaffected). See docs/AUTH.md.
+_CSV_FORMULA_PREFIXES = ("=", "+", "-", "@", "\t", "\r")
+
+
+def _csv_guard(s: str) -> str:
+    return "'" + s if s and s[0] in _CSV_FORMULA_PREFIXES else s
+
 
 def _cell(v: Any) -> Any:
-    """A CSV-safe scalar: NaN/None → empty; list/dict/tuple → compact JSON string; else as-is."""
+    """A CSV-safe scalar: NaN/None → empty; list/dict/tuple → compact JSON string; a string starting with a
+    spreadsheet formula trigger is quote-prefixed (formula-injection defense); else as-is."""
     if v is None or (isinstance(v, float) and v != v):
         return ""
     if isinstance(v, (list, dict, tuple)):
-        return json.dumps(v, default=str)
+        return _csv_guard(json.dumps(v, default=str))
+    if isinstance(v, str):
+        return _csv_guard(v)
     return v
 
 

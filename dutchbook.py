@@ -913,7 +913,11 @@ def find_dutch_books(rows: list[dict[str, Any]],
     n-way MECE book overpriced by up to that many cents) — strict findings still win per event. It is NOT
     applied to ``_detect_field`` (a winner-field overround is convex on a subset, not a flat guaranteed
     loss, so the near-miss framing would be wrong). 0 (default) → strict-only, byte-for-byte unchanged."""
-    groups: dict[str, list[dict[str, Any]]] = {}
+    # Two-way rows are keyed by (event_ticker, KIND) — not event_ticker alone — so a `match`-family row and
+    # a `game`-family row that happen to share an event ticker can never land in one group and have dispatch
+    # pick a path off an arbitrary markets[0]. Homogeneous for every current sport (no behaviour change);
+    # defensive against a future shape where the tie-capable fixed-sum proof must not be bypassed.
+    groups: dict[tuple[str, str], list[dict[str, Any]]] = {}
     field_groups: dict[str, list[dict[str, Any]]] = {}
     for row in rows or []:
         ev = row.get("event_ticker") or ""
@@ -931,12 +935,14 @@ def find_dutch_books(rows: list[dict[str, Any]],
             # and must NEVER be priced as a dutch book — an explicit guard even though no family selects them.
             continue
         if _is_two_way_row(row):
-            groups.setdefault(ev, []).append(row)
+            groups.setdefault((ev, row.get("kind") or ""), []).append(row)
         elif _is_field_row(row):
             field_groups.setdefault(ev, []).append(row)
 
     out: list[dict[str, Any]] = []
-    for event_ticker, markets in groups.items():
+    for (event_ticker, _kind), markets in groups.items():
+        if not markets:
+            continue
         cfg = sports.sport_for_series(markets[0].get("series"))
         if cfg.sport_id == "soccer":
             finding = _detect_n_way(event_ticker, markets, cfg, _diag, near_miss_max_over_c)

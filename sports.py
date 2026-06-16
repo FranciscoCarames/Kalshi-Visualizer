@@ -277,6 +277,7 @@ class SportConfig:
             top = node_pct.get(broad)
             if top is not None:
                 out.append({"label": f"In contention ({broad})", "comparator": "≈", "value_pct": top,
+                            "kind": "absolute",
                             "note": "market-implied chance of being in the running; gross, top-of-book, "
                                     "Uncalibrated"})
             for broader, deeper in zip(nodes, nodes[1:]):
@@ -284,6 +285,7 @@ class SportConfig:
                 if b is None or d is None or b <= 0 or d > b:   # missing / degenerate / inconsistent ladder
                     continue
                 out.append({"label": f"P({deeper} | {broader})", "comparator": "≈", "value_pct": d / b * 100,
+                            "kind": "conditional",
                             "note": "derived conditional estimate; assumes a consistent ladder; gross, "
                                     "top-of-book, Uncalibrated — NOT a fair value"})
         if self.derived_indicators_fn:
@@ -858,7 +860,7 @@ def _golf_make_cut_indicator(cfg: SportConfig, node_pct: dict[str, "float | None
     top20 = node_pct.get("Top 20")
     if top20 is None:
         return []
-    return [{"label": "Make the cut", "comparator": "≥", "value_pct": top20,
+    return [{"label": "Make the cut", "comparator": "≥", "value_pct": top20, "kind": "bound",
              "note": "Derived — not a traded market. Finishing Top 20 requires making the cut, so the market "
                      "implies at least this chance to make the cut (the Top-20 price). Gross, top-of-book; "
                      "a bound, not a fair value."}]

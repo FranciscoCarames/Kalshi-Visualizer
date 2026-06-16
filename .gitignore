@@ -13,6 +13,9 @@ env/
 # Snapshot store (Stage 1) — local opportunity-history SQLite DB
 *.db
 snapshots.db
+# Per-user auth store (auth_store.py) — credentials; covered by *.db but listed explicitly so it is never
+# committed even if the *.db rule is ever narrowed.
+auth.db
 # WAL sidecar files (v3 enables WAL mode) — gitignore has no inline comments, so keep these bare:
 *.db-wal
 *.db-shm
@@ -29,6 +32,11 @@ snapshots.db
 
 # Scratch / temp working dirs (audits, throwaway docs) — never tracked
 .codex_tmp/
+# Playwright MCP browser artifacts (snapshots, console logs, screenshots) — session scratch, never tracked
+.playwright-mcp/
+# Session scratch: boot logs + screenshots produced while verifying (never tracked)
+serve_*.log
+*.err.log
 
 # Local kss planning shell (topics, milestones, codebase snapshots) — keep out of the repo
 .kss/

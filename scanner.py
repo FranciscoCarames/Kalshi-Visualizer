@@ -631,8 +631,9 @@ def run_scan(fetch_fn: Callable[[str], tuple], *, fetched_at: Any = None,
              ) -> tuple[pd.DataFrame, dict[str, Any], list[dict[str, Any]]]:
     """Fetch every sport, aggregate coverage, and produce the unified ranked frame — the service entry.
 
-    `fetch_fn(sport_id)` returns the `fetch.fetch_contracts` 7-tuple
-    `(df, _fetched_at, errors, n_scanned, n_loaded, skipped_no_name, n_excluded_unknown)`. Returns
+    `fetch_fn(sport_id)` returns the `fetch.fetch_contracts` 8-tuple
+    `(df, _fetched_at, errors, n_scanned, n_loaded, skipped_no_name, n_excluded_unknown, fee_rates)`
+    (a 7-tuple from older stubs is also accepted; `fee_rates` then defaults to empty). Returns
     `(unified_df, coverage, frames)` where `coverage` carries the scan-wide counts + per-series /
     per-sport errors (so `/coverage` is honest), and `frames` is the per-sport evidence to persist via
     `store.write_snapshot(frames=…)`. `request_count` is an injected no-arg counter (e.g.
@@ -671,6 +672,7 @@ def run_scan(fetch_fn: Callable[[str], tuple], *, fetched_at: Any = None,
     series_errors: list[dict[str, Any]] = []
     fetch_errors: list[dict[str, Any]] = []
     fetch_status_by_sport: dict[str, dict[str, Any]] = {}
+    fee_rates: dict[str, Any] = {}               # {UPPER_series: {fee_type, fee_multiplier}} (display-only)
     for cfg in sport_cfgs:                       # aggregate in registered order -> deterministic
         sid = cfg.sport_id
         res, err, secs = by_sport[sid]
@@ -679,7 +681,9 @@ def run_scan(fetch_fn: Callable[[str], tuple], *, fetched_at: Any = None,
             fetch_errors.append({"sport": sid, "error": err})
             fetch_status_by_sport[sid] = {"ok": False, "fetch_ms": fetch_ms, "error": err}
             continue
-        df, _fa, errors, n_scanned, n_loaded, skipped_no_name, n_excluded = res
+        df, _fa, errors, n_scanned, n_loaded, skipped_no_name, n_excluded = res[:7]
+        if len(res) > 7 and isinstance(res[7], dict):   # 8-tuple carries this sport's series fee rates
+            fee_rates.update(res[7])
         dfs[sid] = df
         scanned += n_scanned
         loaded += n_loaded
@@ -706,6 +710,7 @@ def run_scan(fetch_fn: Callable[[str], tuple], *, fetched_at: Any = None,
         "sport_errors": fetch_errors + processing_errors,   # fetch-level + processing-level
         "series_errors": series_errors,
         "fetch_status_by_sport": fetch_status_by_sport,      # per-sport {ok, fetch_ms[, error]} timing
+        "fee_rates": fee_rates,                              # DISPLAY-ONLY per-series fee metadata
     }
     if before is not None:
         coverage["kalshi_requests"] = request_count() - before

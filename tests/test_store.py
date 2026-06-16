@@ -619,3 +619,109 @@ def test_backlog_legs_round_trip(tmp_path):
     r = store.backlog_intervals(db_path=db)[0]
     assert r["last_legs"] == legs
     assert r["data"]["opportunity_id"] == "a"                    # full row JSON retained
+
+
+def test_connect_initializes_schema_once_per_path(tmp_path, monkeypatch):
+    # B2: migrate + index-build run only on the FIRST connect to a file path, not on every read connect.
+    db = str(tmp_path / "snap.db")
+    store._reset_init_cache()
+    calls = []
+    real = store._ensure_indexes
+    monkeypatch.setattr(store, "_ensure_indexes", lambda conn: (calls.append(1), real(conn))[1])
+    store._connect(db).close()
+    store._connect(db).close()
+    store._connect(db).close()
+    assert len(calls) == 1                      # only the first connect built the indexes
+    store._reset_init_cache()
+
+
+# --- footprint: opportunity tiering + incremental auto_vacuum + footprint stats (PR footprint) ----------
+def test_opp_tier_drops_old_speculative_keeps_latest_n_and_preserves_counts(tmp_path, monkeypatch):
+    db = _db(tmp_path)
+    monkeypatch.setattr(config, "SNAPSHOT_RETENTION_SECONDS", 10**12)   # don't time-drop; isolate opp tier
+    monkeypatch.setattr(config, "SNAPSHOT_OPP_TIER_ENABLED", True)
+    monkeypatch.setattr(config, "SNAPSHOT_OPP_FULL_RETENTION_N", 3)
+    monkeypatch.setattr(config, "SNAPSHOT_OPP_TIER_BUCKETS", ("no_structure", "data_quality", "near_miss"))
+    for i in range(8):
+        rows = [_opp(f"act-{i}", bucket="actionable"), _opp(f"clean-{i}", bucket="clean"),
+                _opp(f"ns-{i}", bucket="no_structure"), _opp(f"dq-{i}", bucket="data_quality"),
+                _opp(f"nm-{i}", bucket="near_miss")]
+        store.write_snapshot(i * 1000, rows, db_path=db)
+
+    conn = store._connect(db)
+    try:
+        ids = [r["id"] for r in conn.execute("SELECT id FROM snapshots ORDER BY fetched_ts DESC, id DESC")]
+        # latest 3 keep ALL five buckets
+        for sid in ids[:3]:
+            buckets = {r["bucket"] for r in conn.execute(
+                "SELECT DISTINCT bucket FROM opportunities WHERE snapshot_id = ?", (sid,))}
+            assert buckets == {"actionable", "clean", "no_structure", "data_quality", "near_miss"}
+        # older snapshots keep only the non-speculative buckets, and stamp counts into meta
+        for sid in ids[3:]:
+            buckets = {r["bucket"] for r in conn.execute(
+                "SELECT DISTINCT bucket FROM opportunities WHERE snapshot_id = ?", (sid,))}
+            assert buckets == {"actionable", "clean"}
+            meta = conn.execute("SELECT meta FROM snapshots WHERE id = ?", (sid,)).fetchone()["meta"]
+            assert '"tiered_opp_counts"' in meta and '"opp_tiered": true' in meta
+    finally:
+        conn.close()
+    # the LIVE feed (newest snapshot) is always complete
+    latest = store.latest(db_path=db)
+    assert {o["bucket"] for o in latest["opportunities"]} == {
+        "actionable", "clean", "no_structure", "data_quality", "near_miss"}
+
+
+def test_opp_tier_disabled_keeps_every_bucket(tmp_path, monkeypatch):
+    db = _db(tmp_path)
+    monkeypatch.setattr(config, "SNAPSHOT_RETENTION_SECONDS", 10**12)
+    monkeypatch.setattr(config, "SNAPSHOT_OPP_TIER_ENABLED", False)
+    monkeypatch.setattr(config, "SNAPSHOT_OPP_FULL_RETENTION_N", 1)
+    for i in range(5):
+        store.write_snapshot(i * 1000, [_opp(f"ns-{i}", bucket="no_structure")], db_path=db)
+    conn = store._connect(db)
+    try:
+        assert conn.execute("SELECT COUNT(*) FROM opportunities").fetchone()[0] == 5   # nothing tiered away
+    finally:
+        conn.close()
+
+
+def test_fresh_db_uses_incremental_auto_vacuum(tmp_path):
+    db = _db(tmp_path)
+    conn = store._connect(db)
+    try:
+        assert conn.execute("PRAGMA auto_vacuum").fetchone()[0] == 2   # 2 == INCREMENTAL
+    finally:
+        conn.close()
+
+
+def test_db_housekeeping_bounds_file_under_retention(tmp_path, monkeypatch):
+    db = _db(tmp_path)
+    monkeypatch.setattr(config, "SNAPSHOT_RETENTION_SECONDS", 5000)    # ~6 snapshots at 1000s spacing
+    monkeypatch.setattr(config, "SNAPSHOT_OPP_TIER_ENABLED", False)
+    monkeypatch.setattr(config, "SNAPSHOT_HOUSEKEEPING_EVERY_N", 1)
+    big = "z" * 2000
+
+    def rows(i):
+        return [_opp(f"x-{i}-{j}", bucket="clean", blob=big) for j in range(120)]
+    import os
+    for i in range(15):
+        store.write_snapshot(i * 1000, rows(i), db_path=db)
+    peak = os.path.getsize(db)
+    for i in range(15, 35):
+        store.write_snapshot(i * 1000, rows(i), db_path=db)
+    assert os.path.getsize(db) <= peak                                # incremental_vacuum keeps it bounded
+    conn = store._connect(db)
+    try:
+        assert conn.execute("SELECT COUNT(*) FROM snapshots").fetchone()[0] <= 8
+    finally:
+        conn.close()
+
+
+def test_footprint_stats_reports_sizes_and_counts(tmp_path):
+    db = _db(tmp_path)
+    store.write_snapshot(1000, [_opp("a"), _opp("b", bucket="clean")], db_path=db)
+    stats = store.footprint_stats(db_path=db)
+    assert stats["snapshot_count"] == 1
+    assert stats["opportunity_rows"] == 2
+    assert stats["db_size_bytes"] and stats["db_size_bytes"] > 0
+    assert stats["freelist_pages"] is not None and stats["page_count"] > 0

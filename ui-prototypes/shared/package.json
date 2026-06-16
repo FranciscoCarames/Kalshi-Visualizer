@@ -1,0 +1,12 @@
+{
+  "name": "@bakeoff/shared",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./tokens.css": "./tokens.css",
+    "./data": "./data.ts",
+    "./stream": "./stream.ts",
+    "./perf": "./perf.ts"
+  }
+}

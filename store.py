@@ -26,6 +26,28 @@ import config
 
 _log = logging.getLogger(__name__)
 
+
+# --- env-overridable footprint knobs (config holds the DEFAULTS; the override is read HERE, the boundary
+# that consumes them, keeping config.py import-free per convention). Bad values fall back to the config default.
+def _env_int(name: str, default: int) -> int:
+    try:
+        v = os.getenv(name)
+        return int(v) if v is not None and v.strip() != "" else default
+    except (TypeError, ValueError):
+        return default
+
+
+def _env_flag(name: str, default: bool) -> bool:
+    v = os.getenv(name)
+    if v is None or v.strip() == "":
+        return default
+    return v.strip().lower() in ("1", "true", "yes", "on")
+
+
+# Process-local counter so heavy DB housekeeping (incremental_vacuum + WAL checkpoint) runs only every Nth
+# snapshot write, not on every scan (bounds the post-commit cost at high cadence).
+_snapshots_written = 0
+
 # Bump when the on-disk schema changes; `_migrate` brings an older file forward. Held in the SQLite
 # `user_version` pragma so no bookkeeping table is needed. v3 adds `snapshot_frames` (per-sport/per-frame
 # evidence) + WAL; the v2->v3 upgrade backs up the file first and falls back to a fresh DB on failure.
@@ -220,17 +242,39 @@ def db_writable(db_path: str | None = None) -> bool:
 
 
 # --- connection / migration ----------------------------------------------------------
+# File paths whose schema has been migrated + indexed this process. Migration (a PRAGMA check) and the
+# read-path index build (3× CREATE INDEX IF NOT EXISTS — a writer-lock op) are durable on disk, so they
+# only need to run on the FIRST connect to a path, NOT on every read (the ~1s dashboard poll, /metrics,
+# /coverage, /readyz all open a connection). A fresh :memory: DB is a new database each connect, so it is
+# NEVER cached and always initializes.
+_initialized_paths: set[str] = set()
+
+
+def _reset_init_cache() -> None:
+    """Test hook: forget which DB paths have been schema-initialized (so a reused/recreated path re-migrates)."""
+    _initialized_paths.clear()
+
+
 def _connect(db_path: str | None) -> sqlite3.Connection:
     resolved = db_path or config.SNAPSHOT_DB_PATH
     conn = sqlite3.connect(resolved)
     conn.row_factory = sqlite3.Row
+    # auto_vacuum MUST be set before the DB header is written (the next write — `journal_mode = WAL` — fixes
+    # it), so it goes FIRST. On a fresh DB this enables INCREMENTAL page reclamation; on an existing DB whose
+    # header already exists it is silently ignored (a no-op until scripts/compact_store.py VACUUMs it). Harmless
+    # for :memory:.
+    conn.execute("PRAGMA auto_vacuum = INCREMENTAL")
     conn.execute("PRAGMA foreign_keys = ON")
     # WAL lets a reader proceed while a scan write holds the writer lock; busy_timeout bounds the wait on a
-    # held lock instead of raising "database is locked" immediately. (No-ops / harmless for :memory:.)
+    # held lock instead of raising "database is locked" immediately. These are per-connection, so they run
+    # every connect. (No-ops / harmless for :memory:.)
     conn.execute("PRAGMA journal_mode = WAL")
     conn.execute(f"PRAGMA busy_timeout = {int(config.SNAPSHOT_BUSY_TIMEOUT_MS)}")
-    _migrate(conn, resolved)
-    _ensure_indexes(conn)
+    if resolved == ":memory:" or resolved not in _initialized_paths:
+        _migrate(conn, resolved)
+        _ensure_indexes(conn)
+        if resolved != ":memory:":
+            _initialized_paths.add(resolved)
     return conn
 
 
@@ -275,7 +319,8 @@ def _migrate(conn: sqlite3.Connection, db_path: str = "") -> None:
             f"snapshot DB schema v{version} is newer than supported v{SCHEMA_VERSION}"
         )
     if version == 0:
-        # Fresh DB: create the FULL current schema (incl. v2 `meta` + v3 `snapshot_frames`).
+        # Fresh DB: create the FULL current schema (incl. v2 `meta` + v3 `snapshot_frames`). auto_vacuum is
+        # already set to INCREMENTAL in `_connect` (before the WAL header write) so it takes effect here.
         conn.executescript(_SCHEMA)
         conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
         conn.commit()
@@ -301,7 +346,8 @@ def _migrate(conn: sqlite3.Connection, db_path: str = "") -> None:
 def _apply_retention(conn: sqlite3.Connection, retention_seconds: float | None = None) -> int:
     """Drop snapshots older than the retention window, measured back from the NEWEST stored snapshot.
     Returns the number of snapshots dropped."""
-    keep = config.SNAPSHOT_RETENTION_SECONDS if retention_seconds is None else retention_seconds
+    keep = (_env_int("SNAPSHOT_RETENTION_SECONDS", config.SNAPSHOT_RETENTION_SECONDS)
+            if retention_seconds is None else retention_seconds)
     newest = conn.execute("SELECT MAX(fetched_ts) AS m FROM snapshots").fetchone()["m"]
     if newest is None:
         return 0
@@ -325,6 +371,29 @@ def _db_size_bytes(db_path: str) -> int | None:
         return os.path.getsize(db_path)
     except OSError:
         return None
+
+
+def footprint_stats(db_path: str | None = None) -> dict[str, Any]:
+    """Cheap on-disk footprint counters for /metrics monitoring (so the owner can SEE retention/vacuum
+    working): DB + WAL file bytes, snapshot/opportunity row counts, and SQLite page/freelist counts. All
+    fast (file stat + indexed COUNT + instant PRAGMAs). Never raises — returns what it can."""
+    resolved = db_path or config.SNAPSHOT_DB_PATH
+    out: dict[str, Any] = {
+        "db_size_bytes": _db_size_bytes(resolved),
+        "wal_size_bytes": _db_size_bytes(resolved + "-wal") if resolved != ":memory:" else None,
+    }
+    try:
+        conn = _connect(db_path)
+        try:
+            out["snapshot_count"] = conn.execute("SELECT COUNT(*) AS c FROM snapshots").fetchone()["c"]
+            out["opportunity_rows"] = conn.execute("SELECT COUNT(*) AS c FROM opportunities").fetchone()["c"]
+            out["page_count"] = conn.execute("PRAGMA page_count").fetchone()[0]
+            out["freelist_pages"] = conn.execute("PRAGMA freelist_count").fetchone()[0]
+        finally:
+            conn.close()
+    except sqlite3.Error as exc:
+        _log.warning("footprint_stats query failed: %s", exc)
+    return out
 
 
 def _frame_bearing_snapshots(conn: sqlite3.Connection) -> list[int]:
@@ -372,6 +441,77 @@ def _apply_frame_retention(conn: sqlite3.Connection, db_path: str) -> dict[str, 
     if evict:
         print(f"snapshot frame retention: evicted {len(evict)} frame-snapshot(s); "
               f"retained frame bytes={stats['frame_bytes']}, db size={stats['db_size_bytes']} bytes")
+    return stats
+
+
+def _apply_opp_retention(conn: sqlite3.Connection) -> dict[str, Any]:
+    """Lean opportunity tier: keep FULL opportunity JSON for the latest N snapshots; for OLDER snapshots,
+    drop the heavy SPECULATIVE/diagnostic buckets' rows (``config.SNAPSHOT_OPP_TIER_BUCKETS`` —
+    no_structure / data_quality / near_miss, ~61% of stored bytes) while preserving their per-bucket COUNTS
+    in ``snapshots.meta`` (``tiered_opp_counts``) for transparency. ``store.latest()`` is NEVER affected (it
+    reads the newest snapshot, always inside the latest-N full set). Idempotent: only acts on snapshots that
+    still carry tiered-bucket rows. Engine OUTPUT is untouched — this only trims what is PERSISTED for OLD
+    snapshots. Safe vs lifecycle/backlog: the recently-actionable backlog reads only ``bucket='actionable'``
+    history (never tiered) and ``blocked_change`` uses the latest two snapshots (inside latest-N)."""
+    if not _env_flag("SNAPSHOT_OPP_TIER_ENABLED", config.SNAPSHOT_OPP_TIER_ENABLED):
+        return {"opp_snapshots_tiered": 0}
+    buckets = tuple(config.SNAPSHOT_OPP_TIER_BUCKETS or ())
+    n = max(1, _env_int("SNAPSHOT_OPP_FULL_RETENTION_N", config.SNAPSHOT_OPP_FULL_RETENTION_N))
+    if not buckets:
+        return {"opp_snapshots_tiered": 0}
+    ids = [r["id"] for r in conn.execute(
+        "SELECT id FROM snapshots ORDER BY fetched_ts DESC, id DESC").fetchall()]
+    older = ids[n:]                                   # everything past the latest N (newest-first slice)
+    if not older:
+        return {"opp_snapshots_tiered": 0}
+    bmarks = ",".join("?" * len(buckets))
+    tiered = 0
+    for sid in older:
+        counts = conn.execute(
+            f"SELECT bucket, COUNT(*) AS c FROM opportunities "
+            f"WHERE snapshot_id = ? AND bucket IN ({bmarks}) GROUP BY bucket",
+            (sid, *buckets)).fetchall()
+        if not counts:
+            continue                                  # already tiered (idempotent)
+        row = conn.execute("SELECT meta FROM snapshots WHERE id = ?", (sid,)).fetchone()
+        meta: dict[str, Any] = {}
+        if row and row["meta"]:
+            try:
+                meta = json.loads(row["meta"])
+            except (ValueError, TypeError):
+                meta = {}
+        tc = dict(meta.get("tiered_opp_counts") or {})
+        for cr in counts:
+            tc[cr["bucket"]] = cr["c"]
+        meta["tiered_opp_counts"] = tc
+        meta["opp_tiered"] = True
+        conn.execute("UPDATE snapshots SET meta = ? WHERE id = ?", (json.dumps(meta), sid))
+        conn.execute(
+            f"DELETE FROM opportunities WHERE snapshot_id = ? AND bucket IN ({bmarks})", (sid, *buckets))
+        tiered += 1
+    return {"opp_snapshots_tiered": tiered}
+
+
+def _run_db_housekeeping(conn: sqlite3.Connection, db_path: str) -> dict[str, Any]:
+    """Reclaim disk after retention/tier deletes: a throttled ``PRAGMA incremental_vacuum`` (only reclaims
+    when the DB was created with auto_vacuum=INCREMENTAL — a harmless no-op on legacy DBs until compacted)
+    and a WAL ``checkpoint(TRUNCATE)`` so the -wal file doesn't grow unbounded on a long-running server.
+    Both env-gated for rollback. Runs in the post-commit housekeeping transaction (off the writer-critical
+    path); failures are logged and swallowed so housekeeping can never lose or block a committed snapshot."""
+    stats: dict[str, Any] = {}
+    if _env_flag("SNAPSHOT_INCREMENTAL_VACUUM_ENABLED", config.SNAPSHOT_INCREMENTAL_VACUUM_ENABLED):
+        try:
+            conn.execute("PRAGMA incremental_vacuum")
+            stats["incremental_vacuum"] = True
+        except sqlite3.Error as exc:
+            _log.warning("incremental_vacuum skipped: %s", exc)
+    if _env_flag("SNAPSHOT_WAL_TRUNCATE_ENABLED", config.SNAPSHOT_WAL_TRUNCATE_ENABLED):
+        try:
+            conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+            stats["wal_truncate"] = True
+        except sqlite3.Error as exc:
+            _log.warning("wal_checkpoint(TRUNCATE) skipped: %s", exc)
+    stats["db_size_bytes"] = _db_size_bytes(db_path)
     return stats
 
 
@@ -632,9 +772,22 @@ def write_snapshot(fetched_at: Any, opps: Any, *, meta: Any = None, frames: Any 
                 [(sid, *_frame_rows(f)) for f in frames],
             )
         _maintain_backlog_intervals(conn, records, ts)          # durable tier: 7-day lifecycle intervals
+        conn.commit()                                            # snapshot is durable + visible to readers NOW
+        # Housekeeping runs in a SEPARATE short transaction AFTER the snapshot commit, so readers aren't held
+        # behind the retention scan + per-snapshot size queries while the writer lock covers the insert. The
+        # snapshot is already persisted; a retention hiccup can't lose it.
         _apply_retention(conn)                                   # lean tier: time-based whole-snapshot drop
         _apply_frame_retention(conn, db_path or config.SNAPSHOT_DB_PATH)   # heavy tier: latest-N + size budget
+        _apply_opp_retention(conn)                               # opp tier: drop OLD speculative-bucket rows
         conn.commit()
+        # DB-level reclamation (incremental_vacuum + WAL truncate) is the heaviest step, so it runs only every
+        # Nth snapshot — in its OWN transaction after the housekeeping commit, never blocking the writer path.
+        global _snapshots_written
+        _snapshots_written += 1
+        every_n = max(1, _env_int("SNAPSHOT_HOUSEKEEPING_EVERY_N", config.SNAPSHOT_HOUSEKEEPING_EVERY_N))
+        if _snapshots_written % every_n == 0:
+            _run_db_housekeeping(conn, db_path or config.SNAPSHOT_DB_PATH)
+            conn.commit()
         return sid
     finally:
         conn.close()

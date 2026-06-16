@@ -5,3 +5,5 @@ fastapi>=0.110          # engine REST API (Stage 4)
 uvicorn[standard]>=0.29  # ASGI server for serve.py
 pydantic>=2.6           # API response models
 nicegui>=3.12,<4        # opportunity-first dashboard (Stage 5), mounted on the FastAPI app (pinned <4)
+argon2-cffi>=23.1       # argon2id password hashing for per-user auth (auth_store.py); itsdangerous (session
+                        # cookie signing) ships transitively with fastapi/starlette — no extra pin needed

@@ -577,7 +577,7 @@ _LEG_COLUMNS = [
 ]
 
 
-@ui.page("/")
+@ui.page("/", title="Kalshi Structured Scanner")
 def dashboard(sport: str = "", tournament: str = "", participant: str = "",
               min_size: str = "", active: str = "") -> None:
     # Compact URL state -> initial control values (validated against the snapshot in `_seed`).
@@ -761,7 +761,10 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             # shared state — one scheduler loop per process — so a change affects every viewer.
             auto_sw = ui.switch("Auto-refresh", value=scan_scheduler.scheduler.enabled).tooltip(
                 "Periodically re-scan in the background (server-wide). Off = manual 'Refresh snapshot' only.")
-            interval_sel = ui.select(config.AUTO_SCAN_INTERVAL_OPTIONS,
+            # NiceGUI's select REJECTS a value outside its options, so fold the live interval into the preset
+            # list — a custom AUTO_SCAN_DEFAULT_SECONDS (env override) must not 500 the dashboard.
+            _intervals = sorted({*config.AUTO_SCAN_INTERVAL_OPTIONS, int(scan_scheduler.scheduler.interval_s)})
+            interval_sel = ui.select(_intervals,
                                       value=scan_scheduler.scheduler.interval_s, label="Every (s)"
                                       ).props("stack-label").classes("min-w-[8rem]").tooltip(
                 "How often the background auto-scan runs.")
@@ -1419,12 +1422,15 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
         _t.props(f'no-data-label="{_msg}"')
 
     # Per-table column menus (redesigned) — a "Columns" button by each table opening labeled checkboxes.
-    # Opp tables hide the net-of-fees columns by default; Bounded-Loss hides the outright/display-spread
-    # context (spread÷parent/child stay visible). Buttons are placed into each section's header / row.
+    # Opp tables now SHOW the net-of-fees ESTIMATE columns by default (labels are prefixed "Est."; they're
+    # display-only and never affect ranking) so a thin gross edge isn't mistaken for net profit; Bounded-Loss
+    # hides the outright/display-spread context (spread÷parent/child stay visible).
     opp_menus = []
     for _hdr, _tbl in ((act_cols_row, actionable), (review_cols_row, review), (blocked_hdr, blocked)):
         with _hdr:
-            opp_menus.append(build_column_menu(_tbl, _OPP_COLUMNS, default_hidden=_NET_COLUMNS))
+            # branch (fee display): show the net-of-fees estimate columns by DEFAULT (default_hidden=()).
+            # main (collapsible qualifier): the qualifier column menu lives in qs_cols_row (qs_hdr is gone).
+            opp_menus.append(build_column_menu(_tbl, _OPP_COLUMNS, default_hidden=()))
     with qs_cols_row:
         build_column_menu(qs_table, _QS_COLUMNS, default_hidden=_QS_HIDDEN)
     with rb_all_cols:

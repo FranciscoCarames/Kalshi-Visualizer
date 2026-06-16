@@ -934,6 +934,103 @@ def test_risk_budget_row_old_snapshot_missing_new_fields_renders_blank():
     assert row["flags"] == []
 
 
+# --- D1 total-profit (gross deployable) rank mode + D2 fee badge + net-of-fees isolation -------------
+def _tp(oid, gap, size, bucket="actionable"):
+    return {"opportunity_id": oid, "bucket": bucket, "exec_gap_c": gap, "exec_min_size": size}
+
+
+def test_total_profit_ranks_by_deployable_size_not_per_unit_edge():
+    # The core point: a thin-but-deep book outranks a fat-but-shallow one (the per-unit modes invert this).
+    rows = [_tp("fat_shallow", gap=5, size=1),       # 5¢ × 1   = 5¢ gross
+            _tp("thin_deep", gap=2, size=5000)]      # 2¢ × 5000 = 10000¢ gross
+    assert [o["opportunity_id"] for o in vm.rank_opps(rows, "total_profit")] == ["thin_deep", "fat_shallow"]
+    # And the per-unit "edge" mode still orders the other way (proves it's a distinct, opt-in mode).
+    assert [o["opportunity_id"] for o in vm.rank_opps(rows, "edge")] == ["fat_shallow", "thin_deep"]
+
+
+def test_total_profit_missing_gap_or_size_sorts_last():
+    rows = [_tp("ok", gap=1, size=10), _tp("nosize", gap=9, size=None), _tp("nogap", gap=None, size=9)]
+    ordered = [o["opportunity_id"] for o in vm.rank_opps(rows, "total_profit")]
+    assert ordered[0] == "ok" and set(ordered[1:]) == {"nosize", "nogap"}
+
+
+def test_net_of_fees_fields_do_not_affect_ranking_any_mode():
+    # ISOLATION INVARIANT: stamping the display-only net-of-fees fields onto rows must NEVER change the order
+    # produced by any rank mode (fees are display-only; the engine ranks gross).
+    base = [_tp("a", gap=2, size=5000), _tp("b", gap=5, size=1), _tp("c", gap=3, size=100)]
+    netted = [{**o, "net_edge": -9, "net_profit": -1.0, "fees": 999, "net_negative": True} for o in base]
+    for mode in vm.RANK_MODES:
+        a = [o["opportunity_id"] for o in vm.rank_opps([dict(o) for o in base], mode)]
+        b = [o["opportunity_id"] for o in vm.rank_opps(netted, mode)]
+        assert a == b, f"net-of-fees fields changed ranking under mode {mode!r}: {a} vs {b}"
+
+
+def test_net_negative_badge_on_thin_actionable_absent_on_healthy():
+    # Thin edge: 1¢ × 100 gross = $1, but ~175¢/leg × 2 legs of fees -> net-negative -> advisory badge.
+    thin = {"bucket": "actionable", "exec_gap_c": 1, "exec_min_size": 100,
+            "action_1_price_c": 50, "action_2_price_c": 50}
+    labels = [b["label"] for b in vm.severity_badges(thin)]
+    assert "Net-negative (est.)" in labels
+    assert next(b for b in vm.severity_badges(thin) if b["label"] == "Net-negative (est.)")["severity"] == "advisory"
+    # Healthy edge: 20¢ × 100 easily clears the fees -> no badge.
+    healthy = {**thin, "exec_gap_c": 20}
+    assert "Net-negative (est.)" not in [b["label"] for b in vm.severity_badges(healthy)]
+    # Non-actionable rows never get the badge (it's an Actionable-row advisory only).
+    spec = {**thin, "bucket": "risk_budget"}
+    assert "Net-negative (est.)" not in [b["label"] for b in vm.severity_badges(spec)]
+
+
+def test_kalshi_fee_estimate_endpoints_and_per_leg_sum():
+    # Mini-spec: integer cents, zero at the 0¢/100¢ endpoints, per-leg sum in net_of_fees.
+    assert vm.kalshi_fee_c(100, 0) == 0 and vm.kalshi_fee_c(100, 100) == 0
+    assert isinstance(vm.kalshi_fee_c(100, 50), int) and vm.kalshi_fee_c(100, 50) == 175
+    nf = vm.net_of_fees({"exec_gap_c": 1, "exec_min_size": 100,
+                         "action_1_price_c": 50, "action_2_price_c": 50})
+    assert nf["missing"] is False and nf["is_estimate"] is True
+    assert nf["total_fees_c"] == 350                       # 175 per leg × 2 legs
+    # Missing a leg price -> every net is BLANK (never treated as 0 fees, per the mini-spec).
+    blank = vm.net_of_fees({"exec_gap_c": 1, "exec_min_size": 100, "action_1_price_c": 50})
+    assert blank["missing"] is True and blank["total_fees_c"] is None
+
+
+def test_detail_expected_adds_possible_cause_reason_for_missing_rungs():
+    # a containment player with one advance market: found rung -> no reason; missing rungs -> possible cause.
+    rows = [{"kind": "advance", "player_key": "P", "tournament": "T", "stage": "Semifinal",
+             "series": "KXATPADVANCE", "sport": "tennis", "contract": "Reach the semifinal"}]
+    out = vm.detail_expected(rows)
+    found = {r["layer"]: r for r in out}
+    assert found["Reach Semifinal"]["found"] is True and found["Reach Semifinal"]["reason"] == ""
+    missing = [r for r in out if not r["found"]]
+    assert missing and all(r["reason"].startswith("possible cause:") for r in missing)
+    # a match-only player has no applicable ladder -> empty (no spurious MISSING noise)
+    assert vm.detail_expected([{"kind": "match"}]) == []
+
+
+def test_detail_chain_exposes_market_ticker_for_present_and_missing_rungs():
+    # a present rung carries its representative market_ticker so the depth ladder can load that rung's book;
+    # a missing rung carries "" (shape symmetry, never None-as-ticker).
+    rows = [{"kind": "advance", "player_key": "P", "tournament": "T", "stage": "Semifinal",
+             "series": "KXATPADVANCE", "sport": "tennis", "contract": "Reach the semifinal",
+             "market_ticker": "KXATPADVANCE-SF", "display_pct": 40.0, "quote_quality": "OK"}]
+    chain = vm.detail_chain(rows, "tennis")
+    by = {r["layer"]: r for r in chain}
+    assert by["Reach Semifinal"]["market_ticker"] == "KXATPADVANCE-SF"
+    # the unfilled rungs (Reach Final / Win Tournament) are present-but-missing → empty ticker, not None
+    missing = [r for r in chain if r["source"] == "— missing —"]
+    assert missing and all(r["market_ticker"] == "" for r in missing)
+
+
+def test_derived_indicators_carry_kind_discriminator():
+    # the table/bounds split is by a structured `kind` tag, not fragile label string-matching.
+    rows = [{"kind": "advance", "player_key": "P", "tournament": "T", "stage": "Semifinal",
+             "series": "KXATPADVANCE", "sport": "tennis", "contract": "Reach the semifinal",
+             "market_ticker": "X", "display_pct": 40.0, "quote_quality": "OK"}]
+    chain = vm.detail_chain(rows, "tennis")
+    inds = vm.derived_indicators(chain, "tennis")
+    kinds = {i.get("kind") for i in inds}
+    assert kinds and kinds <= {"absolute", "conditional", "bound"}
+    # the broadest present rung yields an "absolute" in-contention indicator
+    assert any(i.get("kind") == "absolute" for i in inds)
 # --- conditional probability (PDF core logic), DISPLAY-ONLY ---------------------------
 def _cc(pk, node, c, pct):
     return {"player_key": pk, "series": "KXATPADVANCE", "ladder_node": node, "kind": "advance",

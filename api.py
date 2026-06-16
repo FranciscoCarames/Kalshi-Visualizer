@@ -11,14 +11,19 @@ Run: `python serve.py` (or `uvicorn api:app`). OpenAPI docs at `/docs`.
 from __future__ import annotations
 
 import hmac
+import io
 import logging
 import os
+import threading
 import time
 from typing import Any, Callable
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Response
+from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response
+from fastapi.responses import RedirectResponse, StreamingResponse
 from pydantic import BaseModel, ConfigDict
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 
+import auth
 import config
 import data
 import fetch
@@ -30,20 +35,52 @@ import scan_manager
 import scanner
 import sports
 import store
-from webui import diagnostics
+from webui import diagnostics, feed
 
-app = FastAPI(title="Kalshi opportunity engine", version="4.0")
+# The OpenAPI docs routes are always CONSTRUCTED, but hidden at REQUEST time by the auth middleware when
+# `AUTH_ENABLED` and not `APP_DEV` (it returns 404). Doing this in the middleware — not via the
+# `FastAPI(docs_url=None)` constructor — is deliberate: `apply_runtime_defaults()` sets `AUTH_ENABLED`
+# AFTER `import api`, so a constructor-time check would miss the secure default. See `auth.gate_and_harden`.
+app = FastAPI(title="Kalshi Structured Scanner", version="4.0")
+# Host allowlist (default "*" — no restriction until an operator sets APP_ALLOWED_HOSTS) + the
+# deny-by-default auth gate / security-headers middleware. Both are no-ops for loopback/dev and the test
+# client until AUTH_ENABLED / APP_ALLOWED_HOSTS are set; see auth.py.
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=auth.allowed_hosts())
+# Transport compression for the ~5 MB /api/terminal/feed JSON (~5-10x smaller on the wire). Env-gated
+# (FEED_GZIP_ENABLED=0 rolls it back). minimum_size skips tiny bodies; the rare manual ZIP-export download
+# is already-compressed so gzip gains nothing there (negligible CPU, manual + infrequent) — correctness is
+# unaffected (the browser transparently decodes). Network-only: this does NOT reduce the on-disk store.
+if os.getenv("FEED_GZIP_ENABLED", "1").strip().lower() in ("1", "true", "yes", "on"):
+    from starlette.middleware.gzip import GZipMiddleware
+    app.add_middleware(GZipMiddleware, minimum_size=1024)
+app.middleware("http")(auth.gate_and_harden)
+app.include_router(auth.router)
 logger = logging.getLogger("kalshi.api")
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon() -> RedirectResponse:
+    """Redirect the browser's implicit /favicon.ico probe to the SPA's SVG icon (kills the root 404 on both
+    the dashboard at "/" and the SPA). Registered before NiceGUI's "/" mount so this explicit route wins."""
+    return RedirectResponse(url="/terminal/favicon.svg")
 
 # Per-process HTTP `/scan` rate limiter (PR 26b) — distinct from the ScanManager scan TTL. Guards the
 # endpoint itself; the in-process dashboard button (engine.run_scan_now) never touches it.
 _scan_limiter = ratelimit.SlidingWindow(config.SCAN_HTTP_MAX_PER_WINDOW, config.SCAN_HTTP_WINDOW_SECONDS)
 
 
-def require_scan_token(x_scan_token: str | None = Header(default=None, alias="X-Scan-Token")) -> None:
+def require_scan_token(request: Request,
+                       x_scan_token: str | None = Header(default=None, alias="X-Scan-Token")) -> None:
     """Scan-token gate (PR 26b, locked decision §8). When the `SCAN_TOKEN` env var is SET, `POST /scan`
     requires a matching `X-Scan-Token` header (constant-time compare); when UNSET the gate is OFF (today's
-    open behaviour). Loopback dev simply leaves it unset; a LAN scheduler must send the header."""
+    open behaviour). Loopback dev simply leaves it unset; a LAN scheduler must send the header.
+
+    When AUTH_ENABLED, a request that already carries a valid session or machine token has passed the
+    deny-by-default gate — don't double-gate it out of /scan when SCAN_TOKEN is also set (otherwise a
+    logged-in human could never trigger a scan from the SPA). The legacy header path is unchanged when auth
+    is off."""
+    if auth.auth_enabled() and auth.authenticated(request):
+        return
     token = os.getenv("SCAN_TOKEN", "")
     if token and not hmac.compare_digest(x_scan_token or "", token):
         logger.warning("Rejected POST /scan: missing or invalid X-Scan-Token")
@@ -190,6 +227,12 @@ class Metrics(BaseModel):
     scan_in_progress_seconds: float | None = None
     last_scan_error: str | None = None
     viewer_count: int | None = None
+    # Footprint counters (so the owner can see retention + incremental_vacuum bounding the store).
+    db_size_bytes: int | None = None
+    wal_size_bytes: int | None = None
+    snapshot_count: int | None = None
+    opportunity_rows: int | None = None
+    freelist_pages: int | None = None
 
 
 class BacklogItem(BaseModel):
@@ -306,12 +349,17 @@ def healthz() -> dict[str, str]:
 
 
 @app.get("/readyz", response_model=ReadyZ)
-def readyz(response: Response, db_path: str | None = Depends(db_path_dep)):
+def readyz(request: Request, response: Response, db_path: str | None = Depends(db_path_dep)):
     """Readiness (PR S1), distinct from the liveness-only /healthz: ready/degraded → 200, not_ready → 503.
     The DB-writability probe is MIGRATION-FREE (`store.db_writable` → `os.access`; never `_connect`/
     `_migrate`, so a health probe can't migrate or create the prod DB); the latest snapshot is read only
     when the DB file already exists. Reflects the LAST scan's status (no live Kalshi call) and never claims
-    scheduler health."""
+    scheduler health.
+
+    `/readyz` is PUBLIC (allowlisted) so an unauthenticated load-balancer / orchestrator probe still works
+    under AUTH_ENABLED — but for an anonymous caller the DETAIL (snapshot age, last-scan error, scan state)
+    is REDACTED to just the status + HTTP code, so operational internals don't leak. An authenticated
+    caller (or auth-off dev) gets the full body; the detail also lives in the gated /metrics."""
     resolved = db_path or config.SNAPSHOT_DB_PATH
     writable = store.db_writable(resolved)
     snap = store.latest(db_path=resolved) if (writable and os.path.exists(resolved)) else None
@@ -321,6 +369,8 @@ def readyz(response: Response, db_path: str | None = Depends(db_path_dep)):
         writable=writable, snapshot=snap, age=age, stale=stale,
         scan_status=scan_manager.manager.status())
     response.status_code = code
+    if auth.auth_enabled() and not auth.authenticated(request):
+        return ReadyZ(status=body["status"])           # redacted: status + HTTP code only, no internals
     return ReadyZ(**body)
 
 
@@ -335,6 +385,261 @@ def get_opportunities(sport: str | None = None, bucket: str | None = None,
     if status:
         rows = [r for r in rows if r.get("status") == status]
     return [Opportunity(**r) for r in rows]
+
+
+@app.get("/api/terminal/feed")
+def get_terminal_feed(db_path: str | None = Depends(db_path_dep)) -> dict[str, Any]:
+    """Denormalized, read-only VIEW of the latest snapshot for the Terminal Pro SPA (`/terminal`).
+
+    A faithful 1:1 view, NOT a second engine: `webui.feed.build_feed` re-presents `store.latest()` through
+    the existing display-row builders and adds only DISPLAY-ONLY fields (ripeness / conditional / net-of-
+    fees estimate). `bucket`/`status`/`tradable_now`/`rule_flag` are copied verbatim from the same rows
+    `/opportunities` serves — parity is asserted in tests/test_feed.py. No re-bucketing, no re-ranking.
+
+    Records a presence heartbeat (the SPA isn't a NiceGUI client) so the background scan's idle-gate keeps
+    refreshing the snapshot while this terminal is open. ONLY this endpoint touches terminal presence."""
+    presence.touch()
+    return feed.build_feed(db_path=db_path)
+
+
+# --- Terminal Pro parity endpoints (read-only VIEWS; reuse engine/viewmodel/viz/export only) -----------
+# Each is a THIN adapter over an existing pure/engine function — never a second engine, never a mutation,
+# never a re-bucket. `webui.engine` is imported LAZILY inside handlers (engine imports api → import cycle).
+_DIAG_ROW_CAP = 2000
+
+
+class TerminalDetail(BaseModel):
+    """Data-driven participant drill-down (the old dashboard's detail panel), scoped to one
+    (sport, player_key, tournament). All fields display-only; never feeds classification/ranking."""
+    chain: list[dict[str, Any]] = []
+    indicators: list[dict[str, Any]] = []
+    spreads: list[dict[str, Any]] = []
+    expected: list[dict[str, Any]] = []
+    contracts: list[dict[str, Any]] = []
+    raw_fields: list[dict[str, Any]] = []
+    link_audit: list[dict[str, Any]] = []
+    duplicates: list[dict[str, Any]] = []
+    rules: list[dict[str, Any]] = []
+
+
+class TerminalPayoff(BaseModel):
+    scenarios: list[dict[str, Any]] = []
+    cost_c: float | None = None
+
+
+class TerminalLadder(BaseModel):
+    layers: list[dict[str, Any]] = []
+
+
+class TerminalDiagnostics(BaseModel):
+    checks: list[dict[str, Any]] = []
+    contracts: list[dict[str, Any]] = []
+    category: dict[str, Any] = {}
+    failures: dict[str, Any] = {}
+    checks_truncated: int = 0
+    contracts_truncated: int = 0
+
+
+class ExportRequest(BaseModel):
+    opportunity_ids: list[str] = []
+    snapshot_id: int | None = None
+
+
+class TerminalOrderbook(BaseModel):
+    """Live resting order book for one market (DISPLAY-ONLY depth view — gross / top-of-book limits still
+    apply; NOT net executable capacity). yes/no are [[price_c, size], …] ascending (best bid last)."""
+    ticker: str
+    yes: list[list[int]] = []
+    no: list[list[int]] = []
+    ok: bool = True
+    error: str | None = None
+    age_s: float = 0.0
+
+
+class TerminalTelemetry(BaseModel):
+    """Snapshot-context market telemetry (DISPLAY-ONLY — NOT an opportunity signal): most-liquid sports +
+    contracts, tightest books, most-traded, and a one-line 'most volatile now' message."""
+    snapshot_id: int | None = None
+    top_sports: list[list[Any]] = []
+    top_contracts: list[list[Any]] = []
+    tightest: list[list[Any]] = []
+    most_traded: list[list[Any]] = []
+    volatility: str | None = None
+
+
+# Telemetry is recomputed at most ONCE per snapshot (liquidity_panel scans all contracts; volatility scans
+# recent frames) — cached here so repeated SPA fetches / surface switches don't re-aggregate every time.
+_telemetry_cache: dict[str, Any] = {"snapshot_id": object(), "data": None}
+_telemetry_cache_lock = threading.Lock()                 # serialize the check+compute+store (compute once)
+_TELEMETRY_VOLATILITY_WINDOW_S = 3600.0
+
+# Live order-book fetch (the SPA depth ladder): a short per-ticker TTL cache coalesces the ~5s frontend
+# poll across tabs/sessions (the Kalshi throttle is process-wide, so caching bounds upstream load), and a
+# sliding window caps total orderbook fetches/sec. Depth is clamped 1..100. All process-local.
+_ORDERBOOK_DEFAULT_DEPTH = 10
+_ORDERBOOK_MAX_DEPTH = 100
+_ORDERBOOK_CACHE_TTL_S = 2.0
+_orderbook_cache: dict[str, tuple[float, dict[str, Any]]] = {}      # ticker -> (fetched_monotonic, parsed)
+_orderbook_cache_lock = threading.Lock()
+_orderbook_limiter = ratelimit.SlidingWindow(config.ORDERBOOK_HTTP_MAX_PER_WINDOW, config.ORDERBOOK_HTTP_WINDOW_SECONDS)
+
+
+def _participant_rows(sport: str, player_key: str, tournament: str, db_path: str | None) -> list[dict[str, Any]]:
+    """A participant's stored contracts SCOPED to one tournament — the engine groups ladders by
+    (player_key, tournament) (data.tournament_of season-scopes the key), so detail/ladder MUST scope by
+    tournament or they would merge a player's contracts across tournaments/seasons into a false ladder."""
+    from webui import engine  # lazy: engine imports api (cycle)
+    prows = engine.participant_contracts(sport, player_key, db_path=db_path)
+    return [r for r in prows if (r.get("tournament") or "") == tournament]
+
+
+@app.get("/api/terminal/detail", response_model=TerminalDetail)
+def get_terminal_detail(sport: str, player_key: str, tournament: str,
+                        db_path: str | None = Depends(db_path_dep)) -> TerminalDetail:
+    """Read-only participant drill-down for the SPA Inspector. REQUIRES tournament (no silent cross-
+    tournament merge → a false ladder). Honest-empty when the participant has no stored contracts."""
+    if not (sport and player_key and tournament):
+        raise HTTPException(status_code=400, detail="sport, player_key and tournament are all required")
+    from webui import viewmodel as vm
+    prows = _participant_rows(sport, player_key, tournament, db_path)
+    chain = vm.detail_chain(prows, sport)
+    rules = [{"contract": r.get("contract") or r.get("market_ticker") or "—",
+              "text": str(r.get("rules_primary"))} for r in prows if r.get("rules_primary")]
+    return TerminalDetail(
+        chain=chain, indicators=vm.derived_indicators(chain, sport),
+        spreads=vm.detail_spreads(prows), expected=vm.detail_expected(prows),
+        contracts=vm.detail_contracts(prows), raw_fields=vm.raw_fields_rows(prows),
+        link_audit=vm.link_audit_rows(prows), duplicates=vm.duplicate_rows(prows), rules=rules)
+
+
+@app.get("/api/terminal/payoff", response_model=TerminalPayoff)
+def get_terminal_payoff(opportunity_id: str, db_path: str | None = Depends(db_path_dep)) -> TerminalPayoff:
+    """Per-state payoff for the SPA payoff chart. 404 when the id isn't in the latest snapshot; honest-empty
+    scenarios for a non-containment / dutch-book opp (no fabricated curve). Reuses viz.payoff_chart_data."""
+    import viz
+    from webui import engine  # lazy (cycle)
+    opp = next((r for r in _opps(db_path) if r.get("opportunity_id") == opportunity_id), None)
+    if opp is None:
+        raise HTTPException(status_code=404, detail=f"opportunity '{opportunity_id}' not in the latest snapshot")
+    pay = engine.payoff_for_opp(opp, db_path=db_path)
+    return TerminalPayoff(scenarios=viz.payoff_chart_data(pay).to_dict("records"),
+                          cost_c=_num((pay or {}).get("cost_c")))
+
+
+@app.get("/api/terminal/ladder", response_model=TerminalLadder)
+def get_terminal_ladder(sport: str, player_key: str, tournament: str,
+                        db_path: str | None = Depends(db_path_dep)) -> TerminalLadder:
+    """Containment-ladder price chart for the SPA. REQUIRES tournament (same scoping rule as /detail).
+    Reuses viz.ladder_prices (inversion-flagged); display-only, never an edge."""
+    if not (sport and player_key and tournament):
+        raise HTTPException(status_code=400, detail="sport, player_key and tournament are all required")
+    import viz
+    from webui import viewmodel as vm
+    prows = _participant_rows(sport, player_key, tournament, db_path)
+    chain = vm.detail_chain(prows, sport)
+    adapted = [{"Layer": r.get("layer", ""), "Display %": r.get("display_pct")} for r in chain]
+    return TerminalLadder(layers=viz.ladder_prices(adapted).to_dict("records"))
+
+
+@app.get("/api/terminal/diagnostics", response_model=TerminalDiagnostics)
+def get_terminal_diagnostics(db_path: str | None = Depends(db_path_dep)) -> TerminalDiagnostics:
+    """Deep diagnostics grids for the OPS surface (full check rows, all contracts, category honesty, scan
+    failures). Rows capped at _DIAG_ROW_CAP with an explicit truncation count — NO silent truncation."""
+    from webui import engine  # lazy (cycle)
+    checks, contracts = engine.all_checks(db_path=db_path), engine.all_contracts(db_path=db_path)
+    return TerminalDiagnostics(
+        checks=checks[:_DIAG_ROW_CAP], contracts=contracts[:_DIAG_ROW_CAP],
+        category=engine.category_breakdown(db_path=db_path), failures=engine.diagnostics(db_path=db_path),
+        checks_truncated=max(0, len(checks) - _DIAG_ROW_CAP),
+        contracts_truncated=max(0, len(contracts) - _DIAG_ROW_CAP))
+
+
+@app.get("/api/terminal/telemetry", response_model=TerminalTelemetry)
+def get_terminal_telemetry(db_path: str | None = Depends(db_path_dep)) -> TerminalTelemetry:
+    """Read-only snapshot-context telemetry for the RES surface. Cached per snapshot_id (so it's not
+    re-aggregated on every poll). Reuses viewmodel.liquidity_panel + volatility_leader; honest-empty when
+    there's no snapshot or no two-sided books. Display-only — never an opportunity signal."""
+    from webui import engine, viewmodel  # lazy (engine cycle); viewmodel is pure
+    sid = store.latest_snapshot_id(db_path=db_path)
+    if sid is None:
+        return TerminalTelemetry(snapshot_id=None)
+    # Hold the lock across check+compute+store so two concurrent polls on a NEW snapshot don't both run the
+    # heavy liquidity_panel aggregation — the second waits, then sees the cache hit. Telemetry is a low-QPS
+    # poll, so serializing here is cheap and is exactly the coalescing we want.
+    with _telemetry_cache_lock:
+        if _telemetry_cache["snapshot_id"] == sid and _telemetry_cache["data"] is not None:
+            return _telemetry_cache["data"]
+        liq = viewmodel.liquidity_panel(engine.all_contracts(db_path=db_path))
+        vol = viewmodel.volatility_leader(engine.recent_contract_frames(_TELEMETRY_VOLATILITY_WINDOW_S, db_path=db_path))
+        rows = lambda key: [list(t) for t in liq.get(key, [])]   # noqa: E731 — tuples → JSON arrays
+        out = TerminalTelemetry(snapshot_id=sid, top_sports=rows("top_sports"), top_contracts=rows("top_contracts"),
+                                tightest=rows("tightest"), most_traded=rows("most_traded"), volatility=vol)
+        _telemetry_cache["snapshot_id"], _telemetry_cache["data"] = sid, out
+        return out
+
+
+@app.get("/api/terminal/orderbook", response_model=TerminalOrderbook)
+def get_terminal_orderbook(ticker: str, depth: int = _ORDERBOOK_DEFAULT_DEPTH) -> TerminalOrderbook:
+    """LIVE resting order book for one market — the SPA depth ladder (replaces the old synthetic book).
+    Read-only market data, GATED by the auth middleware when AUTH_ENABLED (like every `/api/terminal/*`
+    route — it is NOT public). Validates the ticker, clamps depth to 1..100, coalesces the
+    frontend's ~5s poll via a short per-ticker TTL cache, and is sliding-window rate-limited. Degrades
+    HONESTLY: an empty/closed book → empty sides; any upstream failure → ok=False + error (never a 500,
+    never fabricated rungs). Display-only depth — never feeds classification/ranking."""
+    tk = (ticker or "").strip().upper()
+    if not (3 <= len(tk) <= 64) or not all(c.isalnum() or c in "-_." for c in tk):
+        raise HTTPException(status_code=400, detail="invalid ticker")
+    depth = max(1, min(_ORDERBOOK_MAX_DEPTH, int(depth)))
+
+    now = time.monotonic()
+    with _orderbook_cache_lock:                                  # serve a fresh cache hit (coalesce polls)
+        hit = _orderbook_cache.get(tk)
+        if hit and (now - hit[0]) < _ORDERBOOK_CACHE_TTL_S:
+            ob = hit[1]
+            return TerminalOrderbook(ticker=tk, yes=ob["yes"], no=ob["no"], age_s=round(now - hit[0], 2))
+
+    if not _orderbook_limiter.allow(time.time()):
+        return TerminalOrderbook(ticker=tk, ok=False, error="rate limited — try again shortly")
+    try:
+        ob = kalshi_client.get_orderbook(tk, depth=depth)
+    except Exception as exc:                                     # network/4xx/5xx/closed → honest degrade
+        return TerminalOrderbook(ticker=tk, ok=False, error=f"order book unavailable: {exc}")
+    with _orderbook_cache_lock:
+        _orderbook_cache[tk] = (now, ob)
+    return TerminalOrderbook(ticker=tk, yes=ob["yes"], no=ob["no"], age_s=0.0)
+
+
+@app.post("/api/terminal/export")
+def post_terminal_export(req: ExportRequest, db_path: str | None = Depends(db_path_dep)) -> StreamingResponse:
+    """Build the snapshot-export ZIP from EXACTLY the opportunity_ids the grid shows (so the export can
+    never disagree with the visible rows); evidence frames stay whole-snapshot, as the old dashboard
+    exported them. Read-only POST (computes a zip; mutates nothing). 409 when there's no snapshot."""
+    from webui import engine, export  # lazy (engine cycle); export is pure
+    snap = store.latest(db_path=db_path)
+    if snap is None:
+        raise HTTPException(status_code=409, detail="no snapshot to export")
+    wanted = set(req.opportunity_ids)
+    selected = [r for r in _opps(db_path) if r.get("opportunity_id") in wanted]
+    backlog = lifecycle.recently_actionable(
+        store.snapshots_since(config.BACKLOG_WINDOWS["1 hour"], db_path=db_path))
+    blob = export.build_export_zip(
+        snapshot_id=snap.get("snapshot_id"), fetched_at=snap.get("fetched_at"),
+        opportunities=selected, coverage=snap.get("meta") or {}, frames=engine.frames(db_path=db_path),
+        backlog=backlog, backlog_window="1 hour", filters={"opportunity_ids": len(wanted)})
+    fname = f"kalshi-snapshot-{snap.get('snapshot_id')}.zip"
+    return StreamingResponse(io.BytesIO(blob), media_type="application/zip",
+                             headers={"Content-Disposition": f'attachment; filename="{fname}"'})
+
+
+def _num(x: Any) -> float | None:
+    """JSON-safe float (None for None/blank/NaN) — local mirror of feed._num for the payoff cost line."""
+    try:
+        if x is None or x == "":
+            return None
+        f = float(x)
+        return None if f != f else f
+    except (TypeError, ValueError):
+        return None
 
 
 @app.get("/opportunities/{opportunity_id}", response_model=Opportunity)
@@ -391,9 +696,10 @@ def get_metrics(db_path: str | None = Depends(db_path_dep)):
     snap = store.latest(db_path=db_path)
     age = data.data_age_seconds(snap["fetched_at"]) if snap else None
     stale = data.is_stale(age, config.STALE_AFTER_SECONDS) if age is not None else None
-    return Metrics(**diagnostics.build_metrics(
+    base = diagnostics.build_metrics(
         snapshot=snap, scan_status=scan_manager.manager.status(), now_age=age,
-        stale=stale, now=time.time(), viewer_count=presence.count()))
+        stale=stale, now=time.time(), viewer_count=presence.count())
+    return Metrics(**base, **store.footprint_stats(db_path=db_path))
 
 
 @app.get("/alerts", response_model=Alerts)
@@ -417,8 +723,22 @@ def get_alerts(persistence_s: float | None = None, db_path: str | None = Depends
 
 def _scan_run_fn(fetch_fn: Callable[[str], tuple]) -> Callable[[str], tuple]:
     def run_fn(fetched_at: str) -> tuple:
-        return scanner.run_scan(fetch_fn, fetched_at=fetched_at, request_count=kalshi_client.request_count,
-                                retry_stats=kalshi_client.retry_stats)
+        # main: retry_stats for perf instrumentation; branch: the fee-overrides sweep. Keep BOTH.
+        unified, coverage, frames = scanner.run_scan(
+            fetch_fn, fetched_at=fetched_at, request_count=kalshi_client.request_count,
+            retry_stats=kalshi_client.retry_stats)
+        # DISPLAY-ONLY event-fee overrides: one bounded, fail-closed sweep of /events/fee_changes (the
+        # event object doesn't expose overrides). Done HERE (network layer) so the scanner stays
+        # network-free. Stamped into coverage `meta` for the feed; never feeds ranking/bucketing.
+        try:
+            overrides, status = kalshi_client.get_event_fee_overrides()
+        except Exception:  # noqa: BLE001 - an override sweep must never break a scan
+            overrides, status = {}, "failed"
+        coverage["event_fee_overrides"] = overrides
+        coverage["fee_data_status"] = ("ok" if coverage.get("fee_rates") and status == "ok"
+                                       else "fallback" if not coverage.get("fee_rates")
+                                       else status)
+        return unified, coverage, frames
     return run_fn
 
 

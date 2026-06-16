@@ -17,6 +17,19 @@ def _opp(oid, **kw):
     return row
 
 
+def test_csv_formula_injection_is_neutralized():
+    """A Kalshi-supplied string starting with a spreadsheet formula trigger is quote-prefixed; numbers and
+    benign strings are untouched."""
+    assert export._cell("=cmd|'/c calc'!A1") == "'=cmd|'/c calc'!A1"
+    assert export._cell("+1+1") == "'+1+1"
+    assert export._cell("@SUM(A1)") == "'@SUM(A1)"
+    assert export._cell("-5") == "'-5"               # a STRING "-5" is guarded
+    assert export._cell(-5) == -5                     # a numeric -5 is left alone
+    assert export._cell("Buy YES") == "Buy YES"
+    # A JSON-encoded list/dict starts with [ or { — already formula-safe, so it is left unprefixed.
+    assert export._cell(["=evil", 1]) == '["=evil", 1]'
+
+
 def _open(blob: bytes) -> zipfile.ZipFile:
     return zipfile.ZipFile(io.BytesIO(blob))
 

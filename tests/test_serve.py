@@ -7,6 +7,7 @@ throttle are process-local, so multiple workers must be warned against.
 from __future__ import annotations
 
 import importlib
+import os
 
 import pytest
 
@@ -16,6 +17,33 @@ import serve
 
 def _levels(issues):
     return sorted(level for level, _ in issues)
+
+
+# --- secure-by-default runtime (apply_runtime_defaults) --------------------------------------
+@pytest.fixture
+def _clean_auth_env(monkeypatch):
+    """apply_runtime_defaults() mutates os.environ via setdefault (NOT monkeypatch), so a test calling it
+    must guarantee those vars are gone afterwards or they LEAK into later tests (gating their endpoints).
+    This fixture removes them before and restores 'absent' after."""
+    monkeypatch.delenv("AUTH_ENABLED", raising=False)
+    monkeypatch.delenv("AUTH_ALLOW_SIGNUP", raising=False)
+    yield
+    os.environ.pop("AUTH_ENABLED", None)
+    os.environ.pop("AUTH_ALLOW_SIGNUP", None)
+
+
+def test_runtime_defaults_enable_auth_and_signup_when_unset(_clean_auth_env):
+    serve.apply_runtime_defaults()
+    assert os.environ["AUTH_ENABLED"] == "1"
+    assert os.environ["AUTH_ALLOW_SIGNUP"] == "1"
+
+
+def test_runtime_defaults_respect_explicit_opt_out(_clean_auth_env, monkeypatch):
+    monkeypatch.setenv("AUTH_ENABLED", "0")
+    monkeypatch.setenv("AUTH_ALLOW_SIGNUP", "0")
+    serve.apply_runtime_defaults()
+    assert os.environ["AUTH_ENABLED"] == "0"        # operator opt-out wins (setdefault is a no-op)
+    assert os.environ["AUTH_ALLOW_SIGNUP"] == "0"
 
 
 # --- storage-secret fail-hard ----------------------------------------------------------------
@@ -64,6 +92,66 @@ def test_fatal_and_worker_warn_are_independent():
     issues = serve.bind_safety("0.0.0.0", storage_secret_set=False, allow_dev_on_lan=False,
                                web_concurrency=2)
     assert _levels(issues) == ["fatal", "warn"]
+
+
+# --- auth-mode fail-closed bind (Phase 5) ----------------------------------------------------
+def _auth_ok():
+    """The fully-satisfied auth-mode bind args (real secret + users + TLS + host allowlist) for a
+    non-loopback host."""
+    return dict(storage_secret_set=True, allow_dev_on_lan=False, auth_enabled=True,
+                session_secret_real=True, has_users=True, tls_or_proxy=True, host_allowlist_set=True)
+
+
+def test_auth_mode_all_present_is_clean():
+    assert serve.bind_safety("192.168.1.42", **_auth_ok()) == []
+
+
+def test_auth_mode_missing_host_allowlist_is_fatal():
+    # A3: AUTH_ENABLED + non-loopback + no APP_ALLOWED_HOSTS (default '*') is fatal — the Host header is
+    # unvalidated and the Origin/CSRF check derives from it.
+    args = {**_auth_ok(), "host_allowlist_set": False}
+    assert "fatal" in _levels(serve.bind_safety("0.0.0.0", **args))
+
+
+def test_auth_mode_host_allowlist_escape_hatch_clears_fatal():
+    # ALLOW_ANY_HOST_ON_LAN=1 downgrades the allowlist requirement on a trusted LAN.
+    args = {**_auth_ok(), "host_allowlist_set": False, "allow_any_host": True}
+    assert serve.bind_safety("192.168.1.42", **args) == []
+
+
+def test_auth_mode_missing_session_secret_is_fatal():
+    args = {**_auth_ok(), "session_secret_real": False}
+    assert "fatal" in _levels(serve.bind_safety("0.0.0.0", **args))
+
+
+def test_auth_mode_no_users_is_fatal():
+    args = {**_auth_ok(), "has_users": False}
+    assert "fatal" in _levels(serve.bind_safety("0.0.0.0", **args))
+
+
+def test_auth_mode_without_tls_is_fatal():
+    args = {**_auth_ok(), "tls_or_proxy": False}
+    assert "fatal" in _levels(serve.bind_safety("0.0.0.0", **args))
+
+
+def test_auth_mode_multi_worker_is_fatal_not_warn():
+    args = {**_auth_ok(), "web_concurrency": 2}
+    levels = _levels(serve.bind_safety("0.0.0.0", **args))
+    assert "fatal" in levels and "warn" not in levels
+
+
+def test_auth_mode_loopback_is_exempt():
+    # Loopback never needs TLS/users/secret even with auth on (the gate still applies, but binding is safe).
+    args = dict(storage_secret_set=False, allow_dev_on_lan=False, auth_enabled=True,
+                session_secret_real=False, has_users=False, tls_or_proxy=False)
+    assert serve.bind_safety("127.0.0.1", **args) == []
+
+
+def test_auth_off_keeps_legacy_warn_for_multi_worker():
+    # With auth OFF, multi-worker stays a warn (unchanged behaviour).
+    issues = serve.bind_safety("0.0.0.0", storage_secret_set=True, allow_dev_on_lan=False,
+                               web_concurrency=2)
+    assert _levels(issues) == ["warn"]
 
 
 # --- SNAPSHOT_DB_PATH env override (PR S2) ---------------------------------------------------
@@ -130,3 +218,14 @@ def test_pause_when_idle_truthy_forces_gate_on():
 def test_pause_when_idle_unrecognized_falls_back_to_default():
     assert serve.resolve_pause_when_idle("maybe", True) is True
     assert serve.resolve_pause_when_idle("maybe", False) is False
+
+
+def test_server_mode_pause_default_24_7_on_non_loopback():
+    # Non-loopback (deployed server / LAN) → 24/7 scanning (no idle pause), regardless of the config default.
+    for host in ("0.0.0.0", "192.168.1.50", "10.0.0.2"):
+        assert serve.server_mode_pause_default(host, True) is False
+        assert serve.server_mode_pause_default(host, False) is False
+    # Loopback (local dev) → keep the interactive config default.
+    for host in ("127.0.0.1", "localhost", "::1"):
+        assert serve.server_mode_pause_default(host, True) is True
+        assert serve.server_mode_pause_default(host, False) is False

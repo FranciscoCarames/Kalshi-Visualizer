@@ -2,6 +2,10 @@
 
 Everything here is read-only market-data configuration. No credentials are needed:
 Kalshi's market-data endpoints (series/events/markets) are public.
+
+These are DEFAULT constants only — config.py stays import-free by convention; env-var overrides for the
+footprint knobs (retention, cadence, vacuum/checkpoint flags) are read at the boundaries that consume them
+(store.py for the store tier; the scan scheduler for cadence), not here.
 """
 
 # Kalshi public market-data API. NOTE: the reachable host is `external-api.kalshi.com`
@@ -157,6 +161,19 @@ MAX_RETRIES = 3             # attempts per request before raising (was 5; ladder
 BACKOFF_BASE = 1.0          # seconds; exponential backoff base for 429/5xx/network errors
 BACKOFF_MAX = 8.0           # seconds; cap on a single backoff sleep (was 30; Retry-After still honored)
 
+# --- Fee estimation (DISPLAY-ONLY) ---------------------------------------------------
+# Kalshi's published general fee schedule: taker = ceil(0.07 x C x P x (1-P)),
+# maker = ceil(0.0175 x C x P x (1-P)); the per-series/event `fee_multiplier` scales the base
+# (most markets = 1). These base coefficients are configurable and confirmed in live smoke. Fees are an
+# ESTIMATE and NEVER feed ranking/bucketing/actionability (see webui.viewmodel.net_of_fees).
+FEE_TAKER_BASE_COEFF = 0.07        # general taker base (x effective multiplier)
+FEE_MAKER_BASE_COEFF = 0.0175      # general maker base (x multiplier; maker-fee markets only)
+FEE_DEFAULT_MULTIPLIER = 1.0       # labeled fallback when a known-quadratic series lacks a multiplier
+FEE_METADATA_FETCH_ENABLED = True  # read fee_type/fee_multiplier from the series object (rides the title GET)
+FEE_EVENT_OVERRIDE_FETCH_ENABLED = True   # sweep /events/fee_changes for event-level overrides
+FEE_EVENT_OVERRIDE_MAX_PAGES = 10  # bound the override sweep; past it -> fail-closed to series-level
+FEE_METADATA_TTL_SECONDS = 24 * 3600      # fee meta caches with the same TTL as series titles
+
 # --- Auto-refresh cadence ------------------------------------------------------------
 REFRESH_OPTIONS = [60, 120, 300]   # selectable auto-refresh intervals (seconds)
 REFRESH_DEFAULT_SECONDS = 120      # conservative default (safe even for the heavier full scan)
@@ -183,7 +200,25 @@ SNAPSHOT_DB_PATH = "snapshots.db"
 # Retention: drop snapshots older than this many seconds (relative to the newest stored snapshot, so
 # retention is deterministic/testable). Sized above the largest planned backlog window (24h, Stage 3)
 # plus margin, so the lifecycle/backlog views always have enough history.
-SNAPSHOT_RETENTION_SECONDS = 30 * 60 * 60   # 30 hours
+# Server-safe default: 6h (was 30h). A left-running server at the old 30h x ~10s cadence steady-stated to
+# ~28 GB and overheated the host (snapshot_count = retention / cadence; rows = 2,224/snapshot). 6h keeps a
+# full day of lifecycle in the durable backlog table while bounding the heavy store. store.py reads the env
+# override SNAPSHOT_RETENTION_SECONDS for rollback without a code change.
+SNAPSHOT_RETENTION_SECONDS = 6 * 60 * 60   # 6 hours
+# Lean opportunity tiering: keep FULL opportunity JSON for the latest N snapshots; for OLDER snapshots drop
+# the heavy SPECULATIVE/diagnostic buckets' row JSON (counts preserved in snapshots.meta) so history stays
+# bounded without touching store.latest() (the live feed). Mirrors the frame-retention tier. store.py reads
+# env overrides (SNAPSHOT_OPP_FULL_RETENTION_N / SNAPSHOT_OPP_TIER_ENABLED) for rollback.
+SNAPSHOT_OPP_FULL_RETENTION_N = 6
+SNAPSHOT_OPP_TIER_ENABLED = True
+SNAPSHOT_OPP_TIER_BUCKETS = ("no_structure", "data_quality", "near_miss")   # the heavy speculative tier
+# Page reclamation: PRAGMA auto_vacuum=INCREMENTAL at init (fresh DBs) + a throttled incremental_vacuum and
+# WAL checkpoint(TRUNCATE) in post-commit housekeeping so a long-running server's file actually shrinks after
+# retention deletes. store.py reads env overrides (SNAPSHOT_INCREMENTAL_VACUUM_ENABLED /
+# SNAPSHOT_WAL_TRUNCATE_ENABLED) for rollback. Housekeeping runs every Nth snapshot to avoid per-write churn.
+SNAPSHOT_INCREMENTAL_VACUUM_ENABLED = True
+SNAPSHOT_WAL_TRUNCATE_ENABLED = True
+SNAPSHOT_HOUSEKEEPING_EVERY_N = 5
 # SQLite busy-timeout (ms): how long a connection waits on a held lock before raising. With WAL mode
 # (set per-connect in store._connect) this lets a reader proceed during a scan write instead of erroring.
 SNAPSHOT_BUSY_TIMEOUT_MS = 5000
@@ -270,6 +305,60 @@ SCAN_BUDGET_COOLDOWN_SECONDS = 300
 SCAN_HTTP_MAX_PER_WINDOW = 10
 SCAN_HTTP_WINDOW_SECONDS = 60
 
+# Live order-book fetch for the Terminal SPA depth ladder (GET /api/terminal/orderbook). Read-only public
+# market data; the endpoint serves a short per-ticker TTL cache and is sliding-window rate-limited so the
+# ~5s frontend poll across tabs can never overwhelm the process-wide Kalshi throttle. Process-local.
+ORDERBOOK_HTTP_MAX_PER_WINDOW = 30          # max live order-book fetches per window (per process)
+ORDERBOOK_HTTP_WINDOW_SECONDS = 10
+
+# --- Per-user authentication (auth_store.py / auth.py) --------------------------------
+# Auth is a SEPARATE concern from the snapshot store: users live in their OWN SQLite file (AUTH_DB_PATH,
+# env-overridable in serve.py/manage_users.py) so a snapshot-store reset (store._reset_to_fresh DROPs its
+# tables on a bad migration) can NEVER touch credentials. config stays import-free — every env read lives
+# at a boundary (serve.py / api.py / auth.py / manage_users.py). All durations are seconds.
+AUTH_DB_PATH = "auth.db"                       # default; SNAPSHOT_DB_PATH-distinct (env override at boundary)
+AUTH_SESSION_IDLE_SECONDS = 2 * 60 * 60        # re-login after this much INACTIVITY (sliding, re-set each
+                                               #   request); strictly < the absolute cap so sliding is real
+AUTH_SESSION_ABSOLUTE_SECONDS = 12 * 60 * 60   # hard cap on a session's life regardless of activity
+AUTH_LOGIN_MAX_PER_WINDOW = 5                  # login attempts per (ip, username) before 429
+AUTH_LOGIN_WINDOW_SECONDS = 60
+AUTH_LOGIN_LIMITER_MAX = 4096                  # cap on the per-(ip,username) login-limiter map; stale
+                                               #   entries are evicted at the cap so it can't grow unbounded
+AUTH_LOCKOUT_THRESHOLD = 10                    # consecutive failures before a temporary account lockout
+AUTH_LOCKOUT_SECONDS = 15 * 60                 # lockout duration (temporary — CLI `unlock` clears early)
+AUTH_COOKIE_NAME = "kss_session"               # signed session cookie (itsdangerous, NOT NiceGUI's cookie)
+AUTH_REMEMBER_COOKIE_NAME = "kss_remember"     # opt-in "stay signed in on this device" rotating token
+AUTH_REMEMBER_MAX_AGE = 30 * 24 * 60 * 60      # remember-me token lifetime (30 days)
+AUTH_MAX_CRED_LEN = 256                        # reject username/password longer than this BEFORE hashing
+# Argon2id parameters (OWASP Password Storage minimums, 2024). Pinned so a deployment is reproducible and
+# `needs_rehash` can upgrade old hashes when these change. time=2, 19 MiB, 1 lane.
+AUTH_ARGON2_TIME_COST = 2
+AUTH_ARGON2_MEMORY_COST = 19456                # KiB (= 19 MiB)
+AUTH_ARGON2_PARALLELISM = 1
+
+# Per-user preferences (auth_store `preferences` table). A versioned envelope is validated + sanitized
+# server-side (NOT trusted from the client) and size-capped. The allowed-value sets are single-sourced
+# here so the server sanitizer and any future consumer agree. Theme/preset/section names mirror the SPA.
+AUTH_PREFS_MAX_BYTES = 32768                    # 32 KiB cap on the stored JSON blob (bounds abuse)
+AUTH_PREFS_VERSION = 1                          # envelope version (bump when the prefs shape changes)
+PREFS_THEMES = ("amber", "hc")
+PREFS_LAYOUT_PRESETS = ("default", "triage", "inspect", "research", "blotterfull")
+PREFS_SPLITS = ("all", "vertical", "calendar")
+PREFS_AUTOREFRESH = ("10s", "30s", "off")
+PREFS_COL_KEYS = ("opp", "risk", "nm", "no", "qs", "diag")   # colKeyOf() catalogs in columns.ts
+PREFS_SETTINGS_BOOL = ("longShort", "showIds", "resolutionCriteria", "hideNetNegExec")
+PREFS_TEXT_SIZES = ("compact", "normal", "large", "xlarge")   # discrete UI text-size steps (settings.textSize)
+# The fixed singleton workspace panel ids — MANDATORY allow-list for the persisted custom layout
+# (auth_store._clean_layout drops any id not here and dedupes). Mirrors the client PANEL_IDS in layout.ts.
+PREFS_PANEL_IDS = ("p-blotter", "p-des", "p-ladder", "p-watch", "p-alerts", "p-research")
+# Authenticated-action rate limits (per user) — register uses the login (ip,username) limiter; these guard
+# the post-login state-changers so a debounce burst or a script can't hammer them.
+AUTH_ACTION_LIMITS = {                          # action -> (max_events, window_seconds)
+    "password": (10, 300),                      # password changes: 10 / 5 min
+    "preferences": (60, 60),                    # prefs PUT: 60 / min (debounced client → generous)
+    "device": (30, 60),                         # device revoke/logout: 30 / min
+}
+
 # --- NiceGUI dashboard (Stage 5) -----------------------------------------------------
 # NiceGUI needs a storage secret to sign its per-user session cookie. There is NO auth/multi-user here,
 # so this is not a real secret — the REAL value comes from the NICEGUI_STORAGE_SECRET env var (read in
@@ -292,9 +381,13 @@ UI_DEBOUNCE_TICK_SECONDS = 0.1
 # auto-refreshes data without an external scheduler. One loop per process regardless of viewer count; each
 # tick rides the ScanManager TTL/budget/singleflight guards. The UI exposes a toggle + interval selector.
 AUTO_SCAN_INTERVAL_OPTIONS = [10, 15, 30, 60, 120]   # selectable seconds (>= SCAN_MIN_INTERVAL_SECONDS)
-AUTO_SCAN_DEFAULT_SECONDS = 10                        # default cadence (P3): aggressive ~10s so the P2
-                                                      # 1s poll has fresh data to surface. 10 > the 8s
-                                                      # SCAN_MIN_INTERVAL (no TTL-skip) and a full scan is
+AUTO_SCAN_DEFAULT_SECONDS = 60                        # server-safe default (was 10). 10s hammered CPU
+                                                      # (overheating) and 30h x 10s steady-stated the store to
+                                                      # ~28 GB. 60s is a calm background refresh; an active
+                                                      # user can still pick 10-15s from the selector and manual
+                                                      # "Scan now" is never cadence-gated. The scan scheduler
+                                                      # reads the env override AUTO_SCAN_DEFAULT_SECONDS.
+                                                      # Original note: 10 > the 8s SCAN_MIN_INTERVAL and a scan is
                                                       # ~3-4s of rate-limited GETs, so ticks never overlap;
                                                       # the budget/cooldown guards stay as the safety floor.
 AUTO_SCAN_DEFAULT_ENABLED = True                      # auto-refresh on by default
@@ -305,3 +398,9 @@ AUTO_SCAN_DEFAULT_ENABLED = True                      # auto-refresh on by defau
 # AUTO_SCAN_PAUSE_WHEN_IDLE=0 (read in serve.resolve_pause_when_idle) selects the headless 24/7 mode at
 # deploy time without editing code.
 AUTO_SCAN_PAUSE_WHEN_IDLE = True
+
+# The Terminal Pro SPA (/terminal) is not a NiceGUI client, so it can't bump the presence COUNTER; instead
+# its feed poll touches a heartbeat and the idle-gate treats a touch within this window as presence (so the
+# background scan refreshes the snapshot while the SPA is open, and re-pauses this long after it closes).
+# Kept > the SPA poll interval so an open tab stays active across one missed beat (hidden-tab throttling).
+TERMINAL_PRESENCE_WINDOW_S = 30

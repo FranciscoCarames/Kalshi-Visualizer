@@ -11,14 +11,33 @@ inconsistencies** across a participant's related contracts (a deeper outcome mus
 prerequisite that contains it) and **dutch-book arbitrage** on MECE events, as buy-only opportunities
 (**Buy YES / Buy NO**), ranked Actionable / Review / Blocked with collapsed diagnostics and
 per-participant detail. A background scan refreshes a SQLite snapshot store under a process-wide rate
-throttle. NiceGUI is the **sole UI** — the legacy Streamlit `app.py` was retired.
+throttle. The **React "Kalshi Structured Scanner" SPA** (`frontend/`, built to `frontend/dist`) is the
+**default UI at `/`**; the legacy NiceGUI dashboard is **retained (not deleted) at `/dashboard`** as a
+read-only fallback. (The older Streamlit `app.py` was retired.) Both are read-only views of the same
+engine — the SPA reads it solely through `GET /api/terminal/feed` (+ thin `/api/terminal/*` parity views).
 
 - **Owner / GitHub:** FranciscoCarames (`franciscocarames1@gmail.com`). Repo `Kalshi-Visualizer`
   (private), default branch `main`.
 - **Platform:** Windows 11, PowerShell, Python 3.13. (The Bash tool is also available.)
-- **Scope guard — do NOT add unless explicitly asked:** trading, authentication, order placement,
-  conditional-probability/de-vig models, net-of-fees math. Adding a **new sport** is in scope via a
-  `SportConfig` drop-in; non-sport-config work is not.
+- **Scope guard — do NOT add unless explicitly asked:** trading, order placement,
+  conditional-probability/de-vig models, net-of-fees math. **Exception (owner‑approved 2026‑06‑16):** the
+  field‑implied **de‑vig conditional‑probability panel exists in the legacy NiceGUI `/dashboard/`** (merged
+  from `origin/main`); the React **SPA stays display‑only / no de‑vig**. Adding a **new sport** is in scope
+  via a `SportConfig` drop-in; non-sport-config work is not. **Per-user authentication is now IN SCOPE**
+  (owner-requested 2026-06) — app-level login over the read-only surface, gated behind `AUTH_ENABLED`;
+  see `docs/AUTH.md` (`auth_store.py`/`auth.py`/`manage_users.py`). It must NOT alter engine logic.
+
+## NEVER EVER DO
+
+These rules are ABSOLUTE:
+
+### NEVER Publish Sensitive Data
+- NEVER publish passwords, API keys, tokens to git/npm/docker
+- Before ANY commit: verify no secrets included
+
+### NEVER Commit .env Files
+- NEVER commit `.env` to git
+- ALWAYS verify `.env` is in `.gitignore`
 
 ## Workflow docs
 
@@ -69,14 +88,17 @@ MLB/NHL/motorsport lookalikes & props → `other`. Motorsport: `field_families`
 
 ```bash
 pip install -r requirements.txt          # runtime: requests, pandas, fastapi, nicegui, uvicorn
-python serve.py                          # FastAPI + NiceGUI dashboard (/) + REST API
+cd frontend && npm install && npm run build && cd ..   # build the default SPA UI → frontend/dist
+python serve.py                          # SPA (/) + NiceGUI dashboard (/dashboard) + REST API, one app
 pip install -r requirements-dev.txt      # adds pytest, pytest-asyncio, ruff
 pytest -q                                # pure layers + in-process engine/API + headless NiceGUI smoke
 ruff check .                             # lint
 ```
 
 Verify without a browser: `pytest -q`; `python -c "import serve, api, webui.dashboard"`; a `serve.py`
-boot — `GET /`, `/healthz`, `/metrics` → 200, `/readyz` → `ready`/`degraded`/`not_ready`. Headless
+boot — `GET /` (SPA), `/dashboard/` (NiceGUI), `/healthz`, `/metrics` → 200, `/readyz` →
+`ready`/`degraded`/`not_ready`. The SPA is served from `frontend/dist` only when built (gitignored
+artifact); an unbuilt tree leaves `/` unmounted but never breaks boot. Headless
 NiceGUI smoke is `tests/test_browser.py` (`nicegui.testing`, no selenium). Live Kalshi calls, `pip`, and
 `git push` need the Bash tool with the sandbox disabled (network is otherwise blocked).
 
@@ -304,20 +326,35 @@ collapsed Diagnostics & debug expander. `viewmodel.py` + `diagnostics.py` are th
 - Verify with `pytest -q` + a `serve.py` boot (see Run & verify).
 - `.gitignore` covers `.env`, `*.pem`, `.venv`, `__pycache__`, `*.db`, `.claude/`, `.kss/`.
 
-## Git workflow (strict — owner confirmed)
+## Git workflow (strict — owner confirmed 2026-06-16)
 
-- **Never commit, push, or merge to `main`.** The owner merges manually.
-- **Branch-only delivery (near-term policy, owner 2026-06-09 — supersedes "one PR per change"):** do NOT
-  open a PR per change. Implement the **full scope** of a work item across **one or more feature branches**;
-  verify (`pytest -q`, `ruff check .`, `serve.py` boot); then hand the branch back. The owner **tests
-  manually** and **merges to `main` only when satisfied**. `main` stays frozen until then.
-- Branch off the latest `main` — or, since `main` is frozen, off the unmerged branch a feature depends on
-  (state the base in the handoff). Keep verifying before handing back; commits on the branch are fine.
+**`origin/main` is the single source of truth — always the most up‑to‑date code.** Whenever the owner says
+"main" / "the main" they mean **`origin/main`** (the remote), NOT local `main` (which is often stale —
+treat it as untrustworthy).
+
+- **Always start from the freshest relevant code.** Before any new work: `git fetch origin`, then choose the
+  base by the goal — **`origin/main` by default**, or **the newest relevant feature branch** when the work
+  intentionally builds on un‑merged features (the owner says which; when unsure, ask). Never start from a
+  *stale local* `main`. If you base on an unmerged branch, keep it current (periodically merge `origin/main`
+  in) so it can't drift far behind.
+- **Each new feature → its own branch, pushed to origin** (`git push -u origin <feature-branch>`). A pushed
+  origin feature branch is the delivery unit; the owner reviews/merges it to `origin/main` when satisfied.
+- **Never push or merge to `origin/main` directly** — the owner merges (PR). The agent only delivers
+  verified feature branches on origin.
+- Verify before handing back: `pytest -q`, `ruff check .`, `npm run build` + `npx vitest run` (if frontend),
+  a `serve.py` boot, and a browser check of any UI change. State the base branch in the handoff.
 - Commit messages end with: `Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>`.
-  If a PR is opened for review, its body ends with the Claude Code footer.
+  PR bodies end with the Claude Code footer.
+- **Why this policy (lesson, 2026-06-16):** the prior "main is frozen → stack features on unmerged branches"
+  rule let a long SPA feature stack drift ~8 days behind `origin/main`'s parallel NiceGUI work, forcing a
+  large reconciliation merge. Stacking on an unmerged branch is fine *when the goal needs it* — the fix is to
+  keep that branch current with `origin/main` so it never drifts that far again.
+- **Staging hygiene:** stage explicit paths (`git add <files>`), never `git add -A`/`git add .` — the working
+  tree carries untracked scratch (`.playwright-mcp/`, screenshots, mockups, `*.log`) that must NOT be committed.
 
 ## Status & history
 
 Shipped state, current limits, and the approved next-work list live in **`docs/STATUS.md`**. Detailed
 build history and decisions live in `.kss/` (topics + milestones). `pytest` is the full suite (pure
 layers + engine + API + viewmodel + per-sport `test_*` + headless `test_browser`).
+

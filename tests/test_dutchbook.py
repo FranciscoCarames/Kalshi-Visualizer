@@ -919,3 +919,16 @@ def test_group_basket_no_edge_when_priced_at_floor():
     diag = {}
     assert dutchbook.find_group_baskets(_group(yes_asks=[50, 50, 50, 50]), diag) == []
     assert diag.get("eligible_non_firing")
+
+
+def test_two_way_rows_grouped_by_kind_not_just_event():
+    # C5: rows sharing an event_ticker but with DIFFERENT `kind` must NOT be paired into one dutch book
+    # (the group key is (event_ticker, kind)). Otherwise dispatch would pick a path off an arbitrary
+    # markets[0] and could bypass the tie-capable fixed-sum proof.
+    a = market("Alcaraz", yes_bid_c=43, yes_ask_c=45)
+    b = market("Sinner", yes_bid_c=46, yes_ask_c=48)
+    b["kind"] = "game"                                  # same event, different family
+    assert dutchbook.find_dutch_books([a, b]) == []     # no false cross-kind pairing
+    # Control: same kind still pairs and fires (regression guard — behaviour unchanged for real events).
+    b_same = market("Sinner", yes_bid_c=46, yes_ask_c=48)
+    assert len(dutchbook.find_dutch_books([a, b_same])) == 1

@@ -30,6 +30,14 @@ class SlidingWindow:
             self._events.append(now)
             return True
 
+    def is_stale(self, now: float) -> bool:
+        """True when no events remain inside the window (after pruning) — i.e. this limiter is carrying no
+        live state and is safe to drop. Used to bound an unbounded map of per-key limiters."""
+        with self._lock:
+            cutoff = now - self.window_s
+            self._events = [t for t in self._events if t > cutoff]
+            return not self._events
+
     def reset(self) -> None:
         """Test hook: clear the recorded events."""
         with self._lock:
