@@ -700,7 +700,20 @@ def get_alerts(persistence_s: float | None = None, db_path: str | None = Depends
 
 def _scan_run_fn(fetch_fn: Callable[[str], tuple]) -> Callable[[str], tuple]:
     def run_fn(fetched_at: str) -> tuple:
-        return scanner.run_scan(fetch_fn, fetched_at=fetched_at, request_count=kalshi_client.request_count)
+        unified, coverage, frames = scanner.run_scan(
+            fetch_fn, fetched_at=fetched_at, request_count=kalshi_client.request_count)
+        # DISPLAY-ONLY event-fee overrides: one bounded, fail-closed sweep of /events/fee_changes (the
+        # event object doesn't expose overrides). Done HERE (network layer) so the scanner stays
+        # network-free. Stamped into coverage `meta` for the feed; never feeds ranking/bucketing.
+        try:
+            overrides, status = kalshi_client.get_event_fee_overrides()
+        except Exception:  # noqa: BLE001 - an override sweep must never break a scan
+            overrides, status = {}, "failed"
+        coverage["event_fee_overrides"] = overrides
+        coverage["fee_data_status"] = ("ok" if coverage.get("fee_rates") and status == "ok"
+                                       else "fallback" if not coverage.get("fee_rates")
+                                       else status)
+        return unified, coverage, frames
     return run_fn
 
 

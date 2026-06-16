@@ -69,10 +69,66 @@ def test_series_title_cache_short_ttl_for_misses(monkeypatch):
     monkeypatch.setattr(kc, "_get", lambda *_a: {"series": {}})    # no title -> empty
     now = time.monotonic()
     assert kc.get_series_titles(["KXEMPTY"]) == {"KXEMPTY": ""}
-    expiry, title = kc._title_cache["KXEMPTY"]
-    assert title == ""
+    expiry, meta = kc._title_cache["KXEMPTY"]        # cache now stores {title, fee_type, fee_multiplier}
+    assert meta["title"] == "" and meta["fee_type"] is None and meta["fee_multiplier"] is None
     # an empty/miss result lives only the short TTL (~60s), not the 24h success TTL
     assert expiry - now <= kc.TITLE_TTL_MISS_SECONDS + 1 < kc.TITLE_TTL_OK_SECONDS
+
+
+def test_get_series_meta_parses_fee_fields(monkeypatch):
+    kc.reset_title_cache()
+    monkeypatch.setattr(kc, "_get", lambda *_a: {"series": {
+        "title": "ATP Tennis Match", "fee_type": "quadratic_with_maker_fees", "fee_multiplier": 1}})
+    m = kc.get_series_meta(["KXATPMATCH"])
+    assert m["KXATPMATCH"] == {"title": "ATP Tennis Match",
+                               "fee_type": "quadratic_with_maker_fees", "fee_multiplier": 1}
+    # back-compat title wrapper still works
+    assert kc.get_series_titles(["KXATPMATCH"]) == {"KXATPMATCH": "ATP Tennis Match"}
+
+
+def test_get_series_meta_missing_fee_type_is_none(monkeypatch):
+    kc.reset_title_cache()
+    monkeypatch.setattr(kc, "_get", lambda *_a: {"series": {"title": "X", "fee_multiplier": 1}})
+    m = kc.get_series_meta(["KXONLYMULT"])
+    assert m["KXONLYMULT"]["fee_type"] is None and m["KXONLYMULT"]["fee_multiplier"] == 1
+
+
+def test_get_event_fee_overrides_empty_and_disabled(monkeypatch):
+    kc.reset_fee_override_cache()
+    monkeypatch.setattr(kc, "_get", lambda *_a: {"event_fee_changes": [], "cursor": ""})
+    ov, status = kc.get_event_fee_overrides()
+    assert ov == {} and status == "ok"
+    kc.reset_fee_override_cache()
+    monkeypatch.setattr(config, "FEE_EVENT_OVERRIDE_FETCH_ENABLED", False)
+    assert kc.get_event_fee_overrides() == ({}, "disabled")
+
+
+def test_get_event_fee_overrides_picks_latest_active(monkeypatch):
+    kc.reset_fee_override_cache()
+    monkeypatch.setattr(config, "FEE_EVENT_OVERRIDE_FETCH_ENABLED", True)
+    payload = {"cursor": "", "event_fee_changes": [
+        {"event_ticker": "KXE-1", "fee_type_override": "flat", "fee_multiplier_override": None,
+         "scheduled_ts": "2020-01-01T00:00:00Z"},
+        {"event_ticker": "KXE-1", "fee_type_override": "quadratic_with_maker_fees",
+         "fee_multiplier_override": 2, "scheduled_ts": "2021-01-01T00:00:00Z"},   # later -> wins
+        {"event_ticker": "KXE-2", "fee_type_override": None, "fee_multiplier_override": None,
+         "scheduled_ts": "2099-01-01T00:00:00Z"},   # future -> not active -> dropped
+    ]}
+    monkeypatch.setattr(kc, "_get", lambda *_a: payload)
+    ov, status = kc.get_event_fee_overrides()
+    assert status == "ok"
+    assert ov["KXE-1"]["fee_type_override"] == "quadratic_with_maker_fees"
+    assert ov["KXE-1"]["fee_multiplier_override"] == 2
+    assert "KXE-2" not in ov            # only a future-dated change -> no active override
+
+
+def test_get_event_fee_overrides_cap_fails_closed(monkeypatch):
+    kc.reset_fee_override_cache()
+    monkeypatch.setattr(config, "FEE_EVENT_OVERRIDE_FETCH_ENABLED", True)
+    # a cursor that never empties -> hit the page cap -> fail closed to {} + "capped"
+    monkeypatch.setattr(kc, "_get", lambda *_a: {"event_fee_changes": [], "cursor": "next"})
+    ov, status = kc.get_event_fee_overrides(max_pages=3)
+    assert ov == {} and status == "capped"
 
 
 def test_backoff_exponential_without_header():

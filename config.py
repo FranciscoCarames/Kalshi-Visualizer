@@ -149,6 +149,19 @@ MAX_RETRIES = 5             # attempts per request before raising
 BACKOFF_BASE = 1.0          # seconds; exponential backoff base for 429/5xx/network errors
 BACKOFF_MAX = 30.0          # seconds; cap on a single backoff sleep
 
+# --- Fee estimation (DISPLAY-ONLY) ---------------------------------------------------
+# Kalshi's published general fee schedule: taker = ceil(0.07 x C x P x (1-P)),
+# maker = ceil(0.0175 x C x P x (1-P)); the per-series/event `fee_multiplier` scales the base
+# (most markets = 1). These base coefficients are configurable and confirmed in live smoke. Fees are an
+# ESTIMATE and NEVER feed ranking/bucketing/actionability (see webui.viewmodel.net_of_fees).
+FEE_TAKER_BASE_COEFF = 0.07        # general taker base (x effective multiplier)
+FEE_MAKER_BASE_COEFF = 0.0175      # general maker base (x multiplier; maker-fee markets only)
+FEE_DEFAULT_MULTIPLIER = 1.0       # labeled fallback when a known-quadratic series lacks a multiplier
+FEE_METADATA_FETCH_ENABLED = True  # read fee_type/fee_multiplier from the series object (rides the title GET)
+FEE_EVENT_OVERRIDE_FETCH_ENABLED = True   # sweep /events/fee_changes for event-level overrides
+FEE_EVENT_OVERRIDE_MAX_PAGES = 10  # bound the override sweep; past it -> fail-closed to series-level
+FEE_METADATA_TTL_SECONDS = 24 * 3600      # fee meta caches with the same TTL as series titles
+
 # --- Auto-refresh cadence ------------------------------------------------------------
 REFRESH_OPTIONS = [60, 120, 300]   # selectable auto-refresh intervals (seconds)
 REFRESH_DEFAULT_SECONDS = 120      # conservative default (safe even for the heavier full scan)

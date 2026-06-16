@@ -50,7 +50,7 @@ def test_known_limit_badges_structured_and_universal():
     assert glossary.KNOWN_LIMIT_STRIP.strip()
     assert glossary.KNOWN_LIMIT_BADGES, "must define at least one universal limit badge"
     labels = {lbl for lbl, _ in glossary.KNOWN_LIMIT_BADGES}
-    assert {"Gross", "Top-of-book", "Fees not modeled", "Depth not modeled"} <= labels
+    assert {"Gross", "Top-of-book", "Fees estimated", "Depth not modeled"} <= labels
     for lbl, tip in glossary.KNOWN_LIMIT_BADGES:
         assert lbl.strip() and len(lbl) <= 24, f"badge label not short: {lbl!r}"
         assert tip.strip() and len(tip) > len(lbl), f"badge {lbl!r} needs a real tooltip"

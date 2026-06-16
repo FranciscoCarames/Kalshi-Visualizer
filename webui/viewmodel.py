@@ -17,6 +17,7 @@ import statistics
 import urllib.parse
 from collections import Counter
 from datetime import datetime, timezone
+from decimal import Decimal
 from typing import Any, Iterable
 
 import config
@@ -1189,52 +1190,155 @@ def _num_or_none(x: Any) -> float | None:
     return x if isinstance(x, (int, float)) and x == x else None
 
 
-# --- Net-of-fees ESTIMATE (PR E) — DISPLAY ONLY, never touches ranking/bucketing/actionability ----------
-# Kalshi's published GENERAL taker-fee schedule: fee = ceil(0.07 × C × P × (1−P)) per fill, in cents, where
-# C = contracts and P = price in dollars (0 at P=0 or P=1). This is an ESTIMATE: it's the general schedule,
-# not a universal rate — some products use different/maker schedules — and it's gross of nothing else. The
-# UI labels every net number "Est." and "general taker-fee estimate"; rank_opps / _edge / bucket_of never
-# read these fields (see test_net_of_fees_does_not_affect_ranking).
-def kalshi_fee_c(contracts: float, price_c: float) -> int:
-    """Estimated Kalshi GENERAL TAKER fee for `contracts` at `price_c` cents, in integer cents (rounded up):
-    ``ceil(0.07 · C · P · (1−P))`` — matches Kalshi's published general formula. This is an ESTIMATE, not
-    realized net P&L: special-schedule markets, maker fills (resting orders), centicent rounding, and series
-    fee changes may differ. The authoritative per-series source is Kalshi's ``GET /series/fee_changes`` (not
-    wired — display-only estimate by design). Zero at the 0¢/100¢ endpoints; 0 for non-positive/invalid C."""
-    c, p = _num_or_none(contracts), _num_or_none(price_c)
-    if c is None or p is None or c <= 0 or p <= 0 or p >= 100:
+# --- Net-of-fees ESTIMATE — DISPLAY ONLY, never touches ranking/bucketing/actionability -----------------
+# Kalshi's published GENERAL fee schedule: fee = ceil(coeff · C · P · (1−P)) per fill, in cents, where
+# C = contracts, P = price in dollars (0 at P=0/1), and coeff = base × the series/event `fee_multiplier`
+# (taker base 0.07, maker base 0.0175 — config). Live-confirmed (2026-06-16): `/series/{ticker}` carries
+# `fee_type` + `fee_multiplier`; sports series are `quadratic_with_maker_fees`, mult 1, so maker fees apply.
+# This is an ESTIMATE (special/flat schedules, exact centicent rounding + rebate accumulator differ) and is
+# presented as two execution scenarios (immediate-fill/taker, resting-order/maker). rank_opps / _edge /
+# bucket_of NEVER read these fields (see test_net_of_fees_does_not_affect_ranking).
+def kalshi_fee_c(contracts: float, price_c: float, coeff: float = config.FEE_TAKER_BASE_COEFF) -> int:
+    """Estimated Kalshi fee for `contracts` at `price_c` cents, in integer cents (rounded up):
+    ``ceil(coeff · C · P · (1−P))``. `coeff` is the EFFECTIVE coefficient (base × fee_multiplier); the
+    taker base (0.07) is the default so the legacy call signature is unchanged. Decimal math avoids
+    ``0.07×mult`` FP dust. Conservative pre-trade estimate — realized fee depends on fill path, price
+    precision, balance precision, rounding fee, rebate, and the per-order fee accumulator. Zero at the
+    0¢/100¢ endpoints; 0 for non-positive/invalid C or a None coeff."""
+    c, p, k = _num_or_none(contracts), _num_or_none(price_c), _num_or_none(coeff)
+    if c is None or p is None or k is None or c <= 0 or p <= 0 or p >= 100 or k <= 0:
         return 0
-    pf = p / 100.0
-    fee_c = 0.07 * c * pf * (1 - pf) * 100
-    return math.ceil(round(fee_c, 9))      # round off binary FP dust before the ceil (175.0000…3 -> 175)
+    pf = Decimal(str(p)) / Decimal(100)
+    fee_c = Decimal(str(k)) * Decimal(str(c)) * pf * (Decimal(1) - pf) * Decimal(100)
+    return int(fee_c.to_integral_value(rounding="ROUND_CEILING"))
 
 
-def net_of_fees(opp: dict[str, Any], units: float | None = None) -> dict[str, Any]:
-    """DISPLAY-ONLY net-of-fees estimate for one opportunity. Sums the estimated general taker fee over
-    every leg's buy price (legs[].price_c, falling back to the 2-leg action_*_price_c) for `units` contracts
-    (default: the opp's exec_min_size). Returns ``{total_fees_c, net_edge_c, net_profit_dollars,
-    is_estimate, missing}``. When any required input (units / gap / a leg price) is missing, every net is
-    BLANK (None) and ``missing`` is True — fees are never treated as 0 just because a price is absent."""
-    u = _num_or_none(units if units is not None else opp.get("exec_min_size"))
-    gap = _num_or_none(opp.get("exec_gap_c"))
+def effective_coeffs(fee_type: Any, fee_multiplier: Any) -> dict[str, Any]:
+    """Resolve a market's effective taker/maker coefficients from its `fee_type` + `fee_multiplier`.
+
+    Returns ``{taker, maker, estimable, status}`` (taker/maker are floats or None). NEVER assumes
+    ``quadratic`` when the type is missing/unknown — that would understate maker fees or mis-price a flat
+    market — it marks the estimate incomplete instead. `status` ∈ {complete, assumed_multiplier,
+    unsupported_flat, unknown_fee_type}."""
+    ft = str(fee_type or "").strip().lower()
+    mult = _num_or_none(fee_multiplier)
+    status = "complete"
+    if ft in ("", "none"):
+        return {"taker": None, "maker": None, "estimable": False, "status": "unknown_fee_type"}
+    if ft == "flat":                                           # rate lives in the Specific Fees Table (not modeled)
+        return {"taker": None, "maker": None, "estimable": False, "status": "unsupported_flat"}
+    if ft not in ("quadratic", "quadratic_with_maker_fees"):
+        return {"taker": None, "maker": None, "estimable": False, "status": "unknown_fee_type"}
+    if mult is None or mult <= 0:                              # known quadratic type, missing multiplier -> labeled fallback
+        mult, status = config.FEE_DEFAULT_MULTIPLIER, "assumed_multiplier"
+    taker = config.FEE_TAKER_BASE_COEFF * mult
+    # maker fee only on `quadratic_with_maker_fees`; plain `quadratic` resting orders pay 0
+    maker = config.FEE_MAKER_BASE_COEFF * mult if ft == "quadratic_with_maker_fees" else 0.0
+    return {"taker": taker, "maker": maker, "estimable": True, "status": status}
+
+
+def _leg_prices(opp: dict[str, Any]) -> list[float | None]:
     legs = opp.get("legs")
     if isinstance(legs, list) and legs:
-        prices = [leg.get("price_c") for leg in legs]
-    else:                                                      # 2-leg shapes without a synthesized legs list
-        prices = [opp.get("action_1_price_c"), opp.get("action_2_price_c")]
-    prices = [_num_or_none(p) for p in prices]
+        return [_num_or_none(leg.get("price_c")) for leg in legs]
+    return [_num_or_none(opp.get("action_1_price_c")), _num_or_none(opp.get("action_2_price_c"))]
+
+
+def net_of_fees(opp: dict[str, Any], units: float | None = None,
+                leg_coeffs: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+    """DISPLAY-ONLY net-of-fees estimate as TWO EXECUTION SCENARIOS for one opportunity.
+
+    `leg_coeffs` (when given) is a per-leg list of effective coeffs aligned to the opp's legs; each item is
+    ``{taker, maker, fee_type, status, fee_type_source, fee_multiplier_source, series_ticker, event_ticker}``
+    (as produced by the feed adapter via `effective_coeffs`). When omitted, every leg uses the general
+    taker/maker base (back-compat: `total_fees_c` then equals the old taker estimate).
+
+    The primary keys (`total_fees_c`/`net_edge_c`/`net_profit_dollars`/`breakeven_c`) carry the TAKER /
+    immediate-fill scenario (it drives the net-negative badge + breakeven). Per-scenario completeness is
+    explicit: a `flat`/unknown leg marks that scenario incomplete (totals None) rather than estimating it.
+    When any required input (units / gap / a leg price) is missing, everything is BLANK and ``missing`` is
+    True — fees are never treated as 0 just because a price is absent. Never read by ranking/bucketing."""
+    u = _num_or_none(units if units is not None else opp.get("exec_min_size"))
+    gap = _num_or_none(opp.get("exec_gap_c"))
+    prices = _leg_prices(opp)
     if u is None or u <= 0 or gap is None or not prices or any(p is None for p in prices):
         return {"total_fees_c": None, "net_edge_c": None, "net_profit_dollars": None,
+                "total_fees_taker_c": None, "total_fees_maker_c": None,
+                "net_edge_taker_c": None, "net_edge_maker_c": None,
+                "net_profit_taker_dollars": None, "net_profit_maker_dollars": None,
+                "breakeven_c": None, "breakeven_approx": False, "taker_complete": False,
+                "maker_complete": False, "per_leg": [], "fee_source": "unknown",
                 "is_estimate": True, "missing": True}
-    total_fees_c = sum(kalshi_fee_c(u, p) for p in prices)
-    net_profit_c = gap * u - total_fees_c                      # gross profit (gap × units) minus fees
+
+    n = len(prices)
+    if leg_coeffs and len(leg_coeffs) == n:
+        coeffs = leg_coeffs
+    else:                                                      # back-compat: general taker/maker on every leg
+        gen = effective_coeffs("quadratic_with_maker_fees", config.FEE_DEFAULT_MULTIPLIER)
+        coeffs = [{"taker": gen["taker"], "maker": gen["maker"], "status": gen["status"],
+                   "fee_type_source": "fallback", "fee_multiplier_source": "fallback"} for _ in range(n)]
+
+    per_leg: list[dict[str, Any]] = []
+    taker_fees: list[int] = []
+    maker_fees: list[int] = []
+    taker_complete = maker_complete = True
+    sources: set[str] = set()
+    for price, lc in zip(prices, coeffs):
+        tk_coeff, mk_coeff = lc.get("taker"), lc.get("maker")
+        status = lc.get("status") or "complete"
+        ft_src, mult_src = lc.get("fee_type_source"), lc.get("fee_multiplier_source")
+        tk = kalshi_fee_c(u, price, tk_coeff) if tk_coeff is not None else None
+        mk = kalshi_fee_c(u, price, mk_coeff) if mk_coeff is not None else None
+        if tk is None:
+            taker_complete = False
+        else:
+            taker_fees.append(tk)
+        if mk is None:
+            maker_complete = False
+        else:
+            maker_fees.append(mk)
+        sources.add(_leg_source(ft_src, mult_src, status))
+        per_leg.append({
+            "side": lc.get("side"), "price_c": price, "contracts": u,
+            "series_ticker": lc.get("series_ticker"), "event_ticker": lc.get("event_ticker"),
+            "fee_type": lc.get("fee_type"), "fee_multiplier": lc.get("fee_multiplier"),
+            "fee_taker_c": tk, "fee_maker_c": mk,
+            "fee_type_source": ft_src, "fee_multiplier_source": mult_src, "status": status,
+        })
+
+    def _scenario(fees: list[int], complete: bool) -> tuple[int | None, int | None, float | None]:
+        if not complete:
+            return None, None, None
+        total = sum(fees)
+        net_c = gap * u - total
+        return total, round(net_c / u), round(net_c / 100, 2)
+
+    tk_total, tk_edge, tk_profit = _scenario(taker_fees, taker_complete)
+    mk_total, mk_edge, mk_profit = _scenario(maker_fees, maker_complete)
+    breakeven = math.ceil(tk_total / u) if tk_total is not None else None
     return {
-        "total_fees_c": total_fees_c,
-        "net_edge_c": round(net_profit_c / u),                # per-unit net edge ¢ (display)
-        "net_profit_dollars": round(net_profit_c / 100, 2),
-        "is_estimate": True,
-        "missing": False,
+        "total_fees_c": tk_total, "net_edge_c": tk_edge, "net_profit_dollars": tk_profit,  # taker = primary
+        "total_fees_taker_c": tk_total, "total_fees_maker_c": mk_total,
+        "net_edge_taker_c": tk_edge, "net_edge_maker_c": mk_edge,
+        "net_profit_taker_dollars": tk_profit, "net_profit_maker_dollars": mk_profit,
+        "breakeven_c": breakeven, "breakeven_approx": n > 2,    # clean only for 2-leg containment
+        "taker_complete": taker_complete, "maker_complete": maker_complete,
+        "per_leg": per_leg, "fee_source": (sources.pop() if len(sources) == 1 else "mixed"),
+        "is_estimate": True, "missing": False,
     }
+
+
+def _leg_source(fee_type_source: Any, fee_multiplier_source: Any, status: str) -> str:
+    """Row-summary token for one leg's fee provenance (used to derive the row-level `fee_source`)."""
+    if status == "unsupported_flat":
+        return "flat"
+    if status == "unknown_fee_type":
+        return "unknown"
+    if "event" in (str(fee_type_source or ""), str(fee_multiplier_source or "")):
+        return "event_override"
+    if str(fee_type_source) == "series" or str(fee_multiplier_source) == "series":
+        return "series"
+    return "fallback"
 
 
 def _edge(o: dict[str, Any]) -> float:

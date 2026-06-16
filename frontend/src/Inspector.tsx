@@ -20,6 +20,66 @@ const safeHref = (u: unknown): string | null => {
   try { return ["http:", "https:"].includes(new URL(u).protocol) ? u : null; } catch { return null; }
 };
 
+// Fee estimate as TWO EXECUTION SCENARIOS (display-only, never ranks). Taker (immediate-fill) is primary
+// and drives the breakeven + net-neg badge; maker (resting-order) is shown separately and caveated, since
+// fills/queue/edge-decay are not modeled. A flat/unknown leg marks a scenario incomplete (never faked).
+function FeeScenarios({ row }: { row: FeedRow }) {
+  const legs = row.fee_legs ?? [];
+  const multiLeg = legs.length > 2;
+  const srcChip: Record<string, string> = {
+    event_override: "event override", series: "series-level", mixed: "mixed (event + series)",
+    fallback: "general-rate fallback (no live fee data)", flat: "flat fee — not estimated",
+    unknown: "unknown fee type — incomplete",
+  };
+  const takerLine = row.taker_complete === false
+    ? <span className="v amber">incomplete — flat/unknown leg</span>
+    : <span className="v">{cents(row.fees_taker ?? row.fees)}</span>;
+  const makerLine = row.maker_complete === false
+    ? <span className="v amber">incomplete — flat/unknown leg</span>
+    : <span className="v">{cents(row.fees_maker)}</span>;
+  return (
+    <>
+      <div className="sect">FEES — IMMEDIATE-FILL (TAKER)</div>
+      <div className="kv">
+        <span className="l">Est. fees</span>{takerLine}
+        <span className="l">Est. net edge</span><span className="v">{row.taker_complete === false ? "—" : cents(row.net_edge)}</span>
+        <span className="l">Breakeven gross gap</span>
+        <span className="v">{row.fee_breakeven == null ? "—" : cents(row.fee_breakeven) + (row.fee_breakeven_approx ? " (approx)" : "")}</span>
+      </div>
+      <div className="note dim" style={{ marginTop: 2 }}>Immediate-fill estimate — cross visible top-of-book now.</div>
+
+      <div className="sect">FEES — RESTING-ORDER (MAKER)</div>
+      <div className="kv">
+        <span className="l">Est. fees</span>{makerLine}
+        <span className="l">Est. net edge</span><span className="v">{row.maker_complete === false ? "—" : cents(row.net_edge_maker)}</span>
+      </div>
+      <div className="note dim" style={{ marginTop: 2 }}>
+        Resting-order scenario: assumes posted orders later fill; queue position, fill probability, and edge decay are not modeled.
+        {multiLeg ? " All-maker assumes every leg rests and fills before prices move." : null} Mixed execution (some legs taker, some maker) is not modeled.
+      </div>
+
+      {legs.length ? <>
+        <div className="sect">PER-LEG FEES</div>
+        {legs.map((l, i) => (
+          <div className="leg" key={i}>
+            <span className={String(l.side || "").includes("yes") ? "y" : "n"}>{String(l.side || "").includes("yes") ? "YES" : "NO"}</span>
+            <span className="l2">{l.series_ticker || "—"}</span>
+            <span className="white">{l.price_c != null ? l.price_c + "¢" : "—"}</span>
+            <span className="dim">{l.fee_type || "?"}×{l.fee_multiplier ?? "?"}</span>
+            <span className="dim">t {cents(l.fee_taker_c)} · m {cents(l.fee_maker_c)}</span>
+            <span className="dim">{l.fee_type_source || "?"}</span>
+          </div>
+        ))}
+      </> : null}
+      <div className="note" style={{ marginTop: 4 }}>
+        <span className="dim">Source: {srcChip[row.fee_source ?? "fallback"] ?? row.fee_source}. </span>
+        Conservative pre-trade estimate; realized fee depends on fill path, price precision, quantity,
+        rounding fee, rebate, and the fee accumulator. Still gross of order-book depth. <span className="uncal">never ranks</span>
+      </div>
+    </>
+  );
+}
+
 export default function Inspector({ row, lens, snapshotId, showNet, longShort }:
   { row: FeedRow | null; lens: string; snapshotId: number | null; showNet: boolean; longShort?: boolean }) {
   const [basis, setBasis] = useState(1);
@@ -72,11 +132,9 @@ export default function Inspector({ row, lens, snapshotId, showNet, longShort }:
         {row.parent_over_maxloss != null
           ? <><span className="l">Ripeness (parent÷loss)</span><span className="v amber">{(row.parent_over_maxloss as number).toFixed(2)}</span></>
           : null}
-        {showNet
-          ? <><span className="l">Est. fees</span><span className="v">{cents(row.fees)}</span>
-              <span className="l">Est. net edge</span><span className="v">{cents(row.net_edge)}</span></>
-          : null}
       </div>
+
+      {showNet ? <FeeScenarios row={row} /> : null}
 
       {hasCond ? (
         <div className="note" style={{ marginTop: 6 }}>

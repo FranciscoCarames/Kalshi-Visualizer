@@ -16,9 +16,22 @@ export interface FeedRow {
   edge?: number; roi?: number; units?: number; profit?: number; cost?: number;
   max_loss?: number; max_profit?: number; max_units?: number; quote_health?: string; caveat?: string;
   settlement_caveat?: string; blk?: string; scope?: string; resolution_mode?: string;
-  // net-of-fees ESTIMATE (display-only · general taker fee · never ranks). net_negative flags an Actionable
-  // row whose estimated fees meet/exceed the gross edge — an advisory chip, never a hide/demote.
+  // net-of-fees ESTIMATE (display-only · never ranks). Two EXECUTION SCENARIOS: taker = immediate-fill
+  // (primary; `fees`/`net_edge`/`net_profit` carry it), maker = resting-order (fills/queue/edge-decay not
+  // modeled). Fees resolve per leg: event override -> series fee -> labeled fallback. net_negative flags an
+  // Actionable row whose estimated TAKER fees meet/exceed the gross edge — advisory chip, never a hide.
   net_edge?: number | null; net_profit?: number | null; fees?: number | null; net_negative?: boolean;
+  fees_taker?: number | null; fees_maker?: number | null;
+  net_edge_maker?: number | null; net_profit_maker?: number | null;
+  fee_breakeven?: number | null; fee_breakeven_approx?: boolean;
+  taker_complete?: boolean; maker_complete?: boolean;
+  fee_source?: "event_override" | "series" | "mixed" | "fallback" | "flat" | "unknown";
+  fee_legs?: {
+    side?: string; price_c?: number | null; contracts?: number | null;
+    series_ticker?: string; event_ticker?: string; fee_type?: string | null; fee_multiplier?: number | null;
+    fee_taker_c?: number | null; fee_maker_c?: number | null;
+    fee_type_source?: string; fee_multiplier_source?: string; status?: string;
+  }[] | null;
   // display-only derived (computed in the adapter; uncalibrated · gross · never rank). Conditional on two
   // bases: display (dashboard price) and firm (executable bid/ask) — the firm pair is a DIAGNOSTIC, not an
   // executable edge. midpoint_only / wide_basis are honesty flags from the engine row builder.
@@ -44,6 +57,7 @@ export interface FeedMeta {
   resolution_counts: Record<string, number>; scope_counts: Record<string, number>;
   series_errors?: unknown;
   defaults?: BandDefaults;       // old-dashboard band-control defaults (single-sourced from config)
+  fee_data_status?: string;      // DISPLAY-ONLY fee provenance: ok/partial/fallback/failed/capped/disabled
 }
 
 export interface Feed { meta: FeedMeta; opps: FeedRow[]; }

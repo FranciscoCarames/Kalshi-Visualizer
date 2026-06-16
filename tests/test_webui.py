@@ -274,10 +274,75 @@ def test_net_of_fees_is_estimate_and_blanks_on_missing_price():
 def test_net_of_fees_does_not_affect_ranking():
     opps = [op("a", exec_gap_c=5), op("b", exec_gap_c=9), op("c", exec_gap_c=2)]
     base = [o["opportunity_id"] for o in vm.rank_opps(opps, "edge")]
-    # Injecting net-of-fees fields onto the opps must NOT change the order (ranking is strictly gross).
+    # Injecting net-of-fees fields + per-leg fee identity onto the opps must NOT change the order
+    # (ranking is strictly gross).
     for o in opps:
         o["net_edge_c"], o["net_profit_dollars"], o["fees_c"] = 1, 1.0, 999
+        o["fee_source"], o["fee_legs"], o["fee_breakeven"] = "event_override", [{"x": 1}], 999
     assert [o["opportunity_id"] for o in vm.rank_opps(opps, "edge")] == base == ["b", "a", "c"]
+
+
+def test_kalshi_fee_c_effective_coefficient_is_base_times_multiplier():
+    # fee_multiplier is a MULTIPLIER, not the coefficient: mult 1 -> $1.75 at 100x50c (NOT $25).
+    assert vm.kalshi_fee_c(100, 50, vm.config.FEE_TAKER_BASE_COEFF * 1) == 175
+    assert vm.kalshi_fee_c(100, 50, vm.config.FEE_TAKER_BASE_COEFF * 0.5) == 88   # half multiplier -> ~half
+    assert vm.kalshi_fee_c(100, 50, vm.config.FEE_MAKER_BASE_COEFF * 1) == 44     # maker base (0.0175)
+    assert vm.kalshi_fee_c(100, 50, None) == 0                                    # None coeff -> 0
+
+
+def test_effective_coeffs_by_fee_type():
+    qwmf = vm.effective_coeffs("quadratic_with_maker_fees", 1)
+    assert qwmf["estimable"] and qwmf["status"] == "complete"
+    assert abs(qwmf["taker"] - 0.07) < 1e-9 and abs(qwmf["maker"] - 0.0175) < 1e-9
+    quad = vm.effective_coeffs("quadratic", 1)
+    assert quad["maker"] == 0.0 and quad["taker"] == 0.07          # plain quadratic: resting fee 0
+    flat = vm.effective_coeffs("flat", 1)
+    assert flat["estimable"] is False and flat["status"] == "unsupported_flat"
+    assert flat["taker"] is None and flat["maker"] is None
+    unk = vm.effective_coeffs("", 1)                               # missing fee_type -> NEVER assume quadratic
+    assert unk["estimable"] is False and unk["status"] == "unknown_fee_type"
+    nomult = vm.effective_coeffs("quadratic_with_maker_fees", None)
+    assert nomult["estimable"] and nomult["status"] == "assumed_multiplier"     # labeled mult-1 fallback
+
+
+def _leg_coeff(ft="quadratic_with_maker_fees", mult=1, src="series", **kw):
+    ec = vm.effective_coeffs(ft, mult)
+    return {"taker": ec["taker"], "maker": ec["maker"], "status": ec["status"],
+            "fee_type": ft, "fee_multiplier": mult, "fee_type_source": src,
+            "fee_multiplier_source": src, **kw}
+
+
+def test_net_of_fees_two_scenarios_and_breakeven():
+    o = op("a")        # 45/48 buy prices, gap 7, 100 units
+    lc = [_leg_coeff(), _leg_coeff()]
+    nf = vm.net_of_fees(o, leg_coeffs=lc)
+    assert nf["taker_complete"] and nf["maker_complete"]
+    assert nf["total_fees_taker_c"] == nf["total_fees_c"]                        # taker is the primary
+    assert nf["total_fees_maker_c"] < nf["total_fees_taker_c"]                   # maker (0.0175) cheaper
+    assert nf["breakeven_c"] == -(-nf["total_fees_taker_c"] // 100)              # ceil(total/units)
+    assert nf["breakeven_approx"] is False and nf["fee_source"] == "series"
+    assert len(nf["per_leg"]) == 2 and nf["per_leg"][0]["fee_taker_c"] is not None
+
+
+def test_net_of_fees_flat_leg_marks_scenarios_incomplete():
+    o = op("a")
+    lc = [_leg_coeff(), _leg_coeff(ft="flat")]      # one normal + one flat (unpriceable) leg
+    nf = vm.net_of_fees(o, leg_coeffs=lc)
+    assert nf["taker_complete"] is False and nf["maker_complete"] is False
+    assert nf["total_fees_taker_c"] is None and nf["total_fees_c"] is None       # never silently estimated
+    assert nf["fee_source"] == "mixed"
+
+
+def test_net_of_fees_source_event_and_mixed_and_breakeven_approx():
+    o = op("a")
+    assert vm.net_of_fees(o, leg_coeffs=[_leg_coeff(src="event")] * 2)["fee_source"] == "event_override"
+    mixed = vm.net_of_fees(o, leg_coeffs=[_leg_coeff(src="event"), _leg_coeff(src="series")])
+    assert mixed["fee_source"] == "mixed"
+    # N-leg (>2) opp -> breakeven flagged approximate (unit basis not a clean paired unit)
+    o3 = {"exec_min_size": 50, "exec_gap_c": 5,
+          "legs": [{"price_c": 30}, {"price_c": 40}, {"price_c": 25}]}
+    nf3 = vm.net_of_fees(o3)
+    assert nf3["breakeven_approx"] is True and nf3["breakeven_c"] is not None
 
 
 def _liq_contract(series, player, bid_sz, ask_sz, spread, *, status="active", bid_c=40, ask_c=None, vol=0):

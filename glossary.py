@@ -310,10 +310,15 @@ GLOSSARY: dict[str, dict[str, str]] = {
                  "bound, not a guaranteed take-home.",
         "long": "The app reports GROSS, TOP-OF-BOOK edges and never silently nets execution costs into the "
                 "actionability decision, so a finding can look positive yet be unprofitable in practice. "
-                "Three limits are documented but NOT built (until the owner opts in): "
-                "(1) Net-of-fees — Kalshi's trading / settlement fees are not subtracted; a thin gross gap "
-                "can turn net-negative after fees. Fee metadata may be captured for honest caveats, but it "
-                "never drives the gap ('gross-only' means 'don't silently net fees', not 'ignore fees'). "
+                "These limits apply: "
+                "(1) Fees — a DISPLAY-ONLY estimate is shown (never netted into the gap or ranking), built "
+                "from each market's live effective fee: the event `fee_*_override` else the series "
+                "`fee_type`/`fee_multiplier` (general 0.07 taker / 0.0175 maker base × multiplier; "
+                "maker-fee markets only charge resting orders), presented as two scenarios — immediate-fill "
+                "(taker) and a separate resting-order (maker) scenario (fills / queue position / edge decay "
+                "are NOT modeled) — with a taker breakeven. It is a conservative pre-trade estimate "
+                "(realized fee depends on fill path, price precision, quantity, rounding fee, rebate, and "
+                "the fee accumulator) and is still gross of depth. "
                 "(2) Position limits & collateral — sizes are the top-of-book quote size; the app does not "
                 "model Kalshi's per-market position caps or the collateral required to hold every leg, so "
                 "'Max units' and 'Gross profit' assume you can take the full quoted size. "
@@ -379,21 +384,23 @@ WATCHLIST_NOTE = (
 # UI source of truth — short (label, tooltip) pairs — and kept aligned with the GLOSSARY["Known limits"]
 # prose above (do not parse that prose). These apply to EVERY row; row-specific caveats get their own badge.
 KNOWN_LIMIT_STRIP = (
-    "All edge / profit / ROI / size values are GROSS and TOP-OF-BOOK — before fees, collateral, and "
-    "full-depth execution. Treat every edge as an upper bound."
+    "All edge / profit / ROI / size values are GROSS and TOP-OF-BOOK — fees are estimated per-market "
+    "(display-only, never ranked); collateral and full-depth execution are not modeled. Treat every edge "
+    "as an upper bound."
 )
 # Compact one-line variant (PR A declutter): the same honesty kept on screen without the 4-badge strip.
 # The full per-aspect detail still lives in KNOWN_LIMIT_BADGES / GLOSSARY["Known limits"] for the help/
 # glossary surfaces — this line is only the always-visible disclosure above the tables.
 KNOWN_LIMIT_LINE = (
-    "Gross, top-of-book estimates — fees / depth / collateral not fully modeled."
+    "Gross, top-of-book — fees estimated per-market (display-only); depth / collateral not modeled."
 )
 KNOWN_LIMIT_BADGES: list[tuple[str, str]] = [
     ("Gross", "Every edge / profit / ROI is GROSS — exchange trading/settlement fees are not subtracted."),
     ("Top-of-book", "Prices and sizes are TOP-OF-BOOK only; filling more than the top size walks the book "
                     "to worse prices (not modeled)."),
-    ("Fees not modeled", "Kalshi fees are documented but never netted into the gap — a thin gross edge can "
-                         "turn net-negative after fees."),
+    ("Fees estimated", "A DISPLAY-ONLY per-market fee estimate (event override → series; taker + maker "
+                       "scenarios) is shown but never netted into the gap or ranking — a thin gross edge can "
+                       "still turn net-negative after fees."),
     ("Depth not modeled", "Order-book depth beyond the top quote isn't modeled, so 'Max units' is the top "
                           "resting size, not the total tradable edge."),
 ]

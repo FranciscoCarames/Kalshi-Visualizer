@@ -12,8 +12,9 @@ function severityOf(o: FeedRow): { cls: string; txt: string } | null {
   if (o.blk) return { cls: "sev-blk", txt: "Blocker" };
   if (o.rule) return { cls: "sev-rev", txt: "Review" };
   if (o.settlement_caveat || o.caveat) return { cls: "sev-adv", txt: "Advisory" };
-  // Display-only: estimated taker fees meet/exceed the gross edge — informational, never hides/re-ranks.
-  if (o.net_negative) return { cls: "sev-adv", txt: "Net-neg est." };
+  // Display-only fee note: immediate-fill (taker) fees meet/exceed the gross edge. The "Fee:" prefix keeps
+  // it from reading like a bucket/rank/instruction — it never hides, demotes, or re-ranks the row.
+  if (o.net_negative) return { cls: "sev-adv", txt: "Fee: taker net-neg (est.)" };
   return null;
 }
 

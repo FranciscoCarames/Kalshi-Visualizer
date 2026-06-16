@@ -115,7 +115,60 @@ def _ripeness(o: dict[str, Any]) -> float | None:
     return round(parent / max_loss, 3)
 
 
-def _build_row(o: dict[str, Any]) -> dict[str, Any]:
+# --- Per-leg fee resolution (DISPLAY-ONLY) -------------------------------------------
+# Resolve each leg's effective fee from its market ticker: event override (GET /events/fee_changes) ->
+# series fee (the /series object) -> general fallback. series/event are derived from the ticker the way
+# the whole app identifies series (the prefix before the first '-'; the event is the ticker minus its
+# final strike segment) — consistent with data.series_for_families / classification. NEVER feeds ranking.
+def _series_of(ticker: str) -> str:
+    return (ticker or "").split("-", 1)[0].upper()
+
+
+def _event_of(ticker: str) -> str:
+    t = ticker or ""
+    return (t.rsplit("-", 1)[0] if "-" in t else t).upper()
+
+
+def _leg_tickers(o: dict[str, Any]) -> list[str]:
+    """Per-leg market tickers, aligned 1:1 with vm._leg_prices(o)."""
+    legs = o.get("legs")
+    if isinstance(legs, list) and legs:
+        return [str(leg.get("ticker") or "") for leg in legs]
+    return [str(o.get("ticker_1") or ""), str(o.get("ticker_2") or "")]
+
+
+def _resolve_leg_coeffs(o: dict[str, Any], fee_rates: dict[str, Any],
+                        overrides: dict[str, Any]) -> list[dict[str, Any]]:
+    """Build the per-leg `leg_coeffs` list net_of_fees consumes: effective fee_type/multiplier (event
+    override -> series -> labeled fallback) resolved per leg, with per-field sources. When `fee_rates` is
+    entirely absent (feature off / pre-fee snapshot) every leg uses the labeled general-rate fallback."""
+    legs = o.get("legs")
+    sides = ([leg.get("side") for leg in legs] if isinstance(legs, list) and legs
+             else [o.get("action_1_side"), o.get("action_2_side")])
+    out: list[dict[str, Any]] = []
+    for tk, side in zip(_leg_tickers(o), sides):
+        series, event = _series_of(tk), _event_of(tk)
+        sm = (fee_rates or {}).get(series)
+        ov = (overrides or {}).get(event) or {}
+        ov_ft, ov_mult = ov.get("fee_type_override"), ov.get("fee_multiplier_override")
+        if not fee_rates or (sm is None and not ov):       # no per-market data at all -> labeled fallback
+            ft, mult, ft_src, mult_src = "quadratic_with_maker_fees", config.FEE_DEFAULT_MULTIPLIER, "fallback", "fallback"
+        else:
+            sm = sm or {}
+            ft = ov_ft if ov_ft is not None else sm.get("fee_type")
+            mult = ov_mult if ov_mult is not None else sm.get("fee_multiplier")
+            ft_src = "event" if ov_ft is not None else ("series" if sm.get("fee_type") is not None else "unknown")
+            mult_src = "event" if ov_mult is not None else ("series" if sm.get("fee_multiplier") is not None else "fallback")
+        ec = vm.effective_coeffs(ft, mult)
+        out.append({"taker": ec["taker"], "maker": ec["maker"], "status": ec["status"],
+                    "fee_type": ft, "fee_multiplier": mult, "fee_type_source": ft_src,
+                    "fee_multiplier_source": mult_src, "series_ticker": series,
+                    "event_ticker": event, "side": side})
+    return out
+
+
+def _build_row(o: dict[str, Any], fee_rates: dict[str, Any] | None = None,
+               overrides: dict[str, Any] | None = None) -> dict[str, Any]:
     """One opportunity -> one denormalized terminal row. Pure; never mutates `o`. The engine's verbatim
     fields (bucket/status/tradable/rule) are copied as-is; the only NEW fields are display-only."""
     bucket = o.get("bucket")
@@ -133,7 +186,8 @@ def _build_row(o: dict[str, Any]) -> dict[str, Any]:
             base = _clean(vm.opp_row(o, set(), {}, set()))
     except Exception as e:                         # a row builder must never sink the whole feed
         base = {"name": o.get("name"), "sport": o.get("sport_label"), "caveat": f"(row err: {e})"}
-    nf = vm.net_of_fees(o)                          # existing DISPLAY-ONLY estimate (never ranks)
+    leg_coeffs = _resolve_leg_coeffs(o, fee_rates or {}, overrides or {})
+    nf = vm.net_of_fees(o, leg_coeffs=leg_coeffs)   # DISPLAY-ONLY estimate (two scenarios; never ranks)
     # Conditional P(deeper│reached) on TWO bases, both display-only / gross / uncalibrated (never rank):
     #   • display — the dashboard's display price (midpoint when the spread is reasonable, else last trade);
     #   • firm — the executable bid/ask. For risk-budget rows the row builder already emits the display
@@ -168,10 +222,18 @@ def _build_row(o: dict[str, Any]) -> dict[str, Any]:
         "cond_child": cond_child, "cond_success": cond_success,
         "cond_child_firm": cond_child_firm, "cond_success_firm": cond_success_firm,
         "parent_over_maxloss": _ripeness(o),
+        # Fees: TWO execution scenarios (taker=immediate-fill primary, maker=resting-order). Display-only,
+        # per-leg (event override -> series -> fallback), never ranks. `fees`/`net_edge`/`net_profit` keep
+        # the taker (primary) value for back-compat with existing consumers.
         "fees": nf.get("total_fees_c"), "net_edge": nf.get("net_edge_c"),
         "net_profit": nf.get("net_profit_dollars"),
-        # DISPLAY-ONLY advisory: an Actionable row whose estimated taker fees meet/exceed the gross edge at
-        # the executable size. Informational chip in the blotter; never hides/demotes/re-ranks the row.
+        "fees_taker": nf.get("total_fees_taker_c"), "fees_maker": nf.get("total_fees_maker_c"),
+        "net_edge_maker": nf.get("net_edge_maker_c"), "net_profit_maker": nf.get("net_profit_maker_dollars"),
+        "fee_breakeven": nf.get("breakeven_c"), "fee_breakeven_approx": nf.get("breakeven_approx"),
+        "taker_complete": nf.get("taker_complete"), "maker_complete": nf.get("maker_complete"),
+        "fee_source": nf.get("fee_source"), "fee_legs": nf.get("per_leg"),
+        # DISPLAY-ONLY advisory: an Actionable row whose estimated TAKER (immediate-fill) fees meet/exceed
+        # the gross edge at the executable size. Informational chip; never hides/demotes/re-ranks the row.
         "net_negative": (bucket == "actionable" and not nf.get("missing")
                          and nf.get("net_profit_dollars") is not None
                          and nf.get("net_profit_dollars") <= 0),
@@ -193,7 +255,9 @@ def feed_from_snapshot(snap: dict[str, Any] | None) -> dict[str, Any]:
                          "defaults": _band_defaults()}, "opps": []}
     opps = snap.get("opportunities") or []
     meta = snap.get("meta") or {}
-    rows = [_build_row(o) for o in opps]
+    fee_rates = meta.get("fee_rates") or {}
+    overrides = meta.get("event_fee_overrides") or {}
+    rows = [_build_row(o, fee_rates, overrides) for o in opps]
     res_counts = Counter((o.get("resolution_mode") or "?") for o in opps if o.get("bucket") == "risk_budget")
     scope_counts = Counter((o.get("no_structure_scope") or "other") for o in opps
                            if o.get("bucket") == "no_structure")
@@ -207,6 +271,8 @@ def feed_from_snapshot(snap: dict[str, Any] | None) -> dict[str, Any]:
         "resolution_counts": dict(res_counts), "scope_counts": dict(scope_counts),
         "series_errors": meta.get("series_errors"),
         "defaults": _band_defaults(),
+        # DISPLAY-ONLY fee provenance for the whole snapshot: ok/partial/fallback/failed/capped/disabled.
+        "fee_data_status": meta.get("fee_data_status") or ("ok" if fee_rates else "fallback"),
     }
     return {"meta": feed_meta, "opps": rows}
 

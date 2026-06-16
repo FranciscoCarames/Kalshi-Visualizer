@@ -254,3 +254,48 @@ def test_endpoint_empty_store(client):
     c, _ = client
     body = c.get("/api/terminal/feed").json()
     assert body["opps"] == [] and body["meta"]["n_total"] == 0
+
+
+# --- Fee estimation (DISPLAY-ONLY): per-leg event-override -> series -> fallback, two scenarios ---------
+def _fee_opp(oid, series, event, **kw):
+    """A 2-leg opp whose leg tickers encode `series`/`event` (series = prefix; event = ticker − strike)."""
+    return _opp(oid, exec_gap_c=7, **{"extra": kw.get("extra", {})}, legs=[
+        {"side": "buy_yes", "contract": "A", "price_c": 50, "size": 100, "ticker": f"{event}-A", "url": "u"},
+        {"side": "buy_no", "contract": "B", "price_c": 50, "size": 100, "ticker": f"{event}-B", "url": "u"},
+    ]) | {"exec_min_size": 100}
+
+
+def test_feed_resolves_series_fees_two_scenarios():
+    snap = {"snapshot_id": 1, "fetched_at": "2026-06-16 00:00:00 UTC",
+            "opportunities": [_fee_opp("a", "KXATPMATCH", "KXATPMATCH-26")],
+            "meta": {"fee_rates": {"KXATPMATCH": {"fee_type": "quadratic_with_maker_fees",
+                                                  "fee_multiplier": 1}},
+                     "event_fee_overrides": {}, "fee_data_status": "ok"}}
+    row = feed.feed_from_snapshot(snap)["opps"][0]
+    # 100 contracts @ 50c: taker 175c/leg, maker 44c/leg -> 350 / 88 over two legs.
+    assert row["fees_taker"] == 350 and row["fees_maker"] == 88
+    assert row["fees"] == row["fees_taker"]                    # primary = taker (immediate-fill)
+    assert row["taker_complete"] and row["maker_complete"]
+    assert row["fee_source"] == "series" and row["fee_breakeven"] == 4
+    assert len(row["fee_legs"]) == 2 and row["fee_legs"][0]["fee_type_source"] == "series"
+    assert feed.feed_from_snapshot(snap)["meta"]["fee_data_status"] == "ok"
+
+
+def test_feed_event_override_beats_series():
+    snap = {"snapshot_id": 2, "fetched_at": "2026-06-16 00:00:00 UTC",
+            "opportunities": [_fee_opp("a", "KXATPMATCH", "KXATPMATCH-26")],
+            "meta": {"fee_rates": {"KXATPMATCH": {"fee_type": "quadratic_with_maker_fees",
+                                                  "fee_multiplier": 1}},
+                     "event_fee_overrides": {"KXATPMATCH-26": {
+                         "fee_type_override": "quadratic_with_maker_fees", "fee_multiplier_override": 2}}}}
+    row = feed.feed_from_snapshot(snap)["opps"][0]
+    assert row["fees_taker"] == 700 and row["fee_source"] == "event_override"   # mult 2 -> double
+    assert row["fee_legs"][0]["fee_multiplier"] == 2
+
+
+def test_feed_no_fee_rates_falls_back_labeled():
+    snap = {"snapshot_id": 3, "fetched_at": "2026-06-16 00:00:00 UTC",
+            "opportunities": [_fee_opp("a", "KXATPMATCH", "KXATPMATCH-26")], "meta": {}}
+    out = feed.feed_from_snapshot(snap)
+    assert out["opps"][0]["fee_source"] == "fallback"
+    assert out["meta"]["fee_data_status"] == "fallback"
