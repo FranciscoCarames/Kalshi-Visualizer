@@ -643,7 +643,10 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             # shared state — one scheduler loop per process — so a change affects every viewer.
             auto_sw = ui.switch("Auto-refresh", value=scan_scheduler.scheduler.enabled).tooltip(
                 "Periodically re-scan in the background (server-wide). Off = manual 'Refresh snapshot' only.")
-            interval_sel = ui.select(config.AUTO_SCAN_INTERVAL_OPTIONS,
+            # NiceGUI's select REJECTS a value outside its options, so fold the live interval into the preset
+            # list — a custom AUTO_SCAN_DEFAULT_SECONDS (env override) must not 500 the dashboard.
+            _intervals = sorted({*config.AUTO_SCAN_INTERVAL_OPTIONS, int(scan_scheduler.scheduler.interval_s)})
+            interval_sel = ui.select(_intervals,
                                       value=scan_scheduler.scheduler.interval_s, label="Every (s)"
                                       ).props("stack-label").classes("min-w-[8rem]").tooltip(
                 "How often the background auto-scan runs.")
