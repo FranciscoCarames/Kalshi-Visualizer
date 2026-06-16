@@ -120,16 +120,48 @@ loop is two things, both already tuned for the free tier:
   (≈50 at the last live measurement, and higher now that golf/soccer/MLB/NHL are registered — re-measure
   live with `GET /coverage` → `kalshi_requests`), but the throttle just makes a scan take a few **seconds**;
   it never exceeds the rate.
-- **Scan cadence** — the background auto-scan runs every `config.AUTO_SCAN_DEFAULT_SECONDS` (10s) while a
-  viewer is connected, and the dashboard surfaces a new snapshot within ~1s of it finishing. **For an
-  unattended 24/7 server** (no browser connected) set `AUTO_SCAN_PAUSE_WHEN_IDLE=0` so the loop scans
-  regardless of viewers — otherwise the presence gate pauses it and the store goes stale while idle.
+- **Scan cadence** — the background auto-scan runs every `config.AUTO_SCAN_DEFAULT_SECONDS` (**60s**,
+  server-safe default; env-overridable via `AUTO_SCAN_DEFAULT_SECONDS`) while a viewer is connected, and the
+  dashboard surfaces a new snapshot within ~1s of it finishing. An active user can still pick 10–15s from the
+  Auto-refresh selector, and manual "Scan now" is never cadence-gated. **For an unattended 24/7 server** (no
+  browser connected) set `AUTO_SCAN_PAUSE_WHEN_IDLE=0` so the loop scans regardless of viewers — otherwise the
+  presence gate pauses it and the store goes stale while idle.
 
-To go faster you would lift the throttle (`MAX_RPS`) and/or shorten the cadence in `config.py` — but
-pushing `MAX_RPS` toward/over ~20 invites sustained `429`s (the backoff absorbs them; throughput won't
-improve past the ceiling). The only way to beat REST polling is a Kalshi **WebSocket** feed, which is not
-implemented (and still wouldn't need a *read* key). **Run exactly one process** — the throttle is
-per-process, so N workers issue `15 × N` req/s (see §1).
+To go faster you would lift the throttle (`MAX_RPS`) and/or shorten the cadence (`AUTO_SCAN_DEFAULT_SECONDS`)
+— but pushing `MAX_RPS` toward/over ~20 invites sustained `429`s (the backoff absorbs them; throughput won't
+improve past the ceiling), and a faster cadence grows the store (see below). The only way to beat REST polling
+is a Kalshi **WebSocket** feed, which is not implemented (and still wouldn't need a *read* key). **Run exactly
+one process** — the throttle is per-process, so N workers issue `15 × N` req/s (see §1).
+
+### Store footprint — retention, cadence, and compaction (IMPORTANT for long-running servers)
+
+The heavy store is bounded by `rows = (rows per snapshot) × (retention ÷ cadence)`. Left unattended at the
+**old** 30h retention × 10s cadence the file steady-stated to **~28 GB** and overheated the host. Defaults are
+now server-safe and **env-overridable for rollback** (config holds the defaults; the override is read at the
+boundary that consumes it):
+
+| Env var | Default | Effect |
+|---|---|---|
+| `AUTO_SCAN_DEFAULT_SECONDS` | `60` | scan cadence (was 10) — fewer snapshots + far less CPU |
+| `SNAPSHOT_RETENTION_SECONDS` | `21600` (6h) | how long whole snapshots are kept (was 30h) |
+| `SNAPSHOT_OPP_TIER_ENABLED` | `1` | drop the heavy speculative buckets (`no_structure`/`data_quality`/`near_miss`) from snapshots older than `SNAPSHOT_OPP_FULL_RETENTION_N` (6); counts are preserved in `snapshots.meta`. The live feed (newest snapshot) is always complete |
+| `SNAPSHOT_INCREMENTAL_VACUUM_ENABLED` / `SNAPSHOT_WAL_TRUNCATE_ENABLED` | `1` | reclaim freed pages + truncate the WAL every `SNAPSHOT_HOUSEKEEPING_EVERY_N` (5) snapshots so the file shrinks after retention deletes |
+| `FEED_GZIP_ENABLED` | `1` | gzip the `/api/terminal/feed` response (~5–10× on the wire; network only, not disk) |
+
+`/metrics` now exposes `db_size_bytes`, `wal_size_bytes`, `snapshot_count`, `opportunity_rows`, and
+`freelist_pages` so you can watch the store stay bounded.
+
+**One-time compaction of an existing bloated `snapshots.db`** (fresh DBs self-reclaim via
+`auto_vacuum=INCREMENTAL`, but a DB created before this change was `auto_vacuum=NONE`, which only a full
+`VACUUM` can flip): **stop the server**, then run from the repo root:
+
+```bash
+python scripts/compact_store.py --prune        # backs up the DB, applies retention, VACUUMs, reports sizes
+```
+
+It backs up `snapshots.db` (+ `-wal`/`-shm`), verifies the backup opens, needs ~2× the DB size in free disk
+(checked + refused otherwise), preserves the durable `backlog_intervals`, and prints before/after sizes. After
+it runs once, ongoing incremental_vacuum keeps the file bounded.
 
 ### Run as an auto-restart systemd service (Linux — primary)
 
