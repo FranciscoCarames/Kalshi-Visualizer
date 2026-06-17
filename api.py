@@ -51,9 +51,14 @@ async def _lifespan(_app: "FastAPI"):
     (lifespan doesn't run) — `events.publish` stays a safe no-op there, keeping `import api` side-effect-free."""
     events.set_loop(asyncio.get_running_loop())
     # Start the Stage 2 live WS feed on THIS loop when armed (serve.py built the singleton + flipped the
-    # config switch after its fail-hard safety check). Default OFF ⇒ no singleton ⇒ nothing starts.
+    # config switch after its fail-hard safety check). Default OFF ⇒ no singleton ⇒ nothing starts. Wire the
+    # debounced live-overlay pusher (2C/2D) so a moved book rebuilds the feed off-loop and pushes over SSE.
     if live_feed.is_enabled() and live_feed.feed_singleton is not None:
-        live_feed.feed_singleton.start(asyncio.get_running_loop())
+        import live_overlay
+        loop = asyncio.get_running_loop()
+        pusher = live_overlay.LivePusher(loop)
+        live_feed.feed_singleton._on_book_change = pusher.on_book_change
+        live_feed.feed_singleton.start(loop)
     try:
         yield
     finally:
@@ -709,6 +714,23 @@ def get_terminal_orderbook(ticker: str, depth: int = _ORDERBOOK_DEFAULT_DEPTH) -
     with _orderbook_cache_lock:
         _orderbook_cache[tk] = (now, ob)
     return TerminalOrderbook(ticker=tk, yes=ob["yes"], no=ob["no"], age_s=0.0)
+
+
+@app.get("/api/terminal/live")
+def get_terminal_live(db_path: str | None = Depends(db_path_dep)) -> dict[str, Any]:
+    """Operational view of the real-time Stage 2 live feed: connection health, book coverage, and REST/WS
+    parity (the evidence the owner reviews before trusting live display/actionability — the audit's 2B
+    gate). Honest when OFF (`enabled: false`). Gated like every `/api/terminal/*` route."""
+    if not live_feed.is_enabled():
+        return {"enabled": False}
+    import live_overlay
+    return {
+        "enabled": True,
+        "actionability": config.LIVE_ACTIONABILITY_ENABLED,
+        "metrics": live_feed.live_metrics(),
+        "coverage": live_feed.coverage(db_path=db_path),
+        "parity": live_overlay.parity_report(db_path=db_path),
+    }
 
 
 @app.post("/api/terminal/export")

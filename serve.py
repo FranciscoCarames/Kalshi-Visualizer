@@ -250,9 +250,14 @@ def _enforce_live_feed_safety() -> None:
     with open(key_path, "rb") as fh:   # noqa: PTH123 — small one-shot read at boot
         pem = fh.read()
     config.LIVE_FEED_ENABLED = True
+    # Stage 2D opt-in: allow live-derived rows to rank Actionable (still gated per-leg). Default OFF = 2C.
+    if os.getenv("KALSHI_LIVE_ACTIONABILITY") == "1":
+        config.LIVE_ACTIONABILITY_ENABLED = True
     live_feed.feed_singleton = live_feed.LiveFeed(key_id, pem, tickers=live_feed.plan_subscriptions())
+    mode = "2D (live actionability)" if config.LIVE_ACTIONABILITY_ENABLED else "2C (live display)"
     print("Live feed ARMED: the app now holds Kalshi EXCHANGE credentials (read-only WS). "
-          f"Subscribing to {len(live_feed.feed_singleton._tickers)} markets from the latest snapshot.")
+          f"Subscribing to {len(live_feed.feed_singleton._tickers)} markets from the latest snapshot. "
+          f"Mode: {mode}.")
 
 
 def apply_runtime_defaults() -> None:

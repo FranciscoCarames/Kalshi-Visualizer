@@ -322,3 +322,26 @@ def feed_from_snapshot(snap: dict[str, Any] | None) -> dict[str, Any]:
 def build_feed(db_path: str | None = None) -> dict[str, Any]:
     """The live terminal feed for the newest stored snapshot (read-only; same store the dashboard reads)."""
     return feed_from_snapshot(store.latest(db_path=db_path))
+
+
+def build_feed_from_unified(opps: list[dict[str, Any]], meta: dict[str, Any] | None, *,
+                            snapshot_id: Any = None, fetched_at: Any = None,
+                            row_extra: dict[str, dict[str, Any]] | None = None,
+                            meta_extra: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Build the SAME feed shape from an IN-MEMORY unified opportunity list + meta — the real-time Stage 2C
+    live-overlay path, which re-runs the engine on live-patched prices and pushes WITHOUT touching the store.
+    Reuses `feed_from_snapshot` VERBATIM (so the row builders + the /opportunities parity stay identical),
+    then layers two ADDITIVE, display-only extras: `meta_extra` augments meta (e.g. `live_seq`,
+    `price_source`, `prices_as_of`), and `row_extra` maps an opportunity id → freshness/coverage fields
+    merged onto that feed row. Neither re-buckets or re-ranks."""
+    snap = {"snapshot_id": snapshot_id, "fetched_at": fetched_at,
+            "opportunities": opps, "meta": meta or {}}
+    out = feed_from_snapshot(snap)
+    if meta_extra:
+        out["meta"].update(meta_extra)
+    if row_extra:
+        for row in out["opps"]:
+            extra = row_extra.get(row.get("id"))
+            if extra:
+                row.update(extra)
+    return out

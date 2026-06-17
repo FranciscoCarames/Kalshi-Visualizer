@@ -25,9 +25,9 @@ GATE_EXEMPT_ROUTES = {
 MUST_BE_GATED = {
     "/opportunities", "/opportunities/{opportunity_id}", "/coverage", "/metrics",
     "/scan", "/scan/status", "/alerts", "/backlog", "/backlog/events",
-    "/api/terminal/feed", "/api/terminal/stream", "/api/terminal/detail", "/api/terminal/payoff",
-    "/api/terminal/ladder", "/api/terminal/diagnostics", "/api/terminal/telemetry",
-    "/api/terminal/orderbook", "/api/terminal/export",
+    "/api/terminal/feed", "/api/terminal/stream", "/api/terminal/live", "/api/terminal/detail",
+    "/api/terminal/payoff", "/api/terminal/ladder", "/api/terminal/diagnostics",
+    "/api/terminal/telemetry", "/api/terminal/orderbook", "/api/terminal/export",
 }
 
 # Identity must ALWAYS come from the validated session cookie, never a request param. No endpoint may take

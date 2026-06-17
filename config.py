@@ -418,6 +418,13 @@ SSE_KEEPALIVE_SECONDS = 15
 # Everything below is a DEFAULT; env overrides are read at the boundary in serve.py (config stays
 # import-free). The market-data REST path stays public/keyless — only the live WS needs the key.
 LIVE_FEED_ENABLED = False                       # master switch (env KALSHI_LIVE_ENABLED=1 flips it on)
+# Stage 2C vs 2D: with the live feed ON, may a LIVE-derived row that wasn't Actionable on the last REST
+# scan be presented as Actionable? Default False = Stage 2C (live prices are DISPLAYED everywhere, but the
+# Actionable set stays REST-confirmed — a new live-only edge is demoted to a labeled "live review" row, so
+# a transient one-tick quote can't manufacture a false Actionable). Flip True (env
+# KALSHI_LIVE_ACTIONABILITY=1) = Stage 2D, which additionally requires every leg to have a fresh, synced,
+# covered live book before a live row may rank Actionable.
+LIVE_ACTIONABILITY_ENABLED = False
 LIVE_WS_URL = "wss://external-api-ws.kalshi.com/trade-api/ws/v2"   # verified live WS host
 LIVE_WS_PATH = "/trade-api/ws/v2"               # signed in the RSA-PSS handshake (timestamp+GET+path)
 # Recompute/push pacing once live prices change: debounce a burst of deltas, but never recompute more
