@@ -91,6 +91,7 @@ export default function Inspector({ row, lens, snapshotId, showNet, longShort }:
   const cv = (c: unknown) => { const n = num(c); return n == null ? "—" : basis === 100 ? "$" + (n / 100).toFixed(2) : Math.round(n) + "¢"; };
   const z = ZB[row.zone] ?? ZB.diag;
   const isSpec = row.zone === "spec";
+  const isDiag = row.zone === "diag";   // diagnostic rows are NOT tradable — no buy plan / economics card
   const w = rankWhy(row);
   const legs = row.legs ?? [];
   const condPct = row.cond_child;                 // display-basis P(deeper│reached); firm shown in Detail
@@ -107,6 +108,12 @@ export default function Inspector({ row, lens, snapshotId, showNet, longShort }:
       </div>
       <div className="sub">{[row.sub || row.detail, row.sport, row.resolution_mode, row.scope].filter(Boolean).join(" · ")}</div>
 
+      {isDiag ? (
+        <div className="note" style={{ marginTop: 6 }}>
+          <b>Diagnostic row — not a tradable opportunity.</b> This row is surfaced for review/data-quality
+          only, so it has no buy-only plan or economics. See the evidence and Participant Detail below.
+        </div>
+      ) : (<>
       <div className="sect">BUY-ONLY PLAN — {row.nlegs ?? legs.length} LEG{(row.nlegs ?? legs.length) === 1 ? "" : "S"}</div>
       {legs.length ? legs.map((l, i) => {
         const yes = String(l.side || "").includes("yes");
@@ -139,6 +146,7 @@ export default function Inspector({ row, lens, snapshotId, showNet, longShort }:
       </div>
 
       {showNet ? <FeeScenarios row={row} /> : null}
+      </>)}
 
       {hasCond ? (
         <div className="note" style={{ marginTop: 6 }}>
