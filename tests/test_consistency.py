@@ -843,6 +843,52 @@ def test_transitive_not_emitted_when_all_nodes_present():
     assert "containment_transitive" not in [c["relationship_type"] for _, c in checks.iterrows()]
 
 
+def test_transitive_bridges_present_but_illiquid_middle():
+    """S1: Reach Semifinal (firm) + Win Tournament (firm) present; Reach Final PRESENT but with no firm
+    quote (empty book). The adjacent loop yields MISSING_QUOTE through the dead middle, so without the
+    firm-anchored bridge the SF-vs-Win executable cross would hide. The bridge must span the not-firm
+    middle exactly as it spans an absent one."""
+    import pandas as pd
+    semi = _ckey_row("P", "uuid-p", "advance", "Semifinal", 40)    # firm: ask 41
+    final = _ckey_row("P", "uuid-p", "advance", "Final", 50)       # present but NOT firm (empty book)
+    final.update({"quote_quality": "No quote", "yes_bid_c": None, "yes_ask_c": None,
+                  "yes_bid_size": 0, "yes_ask_size": 0})
+    champ = _ckey_row("P", "uuid-p", "winner", "Champion", 70)     # firm: bid 69
+    checks = consistency.build_checks(pd.DataFrame([semi, final, champ]))
+    by_chain = {c["chain"]: c for _, c in checks.iterrows()}
+    assert "Win Tournament ≤ Reach Semifinal" in by_chain          # firm-anchored bridge spans the dead middle
+    row = by_chain["Win Tournament ≤ Reach Semifinal"]
+    assert row["relationship_type"] == "containment_transitive"
+    assert row["status"] == "EXECUTABLE_VIOLATION"                 # bid 69 > ask 41, both firm + sized
+
+
+def test_transitive_bridges_one_sided_middle():
+    """S1 logic: a ONE-SIDED middle (firm bid, no ask) is not a firm rung either — it can't anchor both
+    adjacent comparisons — so the bridge must span it. Proves `_firm_rung` requires BOTH sides."""
+    import pandas as pd
+    semi = _ckey_row("P", "uuid-p", "advance", "Semifinal", 40)    # firm: ask 41
+    final = _ckey_row("P", "uuid-p", "advance", "Final", 50)       # one-sided: firm bid, no ask/size
+    final.update({"quote_quality": "One-sided", "yes_ask_c": None, "yes_ask_size": 0})
+    champ = _ckey_row("P", "uuid-p", "winner", "Champion", 70)     # firm: bid 69
+    checks = consistency.build_checks(pd.DataFrame([semi, final, champ]))
+    by_chain = {c["chain"]: c for _, c in checks.iterrows()}
+    assert "Win Tournament ≤ Reach Semifinal" in by_chain
+    assert by_chain["Win Tournament ≤ Reach Semifinal"]["status"] == "EXECUTABLE_VIOLATION"
+
+
+def test_transitive_not_emitted_when_middle_is_firm():
+    """Control for the above: when the middle rung IS firm, the adjacent chain covers it and no
+    transitive bridge is emitted (the firm-anchored skeleton must not over-produce)."""
+    import pandas as pd
+    rows = [
+        _ckey_row("P", "uuid-p", "advance", "Semifinal", 60),
+        _ckey_row("P", "uuid-p", "advance", "Final", 40),         # firm middle
+        _ckey_row("P", "uuid-p", "winner", "Champion", 20),
+    ]
+    checks = consistency.build_checks(pd.DataFrame(rows))
+    assert "containment_transitive" not in [c["relationship_type"] for _, c in checks.iterrows()]
+
+
 # --- field-de-vig per node (DISPLAY-ONLY conditional panel) ---------------------------
 def _crow(pk, node, c):
     return {"player_key": pk, "series": "KXATPADVANCE", "ladder_node": node, "kind": "advance",

@@ -380,6 +380,22 @@ def _leg(row: dict[str, Any], side: str) -> tuple[int | None, Any]:
     return _num(row.get("yes_ask_c")), row.get("yes_ask_size")
 
 
+def _firm_rung(node_entry: dict[str, Any] | None) -> bool:
+    """Whether a ladder rung has a FIRM two-sided executable quote — a firm bid AND ask, both with
+    positive size. Reuses the SAME firmness test as `_classify` via `_leg`/`_pos` (so a No-quote,
+    one-sided, crossed, subpenny, or zero-size book is NOT firm — no second definition of "firm").
+
+    Used to anchor the transitive containment bridge: a rung that is present but not firm cannot form an
+    executable comparison with its neighbours, so the bridge must span it exactly as it spans an absent
+    rung — otherwise a real broader-vs-deeper cross hides behind the dead middle rung (the S1 gap)."""
+    row = node_entry.get("market") if node_entry else None
+    if row is None:
+        return False
+    bid_c, bid_sz = _leg(row, "bid")
+    ask_c, ask_sz = _leg(row, "ask")
+    return bid_c is not None and ask_c is not None and _pos(bid_sz) and _pos(ask_sz)
+
+
 def _worst_quality(a: str, b: str) -> str:
     return a if _QUALITY_RANK.get(a, 0) >= _QUALITY_RANK.get(b, 0) else b
 
@@ -900,28 +916,37 @@ def build_checks(df: pd.DataFrame, *, risk_budget_max_loss_c: int = 0) -> pd.Dat
                                 child_node=child_node, parent_node=parent_node, tournament=_tournament,
                                 relationship_type=rel, opp_id=oid, simultaneous=ladder.simultaneous))
 
-        # Transitive containment: when a MIDDLE ladder node is absent, the adjacent loop above only emits
-        # MISSING_LAYER for the gap — it never compares the present broader vs deeper nodes that span it,
-        # so a real cross can hide (a false negative). Bridge it: over node_order (broad -> deep), compare
-        # each consecutive pair of PRESENT nodes that is NOT already an adjacent pair (i.e. >=1 node
-        # between them is missing). When every node is present, each consecutive present pair IS an
-        # adjacent pair, so nothing extra is emitted (no duplicate findings). Both legs are present by
-        # construction, so this reuses the same _classify as the adjacent containment check.
+        # Transitive containment bridge — span a middle rung the adjacent loop can't usefully compare, so a
+        # real broader-vs-deeper relationship can't hide behind it. Two skeletons, unioned and de-duped by
+        # endpoint pair (one row per pair):
+        #   * `present` (has a market row): spans an ABSENT middle — preserves the display-only diagnostic
+        #     across the gap, incl. a subpenny / No-quote endpoint (kept visible, never executable).
+        #   * `firm_present` (`_firm_rung`): ALSO spans a PRESENT-BUT-NOT-FIRM middle (empty / one-sided /
+        #     crossed / subpenny / zero-size book) between two FIRM rungs — the S1 recovery of an executable
+        #     cross the adjacent loop only sees as MISSING_QUOTE.
+        # When every rung is firm both skeletons' consecutive pairs ARE adjacent pairs ⇒ nothing extra (no
+        # duplicates). `optional_children` are excluded automatically (they are not in node_order).
         present = [n for n in ladder.node_order if nodes.get(n, {}).get("market") is not None]
+        firm_present = [n for n in ladder.node_order if _firm_rung(nodes.get(n))]
         adjacent_set = set(ladder.adjacent_pairs)
-        for broader_node, deeper_node in zip(present, present[1:]):   # node_order is broad -> deep
-            if (deeper_node, broader_node) in adjacent_set:
-                continue                                              # already covered by the adjacent loop
-            child = nodes[deeper_node]["market"]
-            parent = nodes[broader_node]["market"]
-            chain = f"{deeper_node} ≤ {broader_node}"
-            rel = "containment_transitive"
-            oid = opportunity_id(rel, player_key, _tournament, deeper_node, broader_node)
-            out.append(_row(player, player_key, chain, child, parent,
-                            _classify(child, parent, False, risk_budget_max_loss_c,
-                                      finishing_ladder=ladder.simultaneous),
-                            child_node=deeper_node, parent_node=broader_node, tournament=_tournament,
-                            relationship_type=rel, opp_id=oid, simultaneous=ladder.simultaneous))
+        bridged: set[tuple[str, str]] = set()
+        for skeleton in (present, firm_present):
+            for broader_node, deeper_node in zip(skeleton, skeleton[1:]):  # node_order is broad -> deep
+                if (deeper_node, broader_node) in adjacent_set:
+                    continue                                           # already covered by the adjacent loop
+                if (broader_node, deeper_node) in bridged:
+                    continue                                           # same endpoint pair already emitted
+                bridged.add((broader_node, deeper_node))
+                child = nodes[deeper_node]["market"]
+                parent = nodes[broader_node]["market"]
+                chain = f"{deeper_node} ≤ {broader_node}"
+                rel = "containment_transitive"
+                oid = opportunity_id(rel, player_key, _tournament, deeper_node, broader_node)
+                out.append(_row(player, player_key, chain, child, parent,
+                                _classify(child, parent, False, risk_budget_max_loss_c,
+                                          finishing_ladder=ladder.simultaneous),
+                                child_node=deeper_node, parent_node=broader_node, tournament=_tournament,
+                                relationship_type=rel, opp_id=oid, simultaneous=ladder.simultaneous))
 
         # Match-alignment (equivalence) rows where both a market and a confident match exist. One
         # equivalence per node (build_player_nodes keeps a single representative per source), so the
