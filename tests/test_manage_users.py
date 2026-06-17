@@ -31,11 +31,11 @@ def test_add_list_disable_enable_unlock(auth_db, monkeypatch, capsys):
     manage_users.main(["unlock", "alice"])  # no-op but must not error
 
 
-def test_add_rejects_weak_password(auth_db, monkeypatch):
+def test_add_accepts_short_password(auth_db, monkeypatch):
+    # Owner policy (2026-06-17): no strength floor — a short/common password is accepted.
     monkeypatch.setattr("getpass.getpass", lambda *a, **k: "password")
-    with pytest.raises(SystemExit):
-        manage_users.main(["add", "bob"])
-    assert auth_store.get_user("bob", db_path=auth_db) is None
+    manage_users.main(["add", "bob"])
+    assert auth_store.get_user("bob", db_path=auth_db) is not None
 
 
 def test_add_rejects_mismatched_confirmation(auth_db, monkeypatch):
@@ -63,13 +63,13 @@ def test_seed_admin_from_env_idempotent(auth_db, monkeypatch):
     assert auth_store.user_count(db_path=auth_db) == 1
 
 
-def test_seed_admin_rejects_weak(auth_db, monkeypatch):
+def test_seed_admin_accepts_short(auth_db, monkeypatch):
+    # Owner policy (2026-06-17): no strength floor — a short/common admin password is accepted.
     import serve
     monkeypatch.setenv("APP_ADMIN_USER", "root")
     monkeypatch.setenv("APP_ADMIN_PASSWORD", "admin")
-    with pytest.raises(SystemExit):
-        serve.seed_admin_from_env()
-    assert auth_store.user_count(db_path=auth_db) == 0
+    serve.seed_admin_from_env()
+    assert auth_store.user_count(db_path=auth_db) == 1
 
 
 def test_seed_admin_noop_without_env(auth_db, monkeypatch):

@@ -96,21 +96,21 @@ _DUMMY_HASH = _hasher().hash("dummy-password-for-constant-time-verify")
 
 
 # --- password policy (single-sourced — CLI seed, env seed, and self-service change all use this) -----
-# A small floor, NOT a strength meter: reject obviously-weak/default passwords so a seeded admin is never
-# "admin"/"password". Real strength is the operator's responsibility (documented in docs/AUTH.md).
-_WEAK_PASSWORDS = {"password", "admin", "administrator", "changeme", "letmein", "kalshi",
-                   "12345678", "secret", "passw0rd"}
-PASSWORD_MIN_LEN = 10
+# Password policy (owner decision 2026-06-17): NO strength floor — any non-empty password is accepted,
+# subject only to the max-length DoS cap below. This is a DELIBERATE security downgrade for a read-only,
+# trusted-LAN deployment behind WireGuard; it is NOT appropriate for an internet-facing install. The prior
+# 10-char minimum + common-password blocklist were removed at the owner's explicit request. Operators who
+# want stronger guarantees should keep the app off the public internet and/or set AUTH_ALLOW_SIGNUP=0 so
+# only admin-created accounts exist. Documented in docs/AUTH.md.
 
 
 def validate_password_strength(password: str) -> str | None:
-    """Return an error string for an obviously-weak password, else None."""
-    if len(password) < PASSWORD_MIN_LEN:
-        return f"password must be at least {PASSWORD_MIN_LEN} characters"
+    """Return an error string only for an empty or over-long password (DoS cap), else None. No minimum
+    length or common-password check — see the policy note above (owner-chosen, trusted-LAN posture)."""
+    if not password:
+        return "password must not be empty"
     if len(password) > config.AUTH_MAX_CRED_LEN:
         return f"password must be at most {config.AUTH_MAX_CRED_LEN} characters"
-    if password.lower() in _WEAK_PASSWORDS:
-        return "password is too common; choose something less guessable"
     return None
 
 

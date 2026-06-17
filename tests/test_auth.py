@@ -189,13 +189,14 @@ def test_register_enabled_auto_logs_in(env, monkeypatch):
     assert _login(fresh, username="newbie", password="a-strong-passphrase").status_code == 200
 
 
-def test_register_rejects_duplicate_weak_and_bad_username(env, monkeypatch):
+def test_register_rejects_duplicate_and_bad_username(env, monkeypatch):
     c, _ = env
     monkeypatch.setenv("AUTH_ALLOW_SIGNUP", "1")
     assert c.post("/auth/register",
                   json={"username": "alice", "password": "a-strong-passphrase"}).status_code == 409
+    # Short passwords are ACCEPTED now (owner policy 2026-06-17: no strength floor on a trusted-LAN app).
     assert c.post("/auth/register",
-                  json={"username": "bob", "password": "short"}).status_code == 400
+                  json={"username": "bob", "password": "x"}).status_code < 400
     assert c.post("/auth/register",
                   json={"username": "b b", "password": "a-strong-passphrase"}).status_code == 400
 
@@ -206,10 +207,6 @@ def test_self_service_password_change(env):
     # Wrong current password → 403, password unchanged.
     bad = c.post("/auth/password", json={"current_password": "nope-wrong", "new_password": "a-fresh-strong-pw"})
     assert bad.status_code == 403
-    # Weak new password → 400.
-    weak = c.post("/auth/password",
-                  json={"current_password": "correct horse battery", "new_password": "short"})
-    assert weak.status_code == 400
     # Valid change → 200, session survives (cookie re-issued), and the new password works on a fresh login.
     ok = c.post("/auth/password",
                 json={"current_password": "correct horse battery", "new_password": "a-fresh-strong-pw"})
