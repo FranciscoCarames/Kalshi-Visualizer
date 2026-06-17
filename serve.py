@@ -180,33 +180,42 @@ def _enforce_bind_safety(host: str) -> None:
         raise SystemExit(2)
 
 
-def live_feed_safety(enabled: bool, *, key_id: str | None, key_path: str | None,
-                     key_readable: bool, key_world_readable: bool, web_concurrency: int = 0
-                     ) -> list[tuple[str, str]]:
-    """Pure fail-hard check for the real-time Stage 2 live feed (the FIRST time the app holds Kalshi
-    EXCHANGE credentials). Returns ``(level, message)`` pairs; ``"fatal"`` aborts boot. All checks are
-    inert when ``enabled`` is False (default), so a normal deploy is unaffected. Mirrors `bind_safety`'s
-    shape so the same enforcement boundary prints + aborts. Unit-testable (no IO — the filesystem facts are
-    passed in)."""
-    issues: list[tuple[str, str]] = []
-    if not enabled:
-        return issues
-    if not key_id:
-        issues.append(("fatal", "KALSHI_LIVE_ENABLED=1 but KALSHI_API_KEY_ID is unset. The live feed needs "
-                                "the Kalshi access-key id. Unset it (or KALSHI_LIVE_ENABLED) to stay OFF."))
-    if not key_path:
-        issues.append(("fatal", "KALSHI_LIVE_ENABLED=1 but KALSHI_PRIVATE_KEY_PATH is unset. Point it at the "
-                                "RSA private key (.pem) for the WS handshake."))
-    elif not key_readable:
-        issues.append(("fatal", f"KALSHI_PRIVATE_KEY_PATH={key_path!r} is missing or unreadable."))
-    elif key_world_readable:
-        issues.append(("fatal", f"Refusing to load {key_path!r}: the private key file is group/world-"
-                                "readable. Restrict it (chmod 600) — it authenticates to the exchange."))
-    if web_concurrency > 1:
-        issues.append(("fatal", "KALSHI_LIVE_ENABLED=1 with WEB_CONCURRENCY>1: the live WS connection + book "
-                                "state are PROCESS-LOCAL. A 2nd worker = a 2nd authenticated WS session, "
-                                "doubled subscriptions, and snapshot races. Run a single worker."))
-    return issues
+def parse_dotenv(text: str) -> dict[str, str]:
+    """Pure `.env` parser: ``KEY=VALUE`` lines → dict. Ignores blank lines + ``#`` comments + lines with no
+    ``=``; strips ONE layer of surrounding single/double quotes; keeps any ``=`` inside the value. No
+    interpolation, no export keyword. Unit-testable."""
+    out: dict[str, str] = {}
+    for raw in text.splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, val = line.split("=", 1)
+        key, val = key.strip(), val.strip()
+        if len(val) >= 2 and val[0] == val[-1] and val[0] in "\"'":
+            val = val[1:-1]
+        if key:
+            out[key] = val
+    return out
+
+
+def apply_dotenv() -> int:
+    """Load a `.env` from the repo root (next to serve.py) into ``os.environ`` WITHOUT overwriting variables
+    already set in the real environment (real env wins, so a shell override always beats the file). No-op if
+    absent/unreadable. Called only from ``python serve.py`` — `import serve` in tests never reads a `.env`.
+    Returns how many variables were applied (for the boot log; values are NEVER printed)."""
+    path = pathlib.Path(__file__).resolve().parent / ".env"
+    if not path.is_file():
+        return 0
+    try:
+        parsed = parse_dotenv(path.read_text(encoding="utf-8"))
+    except OSError:
+        return 0
+    applied = 0
+    for k, v in parsed.items():
+        if k not in os.environ:
+            os.environ[k] = v
+            applied += 1
+    return applied
 
 
 def _key_is_world_readable(path: str) -> bool:
@@ -222,36 +231,81 @@ def _key_is_world_readable(path: str) -> bool:
         return False
 
 
-def _enforce_live_feed_safety() -> None:
-    """Boundary for the live feed: read the env + filesystem, fail-hard on any fatal, and (when safe) build
-    the process-wide `live_feed.LiveFeed` singleton + flip `config.LIVE_FEED_ENABLED`. The FastAPI lifespan
-    (api.py) starts/stops the singleton on the event loop. A no-op unless `KALSHI_LIVE_ENABLED=1`."""
-    enabled = os.getenv("KALSHI_LIVE_ENABLED") == "1"
+def _is_valid_rsa_key(pem: bytes) -> bool:
+    """Whether `pem` loads as an RSA private key (the boot-time notion of 'valid' — Kalshi acceptance is
+    proven only by the live handshake). Never logs the key; any parse error → not valid."""
+    try:
+        from cryptography.hazmat.primitives import serialization
+        from cryptography.hazmat.primitives.asymmetric import rsa
+        key = serialization.load_pem_private_key(pem, password=None)
+        return isinstance(key, rsa.RSAPrivateKey)
+    except Exception:   # noqa: BLE001 — any load failure means "not a usable key", never fatal
+        return False
+
+
+def decide_live_feed(*, explicit_disabled: bool, has_key_config: bool, key_loadable: bool,
+                     key_world_readable: bool, web_concurrency: int) -> tuple[bool, str]:
+    """Pure AUTO-DETECT decision: should the live feed arm? Returns ``(arm, message)`` and NEVER raises — an
+    unsafe/incomplete config simply stays REST-only (the app runs normally). Contract: a valid Kalshi key
+    present ⇒ real-time mode; otherwise ⇒ don't. `KALSHI_LIVE_ENABLED=0` is an explicit kill switch.
+    Unit-testable (filesystem/crypto facts passed in)."""
+    if explicit_disabled:
+        return False, "Live feed OFF (KALSHI_LIVE_ENABLED=0)."
+    if not has_key_config:
+        return False, ""   # no Kalshi key configured → quiet REST-only (the common default)
+    if not key_loadable:
+        return False, ("A Kalshi key is configured but it's missing/unreadable or not a valid RSA private "
+                       "key — staying REST-only. Check KALSHI_API_KEY_ID + KALSHI_PRIVATE_KEY_PATH.")
+    if key_world_readable:
+        return False, ("Refusing to arm live: the Kalshi private key file is group/world-readable. "
+                       "Restrict it (chmod 600) — it authenticates to the exchange. Staying REST-only.")
+    if web_concurrency > 1:
+        return False, ("Refusing to arm live: WEB_CONCURRENCY>1 and the live WS + book state are "
+                       "process-local (a 2nd worker doubles the session + races). Run one worker. REST-only.")
+    return True, "armed"
+
+
+def _resolve_and_arm_live_feed() -> None:
+    """Boundary: read the env (post-`.env`) + filesystem/crypto, decide via `decide_live_feed`, and — when a
+    valid key is present and safe — build the `live_feed.LiveFeed` singleton + flip `config.LIVE_FEED_ENABLED`
+    (the lifespan starts it on the loop). NEVER aborts boot: a missing/invalid key just leaves REST mode. The
+    private key (file path OR inline `KALSHI_PRIVATE_KEY`, with literal \\n) is read into memory, never logged."""
+    explicit_disabled = os.getenv("KALSHI_LIVE_ENABLED") == "0"
     key_id = os.getenv("KALSHI_API_KEY_ID")
     key_path = os.getenv("KALSHI_PRIVATE_KEY_PATH")
+    inline = os.getenv("KALSHI_PRIVATE_KEY")
+    has_key_config = bool(key_id) and bool(key_path or inline)
     try:
         web_concurrency = int(os.getenv("WEB_CONCURRENCY", "0") or "0")
     except ValueError:
         web_concurrency = 0
-    key_readable = bool(key_path) and os.path.isfile(key_path) and os.access(key_path, os.R_OK)
-    issues = live_feed_safety(
-        enabled, key_id=key_id, key_path=key_path, key_readable=key_readable,
-        key_world_readable=_key_is_world_readable(key_path) if key_readable else False,
-        web_concurrency=web_concurrency)
-    for level, msg in issues:
-        print(f"{'ERROR (refused):' if level == 'fatal' else 'WARNING:'} {msg}")
-    if any(level == "fatal" for level, _ in issues):
-        raise SystemExit(2)
-    if not enabled:
+
+    pem: bytes | None = None
+    key_world_readable = False
+    if has_key_config:
+        if inline:
+            pem = inline.replace("\\n", "\n").encode()           # inline PEM (single-line with \n escapes)
+        elif os.path.isfile(key_path) and os.access(key_path, os.R_OK):
+            try:
+                with open(key_path, "rb") as fh:                 # noqa: PTH123 — one-shot boot read
+                    pem = fh.read()
+                key_world_readable = _key_is_world_readable(key_path)
+            except OSError:
+                pem = None
+    key_loadable = pem is not None and _is_valid_rsa_key(pem)
+
+    arm, msg = decide_live_feed(
+        explicit_disabled=explicit_disabled, has_key_config=has_key_config, key_loadable=key_loadable,
+        key_world_readable=key_world_readable, web_concurrency=web_concurrency)
+    if not arm:
+        if msg:                                                  # WARN when a key was configured but unusable
+            prefix = "WARNING: " if (has_key_config and not explicit_disabled) else ""
+            print(f"{prefix}{msg}")
         return
-    # Safe to arm: load the key (never logged), build the singleton, flip the config switch. The lifespan
-    # will start it on the loop. Subscriptions are seeded from the latest snapshot (bounded).
+
     import live_feed
-    with open(key_path, "rb") as fh:   # noqa: PTH123 — small one-shot read at boot
-        pem = fh.read()
     config.LIVE_FEED_ENABLED = True
-    # Stage 2D opt-in: allow live-derived rows to rank Actionable (still gated per-leg). Default OFF = 2C.
-    if os.getenv("KALSHI_LIVE_ACTIONABILITY") == "1":
+    if os.getenv("KALSHI_LIVE_ACTIONABILITY") == "1":            # Stage 2D opt-in (still per-leg gated)
         config.LIVE_ACTIONABILITY_ENABLED = True
     live_feed.feed_singleton = live_feed.LiveFeed(key_id, pem, tickers=live_feed.plan_subscriptions())
     mode = "2D (live actionability)" if config.LIVE_ACTIONABILITY_ENABLED else "2C (live display)"
@@ -343,13 +397,18 @@ def _apply_snapshot_db_path() -> None:
 
 
 if __name__ == "__main__":
+    # Load a project-root `.env` FIRST (real env still wins), so KALSHI_*/AUTH_*/etc. configured there are
+    # visible to every boundary below. Then auto-detect the live feed: a valid Kalshi key ⇒ real-time mode.
+    _dotenv_n = apply_dotenv()
+    if _dotenv_n:
+        print(f"Loaded {_dotenv_n} setting(s) from .env (values not shown).")
     apply_runtime_defaults()
     _apply_snapshot_db_path()
     seed_admin_from_env()
     _host = os.getenv("API_HOST", config.API_HOST)
     _port = int(os.getenv("API_PORT", str(config.API_PORT)))
     _enforce_bind_safety(_host)
-    _enforce_live_feed_safety()   # arms the Stage 2 live feed only when KALSHI_LIVE_ENABLED=1 (else no-op)
+    _resolve_and_arm_live_feed()  # auto-arms real-time mode when a valid Kalshi key is present; else REST-only
     if _host not in _LOOPBACK_HOSTS:
         print(f"Serving on http://{_host}:{_port}  ·  reach it from the LAN at "
               f"http://<this-machine-LAN-IP>:{_port}  (see docs/DEPLOYMENT.md)")

@@ -173,35 +173,69 @@ def test_no_trading_surface():
         assert forbidden not in code, f"live_feed.py must not reference {forbidden!r}"
 
 
-# --- serve.live_feed_safety (fail-hard credential guard) -----------------------------------------------
+# --- serve auto-detect: decide_live_feed (NEVER fatal — bad config just stays REST-only) ---------------
 
-def test_safety_noop_when_disabled():
+def test_decide_arms_when_valid_key_present():
     import serve
-    assert serve.live_feed_safety(False, key_id=None, key_path=None, key_readable=False,
-                                  key_world_readable=False, web_concurrency=8) == []
+    arm, _ = serve.decide_live_feed(explicit_disabled=False, has_key_config=True, key_loadable=True,
+                                    key_world_readable=False, web_concurrency=1)
+    assert arm is True
 
 
-def test_safety_fatal_on_missing_key_or_unreadable_or_world_readable_or_multiworker():
+def test_decide_quiet_rest_when_no_key():
     import serve
-    # missing id + path
-    iss = serve.live_feed_safety(True, key_id=None, key_path=None, key_readable=False,
-                                 key_world_readable=False)
-    assert sum(1 for lvl, _ in iss if lvl == "fatal") >= 2
-    # unreadable key
-    iss = serve.live_feed_safety(True, key_id="k", key_path="/no/such.pem", key_readable=False,
-                                 key_world_readable=False)
-    assert any(lvl == "fatal" for lvl, _ in iss)
-    # world-readable key
-    iss = serve.live_feed_safety(True, key_id="k", key_path="/k.pem", key_readable=True,
-                                 key_world_readable=True)
-    assert any(lvl == "fatal" and "readable" in msg for lvl, msg in iss)
-    # multi-worker
-    iss = serve.live_feed_safety(True, key_id="k", key_path="/k.pem", key_readable=True,
-                                 key_world_readable=False, web_concurrency=2)
-    assert any(lvl == "fatal" and "WEB_CONCURRENCY" in msg for lvl, msg in iss)
+    arm, msg = serve.decide_live_feed(explicit_disabled=False, has_key_config=False, key_loadable=False,
+                                      key_world_readable=False, web_concurrency=1)
+    assert arm is False and msg == ""           # common default → silent REST-only
 
 
-def test_safety_clean_when_armed_correctly():
+def test_decide_explicit_kill_switch():
     import serve
-    assert serve.live_feed_safety(True, key_id="k", key_path="/k.pem", key_readable=True,
-                                  key_world_readable=False, web_concurrency=1) == []
+    arm, msg = serve.decide_live_feed(explicit_disabled=True, has_key_config=True, key_loadable=True,
+                                      key_world_readable=False, web_concurrency=1)
+    assert arm is False and "OFF" in msg
+
+
+def test_decide_warns_but_stays_rest_on_bad_or_unsafe_key():
+    import serve
+    # configured but unloadable → warn, no arm (never crashes)
+    arm, msg = serve.decide_live_feed(explicit_disabled=False, has_key_config=True, key_loadable=False,
+                                      key_world_readable=False, web_concurrency=1)
+    assert arm is False and "REST-only" in msg
+    # world-readable key → refuse to arm
+    arm, msg = serve.decide_live_feed(explicit_disabled=False, has_key_config=True, key_loadable=True,
+                                      key_world_readable=True, web_concurrency=1)
+    assert arm is False and "readable" in msg
+    # multi-worker → refuse to arm
+    arm, msg = serve.decide_live_feed(explicit_disabled=False, has_key_config=True, key_loadable=True,
+                                      key_world_readable=False, web_concurrency=2)
+    assert arm is False and "WEB_CONCURRENCY" in msg
+
+
+def test_is_valid_rsa_key_roundtrip():
+    import serve
+    _key, pem = _gen_key()
+    assert serve._is_valid_rsa_key(pem) is True
+    assert serve._is_valid_rsa_key(b"-----BEGIN PRIVATE KEY-----\nnope\n-----END PRIVATE KEY-----") is False
+    assert serve._is_valid_rsa_key(b"not a key") is False
+
+
+# --- serve.parse_dotenv (the .env loader) --------------------------------------------------------------
+
+def test_parse_dotenv():
+    import serve
+    env = serve.parse_dotenv(
+        "# comment\n"
+        "KALSHI_API_KEY_ID=abc123\n"
+        'KALSHI_PRIVATE_KEY_PATH="C:\\keys\\k.pem"\n'
+        "\n"
+        "EMPTY=\n"
+        "WITH_EQUALS=a=b=c\n"
+        "no_equals_line_ignored\n"
+        "  SPACED  =  val  \n")
+    assert env["KALSHI_API_KEY_ID"] == "abc123"
+    assert env["KALSHI_PRIVATE_KEY_PATH"] == "C:\\keys\\k.pem"   # surrounding quotes stripped
+    assert env["EMPTY"] == ""
+    assert env["WITH_EQUALS"] == "a=b=c"                          # only the FIRST = splits
+    assert env["SPACED"] == "val"                                # key + value trimmed
+    assert "no_equals_line_ignored" not in env
