@@ -17,6 +17,8 @@ export interface FeedRow {
   // economics (present per bucket; absent ones render "—"):
   edge?: number; roi?: number; units?: number; profit?: number; cost?: number;
   max_loss?: number; max_profit?: number; max_units?: number; quote_health?: string; caveat?: string;
+  // cheap-NO ladder-shape triage metrics (display-only; bands only, undefined on outrights):
+  ladder_steps?: number | null; ladder_bottom_c?: number | null; ladder_step_ratio?: number | null;
   settlement_caveat?: string; blk?: string; scope?: string; resolution_mode?: string;
   // net-of-fees ESTIMATE (display-only · never ranks). Two EXECUTION SCENARIOS: taker = immediate-fill
   // (primary; `fees`/`net_edge`/`net_profit` carry it), maker = resting-order (fills/queue/edge-decay not

@@ -57,6 +57,32 @@ def test_band_cost_over_100_is_bounded_loss():
     assert b["exec_min_size"] == 200 and b["display_spread_c"] == 6
 
 
+def test_ladder_shape_metrics_band_only_and_isolated():
+    """Cheap-NO ladder-shape triage metrics (#5): bands carry ladder_steps/bottom/step_ratio computed from
+    the participant's present linear ladder; outrights don't; and the fields are display-only — they never
+    change routing/ranking (speculative-isolation contract)."""
+    # Full 3-rung tennis ladder present (Reach SF ⊇ Reach Final ⊇ Win Tournament).
+    parent = market(_PARENT, yes_ask_c=96, yes_bid_c=94, no_ask_c=6, display_c=95)
+    child = market(_CHILD, yes_ask_c=90, yes_bid_c=88, no_ask_c=10, display_c=89)
+    win = market("Win Tournament", yes_ask_c=40, yes_bid_c=38, no_ask_c=60, display_c=39,
+                 kind="winner", series="KXFOMEN", category="Tournament winner")
+    bands = _bands(no_structures.find_no_structures([parent, child, win]))
+    b = next(x for x in bands if x["child_node"] == _CHILD and x["parent_node"] == _PARENT)
+    assert b["ladder_steps"] == 3                       # SF, Final, Win all present
+    assert b["ladder_bottom_c"] == 39                   # deepest present rung's display (Win Tournament)
+    assert b["ladder_step_ratio"] == round(39 / 3, 2)
+    # Band-only: a single-leg outright fade carries no ladder-shape metrics.
+    cheap = market(_CHILD, yes_ask_c=99, yes_bid_c=97, no_ask_c=3, display_c=98)
+    out = _outrights(no_structures.find_no_structures([cheap]))[0]
+    assert out.get("ladder_steps") is None and out.get("ladder_bottom_c") is None and out.get("ladder_step_ratio") is None
+    # ISOLATION (audit): display-only — routing/ranking ignore the new fields entirely.
+    u = scanner._to_unified_no_structure(b, sports.TENNIS)
+    assert u["bucket"] == "no_structure" and u["exec_gap_c"] is None and u["status"] == no_structures.NO_STRUCTURE_BAND
+    stripped = {k: v for k, v in u.items() if not k.startswith("ladder_")}
+    assert consistency.bucket_of(u) == consistency.bucket_of(stripped)
+    assert scanner._rank_key(u) == scanner._rank_key(stripped)
+
+
 def test_band_cost_below_100_suppressed_as_strict_cross():
     # parent ask 80, child NO ask 10 (child YES bid 90 > parent ask 80) → cost 90 < 100 = an EXECUTABLE
     # containment cross the consistency checker owns. No band emitted.

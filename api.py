@@ -152,6 +152,11 @@ class Opportunity(BaseModel):
     # NO-fade faded-leg ladder node + display price (display-only) for the "Cheapness vs field" comparison.
     no_structure_faded_node: str | None = None
     no_structure_faded_display_c: int | None = None
+    # NO-fade ladder-shape triage metrics (display-only; bands only, None on outrights). Optional so older
+    # snapshots/exports parse. NEVER read by classify / bucket_of / _rank_key.
+    ladder_steps: int | None = None
+    ladder_bottom_c: float | None = None
+    ladder_step_ratio: float | None = None
     # Per-leg tickers + the second leg's link (the panel surfaces both legs).
     ticker_1: str | None = None
     ticker_2: str | None = None

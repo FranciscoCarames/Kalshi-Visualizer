@@ -282,6 +282,10 @@ def _build_row(o: dict[str, Any], fee_rates: dict[str, Any] | None = None,
         "net_negative": (bucket == "actionable" and not nf.get("missing")
                          and nf.get("net_profit_dollars") is not None
                          and nf.get("net_profit_dollars") <= 0),
+        # Cheap-NO ladder-shape triage metrics (display-only; bands only, None otherwise) → SPA depth filters.
+        "ladder_steps": _num(o.get("ladder_steps")),
+        "ladder_bottom_c": _num(o.get("ladder_bottom_c")),
+        "ladder_step_ratio": _num(o.get("ladder_step_ratio")),
     })
     if isinstance(base.get("flags"), list):        # normalize the flags list -> a short string
         base["flags"] = " ".join(

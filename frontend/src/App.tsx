@@ -254,6 +254,9 @@ function SecBar() {
         <option value="all">all</option><option value="band">band</option><option value="outright">outright</option></select></label>
       {numI(b.maxLoss, "maxLoss", "Max loss ¢")}
       {numI(b.maxBuyNo, "maxBuyNo", "Max Buy-NO ¢")}
+      {numI(b.minLadderDepth, "minLadderDepth", "Min ladder depth")}
+      {numI(b.maxLadderBottom, "maxLadderBottom", "Max bottom ¢")}
+      {numI(b.maxStepRatio, "maxStepRatio", "Max bottom÷steps")}
       <label className="chk"><input type="checkbox" checked={b.groupByLadder}
         onChange={(e) => t.setBand({ groupByLadder: e.target.checked })} />Group by ladder</label>{hint}</div>
   );

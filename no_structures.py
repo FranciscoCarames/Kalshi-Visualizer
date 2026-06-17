@@ -115,6 +115,17 @@ def _band_findings(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
         if not nodes:
             continue
         ladder = cfg.ladder_for(grp)
+        # Ladder-shape triage metrics (display-only, additive — NEVER read by classify/bucket_of/_rank_key).
+        # Computed once per participant ladder; describes the linear ladder this band sits in so the SPA can
+        # filter cheap-NO bands by how deep the ladder runs and how cheap its bottom rung is.
+        #   steps  = count of PRESENT (priced) rungs in the broad→deep node_order (side-branch leaves excluded)
+        #   bottom = display ¢ of the DEEPEST present rung (the most specific outcome, e.g. "win tournament")
+        #   ratio  = bottom ÷ steps (the owner's "bottom of the ladder divided by the number of steps")
+        _present = [n for n in ladder.node_order if consistency.representative(nodes.get(n)) is not None]
+        _steps = len(_present)
+        _bottom_rep = consistency.representative(nodes.get(_present[-1])) if _present else None
+        _bottom_c = consistency._disp_c(_bottom_rep) if _bottom_rep is not None else None
+        _ratio = round(_bottom_c / _steps, 2) if (_bottom_c is not None and _steps) else None
         for child_node, parent_node in ladder.adjacent_pairs:    # (deeper, broader)
             child = consistency.representative(nodes.get(child_node))
             parent = consistency.representative(nodes.get(parent_node))
@@ -136,13 +147,15 @@ def _band_findings(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 continue
             out.append(_build_band(cfg, player_key, tournament, child_node, parent_node,
                                    child, parent, parent_ask, child_no, cost, max_loss,
-                                   _min_size(parent_ask_size, child_no_size)))
+                                   _min_size(parent_ask_size, child_no_size),
+                                   ladder_steps=_steps, ladder_bottom_c=_bottom_c, ladder_step_ratio=_ratio))
     return out
 
 
 def _build_band(cfg, player_key: str, tournament: str, child_node: str, parent_node: str,
                 child: dict[str, Any], parent: dict[str, Any], parent_ask: int, child_no: int,
-                cost: int, max_loss: int, units: Any) -> dict[str, Any]:
+                cost: int, max_loss: int, units: Any, *, ladder_steps: int | None = None,
+                ladder_bottom_c: float | None = None, ladder_step_ratio: float | None = None) -> dict[str, Any]:
     """Assemble one band finding. The 3-state containment band: two states return 100¢ (profit 100−cost =
     −max_loss), the 'reaches broader, not deeper' state pays 200¢ (profit 200−cost). worst/best mirror
     ``consistency.scenario_payoffs`` (reused by the detail panel)."""
@@ -190,6 +203,8 @@ def _build_band(cfg, player_key: str, tournament: str, child_node: str, parent_n
         "spread_over_child": consistency._disp_ratio(parent, child, "child"),
         "parent_yes_bid_c": _num(parent.get("yes_bid_c")),
         "child_yes_ask_c": _num(child.get("yes_ask_c")),
+        # Ladder-shape triage metrics (display-only; see _band_findings). None on outright fades (no ladder).
+        "ladder_steps": ladder_steps, "ladder_bottom_c": ladder_bottom_c, "ladder_step_ratio": ladder_step_ratio,
         "settlement_caveat": caveat,
         "market_status": "active",
         # Display-only: the band's full hold resolves at the LATER of its two legs (capital-lock-up horizon).
