@@ -5,7 +5,7 @@
  * plus a small account bar. A 401 from ANY data call (routed via http.apiFetch) flips the gate back to the
  * login view; because that UNMOUNTS TerminalProvider, the feed poll stops and all in-memory opportunity
  * state is discarded — no stale data lingers after logout/expiry. force_pw_change → a forced change view. */
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
   type AuthConfig, type AuthUser, type Device,
@@ -201,8 +201,10 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
   const [cfg, setCfg] = useState<AuthConfig>({ auth_enabled: false, remember_available: false, signup_enabled: false });
   const [user, setUser] = useState<AuthUser | null>(null);
 
+  const authOnRef = useRef(false);            // latest auth_enabled, for the global 401 handler closure
   const refresh = useCallback(async () => {
     const c = await getAuthConfig();
+    authOnRef.current = c.auth_enabled;
     setCfg(c);
     if (!c.auth_enabled) { setPhase("authed"); return; }   // auth off → open app (unchanged behaviour)
     const me = await getMe().catch(() => null);
@@ -211,7 +213,10 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     refresh();
-    setUnauthorizedHandler(() => { setUser(null); setPhase("anon"); });
+    // A 401 forces re-login ONLY when auth is enabled. With auth OFF the app is open, but user-only
+    // endpoints (e.g. /auth/preferences) still legitimately 401 — that must NOT bounce the open app to a
+    // login screen (the auth-off paradox).
+    setUnauthorizedHandler(() => { if (authOnRef.current) { setUser(null); setPhase("anon"); } });
     return () => setUnauthorizedHandler(null);
   }, [refresh]);
 
