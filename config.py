@@ -410,3 +410,28 @@ TERMINAL_PRESENCE_WINDOW_S = 30
 # the feed poll), so this MUST stay < TERMINAL_PRESENCE_WINDOW_S or an idle-but-open tab would let the
 # idle-gate pause the scanner. Also keeps proxies from idling the connection out.
 SSE_KEEPALIVE_SECONDS = 15
+
+# --- Real-time Stage 2: authenticated Kalshi WebSocket live feed (DEFAULT OFF) -------------------------
+# This is the first time the app would hold Kalshi EXCHANGE credentials (an RSA key). It stays OFF by
+# default; `serve.live_feed_safety()` fail-hards if it's enabled without a readable key or with
+# WEB_CONCURRENCY>1 (a 2nd worker = a 2nd authenticated WS session, doubled subscriptions, snapshot races).
+# Everything below is a DEFAULT; env overrides are read at the boundary in serve.py (config stays
+# import-free). The market-data REST path stays public/keyless — only the live WS needs the key.
+LIVE_FEED_ENABLED = False                       # master switch (env KALSHI_LIVE_ENABLED=1 flips it on)
+LIVE_WS_URL = "wss://external-api-ws.kalshi.com/trade-api/ws/v2"   # verified live WS host
+LIVE_WS_PATH = "/trade-api/ws/v2"               # signed in the RSA-PSS handshake (timestamp+GET+path)
+# Recompute/push pacing once live prices change: debounce a burst of deltas, but never recompute more
+# often than the floor (the full engine pass is not free — benchmark before tuning, see the plan).
+LIVE_DEBOUNCE_SECONDS = 0.4
+LIVE_MIN_RECOMPUTE_SECONDS = 1.5
+# A live book older than this (no message / unsynced) is STALE → its legs cannot be Actionable (Stage 2D).
+LIVE_STALE_AFTER_SECONDS = 10.0
+# Subscription cap (Tier-2): beyond this many markets we stay REST-only and label coverage honestly.
+LIVE_MAX_SUBSCRIPTIONS = 400
+# Throttled store checkpoints while live (the live path pushes from MEMORY; the store still gets periodic
+# REST snapshots + a live checkpoint at most this often / on a material state transition).
+LIVE_CHECKPOINT_SECONDS = 60.0
+# WS reconnect backoff (exponential w/ jitter applied at the boundary) + heartbeat health.
+LIVE_RECONNECT_BASE_SECONDS = 1.0
+LIVE_RECONNECT_MAX_SECONDS = 30.0
+LIVE_WS_OPEN_TIMEOUT_SECONDS = 10.0

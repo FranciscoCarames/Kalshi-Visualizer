@@ -180,6 +180,81 @@ def _enforce_bind_safety(host: str) -> None:
         raise SystemExit(2)
 
 
+def live_feed_safety(enabled: bool, *, key_id: str | None, key_path: str | None,
+                     key_readable: bool, key_world_readable: bool, web_concurrency: int = 0
+                     ) -> list[tuple[str, str]]:
+    """Pure fail-hard check for the real-time Stage 2 live feed (the FIRST time the app holds Kalshi
+    EXCHANGE credentials). Returns ``(level, message)`` pairs; ``"fatal"`` aborts boot. All checks are
+    inert when ``enabled`` is False (default), so a normal deploy is unaffected. Mirrors `bind_safety`'s
+    shape so the same enforcement boundary prints + aborts. Unit-testable (no IO — the filesystem facts are
+    passed in)."""
+    issues: list[tuple[str, str]] = []
+    if not enabled:
+        return issues
+    if not key_id:
+        issues.append(("fatal", "KALSHI_LIVE_ENABLED=1 but KALSHI_API_KEY_ID is unset. The live feed needs "
+                                "the Kalshi access-key id. Unset it (or KALSHI_LIVE_ENABLED) to stay OFF."))
+    if not key_path:
+        issues.append(("fatal", "KALSHI_LIVE_ENABLED=1 but KALSHI_PRIVATE_KEY_PATH is unset. Point it at the "
+                                "RSA private key (.pem) for the WS handshake."))
+    elif not key_readable:
+        issues.append(("fatal", f"KALSHI_PRIVATE_KEY_PATH={key_path!r} is missing or unreadable."))
+    elif key_world_readable:
+        issues.append(("fatal", f"Refusing to load {key_path!r}: the private key file is group/world-"
+                                "readable. Restrict it (chmod 600) — it authenticates to the exchange."))
+    if web_concurrency > 1:
+        issues.append(("fatal", "KALSHI_LIVE_ENABLED=1 with WEB_CONCURRENCY>1: the live WS connection + book "
+                                "state are PROCESS-LOCAL. A 2nd worker = a 2nd authenticated WS session, "
+                                "doubled subscriptions, and snapshot races. Run a single worker."))
+    return issues
+
+
+def _key_is_world_readable(path: str) -> bool:
+    """Best-effort POSIX permission check (group/other readable). Windows has different ACL semantics — the
+    stat mode bits aren't meaningful there, so we skip the check (return False) and rely on NTFS ACLs."""
+    if os.name == "nt":
+        return False
+    try:
+        import stat
+        mode = os.stat(path).st_mode
+        return bool(mode & (stat.S_IRGRP | stat.S_IROTH))
+    except OSError:
+        return False
+
+
+def _enforce_live_feed_safety() -> None:
+    """Boundary for the live feed: read the env + filesystem, fail-hard on any fatal, and (when safe) build
+    the process-wide `live_feed.LiveFeed` singleton + flip `config.LIVE_FEED_ENABLED`. The FastAPI lifespan
+    (api.py) starts/stops the singleton on the event loop. A no-op unless `KALSHI_LIVE_ENABLED=1`."""
+    enabled = os.getenv("KALSHI_LIVE_ENABLED") == "1"
+    key_id = os.getenv("KALSHI_API_KEY_ID")
+    key_path = os.getenv("KALSHI_PRIVATE_KEY_PATH")
+    try:
+        web_concurrency = int(os.getenv("WEB_CONCURRENCY", "0") or "0")
+    except ValueError:
+        web_concurrency = 0
+    key_readable = bool(key_path) and os.path.isfile(key_path) and os.access(key_path, os.R_OK)
+    issues = live_feed_safety(
+        enabled, key_id=key_id, key_path=key_path, key_readable=key_readable,
+        key_world_readable=_key_is_world_readable(key_path) if key_readable else False,
+        web_concurrency=web_concurrency)
+    for level, msg in issues:
+        print(f"{'ERROR (refused):' if level == 'fatal' else 'WARNING:'} {msg}")
+    if any(level == "fatal" for level, _ in issues):
+        raise SystemExit(2)
+    if not enabled:
+        return
+    # Safe to arm: load the key (never logged), build the singleton, flip the config switch. The lifespan
+    # will start it on the loop. Subscriptions are seeded from the latest snapshot (bounded).
+    import live_feed
+    with open(key_path, "rb") as fh:   # noqa: PTH123 — small one-shot read at boot
+        pem = fh.read()
+    config.LIVE_FEED_ENABLED = True
+    live_feed.feed_singleton = live_feed.LiveFeed(key_id, pem, tickers=live_feed.plan_subscriptions())
+    print("Live feed ARMED: the app now holds Kalshi EXCHANGE credentials (read-only WS). "
+          f"Subscribing to {len(live_feed.feed_singleton._tickers)} markets from the latest snapshot.")
+
+
 def apply_runtime_defaults() -> None:
     """Secure-by-default for the served app: authentication ON and self-registration ON unless the operator
     explicitly sets them. Applied ONLY here (the supported ``python serve.py`` entrypoint), NOT at module
@@ -269,6 +344,7 @@ if __name__ == "__main__":
     _host = os.getenv("API_HOST", config.API_HOST)
     _port = int(os.getenv("API_PORT", str(config.API_PORT)))
     _enforce_bind_safety(_host)
+    _enforce_live_feed_safety()   # arms the Stage 2 live feed only when KALSHI_LIVE_ENABLED=1 (else no-op)
     if _host not in _LOOPBACK_HOSTS:
         print(f"Serving on http://{_host}:{_port}  ·  reach it from the LAN at "
               f"http://<this-machine-LAN-IP>:{_port}  (see docs/DEPLOYMENT.md)")

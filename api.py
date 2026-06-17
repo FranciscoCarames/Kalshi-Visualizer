@@ -33,6 +33,7 @@ import events
 import fetch
 import kalshi_client
 import lifecycle
+import live_feed
 import presence
 import ratelimit
 import scan_manager
@@ -49,9 +50,15 @@ async def _lifespan(_app: "FastAPI"):
     on shutdown so a closed loop is never used. A no-op for a TestClient used without its context manager
     (lifespan doesn't run) — `events.publish` stays a safe no-op there, keeping `import api` side-effect-free."""
     events.set_loop(asyncio.get_running_loop())
+    # Start the Stage 2 live WS feed on THIS loop when armed (serve.py built the singleton + flipped the
+    # config switch after its fail-hard safety check). Default OFF ⇒ no singleton ⇒ nothing starts.
+    if live_feed.is_enabled() and live_feed.feed_singleton is not None:
+        live_feed.feed_singleton.start(asyncio.get_running_loop())
     try:
         yield
     finally:
+        if live_feed.feed_singleton is not None:
+            await live_feed.feed_singleton.stop()
         events.set_loop(None)
 
 
@@ -223,6 +230,8 @@ class Coverage(BaseModel):
     kalshi_requests: int = 0
     sport_errors: list[dict[str, Any]] = []
     series_errors: list[dict[str, Any]] = []
+    # Real-time Stage 2: live book coverage (covered/total markets). None when the live feed is OFF.
+    live: dict[str, Any] | None = None
 
 
 class Metrics(BaseModel):
@@ -248,6 +257,8 @@ class Metrics(BaseModel):
     # Real-time Stage 1 (SSE push): open stream subscribers + coalesced-payload drops (slow clients).
     sse_subscribers: int = 0
     sse_dropped: int = 0
+    # Real-time Stage 2 (live WS feed) health + book coverage. None/all-zero when OFF (the default).
+    live: dict[str, Any] | None = None
     # Footprint counters (so the owner can see retention + incremental_vacuum bounding the store).
     db_size_bytes: int | None = None
     wal_size_bytes: int | None = None
@@ -673,6 +684,15 @@ def get_terminal_orderbook(ticker: str, depth: int = _ORDERBOOK_DEFAULT_DEPTH) -
         raise HTTPException(status_code=400, detail="invalid ticker")
     depth = max(1, min(_ORDERBOOK_MAX_DEPTH, int(depth)))
 
+    # When the Stage 2 live feed is armed and this market has a FRESH synced book, serve it from memory
+    # (no REST round-trip). Falls through to the TTL-cached REST path when off / stale / uncovered.
+    if live_feed.is_enabled():
+        d = live_feed.book.derived(tk)
+        if d and d.get("fresh"):
+            shape = live_feed.book.rest_shape(tk) or {"yes": [], "no": []}
+            return TerminalOrderbook(ticker=tk, yes=shape["yes"], no=shape["no"],
+                                     age_s=round(d.get("age_s") or 0.0, 2))
+
     now = time.monotonic()
     with _orderbook_cache_lock:                                  # serve a fresh cache hit (coalesce polls)
         hit = _orderbook_cache.get(tk)
@@ -768,7 +788,8 @@ def get_coverage(db_path: str | None = Depends(db_path_dep)):
                     contracts_scanned=meta.get("contracts_scanned", 0),
                     checks_tested=meta.get("checks_tested", 0),
                     kalshi_requests=meta.get("kalshi_requests", 0),
-                    sport_errors=meta.get("sport_errors", []), series_errors=meta.get("series_errors", []))
+                    sport_errors=meta.get("sport_errors", []), series_errors=meta.get("series_errors", []),
+                    live=(live_feed.coverage(db_path=db_path) if live_feed.is_enabled() else None))
 
 
 @app.get("/metrics", response_model=Metrics)
@@ -782,7 +803,8 @@ def get_metrics(db_path: str | None = Depends(db_path_dep)):
         snapshot=snap, scan_status=scan_manager.manager.status(), now_age=age,
         stale=stale, now=time.time(), viewer_count=presence.count())
     return Metrics(**base, **store.footprint_stats(db_path=db_path),
-                   sse_subscribers=events.subscriber_count(), sse_dropped=events.dropped_count())
+                   sse_subscribers=events.subscriber_count(), sse_dropped=events.dropped_count(),
+                   live=(live_feed.live_metrics() if live_feed.is_enabled() else None))
 
 
 @app.get("/alerts", response_model=Alerts)

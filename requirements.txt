@@ -7,3 +7,6 @@ pydantic>=2.6           # API response models
 nicegui>=3.12,<4        # opportunity-first dashboard (Stage 5), mounted on the FastAPI app (pinned <4)
 argon2-cffi>=23.1       # argon2id password hashing for per-user auth (auth_store.py); itsdangerous (session
                         # cookie signing) ships transitively with fastapi/starlette — no extra pin needed
+websockets>=12.0        # real-time Stage 2 ONLY: authenticated Kalshi WebSocket client (live_feed.py).
+cryptography>=42.0      # real-time Stage 2 ONLY: RSA-PSS signing of the Kalshi WS handshake. Both are
+                        # imported LAZILY inside live_feed so a default-OFF deploy needn't install them.
