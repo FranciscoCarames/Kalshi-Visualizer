@@ -150,7 +150,7 @@ def test_legs_trimmed_to_view_fields():
     a = next(r for r in feed.feed_from_snapshot(_snapshot())["opps"] if r["id"] == "a")
     # `u` is now the per-participant + per-side deep link (see test_leg_deep_link_*); other fields verbatim.
     assert a["legs"] == [{"side": "buy_yes", "c": "A", "p": 60.0, "sz": 100.0, "tk": "TA", "bo": False,
-                          "u": "ua?op_market_ticker=TA&op_order_side=yes"}]
+                          "pk": None, "u": "ua?op_market_ticker=TA&op_order_side=yes"}]
 
 
 def test_trim_legs_backfills_outright_ticker_from_slot_1():

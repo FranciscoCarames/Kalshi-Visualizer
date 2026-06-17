@@ -163,6 +163,35 @@ def duplicate_node_sources(player_rows: list[dict[str, Any]]) -> list[dict[str, 
     ]
 
 
+def unmapped_advance_stages(player_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Diagnostic (audit A6): advance-family contracts whose stage does NOT map to a tracked ladder node.
+
+    An advance market (e.g. NBA "First Round", a tennis bracket round we don't track yet) whose stage has
+    no node silently DROPS out of the containment ladder (`build_player_nodes` skips a None node). Surface
+    these as a COVERAGE signal — a round/stage worth adding — so they're acknowledged, never silently lost,
+    and never the primary opportunity table. One row per distinct (series, stage)."""
+    seen: set[tuple[str, str]] = set()
+    out: list[dict[str, Any]] = []
+    for row in player_rows or []:
+        if (row.get("market_family") or row.get("kind")) != "advance":
+            continue
+        if node_of(row):                                  # maps to a tracked node → not a coverage gap
+            continue
+        key = (str(row.get("series") or ""), str(row.get("stage") or ""))
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append({
+            "player": row.get("player") or "",
+            "series": row.get("series") or "",
+            "stage": row.get("stage") or "",
+            "event_ticker": row.get("event_ticker") or "",
+            "reason": f"advance stage '{row.get('stage') or 'unknown'}' has no tracked ladder node",
+        })
+    out.sort(key=lambda r: (r["series"], r["stage"]))
+    return out
+
+
 def _isna(x: Any) -> bool:
     """True for None or float NaN. Needed because a `None` price round-trips to float NaN
     through pandas (`DataFrame` → `to_dict("records")`), so a plain `is None` check misses it."""
@@ -339,8 +368,12 @@ def _leg(row: dict[str, Any], side: str) -> tuple[int | None, Any]:
     """Return (cents, size) for a contract's firm bid/ask side.
 
     An empty 0/1 book ("No quote") or a malformed crossed book ("Crossed") has no usable order.
+
+    A subpenny (variable-tick) leg has no TRUSTED integer-cent price — `data.to_cents` ROUNDS it — so it
+    yields no firm executable leg (audit A3) and can never form an executable cross. It still participates
+    in the display test via `display_c`, so a deci-cent rung stays visible as a display-only comparison.
     """
-    if row.get("quote_quality") in ("No quote", "Crossed"):
+    if row.get("quote_quality") in ("No quote", "Crossed") or row.get("subpenny"):
         return None, None
     if side == "bid":
         return _num(row.get("yes_bid_c")), row.get("yes_bid_size")
@@ -398,9 +431,31 @@ def _rule_flag(child: dict[str, Any], parent: dict[str, Any]) -> tuple[str, str]
     return "RULE_CHECK_REQUIRED", "rules not auto-verified"
 
 
+# Dead-heat / tie-for-position settlement language on a FINISHING-POSITION market (golf Top-N, motorsport
+# Top-N / Podium). A tie at the cutoff position can settle FRACTIONALLY (split payout) or pay >k winners
+# — which the strict containment (Top 5 ⊆ Top 10 ⊆ … ⊆ Win) silently assumes away. These are DETECTION
+# tokens: presence strengthens the note. Absence does NOT prove clean settlement, so a finishing-position
+# pair is ALWAYS rule-dependent until the dead-heat convention is verified live (audit A4).
+_DEAD_HEAT_PHRASES = ("dead heat", "dead-heat", "tie for", "ties for", "tied for", "count back",
+                      "countback", "split", "divided equally", "shared")
+
+
+def _finishing_rule_flag(child: dict[str, Any], parent: dict[str, Any]) -> tuple[str, str]:
+    """RULE_CHECK_REQUIRED settlement caveat for a finishing-position containment pair (audit A4).
+
+    Golf / motorsport finishing-position ladders settle off a final classification where a tie at a cutoff
+    (a dead heat for 5th) can pay fractionally or settle >k players YES, so the strict Top-N containment is
+    never an auto-verified clean edge. Always rule-dependent; the note is strengthened when explicit
+    dead-heat language is present in either leg's rules."""
+    blob = f"{child.get('rules_primary') or ''}\n{parent.get('rules_primary') or ''}".lower()
+    if any(p in blob for p in _DEAD_HEAT_PHRASES):
+        return "RULE_CHECK_REQUIRED", "dead-heat / tie-for-position settlement not auto-verified"
+    return "RULE_CHECK_REQUIRED", "finishing-position tie/dead-heat convention not auto-verified"
+
+
 def _classify(
     child: dict[str, Any], parent: dict[str, Any], equivalence: bool,
-    risk_budget_max_loss_c: int = 0,
+    risk_budget_max_loss_c: int = 0, finishing_ladder: bool = False,
 ) -> dict[str, Any]:
     """Compare a child (deeper) against a parent (broader). Executable and display tests are
     independent: a missing display blocks only the display test; a missing firm bid/ask or
@@ -450,9 +505,14 @@ def _classify(
     sizes_ok = best["sizes_ok"] if best else False
 
     # --- display test ---
+    # A subpenny (variable-tick) leg's display_c is ROUNDED to whole cents (audit A3): each leg can shift by
+    # up to ±0.5c, so use a coarser tolerance (don't pretend deci-cent precision under integer cents) — a
+    # subpenny pair needs a >DISPLAY_TOL_C+1 gap before it counts as a display inconsistency.
+    subpenny_pair = bool(child.get("subpenny") or parent.get("subpenny"))
+    disp_tol = (DISPLAY_TOL_C + 1) if subpenny_pair else DISPLAY_TOL_C
     display_evaluable = cd is not None and pd_ is not None
     display_gap = (cd - pd_) if display_evaluable else None
-    display_violation = display_evaluable and display_gap > DISPLAY_TOL_C
+    display_violation = display_evaluable and display_gap > disp_tol
 
     cq, pq = child.get("quote_quality", ""), parent.get("quote_quality", "")
     worst = _worst_quality(cq, pq)
@@ -474,6 +534,12 @@ def _classify(
     elif display_violation:
         status = "DISPLAY_VIOLATION"
         reason = f"display child {cd}c > parent {pd_}c (gap {display_gap}c); no executable cross"
+    elif subpenny_pair and display_evaluable:
+        # A subpenny (variable-tick) leg has no trusted firm price, so the executable test is suppressed
+        # (audit A3) — but the display test IS evaluable and consistent here, so this is a display-only
+        # CLEAN comparison, NOT a missing/empty book. The rung stays visible without ever being actionable.
+        status = "CLEAN"
+        reason = "child ≤ parent on display; subpenny leg display-only (no trusted executable price)"
     elif not exec_evaluable:
         status = "MISSING_QUOTE"
         reason = "no firm bid/ask on a leg (empty/one-sided book)"
@@ -497,6 +563,12 @@ def _classify(
     rule_flag, rule_note = ("", "")
     if equivalence:
         rule_flag, rule_note = _rule_flag(child, parent)
+        reason = f"{reason}; {rule_note}"
+    elif finishing_ladder:
+        # Golf / motorsport finishing-position containment (audit A4): a tie/dead-heat at a cutoff position
+        # can break the strict Top-N containment, so the pair is rule-dependent until verified live. Reuses
+        # the same rule_flag path (tradable_now → "rule-dependent", a rule blocker is appended below).
+        rule_flag, rule_note = _finishing_rule_flag(child, parent)
         reason = f"{reason}; {rule_note}"
 
     # Profit / trade-construction context for the ONE actionable status. All None otherwise so
@@ -772,14 +844,11 @@ def build_checks(df: pd.DataFrame, *, risk_budget_max_loss_c: int = 0) -> pd.Dat
     if "tournament" not in df.columns:
         df = df.assign(tournament="")
 
-    # Variable-tick guard: a subpenny-priced row's cents are ROUNDED (data.to_cents), so it must not form a
-    # trusted containment edge. Exclude such rows from ladder checks (they stay visible in the raw contracts
-    # frame / diagnostics). No-op for the current whole-cent sports; guard for test frames lacking the column.
-    if "subpenny" in df.columns:
-        df = df[~df["subpenny"].fillna(False).astype(bool)]
-        if df.empty:
-            return pd.DataFrame(columns=columns)
-
+    # Variable-tick guard (audit A3): a subpenny-priced row's cents are ROUNDED (data.to_cents), so it can
+    # never form a TRUSTED EXECUTABLE edge — but it is KEPT in the ladder so a deci-cent deepest rung (e.g.
+    # "Win the World Cup", KXMENWORLDCUP) no longer vanishes and break the ladder with a false MISSING_LAYER.
+    # `_classify` reads its `subpenny` flag and routes it DISPLAY-ONLY (executable legs suppressed in `_leg`,
+    # display tolerance coarsened), so a subpenny row can never become actionable via cent rounding.
     out: list[dict] = []
     # Group by the STABLE player_key (never the display name) AND tournament: two distinct competitors
     # who share a display name must not merge, and one competitor's two tournaments must not merge.
@@ -826,31 +895,41 @@ def build_checks(df: pd.DataFrame, *, risk_budget_max_loss_c: int = 0) -> pd.Dat
                                 relationship_type=rel, opp_id=oid, simultaneous=ladder.simultaneous))
             else:
                 out.append(_row(player, player_key, chain, child, parent,
-                                _classify(child, parent, False, risk_budget_max_loss_c),
+                                _classify(child, parent, False, risk_budget_max_loss_c,
+                                          finishing_ladder=ladder.simultaneous),
                                 child_node=child_node, parent_node=parent_node, tournament=_tournament,
                                 relationship_type=rel, opp_id=oid, simultaneous=ladder.simultaneous))
 
-        # Transitive containment: when a MIDDLE ladder node is absent, the adjacent loop above only emits
-        # MISSING_LAYER for the gap — it never compares the present broader vs deeper nodes that span it,
-        # so a real cross can hide (a false negative). Bridge it: over node_order (broad -> deep), compare
-        # each consecutive pair of PRESENT nodes that is NOT already an adjacent pair (i.e. >=1 node
-        # between them is missing). When every node is present, each consecutive present pair IS an
-        # adjacent pair, so nothing extra is emitted (no duplicate findings). Both legs are present by
-        # construction, so this reuses the same _classify as the adjacent containment check.
-        present = [n for n in ladder.node_order if nodes.get(n, {}).get("market") is not None]
+        # Transitive CLOSURE: recognize EVERY (broader ⊇ deeper) containment pair in the ladder, not just
+        # adjacent rungs — e.g. Reach Round of 32 ⊇ Win the World Cup directly, or Reach SF ⊇ Win. By the
+        # ladder's total order, any deeper node is contained by every broader ancestor, so each non-adjacent
+        # pair is a real containment relationship, checked EXACTLY like an adjacent pair (same _classify /
+        # _row / bucket routing). This SUBSUMES the old consecutive-present "bridge": comparing the two
+        # present endpoints directly also spans any missing OR illiquid middle rung. Iterating node_order
+        # (broad -> deep) naturally EXCLUDES optional side-branch leaves (e.g. soccer "Win group"), which
+        # live only in adjacent_pairs and are incomparable to deeper rungs. Both endpoints must be present
+        # (a missing rung is already surfaced as MISSING_LAYER by the adjacent loop); reuses _classify since
+        # both legs are present. Dedup against adjacent_pairs so an adjacent pair is never emitted twice.
+        order = ladder.node_order
         adjacent_set = set(ladder.adjacent_pairs)
-        for broader_node, deeper_node in zip(present, present[1:]):   # node_order is broad -> deep
-            if (deeper_node, broader_node) in adjacent_set:
-                continue                                              # already covered by the adjacent loop
-            child = nodes[deeper_node]["market"]
-            parent = nodes[broader_node]["market"]
-            chain = f"{deeper_node} ≤ {broader_node}"
-            rel = "containment_transitive"
-            oid = opportunity_id(rel, player_key, _tournament, deeper_node, broader_node)
-            out.append(_row(player, player_key, chain, child, parent,
-                            _classify(child, parent, False, risk_budget_max_loss_c),
-                            child_node=deeper_node, parent_node=broader_node, tournament=_tournament,
-                            relationship_type=rel, opp_id=oid, simultaneous=ladder.simultaneous))
+        for i in range(len(order)):
+            broader_node = order[i]
+            for j in range(i + 1, len(order)):                        # j > i ⇒ order[j] is deeper
+                deeper_node = order[j]
+                if (deeper_node, broader_node) in adjacent_set:
+                    continue                                          # already covered by the adjacent loop
+                child = nodes.get(deeper_node, {}).get("market")
+                parent = nodes.get(broader_node, {}).get("market")
+                if child is None or parent is None:
+                    continue                                          # present endpoints only
+                chain = f"{deeper_node} ≤ {broader_node}"
+                rel = "containment_transitive"
+                oid = opportunity_id(rel, player_key, _tournament, deeper_node, broader_node)
+                out.append(_row(player, player_key, chain, child, parent,
+                                _classify(child, parent, False, risk_budget_max_loss_c,
+                                          finishing_ladder=ladder.simultaneous),
+                                child_node=deeper_node, parent_node=broader_node, tournament=_tournament,
+                                relationship_type=rel, opp_id=oid, simultaneous=ladder.simultaneous))
 
         # Match-alignment (equivalence) rows where both a market and a confident match exist. One
         # equivalence per node (build_player_nodes keeps a single representative per source), so the
@@ -901,7 +980,7 @@ def scenario_payoffs(check_row: dict[str, Any], units: Any = None) -> dict[str, 
     `cost_c`, the `payout_c` in each state, and the `profit_c` (= payout − cost). It makes the
     edge concrete: you can see the money in every outcome, and the worst row is the guaranteed floor.
 
-    Two shapes, distinguished by `rule_flag` (set only for match-alignment equivalence pairs):
+    Two shapes, distinguished by `relationship_type` (== "match_alignment" for equivalence pairs):
 
     - **containment** (broader ⊇ deeper): THREE distinct states. The two 100c states are the
       guaranteed floor; the broader-but-not-deeper state pays an extra $1 — a directional BONUS,
@@ -927,7 +1006,10 @@ def scenario_payoffs(check_row: dict[str, Any], units: Any = None) -> dict[str, 
     no_price = _num(check_row.get("action_2_price_c"))    # cost to Buy NO on the short leg @ the NO ask
     cost_c = (yes_price + no_price) if (yes_price is not None and no_price is not None) else None
 
-    equivalence = bool(check_row.get("rule_flag"))
+    # Equivalence payoff shape is keyed on the RELATIONSHIP, not on rule_flag — a finishing-position
+    # containment pair (golf/motorsport) now also carries a RULE_CHECK_REQUIRED flag (audit A4) but is
+    # still a 3-state containment payoff, not the 2-aligned + risk equivalence shape.
+    equivalence = check_row.get("relationship_type") == "match_alignment"
 
     def _scn(label: str, yes_pay: int | None, no_pay: int | None,
              *, bonus: bool = False, risk: bool = False) -> dict[str, Any]:

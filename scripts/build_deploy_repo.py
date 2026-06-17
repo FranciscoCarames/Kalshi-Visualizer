@@ -30,6 +30,7 @@ STATIC_INCLUDES = (
     "deploy/kalshi-dashboard-scan.service",
     "deploy/kalshi-dashboard-scan.timer",
     "deploy/scan.sh",
+    "deploy/update.sh",
     "deploy/.env.example",
     "deploy/README.md",
     ".gitignore",

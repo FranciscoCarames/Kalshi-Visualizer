@@ -5,7 +5,7 @@ import { apiFetch } from "./http";
 
 // `bo` (book-only): a pseudo-leg added by the feed so the depth panel can show a market's book where no
 // executable leg carries the ticker — NOT a trade instruction (no side/price). See webui/feed._trim_legs.
-export interface FeedLeg { side?: string; c?: string; p?: number | null; sz?: number; tk?: string; u?: string; bo?: boolean; }
+export interface FeedLeg { side?: string; c?: string; p?: number | null; sz?: number; tk?: string; u?: string; bo?: boolean; pk?: string | null; }
 
 export interface FeedRow {
   id: string;
@@ -17,6 +17,9 @@ export interface FeedRow {
   // economics (present per bucket; absent ones render "—"):
   edge?: number; roi?: number; units?: number; profit?: number; cost?: number;
   max_loss?: number; max_profit?: number; max_units?: number; quote_health?: string; caveat?: string;
+  // cheap-NO ladder-shape triage metrics (display-only; bands only, undefined on outrights):
+  ladder_steps?: number | null; ladder_bottom_c?: number | null; ladder_step_ratio?: number | null;
+  capacity?: number | null;   // EXPERIMENTAL top-book cost capacity $ (bounded-loss table clarity)
   settlement_caveat?: string; blk?: string; scope?: string; resolution_mode?: string;
   // net-of-fees ESTIMATE (display-only · never ranks). Two EXECUTION SCENARIOS: taker = immediate-fill
   // (primary; `fees`/`net_edge`/`net_profit` carry it), maker = resting-order (fills/queue/edge-decay not

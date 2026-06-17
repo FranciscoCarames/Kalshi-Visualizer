@@ -35,6 +35,22 @@ non-blocking, singleflighted scan). Background auto-scan is on by default. For o
 safety, systemd service + scan timer, the clean deploy artifact), see
 [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
 
+### Frontend: dev vs prod (the SPA at `/`)
+
+The default UI at `/` is the React SPA in `frontend/` (the legacy NiceGUI dashboard stays at `/dashboard`).
+
+- **Prod / normal run** — build the SPA once, then `serve.py` serves the prebuilt `frontend/dist` itself on
+  one port:
+  ```bash
+  cd frontend && npm ci && npm run build && cd ..   # npm ci (not install) for reproducible deploys
+  python serve.py
+  ```
+  `frontend/dist` is **gitignored**, so it MUST be (re)built after pulling frontend changes — until it
+  exists, `/` is simply unmounted (boot never breaks). On a deployed box, `deploy/update.sh` rebuilds it.
+- **Dev only** — `cd frontend && npm run dev` runs Vite on `:5180` and proxies `/api` to the backend on
+  `:8000`, so you still need `python serve.py` running alongside or **every data fetch fails**. This is not
+  how production runs.
+
 ### Tests
 
 ```bash

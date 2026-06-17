@@ -90,7 +90,9 @@ def test_round_parser_hyphenated_variants_not_finals_wnba():
 
 # --- NBA classification (grounded in live discovery) ---------------------------------
 def _mc(series, title):
-    return sports.NBA.classify(series, {"title": title})
+    # Production markets always carry a ticker prefixed by their series (e.g. KXNBAEAST-26-BOS); the NBA
+    # advance stage keys on that prefix (audit A8 explicit map), so supply a realistic ticker.
+    return sports.NBA.classify(series, {"title": title, "ticker": f"{series}-26-X"})
 
 
 def test_nba_ladder_families_map_to_nodes():
@@ -568,6 +570,29 @@ def test_soccer_stage_of_elim_owned_classified_non_laddered():
         assert c.eligible_for_ladder_checks is False and c.stage == label
 
 
+_H2H_FIX = Path(__file__).parent / "fixtures" / "wc_team_h2h"
+
+
+def test_wc_team_h2h_recognized_other_never_detected():
+    # Wave 2 #10 (live-probed 2026-06-16). KXWCTEAMH2H is OWNED (resolves to soccer, not UNKNOWN) and
+    # classified "other" → visible in the coverage audit but NEVER fetched/detected. The live shape is a
+    # 3-way same-stage-tie set with mutually_exclusive UNSET, so no executable detector may touch it yet.
+    import dutchbook
+    assert sports.sport_for_series("KXWCTEAMH2H").sport_id == "soccer"
+    assert sports.SOCCER.family_of("KXWCTEAMH2H") == "other"
+    assert "KXWCTEAMH2H" not in sports.SOCCER.default_series          # owned but never fetched
+    assert "KXWCTEAMH2H" in sports.SOCCER.exact_series
+    # The captured live event flows through build_contracts (3 distinct teams incl. the same-stage leg) and
+    # produces NO dutch-book / group-basket finding (it is not a recognized detector family).
+    ev = json.loads((_H2H_FIX / "KXWCTEAMH2H-26USAMEX.json").read_text(encoding="utf-8"))
+    rows = data.build_contracts("KXWCTEAMH2H", [ev])
+    assert len(rows) == 3 and all(r["market_family"] == "other" for r in rows)
+    assert all(r["ladder_eligible"] is False for r in rows)
+    recs = pd.DataFrame(rows).to_dict("records")
+    assert dutchbook.find_dutch_books(recs) == []
+    assert dutchbook.find_group_baskets(recs) == []
+
+
 def test_soccer_winner_rung_live_outright():
     # The LIVE tournament outright (KXMENWORLDCUP-26) classifies as the deepest ladder rung "Win the World
     # Cup" (node == display label). The dead lookalike KXMWORLDCUP and the retired dormant guess KXWC are
@@ -581,6 +606,42 @@ def test_soccer_winner_rung_live_outright():
     assert sports.SOCCER.ladder.node_order[0] == "Reach Round of 32"
     assert sports.SOCCER.ladder.node_order[-1] == "Win the World Cup"
     assert ("Win the World Cup", "Reach Finals") in sports.SOCCER.ladder.adjacent_pairs
+
+
+def test_a8_nba_nhl_unknown_advance_series_is_unmapped_not_conference():
+    # A8: the explicit advance-stage map returns "" for an unrecognized series (→ surfaced by A6's
+    # unmapped-advance diagnostic), instead of the old blanket `else "Conference"` mislabel.
+    assert sports._nba_stage(sports.NBA, "advance", {"ticker": "KXNBAEAST-26-BOS"}) == "Conference"
+    assert sports._nba_stage(sports.NBA, "advance", {"ticker": "KXNBAPLAYOFF-26-BOS"}) == "Playoffs"
+    assert sports._nba_stage(sports.NBA, "advance", {"ticker": "KXNBAPLAYIN-26-BOS"}) == ""
+    assert sports._nhl_stage(sports.NHL, "advance", {"ticker": "KXNHLWEST-26-COL"}) == "Conference"
+    assert sports._nhl_stage(sports.NHL, "advance", {"ticker": "KXNHLPLAYOFF-26-COL"}) == "Playoffs"
+    assert sports._nhl_stage(sports.NHL, "advance", {"ticker": "KXNHLWILDCARD-26-COL"}) == ""
+
+
+def test_soccer_tournament_key_unifies_ladder_across_series():
+    # Audit A2: a team's reach-stage rung (KXWCROUND) and tournament-winner rung (KXMENWORLDCUP) carry
+    # DIFFERENT competition strings live, but must land in ONE (player_key, tournament) group so the
+    # containment ladder forms. The season-scoped key collapses every WC series to one tournament.
+    round_ev = {"event_ticker": "KXWCROUND-26FINAL-BRA", "title": "x",
+                "product_metadata": {"competition": "2026 FIFA World Cup — Knockout"},
+                "markets": [{"ticker": "KXWCROUND-26FINAL-BRA", "yes_sub_title": "Brazil",
+                             "custom_strike": {"soccer_team": "u-bra"},
+                             "yes_bid_dollars": "0.40", "yes_ask_dollars": "0.42",
+                             "yes_bid_size_fp": "100", "yes_ask_size_fp": "100", "status": "active", "title": "x"}]}
+    win_ev = {"event_ticker": "KXMENWORLDCUP-26-BRA", "title": "x",
+              "product_metadata": {"competition": "2026 FIFA World Cup Winner"},
+              "markets": [{"ticker": "KXMENWORLDCUP-26-BRA", "yes_sub_title": "Brazil",
+                           "custom_strike": {"soccer_team": "u-bra"},
+                           "yes_bid_dollars": "0.20", "yes_ask_dollars": "0.22",
+                           "yes_bid_size_fp": "100", "yes_ask_size_fp": "100", "status": "active", "title": "x"}]}
+    r_round = data.build_contracts("KXWCROUND", [round_ev])[0]
+    r_win = data.build_contracts("KXMENWORLDCUP", [win_ev])[0]
+    assert r_round["tournament"] == r_win["tournament"] == "World Cup · 26"
+    assert r_round["tournament_source"] == "soccer_event"
+    # A future edition stays separate (season scope) — no false cross-edition ladder.
+    win30 = {**win_ev, "event_ticker": "KXMENWORLDCUP-30-BRA"}
+    assert data.build_contracts("KXMENWORLDCUP", [win30])[0]["tournament"] == "World Cup · 30"
 
 
 def test_soccer_group_winner_is_transitivity_excluded_leaf():
@@ -685,7 +746,7 @@ def test_soccer_tie_is_non_participant_with_per_event_key():
     assert tie["is_participant"] is False and tie["participant_type"] == "tie"
     assert tie["player_key"] == "tie::KXWCGAME-26JUN11MEXRSA"               # per-event synthetic key
     assert all(r["mutually_exclusive"] is True for r in rows)              # MECE flag stamped from the event
-    assert {r["tournament"] for r in rows} == {"2026 FIFA World Cup · 26"}  # WC key + season token
+    assert {r["tournament"] for r in rows} == {"World Cup · 26"}            # A2 canonical season-scoped WC key
     assert all(r["kind"] == "game" for r in rows)
 
 
@@ -701,12 +762,13 @@ def test_soccer_reach_stage_ladder_violation():
 
 def test_soccer_groupqual_fixture_is_round_of_32():
     # Real captured KXWCGROUPQUAL event parses to the Reach Round of 32 rung. Live competition metadata is
-    # "FIFA World Cup" (not the "2026 FIFA World Cup" of older fixtures) → tournament key "FIFA World Cup · 26".
+    # "FIFA World Cup" (vs the "2026 FIFA World Cup" of older fixtures) — the exact per-series divergence
+    # audit A2 fixes: the season-scoped tournament_key_fn now collapses both to "World Cup · 26".
     rows = data.build_contracts("KXWCGROUPQUAL", [_load_soccer("KXWCGROUPQUAL-26L.json")])
     assert {r["player"] for r in rows} == {"Panama", "Ghana"}
     assert all(r["kind"] == "advance" for r in rows)
     assert all(r["contract"] == "Reach Round of 32" for r in rows)         # ladder node = contract label
-    assert {r["tournament"] for r in rows} == {"FIFA World Cup · 26"}
+    assert {r["tournament"] for r in rows} == {"World Cup · 26"}
     assert all(r["is_participant"] is True for r in rows)                  # real teams, not a Tie leg
 
 

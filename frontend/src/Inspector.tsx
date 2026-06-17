@@ -91,6 +91,7 @@ export default function Inspector({ row, lens, snapshotId, showNet, longShort }:
   const cv = (c: unknown) => { const n = num(c); return n == null ? "—" : basis === 100 ? "$" + (n / 100).toFixed(2) : Math.round(n) + "¢"; };
   const z = ZB[row.zone] ?? ZB.diag;
   const isSpec = row.zone === "spec";
+  const isDiag = row.zone === "diag";   // diagnostic rows are NOT tradable — no buy plan / economics card
   const w = rankWhy(row);
   const legs = row.legs ?? [];
   const condPct = row.cond_child;                 // display-basis P(deeper│reached); firm shown in Detail
@@ -107,15 +108,34 @@ export default function Inspector({ row, lens, snapshotId, showNet, longShort }:
       </div>
       <div className="sub">{[row.sub || row.detail, row.sport, row.resolution_mode, row.scope].filter(Boolean).join(" · ")}</div>
 
+      {isDiag ? (
+        <div className="note" style={{ marginTop: 6 }}>
+          <b>Diagnostic row — not a tradable opportunity.</b> This row is surfaced for review/data-quality
+          only, so it has no buy-only plan or economics. See the evidence and Participant Detail below.
+        </div>
+      ) : (<>
       <div className="sect">BUY-ONLY PLAN — {row.nlegs ?? legs.length} LEG{(row.nlegs ?? legs.length) === 1 ? "" : "S"}</div>
       {legs.length ? legs.map((l, i) => {
+        const href = safeHref(l.u);
+        // Book-only pseudo-leg (bo): a reference market the engine attached for the depth panel — NOT a
+        // buy instruction (no side/price). Render it as a reference row, never as a blank "NO @ —" leg
+        // (e.g. the exact-order bundle's qualifier comparator).
+        if (l.bo) return (
+          <div className="leg" key={i}>
+            <span className="dim">BOOK</span>
+            <span className="l2">{l.c || l.tk || "reference market"}</span>
+            <span className="dim">reference only</span>
+            <span className="dim" />
+            {href ? <a href={href} target="_blank" rel="noreferrer">↗</a> : null}
+          </div>
+        );
         const yes = String(l.side || "").includes("yes");
         const lbl = longShort ? (yes ? "LONG" : "SHORT") : (yes ? "YES" : "NO");
-        const href = safeHref(l.u);
         return (
           <div className="leg" key={i}>
             <span className={yes ? "y" : "n"}>{lbl}</span>
             <span className="l2">{l.c}</span>
+            {l.tk ? <span className="dim" style={{ fontFamily: "monospace", fontSize: "0.85em" }} title="market ticker">{l.tk}</span> : null}
             <span className="white">{l.p != null ? l.p + "¢" : "—"}</span>
             <span className="dim">×{l.sz ?? 0}</span>
             {href ? <a href={href} target="_blank" rel="noreferrer">↗</a> : null}
@@ -139,6 +159,7 @@ export default function Inspector({ row, lens, snapshotId, showNet, longShort }:
       </div>
 
       {showNet ? <FeeScenarios row={row} /> : null}
+      </>)}
 
       {hasCond ? (
         <div className="note" style={{ marginTop: 6 }}>
@@ -219,11 +240,33 @@ export function condRungRows(chain: Record<string, unknown>[]): CondRow[] {
 }
 
 export function Detail({ row, showIds, showRules = true }: { row: FeedRow | null; showIds?: boolean; showRules?: boolean }) {
-  const key = detailKey(row);
+  const baseKey = detailKey(row);   // the row's own single-participant anchor (sport+player_key+tournament)
+  // Distinct per-leg participants (field / multi-participant rows like a 2-way game or a winner field) →
+  // a participant chooser. Skips book-only legs and legs without a participant UUID.
+  const legParts: { pk: string; label: string }[] = [];
+  const _seen = new Set<string>();
+  for (const l of (row?.legs ?? [])) {
+    const pk = l.pk;
+    // Real participants only: skip book-only legs, legs without a pk, and the synthetic Tie/draw leg
+    // (pk "tie::…") — a tie has no participant ladder, so it's never a chooser option.
+    if (!pk || l.bo || pk.startsWith("tie::") || _seen.has(pk)) continue;
+    _seen.add(pk); legParts.push({ pk, label: l.c || pk });
+  }
+  const [pickPk, setPickPk] = useState<string | null>(null);
+  // A chooser is offered only when the row exposes sport_key + tournament (needed to form a detail key for
+  // a picked side). The picked participant overrides the row's own anchor; `validPick` guards against a
+  // stale pick carried across a row change.
+  const canPick = !!(row?.sport_key && row?.tournament) && legParts.length > 0;
+  const validPick = pickPk && legParts.some((p) => p.pk === pickPk) ? pickPk : null;
+  const pickedKey = canPick && validPick
+    ? { sport: String(row!.sport_key), player_key: validPick, tournament: String(row!.tournament) } : null;
+  const key = pickedKey ?? baseKey;
+  const keyStr = key ? `${key.sport}|${key.player_key}|${key.tournament}` : "";
   const [bundle, setBundle] = useState<DetailBundle | null>(null);
   const [ladder, setLadder] = useState<LadderData | null>(null);
   const [payoff, setPayoff] = useState<PayoffData | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  useEffect(() => { setPickPk(null); }, [row?.id]);   // reset the chosen side when the row changes
   useEffect(() => {
     setBundle(null); setLadder(null); setPayoff(null); setErr(null);
     if (!row) return;
@@ -235,15 +278,30 @@ export function Detail({ row, showIds, showRules = true }: { row: FeedRow | null
     loadPayoff(row.id).then((p) => alive && setPayoff(p)).catch(() => {});
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [row?.id]);
+  }, [row?.id, keyStr]);
 
   if (!row) return <div className="empty">Click a scanner row.</div>;
   const z = ZB[row.zone] ?? ZB.diag;
   const hasCond = row.cond_child != null || row.cond_child_firm != null;
+  // PD-fix: only a participant with ≥2 PRICED rungs is a real containment ladder. A match/game/single-
+  // contract row has 0-1 priced rungs, so the ladder/chain/spreads/expected sections would render empty
+  // templates (the "Bryce vs Suarez" confusion). Below we gate those on hasLadder and otherwise show just
+  // a clear note + ALL CONTRACTS + resolution (the actual evidence).
+  const hasLadder = !!bundle && condRungRows(bundle.chain).filter((r) => r.reaching != null).length >= 2;
   return (
     <div className="des">
       <div className="dtitle"><span className={"bk " + z[0]}>{z[1]}</span><span className="t">{row.name}</span></div>
       <div className="sub">{[row.sub, row.sport].filter(Boolean).join(" · ")} · participant detail</div>
+
+      {canPick ? (
+        <div className="note" style={{ marginTop: 6 }}>
+          <b>Participant:</b>{" "}
+          {legParts.map((p) => (
+            <button key={p.pk} className={(validPick ?? baseKey?.player_key) === p.pk ? "on" : ""} onClick={() => setPickPk(p.pk)}>{p.label}</button>
+          ))}
+          {" "}<span className="uncal">pick a side to view its ladder</span>
+        </div>
+      ) : null}
 
       {hasCond ? (
         <>
@@ -277,17 +335,25 @@ export function Detail({ row, showIds, showRules = true }: { row: FeedRow | null
             on both the broader and deeper legs to imply P(deeper │ reached).
           </div>
         </>
-      ) : <div className="note" style={{ marginTop: 6 }}>No parent/child containment node on this row (e.g. a dutch-book field/game). Conditional probability applies to ladder (containment) rows only.</div>}
+      ) : key ? (
+        <div className="note" style={{ marginTop: 6 }}>Conditional probability needs a comparable broader+deeper pair, which this row doesn't have.</div>
+      ) : <div className="note" style={{ marginTop: 6 }}>No participant anchor on this row (e.g. a 2-way dutch-book game). {canPick ? "Pick a participant above to view its ladder." : "Participant detail applies to ladder (containment) rows."}</div>}
 
       {!key ? (
-        <div className="note" style={{ marginTop: 8 }}>No single-participant anchor on this row — drill-down tables (chain / spreads / contracts) apply to ladder rows with a participant key + tournament.</div>
+        <div className="note" style={{ marginTop: 8 }}>{canPick
+          ? "Pick a participant above to load its chain / spreads / contracts."
+          : "No single-participant anchor on this row — drill-down tables (chain / spreads / contracts) apply to ladder rows with a participant key + tournament."}</div>
       ) : err ? (
         <div className="note red" style={{ marginTop: 8 }}>detail unavailable: {err}</div>
       ) : !bundle ? (
         <div className="note" style={{ marginTop: 8 }}>loading participant detail…</div>
       ) : (
         <>
-          {bundle.chain.length ? (() => {
+          {!hasLadder ? (
+            <div className="note" style={{ marginTop: 8 }}>This market isn't part of a containment ladder
+              (no nested stages with prices to compare) — showing its contract(s) and resolution below.</div>
+          ) : null}
+          {hasLadder ? (() => {
             const cr = condRungRows(bundle.chain);
             const bounds = bundle.indicators.filter((ind) => ind.kind === "bound");   // golf make-cut etc.
             return (
@@ -311,7 +377,7 @@ export function Detail({ row, showIds, showRules = true }: { row: FeedRow | null
             );
           })() : null}
 
-          {bundle.chain.length ? (
+          {hasLadder ? (
             <><div className="sect">CONTAINMENT CHAIN (BROAD → DEEP)</div>
               <Tbl rows={bundle.chain} cols={[["layer", "Layer"], ["source", "Source"], ["display_pct", "Disp %"], ["bid_pct", "Bid %"], ["ask_pct", "Ask %"], ["quote", "Quote"]]} />
               <div className="note" style={{ marginTop: 4 }}>
@@ -325,12 +391,12 @@ export function Detail({ row, showIds, showRules = true }: { row: FeedRow | null
             <><div className="sect">PER-UNIT PAYOFF BY SCENARIO <span className="uncal">GROSS</span></div><PayoffChart data={payoff} /></>
           ) : null}
 
-          {bundle.spreads.length ? (
+          {hasLadder && bundle.spreads.length ? (
             <><div className="sect">RAW STAGE-LADDER SPREADS</div>
               <Tbl rows={bundle.spreads} cols={[["from_layer", "From"], ["to_layer", "To"], ["spread_pct", "Spread pp"], ["spread_cents", "Spread ¢"], ["quote", "Quote"]]} /></>
           ) : null}
 
-          {bundle.expected.length ? (
+          {hasLadder && bundle.expected.length ? (
             <><div className="sect">EXPECTED VS FOUND</div>
               <Tbl rows={bundle.expected} cols={[["layer", "Layer"], ["found", "Found"], ["source", "Source"], ["reason", "If missing"]]} />
               {bundle.expected.some((e) => !e.found) ? (

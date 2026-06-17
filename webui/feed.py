@@ -21,6 +21,7 @@ from collections import Counter
 from typing import Any
 
 import config
+import data
 import store
 import webui.viewmodel as vm
 
@@ -103,9 +104,12 @@ def _trim_legs(o: dict[str, Any]) -> list[dict[str, Any]]:
             si += 1
         out.append({"side": leg.get("side"), "c": leg.get("contract"), "p": _num(leg.get("price_c")),
                     "sz": _num(leg.get("size")) or 0, "tk": tk, "bo": False,
+                    # pk: per-leg participant UUID (present on field/multi-participant rows) — lets the
+                    # Inspector offer a participant chooser. None on rows with no per-leg identity.
+                    "pk": leg.get("player_key") or None,
                     "u": _leg_deep_link(leg.get("url"), tk, leg.get("side"))})
     for t in spare[si:]:                            # (2) book-only legs for any still-unused market ticker
-        out.append({"side": "", "c": "", "p": None, "sz": 0, "tk": str(t), "bo": True,
+        out.append({"side": "", "c": "", "p": None, "sz": 0, "tk": str(t), "bo": True, "pk": None,
                     "u": _leg_deep_link(o.get("url") or o.get("url_2"), str(t), None)})
     return out[:24]
 
@@ -279,6 +283,10 @@ def _build_row(o: dict[str, Any], fee_rates: dict[str, Any] | None = None,
         "net_negative": (bucket == "actionable" and not nf.get("missing")
                          and nf.get("net_profit_dollars") is not None
                          and nf.get("net_profit_dollars") <= 0),
+        # Cheap-NO ladder-shape triage metrics (display-only; bands only, None otherwise) → SPA depth filters.
+        "ladder_steps": _num(o.get("ladder_steps")),
+        "ladder_bottom_c": _num(o.get("ladder_bottom_c")),
+        "ladder_step_ratio": _num(o.get("ladder_step_ratio")),
     })
     if isinstance(base.get("flags"), list):        # normalize the flags list -> a short string
         base["flags"] = " ".join(
@@ -320,5 +328,17 @@ def feed_from_snapshot(snap: dict[str, Any] | None) -> dict[str, Any]:
 
 
 def build_feed(db_path: str | None = None) -> dict[str, Any]:
-    """The live terminal feed for the newest stored snapshot (read-only; same store the dashboard reads)."""
-    return feed_from_snapshot(store.latest(db_path=db_path))
+    """The live terminal feed for the newest stored snapshot (read-only; same store the dashboard reads).
+
+    Applies the Wave 1b staleness gate HERE (the live boundary, where the snapshot age is real) rather than
+    inside the pure `feed_from_snapshot` transform — so the transform stays verbatim/unit-testable while the
+    live feed downgrades `tradable_now` on a stale snapshot, using the SAME age + thresholds as api._opps so
+    the feed ↔ /opportunities parity holds."""
+    snap = store.latest(db_path=db_path)
+    if snap:
+        age = data.data_age_seconds(snap.get("fetched_at"))
+        gated = data.gate_stale_tradability(snap.get("opportunities") or [], age,
+                                            config.STALE_AFTER_SECONDS,
+                                            by_sport=config.STALE_AFTER_SECONDS_BY_SPORT)
+        snap = {**snap, "opportunities": gated}
+    return feed_from_snapshot(snap)

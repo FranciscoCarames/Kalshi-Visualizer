@@ -30,6 +30,68 @@ def test_executable_violation_requires_cross_and_size():
     assert out["executable_gap"] == 2
 
 
+# --- A3: a subpenny (deci-cent) leg is display-only, never executable ----------------
+def test_subpenny_leg_can_never_be_executable_violation():
+    # A subpenny child whose bid crosses the parent's ask would be EXECUTABLE_VIOLATION on whole cents,
+    # but its rounded cents can't be trusted, so it routes display-only — never actionable.
+    child = leg(display_c=40, bid_c=40, ask_c=41)
+    child["subpenny"] = True
+    parent = leg(display_c=35, bid_c=34, ask_c=35)
+    out = consistency._classify(child, parent, equivalence=False)
+    assert out["status"] != "EXECUTABLE_VIOLATION"
+    assert out["exec_gap_c"] is None                      # executable test suppressed
+    # The display prices clearly cross (40 > 35, past the coarsened tolerance) → display inconsistency.
+    assert out["status"] == "DISPLAY_VIOLATION"
+
+
+def test_subpenny_consistent_pair_is_display_only_clean_not_missing():
+    # Deci-cent deepest rung (e.g. "Win the World Cup") that is display-consistent stays visible as a
+    # display-only CLEAN comparison — NOT dropped, NOT a misleading MISSING_QUOTE empty-book.
+    child = leg(display_c=20, bid_c=19, ask_c=21)
+    child["subpenny"] = True
+    parent = leg(display_c=30, bid_c=29, ask_c=31)
+    out = consistency._classify(child, parent, equivalence=False)
+    assert out["status"] == "CLEAN"
+    assert out["exec_gap_c"] is None
+    assert "display-only" in out["reason"]
+
+
+def test_finishing_ladder_pair_is_rule_dependent():
+    # Audit A4: a golf/motorsport finishing-position cross (Top 5 ⊆ Top 10) carries a dead-heat settlement
+    # caveat → RULE_CHECK_REQUIRED, and an executable cross is "rule-dependent", never a clean firm edge.
+    child = leg(display_c=37, bid_c=37, ask_c=38)
+    parent = leg(display_c=35, bid_c=34, ask_c=35)
+    out = consistency._classify(child, parent, equivalence=False, finishing_ladder=True)
+    assert out["status"] == "EXECUTABLE_VIOLATION"
+    assert out["rule_flag"] == "RULE_CHECK_REQUIRED"
+    assert out["tradable_now"] == "Yes — rule-dependent"
+    # A plain (non-finishing) containment cross stays unflagged.
+    plain = consistency._classify(child, parent, equivalence=False, finishing_ladder=False)
+    assert plain["rule_flag"] == "" and plain["tradable_now"] == "Yes"
+
+
+def test_finishing_ladder_payoff_stays_containment_not_equivalence():
+    # The A4 rule_flag must NOT flip the payoff into the equivalence shape — it's still 3-state containment.
+    child = leg(display_c=37, bid_c=37, ask_c=38)
+    parent = leg(display_c=35, bid_c=34, ask_c=35)
+    comp = consistency._classify(child, parent, equivalence=False, finishing_ladder=True)
+    row = {**comp, "child_node": "Win Tournament", "parent_node": "Top 5",
+           "relationship_type": "containment_adjacent",
+           "child_contract": "Win", "parent_contract": "Top 5"}
+    pay = consistency.scenario_payoffs(row)
+    assert pay["kind"] == "containment"
+
+
+def test_subpenny_display_tolerance_is_coarsened():
+    # A 2c display gap (child 37 vs parent 35) clears the whole-cent tolerance but NOT the coarsened
+    # subpenny tolerance — rounding of ±0.5c/leg means a 2c apparent gap isn't a trusted inconsistency.
+    child = leg(display_c=37)
+    child["subpenny"] = True
+    parent = leg(display_c=35)
+    out = consistency._classify(child, parent, equivalence=False)
+    assert out["status"] != "DISPLAY_VIOLATION"
+
+
 # --- v1.2: executable-inconsistency profit / trade-construction context --------------
 def test_forward_violation_exposes_profit_and_long_broad_short_deep():
     # child bid 37 > parent ask 35 -> long the broader (parent), short the deeper (child).
@@ -75,8 +137,11 @@ def _check(child, parent, equivalence=False,
     """A consistency-check row as scenario_payoffs consumes it: _classify output plus the node
     labels and contract names that build_checks/_row would attach."""
     comp = consistency._classify(child, parent, equivalence)
+    # Mirror build_checks/_row: the relationship_type is how scenario_payoffs tells equivalence from
+    # containment (a finishing-position containment pair can also carry a rule_flag, audit A4).
+    rel = "match_alignment" if equivalence else "containment_adjacent"
     return {**comp, "child_node": child_node, "parent_node": parent_node,
-            "child_contract": "Deeper", "parent_contract": "Broader"}
+            "relationship_type": rel, "child_contract": "Deeper", "parent_contract": "Broader"}
 
 
 def test_display_outright_helpers_spread_and_ratios():
@@ -523,6 +588,21 @@ def test_build_player_nodes_duplicate_is_deterministic():
     ]
 
 
+# --- A6: unmapped advance stages surface as a coverage diagnostic, not silent drops ---
+def test_unmapped_advance_stages_are_surfaced_not_dropped():
+    # A mapped advance rung (soccer "Round of 16") is fine; an unrecognized advance stage is surfaced.
+    mapped = {"market_family": "advance", "series": "KXWCROUND", "stage": "Reach Round of 16",
+              "ladder_node": "Reach Round of 16", "player": "Brazil", "event_ticker": "E1"}
+    unmapped = {"market_family": "advance", "series": "KXWCROUND", "stage": "Reach Round of 64",
+                "ladder_node": None, "player": "Brazil", "event_ticker": "E2", "kind": "advance"}
+    diag = consistency.unmapped_advance_stages([mapped, unmapped])
+    assert len(diag) == 1
+    assert diag[0]["stage"] == "Reach Round of 64" and diag[0]["series"] == "KXWCROUND"
+    assert "no tracked ladder node" in diag[0]["reason"]
+    # A non-advance row (e.g. a prop) is never reported here.
+    assert consistency.unmapped_advance_stages([{"market_family": "other", "stage": "x"}]) == []
+
+
 # --- v1.3: buy-only action plan + "tradable now" + blockers --------------------------
 def test_executable_containment_is_buy_yes_parent_buy_no_child():
     # child bid 37 > parent ask 35 -> Buy YES on the broader (parent), Buy NO on the deeper (child).
@@ -697,9 +777,9 @@ def test_build_checks_stamps_relationship_type_and_stable_unique_id():
     checks = consistency.build_checks(df)
     assert {"relationship_type", "opportunity_id", "bucket", "blocked_reason"} <= set(checks.columns)
     assert not checks.empty
-    assert set(checks["relationship_type"]) <= {"containment_adjacent", "match_alignment"}
+    assert set(checks["relationship_type"]) <= {"containment_adjacent", "containment_transitive", "match_alignment"}
     assert (checks["opportunity_id"].str.len() == 16).all()
-    assert checks["opportunity_id"].is_unique                      # unique within the snapshot
+    assert checks["opportunity_id"].is_unique                      # unique within the snapshot (incl. closure pairs)
     again = consistency.build_checks(df)                           # deterministic across rebuilds
     assert list(again["opportunity_id"]) == list(checks["opportunity_id"])
 
@@ -751,8 +831,11 @@ def test_transitive_containment_bridges_missing_middle():
     assert "MISSING_LAYER" in {c["status"] for _, c in checks.iterrows()}
 
 
-def test_transitive_not_emitted_when_all_nodes_present():
-    """All three rungs present -> the adjacent chain already covers it; no duplicate transitive row."""
+def test_full_closure_emits_nonadjacent_pair_when_all_present():
+    """Full transitive closure: EVERY (broader ⊇ deeper) pair is recognized, not just adjacent rungs. With
+    all three rungs present + consistent (60 ≥ 40 ≥ 20 broad→deep), the NON-ADJACENT pair
+    (Win Tournament ≤ Reach Semifinal) is now emitted too (status CLEAN), alongside the two adjacent pairs.
+    Each non-adjacent pair appears exactly once (deduped against adjacent + the upper-triangular generator)."""
     import pandas as pd
     rows = [
         _ckey_row("P", "uuid-p", "advance", "Semifinal", 60),
@@ -760,7 +843,27 @@ def test_transitive_not_emitted_when_all_nodes_present():
         _ckey_row("P", "uuid-p", "winner", "Champion", 20),
     ]
     checks = consistency.build_checks(pd.DataFrame(rows))
-    assert "containment_transitive" not in [c["relationship_type"] for _, c in checks.iterrows()]
+    by_chain = {c["chain"]: c for _, c in checks.iterrows()}
+    assert "Win Tournament ≤ Reach Semifinal" in by_chain          # the non-adjacent closure pair
+    nonadj = by_chain["Win Tournament ≤ Reach Semifinal"]
+    assert nonadj["relationship_type"] == "containment_transitive"
+    assert nonadj["status"] == "CLEAN"                             # consistent ordering, no cross
+    # exactly one row for that pair (no duplicate emission)
+    assert sum(c["chain"] == "Win Tournament ≤ Reach Semifinal" for _, c in checks.iterrows()) == 1
+
+
+def test_full_closure_emits_nonadjacent_cross_when_all_present():
+    """A non-adjacent cross is caught even when the middle rung is present and consistent: Reach Semifinal
+    ask 41, Reach Final fine, but Win Tournament bid 69 > Semifinal ask 41 ⇒ the (Win ≤ Semifinal) closure
+    pair is an EXECUTABLE_VIOLATION the adjacent chain alone would not surface."""
+    import pandas as pd
+    semi = _ckey_row("P", "uuid-p", "advance", "Semifinal", 40)
+    final = _ckey_row("P", "uuid-p", "advance", "Final", 38)
+    champ = _ckey_row("P", "uuid-p", "winner", "Champion", 70)
+    checks = consistency.build_checks(pd.DataFrame([semi, final, champ]))
+    by_chain = {c["chain"]: c for _, c in checks.iterrows()}
+    assert "Win Tournament ≤ Reach Semifinal" in by_chain
+    assert by_chain["Win Tournament ≤ Reach Semifinal"]["relationship_type"] == "containment_transitive"
 
 
 # --- field-de-vig per node (DISPLAY-ONLY conditional panel) ---------------------------

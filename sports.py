@@ -228,6 +228,11 @@ class SportConfig:
     # settlement-rule proof (dutchbook._proves_fixed_sum) that the tie settles fixed-sum ($0.50 each) or
     # cannot occur — otherwise the book is skipped (never a false dutch book on a tie-capable game).
     game_mece_by_shape: bool = True
+    # Capability flag (audit A8): this sport's two-way group can carry an n-OUTCOME (n>2) MECE event — a
+    # 3-way Home/Away/Tie soccer game — so dutchbook dispatches it to `_detect_n_way` instead of the strict
+    # 2-market `_detect_pair`. Replaces a hardcoded `sport_id == "soccer"` check, so a future 3-way sport is
+    # one flag, not a detector edit. False (default) = every 2-way sport keeps `_detect_pair` byte-for-byte.
+    n_way_dutch_book: bool = False
     # Optional cardinality-floor "group basket" rules, keyed by EXACT series ticker (e.g. World Cup group
     # qualifiers). Maps a series to its per-group ``GroupBasketRule`` (team count + guaranteed YES/NO settle
     # floors, derived from the tournament format). Empty (default) = no basket for this sport, so adding it
@@ -630,8 +635,16 @@ def _nba_stage(cfg: SportConfig, family: str, market: dict[str, Any]) -> str:
     if family == "winner":
         return "Champion"
     if family == "advance":
-        # NBA has no title round, so the advance "stage" comes from which series the market is in.
-        return "Playoffs" if (market.get("ticker") or "").upper().startswith("KXNBAPLAYOFF") else "Conference"
+        # NBA has no title round, so the advance "stage" comes from which series the market is in. Audit
+        # A8: EXPLICIT map (no blanket `else "Conference"`) — an unrecognized advance series returns ""
+        # (unmapped → surfaced by consistency.unmapped_advance_stages) rather than being silently
+        # mislabeled "Conference".
+        t = (market.get("ticker") or "").upper()
+        if t.startswith("KXNBAPLAYOFF"):
+            return "Playoffs"
+        if t.startswith(("KXNBAEAST", "KXNBAWEST")):
+            return "Conference"
+        return ""
     if family == "match":
         return extract_round(cfg.round_patterns, market.get("title"), market.get("rules_primary"))
     return ""
@@ -924,6 +937,14 @@ _SOCCER_KNOWN_OTHER = frozenset({
     "KXWCTEAMGOALS",          # per-team goals scalar — out of scope
     "KXWCGROUPGOALS",         # per-group goals scalar — out of scope
     "KXWCGROUPWINNER",        # "Group to Win" — a DIFFERENT contract from KXWCGROUPWIN; not modeled
+    # KXWCTEAMH2H "Who Will Go Further" (Wave 2 #10). LIVE PROBE 2026-06-16 (the acceptance-gate /events
+    # probe; fixture tests/fixtures/wc_team_h2h/) CORRECTS the plan's 2-way assumption: each event is a
+    # THREE-way set — "<A> advances further", "<B> advances further", "Eliminated same stage" — with the
+    # markets NOT flagged mutually_exclusive (me=None) and a tournament-long, same-stage-tie settlement.
+    # So it is NOT safe for any executable detector yet: recognized + "other" (visible in the coverage
+    # audit, never fetched/detected, never a false edge). Promotion to a REVIEW-ONLY 3-way detector is
+    # gated on Kalshi flagging mutually_exclusive + confirming the same-stage outcome is exhaustive.
+    "KXWCTEAMH2H",
 })
 _SOCCER_EXACT = frozenset({"KXWCGAME", "KXWCROUND", "KXWCGROUPQUAL", "KXWCGROUPWIN", "KXMENWORLDCUP",
                            "KXWCGROUPORDER", "KXWCGROUPBOTTOM",
@@ -1035,6 +1056,25 @@ def _soccer_tie(cfg, market):
         str(market.get("yes_sub_title") or "").strip().lower() == "tie"
 
 
+def _soccer_tournament_key(cfg, event):
+    """Canonical season-scoped grouping key for EVERY World Cup series (audit A2).
+
+    All WC scopes — reach-stage (``KXWCROUND``), group qualifier (``KXWCGROUPQUAL``), the outright
+    winner (``KXMENWORLDCUP``), games, group baskets — carry DIFFERENT ``competition`` strings, so the
+    default ``data.tournament_of`` keys them apart and a team's containment ladder (Reach RO16 ⊇ … ⊇ Win
+    the World Cup) fragments across ``(player_key, tournament)`` groups and never forms. Mirroring
+    motorsport's ``tournament_key_fn``, this collapses them onto one ``"World Cup · <season>"`` key (season
+    token = the leading digit run after the series prefix, e.g. ``KXWCROUND-26RO16-PAR`` → ``26``), so the
+    ladder groups correctly while co-loaded editions (a future ``-30``) still stay separate."""
+    et = str(event.get("event_ticker") or "")
+    token = ""
+    if "-" in et:
+        m = re.match(r"(\d+)", et.split("-", 1)[1])
+        token = m.group(1) if m else ""
+    key = f"World Cup · {token}" if token else "World Cup"
+    return key, "soccer_event"
+
+
 SOCCER = register(SportConfig(
     sport_id="soccer", label="Soccer (World Cup)", emoji="⚽",
     # default_series is the bounded fetch subset — the SUPPORTED series only. Known-other tickers are owned
@@ -1048,6 +1088,7 @@ SOCCER = register(SportConfig(
     stage_rank=_SOCCER_STAGE_RANK,
     ladder_families=frozenset({"advance", "winner", "group_winner"}),
     match_family="",                           # no 2-way head-to-head; the 3-way game rides the "game" family
+    n_way_dutch_book=True,                      # 3-way Home/Away/Tie games → dutchbook._detect_n_way (A8)
     divisions={},
     division_label="",
     family_fn=_soccer_family,
@@ -1063,6 +1104,9 @@ SOCCER = register(SportConfig(
     # identity from custom_strike) → non-selectable, per-market key.
     non_participant_families=frozenset({"exact_order"}),
     winner_label="Win the World Cup",
+    # Audit A2: collapse every WC scope onto one season-scoped tournament key so a team's containment
+    # ladder (Reach RO16 ⊇ … ⊇ Win the World Cup) groups instead of fragmenting by per-series competition.
+    tournament_key_fn=_soccer_tournament_key,
     # Each KXWCGROUPQUAL-26<G> event is a group of 4 teams; the 2026 format guarantees >=2 qualify (top-2
     # auto-advance) and >=1 fails (the 4th-placed team never advances) → a hard YES floor of 200¢ and NO
     # floor of 100¢ for the all-four basket. The CONDITIONAL ceilings: up to 3 qualify when the 3rd-placed
@@ -1230,8 +1274,15 @@ def _nhl_stage(cfg: SportConfig, family: str, market: dict[str, Any]) -> str:
     if family == "winner":
         return "Champion"
     if family == "advance":
-        # NHL has no title round, so the advance "stage" comes from which series the market is in.
-        return "Playoffs" if (market.get("ticker") or "").upper().startswith("KXNHLPLAYOFF") else "Conference"
+        # NHL has no title round, so the advance "stage" comes from which series the market is in. Audit
+        # A8: EXPLICIT map (no blanket `else "Conference"`) — an unrecognized advance series returns ""
+        # (unmapped → surfaced by consistency.unmapped_advance_stages) rather than mislabeled "Conference".
+        t = (market.get("ticker") or "").upper()
+        if t.startswith("KXNHLPLAYOFF"):
+            return "Playoffs"
+        if t.startswith(("KXNHLEAST", "KXNHLWEST")):
+            return "Conference"
+        return ""
     if family == "match":
         return extract_round(cfg.round_patterns, market.get("title"), market.get("rules_primary"))
     return ""
@@ -1419,31 +1470,53 @@ _MOTOR_LADDERS = {
 _MOTOR_EMPTY_LADDER = LadderSpec((), (), {}, {})
 
 
+# Motorsport family resolution is an EXACT-TICKER ALLOW-LIST (audit A7), not substring matching. The old
+# form routed ANY ticker containing "RACE"/"SERIES" into a one-winner FIELD family (race_winner/winner),
+# so a NEW prop (e.g. a hypothetical "KXF1RACEMARGIN") could be mis-routed into a field dutch book. Here a
+# ticker is field-eligible ONLY if it is explicitly listed; anything unrecognized is "other" (never a
+# field) and `motorsport_coverage_gaps` surfaces it so the allow-list can't silently rot.
+_MOTOR_FAMILY_BY_SERIES: dict[str, str] = {
+    # season-champion futures — one-winner FIELD
+    "KXF1": "winner", "KXMOTOGP": "winner", "KXNASCAR": "winner",
+    "KXNASCARCUPSERIES": "winner", "KXNASCARTRUCKSERIES": "winner", "KXINDYCARSERIES": "winner",
+    # per-race winner — one-winner FIELD
+    "KXF1RACE": "race_winner", "KXF1RACESPRINT": "race_winner", "KXNASCARRACE": "race_winner",
+    "KXINDYCARRACE": "race_winner", "KXINDY500": "race_winner", "KXMOTOGPRACE": "race_winner",
+    # pole / fastest lap — one-winner FIELD
+    "KXF1POLE": "pole", "KXNASCARPOLE": "pole",
+    "KXF1FASTLAP": "fastest_lap", "KXNASCARFASTLAP": "fastest_lap",
+    # constructor / team championships — one-winner FIELD
+    "KXF1CONSTRUCTORS": "constructor", "KXF1TOPCONSTRUCTOR": "constructor",
+    "KXNASCARTOPTEAM": "team", "KXNASCARTOPMANU": "team", "KXMOTOGPTEAMS": "team",
+    # finishing-position rungs — `advance` ladder, NOT a field (never enters _detect_field)
+    "KXF1RACEPODIUM": "advance", "KXF1TOP5": "advance", "KXF1TOP10": "advance",
+    "KXNASCARTOP3": "advance", "KXNASCARTOP5": "advance", "KXNASCARTOP10": "advance",
+    "KXNASCARTOP20": "advance", "KXINDYCARTOP3": "advance", "KXINDYCARTOP10": "advance",
+}
+# Recognized props / deprecated scopes that are deliberately "other" — so a coverage alert fires only for
+# a GENUINELY unknown motorsport-tagged series, not for these known exclusions.
+_MOTOR_KNOWN_OTHER_TOKENS = ("H2H", "DELAY", "OCCUR", "RETIRE", "QUALIFY", "CHINA", "RACEOLD", "TOPX")
+
+
 def _motor_family(cfg: SportConfig, series_ticker: str) -> str:
-    """Family from the SERIES ticker alone (each Kalshi scope owns its series). Order matters: specific
-    scope tokens before the generic RACE/SERIES checks."""
-    t = (series_ticker or "").upper()
-    if "H2H" in t:
-        return "other"                                          # head-to-head: listed, deferred
-    if any(x in t for x in ("DELAY", "OCCUR", "RETIRE", "QUALIFY", "CHINA", "RACEOLD", "TOPX")):
-        return "other"                                          # props / deprecated / ambiguous
-    if "POLE" in t:
-        return "pole"
-    if "FASTLAP" in t or "FASTESTLAP" in t:
-        return "fastest_lap"
-    if "TOPCONSTRUCTOR" in t or t.endswith("CONSTRUCTORS"):
-        return "constructor"
-    if "TOPTEAM" in t or "TOPMANU" in t or t.endswith("TEAMS"):
-        return "team"
-    if "PODIUM" in t:
-        return "advance"
-    if any(x in t for x in ("TOP20", "TOP10", "TOP5", "TOP3")):
-        return "advance"                                        # finishing-position rung (NOT a field)
-    if "RACE" in t or "INDY500" in t:
-        return "race_winner"                                    # the "Games" scope: one-winner race field
-    if "SERIES" in t or "CUPCHAMP" in t or t in ("KXF1", "KXMOTOGP", "KXNASCAR"):
-        return "winner"                                         # season champion futures
-    return "other"
+    """Family from the SERIES ticker via the exact allow-list (audit A7). An unlisted ticker is "other"
+    and can never be routed into a one-winner field dutch book."""
+    return _MOTOR_FAMILY_BY_SERIES.get((series_ticker or "").upper(), "other")
+
+
+def motorsport_coverage_gaps(series_tickers: Any) -> list[str]:
+    """Coverage alert (audit A7): motorsport-prefixed series that are neither in the family allow-list nor a
+    recognized prop/deprecated scope — surfaced so the allow-list can't silently rot as Kalshi adds scopes.
+    De-duplicated, order-preserving. Empty for the current known universe."""
+    out: list[str] = []
+    for tk in dict.fromkeys(series_tickers or []):
+        T = (tk or "").upper()
+        if not T.startswith(_MOTOR_PREFIXES):
+            continue
+        if T in _MOTOR_FAMILY_BY_SERIES or any(tok in T for tok in _MOTOR_KNOWN_OTHER_TOKENS):
+            continue
+        out.append(tk)
+    return out
 
 
 def _motor_stage(cfg: SportConfig, family: str, market: dict[str, Any]) -> str:

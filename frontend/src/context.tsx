@@ -3,6 +3,7 @@
  * (zone/section/lens/filters/selection/columns/panels). Still a read-only VIEW of the engine. */
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { loadFeed, rowsFor, SUBTABS, type Feed, type FeedRow, type FeedMeta } from "./feed";
+import { subscribeFeed } from "./stream";
 import { COLS, colKeyOf } from "./columns";
 import { applyLens, LENSES } from "./lens";
 import { downloadCsv } from "./csv";
@@ -22,6 +23,7 @@ export interface Settings { longShort: boolean; showIds: boolean; resolutionCrit
 const AUTO_MS: Record<string, number> = { "10s": 10000, "30s": 30000, off: 0 };
 
 interface TerminalState {
+  _feed: Feed | null;             // raw feed — passed to a pop-out's nested provider so it shares DATA only
   meta: FeedMeta | null; opps: FeedRow[]; err: string | null; sports: string[];
   zone: string; section: string; lens: string; filters: FilterState; part: string; tourOptions: string[];
   sel: FeedRow | null; colKey: string; visible: string[]; rows: FeedRow[];
@@ -82,8 +84,14 @@ export const useTerminal = (): TerminalState => {
   return v;
 };
 
-export function TerminalProvider({ children }: { children: ReactNode }) {
-  const [feed, setFeed] = useState<Feed | null>(null);
+export function TerminalProvider({ children, embedded }: { children: ReactNode; embedded?: Feed | null }) {
+  // EMBEDDED mode (a pop-out's nested provider): use the parent's feed DATA verbatim and skip every
+  // side-effect that owns shared/global resources — the feed fetch + SSE, prefs hydrate/save, the
+  // <html data-theme/textsize> writes, and URL sync. Only the VIEW state (zone/section/lens/sel/filters/
+  // bands/layout/itab) stays local, so the pop-out is an independent mini-workspace over the same data.
+  const embeddedMode = embedded !== undefined;
+  const [feedState, setFeed] = useState<Feed | null>(null);
+  const feed = embeddedMode ? (embedded ?? null) : feedState;
   const [err, setErr] = useState<string | null>(null);
   const [zone, setZone] = useState("exec");
   const [section, setSectionRaw] = useState("act");
@@ -102,9 +110,11 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
   const [extra, setExtra] = useState<ExtraPanel | null>(null);
   const [panelsMenuOpen, setPanelsMenuOpen] = useState(false);
   const [scanText, setScanText] = useState<string | null>(null);
-  // hideNetNegExec defaults OFF: all rows show by default. Opting the SETTINGS toggle ON hides executable
-  // rows whose TAKER net-of-fees estimate is negative (a display-only declutter — never re-buckets; the
-  // hidden-count chip reveals them again).
+  // hideNetNegExec defaults OFF (owner pref): all rows show by default. Turning the SETTINGS toggle ON
+  // hides executable rows whose TAKER net-of-fees estimate is negative — a display-only declutter that
+  // never re-buckets and never hides a MAKER-positive row (net_negative is taker-basis, set only on
+  // complete-fee actionable rows), with a hidden-count chip to reveal them. Persisted per-user
+  // (auth_store.sanitize_prefs); existing saved prefs are preserved (migrate-vs-accept → accept).
   const [settings, setSettings] = useState<Settings>({ longShort: false, showIds: false, resolutionCriteria: true, hideNetNegExec: false, textSize: "normal", tz: "local", autoRefresh: "10s" });
   // Per-section band overrides (bounded/nearmiss/cheapno). Untouched sections fall back to the engine's
   // default band (from meta.defaults), so bounded max-loss 5¢ and cheap-NO max-loss 15¢ never collide.
@@ -156,10 +166,10 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
     }).catch((e) => finish("scan error: " + String(e)));
   };
 
-  useEffect(() => { document.documentElement.dataset.theme = theme; }, [theme]);
+  useEffect(() => { if (embeddedMode) return; document.documentElement.dataset.theme = theme; }, [theme]);
   // Text size rides the same <html data-*> mechanism as the theme; tokens.css maps it to --fs and every
   // font-size derives from --fs, so the whole UI scales (not just the Inspector).
-  useEffect(() => { document.documentElement.dataset.textsize = settings.textSize; }, [settings.textSize]);
+  useEffect(() => { if (embeddedMode) return; document.documentElement.dataset.textsize = settings.textSize; }, [settings.textSize]);
 
   // Track mount + tear down a running scan poll on unmount (logout / session expiry unmounts the provider
   // mid-scan): without this the status setInterval keeps firing and would setState on a dead component.
@@ -170,13 +180,21 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
 
   // (The 1s snapshot-age clock now lives in <AgeClock> in App.tsx — a leaf with its own local tick — so it
   // no longer re-renders the whole provider tree every second.)
+  // Live feed: instant paint via loadFeed(), then PUSH updates over SSE (subscribeFeed), with a polling
+  // fallback baked in if the stream errors repeatedly. "off" = manual only (no live updates), matching the
+  // prior poll-disabled behavior. The fallback cadence reuses the auto-refresh interval, so this is a
+  // strict superset of the old polling loop.
   useEffect(() => {
+    if (embeddedMode) return;                                 // pop-out uses the parent's feed; never fetches
     let alive = true;
-    const pull = () => loadFeed().then((f) => alive && (setFeed(f), setErr(null))).catch((e) => alive && setErr(String(e)));
-    pull();
-    const ms = AUTO_MS[settings.autoRefresh] ?? 10000;        // auto-refresh = feed-poll cadence (off = manual)
-    const poll = ms ? setInterval(pull, ms) : null;
-    return () => { alive = false; if (poll) clearInterval(poll); };
+    loadFeed().then((f) => alive && (setFeed(f), setErr(null))).catch((e) => alive && setErr(String(e)));
+    const ms = AUTO_MS[settings.autoRefresh] ?? 10000;        // auto-refresh = fallback poll cadence (off = manual)
+    if (!ms) return () => { alive = false; };                 // auto-refresh off → manual only, no live updates
+    const h = subscribeFeed(
+      (f) => { if (alive) { setFeed(f); setErr(null); } },
+      (e) => { if (alive) setErr(e); },
+      { pollMs: ms });
+    return () => { alive = false; h.close(); };
   }, [settings.autoRefresh]);
 
   // Per-user preferences: hydrate ONCE on mount (AuthGate has already authenticated), applying only valid
@@ -230,10 +248,11 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
     setLayout(cl ?? presetSnapshot(preset));
   };
   useEffect(() => {
+    if (embeddedMode) { hydratedRef.current = true; return; }   // pop-out: no prefs hydrate/save (gate saver too)
     loadPrefs().then(applyPrefs).finally(() => { hydratedRef.current = true; });
   }, []);
   useEffect(() => {
-    if (!hydratedRef.current) return;
+    if (embeddedMode || !hydratedRef.current) return;
     const t = setTimeout(() => {
       void savePrefs({
         version: PREFS_VERSION, theme, showNet, columns: colsByKey, split, layoutPreset,
@@ -294,7 +313,7 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
   // live feed (drop a sport/tournament not present), then mirror changes to the URL (guarded vs loops).
   const restoredRef = useRef(false);
   useEffect(() => {
-    if (restoredRef.current || !meta) return;
+    if (embeddedMode || restoredRef.current || !meta) return;
     restoredRef.current = true;
     const d = decodeUrl(window.location.search);
     const validSports = new Set(Object.keys(meta.sports ?? {}));
@@ -310,7 +329,7 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
     }
   }, [meta, opps]);
   useEffect(() => {
-    if (!restoredRef.current) return;                 // don't clobber the URL before the restore runs
+    if (embeddedMode || !restoredRef.current) return; // don't clobber the URL (and never from a pop-out)
     const q = encodeUrl({ surface, zone, section, lens,
       sports: [...filters.sports], tours: [...filters.tours], part: filters.part });
     if (q !== window.location.search) window.history.replaceState(null, "", q || window.location.pathname);
@@ -322,7 +341,10 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
     if (section === "bounded" && split !== "all") {
       r = r.filter((o) => (String(o.resolution_mode || "calendar")) === split);
     }
-    const sorted = applyLens(r, lens);
+    // Table-clarity (experimental): the bounded-loss bucket DEFAULTS to the implied-EV (chance-weighted)
+    // order so genuine candidates lead instead of big-payout longshots — unless the user picks a lens.
+    // "ev" is an UNCALIBRATED display proxy, never executable ranking. Other sections keep engine order.
+    const sorted = applyLens(r, lens || (section === "bounded" ? "ev" : ""));
     // Cheap-NO "group by ladder" is a final display grouping (after the lens), by tournament/ladder.
     if (section === "cheapno" && band.groupByLadder) {
       return [...sorted].sort((a, b) => String(a.sub || "").localeCompare(String(b.sub || "")));
@@ -358,6 +380,7 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
   });
 
   const value: TerminalState = {
+    _feed: feed,
     meta, opps, err, sports, zone, section, lens, filters, part: filters.part, tourOptions,
     sel, colKey, visible, rows, theme, paletteOpen, multi, surface, showNet, itab,
     extra, panelsMenuOpen, scanText, settings, band, bandIsDefault, split, count, zoneCount, hiddenByFeeCount, inScope, runScan, setSetting,

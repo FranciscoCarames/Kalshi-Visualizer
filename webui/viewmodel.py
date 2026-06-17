@@ -270,15 +270,33 @@ def _detail_with_badge(o: dict[str, Any]) -> str:
     return detail
 
 
+def opp_row_taker_net_negative(row: dict[str, Any]) -> bool:
+    """True when a built actionable display row's TAKER net-of-fees estimate is complete and ≤ 0 — the
+    dashboard's fee row-hide criterion (audit Wave 1b). Mirrors the SPA feed's taker-basis `net_negative`
+    EXACTLY (so both UIs hide the same rows): a blank/incomplete fee estimate (`net_profit` None) is never
+    hidden. (Maker-positive rows: the shared estimate is taker-primary today — a maker-aware refinement is a
+    future change to net_of_fees applied to BOTH UIs together, to keep parity.)"""
+    np_ = row.get("net_profit")
+    return np_ is not None and np_ <= 0
+
+
 def opp_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str] | None = None,
             flash_ids: set[str] | None = None, *, long_short: bool = False) -> dict[str, Any]:
     nf = net_of_fees(o)            # PR E: DISPLAY-ONLY net-of-fees estimate (default-hidden columns)
+    wc, bc = o.get("worst_case_profit_c"), o.get("best_case_profit_c")
     return _stamp_severity({
         "opportunity_id": o.get("opportunity_id"),
         "new": o.get("opportunity_id") in new_ids,   # bool → a coloured "NEW" badge in the cell slot
         "_change": (changes or {}).get(o.get("opportunity_id"), ""),
         "_flash": o.get("opportunity_id") in (flash_ids or set()),   # PR B: one-shot green flash this snapshot
         "sport": o.get("sport_label") or o.get("sport") or "",
+        # Economics for the click→detail card (PR: card parity) — the Inspector ECONOMICS block reads
+        # cost/max_loss/max_profit/quote_health; without these an executable card showed blanks. Cents,
+        # None-safe, display-only (never read by _rank_key / bucket_of). Mirrors risk_budget_row.
+        "cost": o.get("cost_c"),
+        "max_loss": None if _isna(wc) else -wc,
+        "max_profit": None if _isna(bc) else bc,
+        "quote_health": str(o.get("comp_quote_quality") or ""),
         # WC Qualifier Setups (PR1): carry the tag for the detail panel / future PR6 chip + prefix a compact
         # badge onto the detail cell so a flagged row is visible in its existing actionable/blocked section.
         "setup_family": o.get("setup_family") or "", "setup_type": o.get("setup_type") or "",
@@ -460,6 +478,10 @@ def risk_budget_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str
     wc, bc = o.get("worst_case_profit_c"), o.get("best_case_profit_c")
     _r2 = lambda x: None if _num_or_none(x) is None else round(x, 2)   # noqa: E731 — display rounding
     _sized = _sized_at_budget(o)   # PR E: ($100-capped units, gross max-loss ¢, gross best-upside ¢) or None
+    # Table-clarity (EXPERIMENTAL, display-only): top-of-book COST capacity in $ = cost_c × top-book units
+    # / 100 — the dollars to take the whole VISIBLE top book (NOT full-depth, NOT guaranteed fill). Makes a
+    # 49-unit longshot vs a 40,000-unit name tangible. Centralised here so the SPA feed + NiceGUI share it.
+    _cap_c, _cap_u = _num_or_none(o.get("cost_c")), _num_or_none(o.get("exec_min_size"))
     return _stamp_severity({
         "opportunity_id": o.get("opportunity_id"),
         "new": o.get("opportunity_id") in new_ids,   # bool → a coloured "NEW" badge in the cell slot
@@ -506,6 +528,8 @@ def risk_budget_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str
                            if on),
         "max_units": _num_or_none(o.get("exec_min_size")),
         "quote_health": str(o.get("comp_quote_quality") or ""),
+        # Top-book COST capacity $ (experimental; display-only) — see note above.
+        "capacity": round(_cap_c * _cap_u / 100, 2) if (_cap_c is not None and _cap_u is not None) else None,
         "units_100": _sized[0] if _sized else None,
         "loss_100": round(_sized[1] / 100, 1) if _sized else None,    # gross max loss at $100, in dollars
         "upside_100": round(_sized[2] / 100, 1) if _sized else None,  # gross best upside at $100, in dollars
@@ -2579,6 +2603,18 @@ def non_laddered_rows(contract_rows: list[dict[str, Any]] | None) -> list[dict[s
     } for r in (contract_rows or []) if not r.get("ladder_eligible")]
     out.sort(key=lambda r: (r["market_family"], -(r["volume"] or 0)))
     return out
+
+
+def unmapped_advance_rows(contract_rows: list[dict[str, Any]] | None) -> list[dict[str, Any]]:
+    """Coverage diagnostic (audit A6): advance-family contracts whose stage maps to no ladder node — a
+    round/stage we don't track yet that would otherwise silently drop. Delegates to the pure engine."""
+    return consistency.unmapped_advance_stages(list(contract_rows or []))
+
+
+def motorsport_coverage_gaps(contract_rows: list[dict[str, Any]] | None) -> list[str]:
+    """Coverage diagnostic (audit A7): motorsport-tagged series not in the family allow-list — surfaced so
+    the allow-list can't silently rot as Kalshi adds scopes. Delegates to the pure engine."""
+    return sports.motorsport_coverage_gaps([r.get("series") for r in (contract_rows or [])])
 
 
 def considered_inventory(contract_rows: list[dict[str, Any]] | None) -> dict[str, list[dict[str, Any]]]:

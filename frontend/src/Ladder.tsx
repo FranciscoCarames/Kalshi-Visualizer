@@ -84,7 +84,7 @@ export default function Ladder({ row }: { row: FeedRow | null }) {
   // on change/unmount. Paused when nothing is selected (no ticker → no fetch).
   useEffect(() => {
     setOb(null); setSecsAgo(0);
-    if (!effectiveTicker) return;
+    if (!effectiveTicker || row?.zone === "diag") return;   // diagnostic rows aren't tradable — no live book
     let alive = true;
     const ctrl = new AbortController();
     const pull = () => {
@@ -100,9 +100,13 @@ export default function Ladder({ row }: { row: FeedRow | null }) {
     const poll = setInterval(pull, REFRESH_MS);
     const tick = setInterval(() => alive && setSecsAgo((s) => s + 1), 1000);
     return () => { alive = false; ctrl.abort(); clearInterval(poll); clearInterval(tick); };
-  }, [effectiveTicker]);
+  }, [effectiveTicker, row?.zone]);
 
   if (!row) return <div className="empty">—</div>;
+  if (row.zone === "diag") return (<>
+    <div className="ladhdr"><div className="t">{row.name}</div><div className="s">diagnostic row</div></div>
+    <div className="empty">not applicable — diagnostic rows have no tradable order book</div>
+  </>);
   const anyBookable = legs.some((l) => l.tk) || rungs.length > 0;
   if (!anyBookable) return (<>
     <div className="ladhdr"><div className="t">{row.name}</div><div className="s">no single-contract book</div></div>

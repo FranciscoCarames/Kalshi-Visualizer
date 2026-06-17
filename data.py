@@ -135,6 +135,33 @@ def is_stale(age_seconds: float | None, threshold_seconds: float) -> bool:
     return age_seconds is not None and age_seconds > threshold_seconds
 
 
+# Actionability label stamped on an otherwise-tradable opportunity once its snapshot is stale (Wave 1b).
+STALE_TRADABILITY = "No — stale snapshot"
+
+
+def gate_stale_tradability(opps: Any, age_seconds: float | None, stale_after_seconds: float,
+                           *, by_sport: dict[str, int] | None = None) -> list[dict[str, Any]]:
+    """Lifecycle-layer staleness gate (audit Wave 1b): when the snapshot age exceeds the staleness
+    threshold, an otherwise-actionable opportunity (``tradable_now`` starts with "Yes") is downgraded to
+    ``STALE_TRADABILITY`` in its ACTIONABILITY field ONLY — ``bucket`` / ``status`` / the executable math
+    stay untouched (price & settlement classification remain pure). Returns a NEW list (never mutates).
+
+    ``age_seconds`` is INJECTED explicitly (the caller computes it from the snapshot) so this logic carries
+    no wall-clock and is deterministic / unit-testable. The global threshold is a BLUNT guard — fine for
+    outright/futures books, crude for thin in-game books — so an optional ``by_sport`` map overrides it per
+    ``sport_id`` (config.STALE_AFTER_SECONDS_BY_SPORT). A None age or non-positive threshold is a no-op
+    (staleness can't be proven). NOTE: keyed on global snapshot age, not per-market quote age (a future
+    refinement when a reliable per-market ``updated_time`` is available)."""
+    out: list[dict[str, Any]] = []
+    for o in (opps or []):
+        thr = (by_sport or {}).get(o.get("sport"), stale_after_seconds)
+        tn = str(o.get("tradable_now") or "")
+        if age_seconds is not None and thr and thr > 0 and age_seconds > thr and tn.startswith("Yes"):
+            o = {**o, "tradable_now": STALE_TRADABILITY}
+        out.append(o)
+    return out
+
+
 def to_float(value: Any) -> float | None:
     """Parse a Kalshi fixed-point string (e.g. "0.6500", "15919.84") into a float.
 

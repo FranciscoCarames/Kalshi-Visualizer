@@ -171,8 +171,11 @@ def test_tournament_key_separates_sprint_and_other_races(racetest):
 
 
 def test_tournament_key_fn_is_noop_for_existing_sports():
+    # Soccer opts into tournament_key_fn (audit A2 — collapses all WC series to one season key) in addition
+    # to motorsport, so it is excluded HERE but still a no-op for field_families / role_fn below.
+    tkey_opted_in = _OPTED_IN | {"soccer"}
     for cfg in sports.all_sports():
-        if cfg.sport_id not in _OPTED_IN:
+        if cfg.sport_id not in tkey_opted_in:
             assert cfg.tournament_key_of({"event_ticker": "X"}) is None
 
 
@@ -264,12 +267,16 @@ def test_dutchbook_skips_subpenny_rows(racetest):
     assert any("subpenny" in r["reason"] for r in diag.get("rejected", []))
 
 
-def test_consistency_excludes_subpenny_rows():
+def test_consistency_subpenny_rows_are_display_only_never_executable():
+    # Audit A3: a subpenny rung is KEPT in the ladder (so a deci-cent deepest rung doesn't vanish) but can
+    # NEVER be an executable violation — its rounded cents are display-only.
     from tests.test_consistency import _ckey_row
     semi = _ckey_row("P", "uuid-p", "advance", "Semifinal", 40)     # ask 41
     champ = _ckey_row("P", "uuid-p", "winner", "Champion", 70)      # bid 69 > 41 -> would be a violation
     base = consistency.build_checks(pd.DataFrame([semi, champ]))
-    assert (base["status"] == "EXECUTABLE_VIOLATION").any()         # control: the edge exists
+    assert (base["status"] == "EXECUTABLE_VIOLATION").any()         # control: the edge exists on whole cents
     semi["subpenny"], champ["subpenny"] = True, True
     guarded = consistency.build_checks(pd.DataFrame([semi, champ]))
-    assert guarded.empty                                            # subpenny rows form no edge
+    assert not guarded.empty                                        # the rung is kept, not dropped
+    assert not (guarded["status"] == "EXECUTABLE_VIOLATION").any()  # but never executable via rounding
+    assert (guarded["status"] == "DISPLAY_VIOLATION").any()         # surfaced display-only (70c > 40c)

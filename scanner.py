@@ -92,6 +92,8 @@ UNIFIED_COLUMNS = [
     "no_structure_close_time",
     # NO-fade faded-leg ladder node + display price (display-only) → "Cheapness vs field" de-vig column.
     "no_structure_faded_node", "no_structure_faded_display_c",
+    # NO-fade ladder-shape triage metrics (display-only; bands only) → SPA cheap-NO depth filters.
+    "ladder_steps", "ladder_bottom_c", "ladder_step_ratio",
     # World Cup Qualifier Setups (PR1): a cross-cutting product tag, SEPARATE from bucket/routing. Read only
     # by a UI badge — never by bucket_of / _rank_key / filters. `setup_family` = product area
     # ("wc_qualifier"); `setup_type` = the specific setup (qualifier_not_winner / qualifier_yes_basket /
@@ -231,6 +233,11 @@ def _to_unified_consistency(r: dict[str, Any], cfg) -> dict[str, Any]:
         "tournament": r.get("tournament") or "", "tour": r.get("tour") or "",
         "action_1_text": r.get("action_1_text") or "", "action_2_text": r.get("action_2_text") or "",
         "action_1_price_c": _num(r.get("action_1_price_c")), "action_2_price_c": _num(r.get("action_2_price_c")),
+        # Side + contract per leg so legs_of synthesizes COMPLETE legs (mirrors _to_unified_no_structure).
+        # Without these the synthesized legs are side-less → the card shows "NO/NO" and the per-leg deep link
+        # defaults op_order_side to "no" on BOTH legs (L1 bug). Leg 1 = Buy YES broader, leg 2 = Buy NO deeper.
+        "action_1_side": r.get("action_1_side"), "action_2_side": r.get("action_2_side"),
+        "action_1_contract": r.get("action_1_contract") or "", "action_2_contract": r.get("action_2_contract") or "",
         "cost_c": _cost(r.get("action_1_price_c"), r.get("action_2_price_c")),
         "exec_gap_c": _num(r.get("exec_gap_c")), "exec_min_size": _num(r.get("exec_min_size")),
         "exec_max_profit_dollars": _num(r.get("exec_max_profit_dollars")),
@@ -534,6 +541,11 @@ def _to_unified_no_structure(r: dict[str, Any], cfg) -> dict[str, Any]:
         # Faded leg's ladder node + display price (display-only) → "Cheapness vs field" de-vig comparison.
         "no_structure_faded_node": r.get("faded_node") or "",
         "no_structure_faded_display_c": _num(r.get("faded_display_c")),
+        # Ladder-shape triage metrics (display-only; bands only, None on outrights) → SPA cheap-NO filters
+        # by ladder depth / bottom-rung price / (bottom ÷ steps). NEVER read by classify / bucket_of / _rank_key.
+        "ladder_steps": _num(r.get("ladder_steps")),
+        "ladder_bottom_c": _num(r.get("ladder_bottom_c")),
+        "ladder_step_ratio": _num(r.get("ladder_step_ratio")),
     }
     d["participant_keys"], d["participant_labels"] = _participants([(r.get("player_key"), r.get("player"))])
     # A band's broader-YES + deeper-NO guarantees ≥100¢ in every settled state (floor 100); an outright NO

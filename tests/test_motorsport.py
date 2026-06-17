@@ -57,6 +57,23 @@ def test_family_map_matches_live_scopes():
         assert cfg.family_of(tk) == fam, (tk, cfg.family_of(tk))
 
 
+def test_a7_new_prop_is_not_misrouted_into_a_field():
+    # A7: a NEW prop ticker that merely CONTAINS "RACE"/"SERIES" must NOT become a one-winner field —
+    # the old substring form would have routed these into race_winner/winner and a field dutch book.
+    cfg = sports.get_sport("motorsport")
+    for tk in ("KXF1RACEMARGIN", "KXNASCARSERIESBONUS", "KXF1RACEHEADTOHEAD", "KXMOTOGPGRIDPENALTY"):
+        fam = cfg.family_of(tk)
+        assert fam == "other", (tk, fam)
+        assert fam not in cfg.field_families                      # never field-eligible
+
+
+def test_a7_coverage_gap_flags_unknown_motorsport_series():
+    # An unrecognized motorsport-tagged series surfaces as a coverage gap; known scopes / props do not.
+    gaps = sports.motorsport_coverage_gaps(
+        ["KXF1RACE", "KXF1H2H", "KXF1NEWSCOPE", "KXNASCARTOP3", "KXNBA", "KXINDYCARGRIDBONUS"])
+    assert gaps == ["KXF1NEWSCOPE", "KXINDYCARGRIDBONUS"]         # only the genuinely-unknown motorsport ones
+
+
 def test_division_is_coarse_competition():
     cfg = sports.get_sport("motorsport")
     assert cfg.division_of("KXF1RACE") == "F1"

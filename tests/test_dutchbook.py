@@ -150,6 +150,34 @@ def test_crossed_book_is_excluded():
     assert dutchbook.find_dutch_books([a, b]) == []
 
 
+# --- A1: a one-sided book can't fabricate a firm NO into an overround -----------------
+def test_one_sided_leg_cannot_fabricate_overround_no_price():
+    # A is bid-only ('One-sided'): its NO would be 100-yes_bid = 100-90 = 10c, which with B's NO
+    # (100-51=49c) sums to 59c < 100 and would FALSELY fire an overround. A1 blocks the NO side of a
+    # one-sided book, so no book fires.
+    a = market("A", yes_bid_c=90, yes_ask_c=None, no_ask_c=None, quality="One-sided")
+    b = market("B", yes_bid_c=51, yes_ask_c=53, no_ask_c=49)
+    assert dutchbook.find_dutch_books([a, b]) == []
+
+
+def test_one_sided_leg_blocks_no_even_with_direct_no_ask():
+    # Even a bare no_ask_c on a one-sided leg is distrusted (no corroborating two-sided book).
+    a = market("A", yes_bid_c=90, yes_ask_c=None, no_ask_c=10, quality="One-sided")
+    b = market("B", yes_bid_c=51, yes_ask_c=53, no_ask_c=49)
+    assert dutchbook.find_dutch_books([a, b]) == []
+
+
+def test_one_sided_ask_only_leg_still_prices_buy_yes():
+    # The gate is per buy leg: an ask-only one-sided leg keeps a genuine firm YES ask, so an
+    # underround (Buy YES both) still prices. A: ask 45 (bid empty), B: ask 48 -> 93 < 100.
+    a = market("A", yes_bid_c=None, yes_ask_c=45, quality="One-sided")
+    b = market("B", yes_bid_c=46, yes_ask_c=48)
+    out = dutchbook.find_dutch_books([a, b])
+    assert len(out) == 1
+    assert out[0]["direction"] == "underround"
+    assert out[0]["action_1_price_c"] in (45, 48) and out[0]["action_2_price_c"] in (45, 48)
+
+
 def test_single_market_event_is_skipped():
     a = market("A", yes_bid_c=43, yes_ask_c=45)
     assert dutchbook.find_dutch_books([a]) == []
@@ -512,10 +540,31 @@ def test_soccer_reject_not_mutually_exclusive():
     assert any("mutually_exclusive" in r["reason"] for r in diag["rejected"])
 
 
-def test_soccer_reject_missing_draw_phrase():
+def test_soccer_missing_draw_phrase_fails_closed_as_coverage_alert():
+    # A5: a MECE-SHAPED event (mutually_exclusive, 2 teams + tie) with an UNRECOGNIZED regulation-only
+    # phrasing fails CLOSED (no finding) but surfaces as a COVERAGE alert — never a silent drop, never fired.
     diag = {}
     assert dutchbook.find_dutch_books(_wc3([40, 30, 25], draw=False), diag) == []
-    assert any("draw-excluded" in r["reason"] for r in diag["rejected"])
+    assert diag.get("coverage_alert")
+    assert any("unrecognized regulation-only phrasing" in r["reason"] for r in diag["coverage_alert"])
+    assert not diag.get("rejected")              # routed to coverage, not the generic reject bucket
+
+
+def test_soccer_broadened_draw_phrase_set_accepts_alternate_wording():
+    # A5: an alternate regulation-only phrasing (not the original literal) still proves the 3-way MECE.
+    rows = _wc3([40, 30, 25], draw=False)
+    for r in rows:
+        r["rules_primary"] = "Team with more goals after 90 minutes; extra time and penalties are not included"
+    f = dutchbook.find_dutch_books(rows)
+    assert len(f) == 1 and f[0]["direction"] == "underround"
+    assert f[0]["settlement_rules_hash"]          # provenance hash stamped on the finding
+
+
+def test_soccer_non_mece_shape_still_rejected_not_coverage_alert():
+    # A genuinely non-MECE event (not flagged mutually_exclusive) is a hard reject, NOT a coverage alert.
+    diag = {}
+    assert dutchbook.find_dutch_books(_wc3([40, 30, 25], me=False, draw=False), diag) == []
+    assert diag.get("rejected") and not diag.get("coverage_alert")
 
 
 def test_soccer_reject_settlement_basis_mismatch():
@@ -599,6 +648,38 @@ def _winner(name, key, *, yes_bid_c, series="KXNBA", event="KXNBA-26", me=True,
         "yes_bid_size": size, "yes_ask_size": size, "quote_quality": quality, "status": status,
         "market_ticker": f"{event}-{key}", "kalshi_url": "https://kalshi.com/x", "event_title": "Field",
     }
+
+
+# --- A8: latent hardening guards ---------------------------------------------------------------------
+def test_a8_field_rejects_mixed_series_and_family():
+    import sports
+    base = [_winner("A", "a", yes_bid_c=40), _winner("B", "b", yes_bid_c=35), _winner("C", "c", yes_bid_c=30)]
+    # Same event, but one leg from a different series → not a single provable field.
+    mixed_series = [dict(base[0]), dict(base[1]), {**base[2], "series": "KXNHL"}]
+    assert dutchbook.prove_field_mece(mixed_series, sports.NBA).ok is False
+    # Same event/series, but one leg a different field family (kind) → reject.
+    mixed_fam = [dict(base[0]), dict(base[1]), {**base[2], "kind": "pole"}]
+    assert dutchbook.prove_field_mece(mixed_fam, sports.NBA).ok is False
+    # Divergent settlement rule tokens → reject (one leg voids on a walkover the others don't).
+    mixed_rules = [dict(base[0]), dict(base[1]), {**base[2], "rules_primary": "voids on a walkover"}]
+    base_rules = [{**r, "rules_primary": "standard"} for r in base]
+    assert dutchbook.prove_field_mece(base_rules, sports.NBA).ok is True       # control: homogeneous
+    assert dutchbook.prove_field_mece(mixed_rules, sports.NBA).ok is False
+
+
+def test_a8_more_than_two_two_way_markets_is_recorded_in_diag():
+    ev = "KXATPMATCH-26JUN03ABC"
+    rows = [market(n, event=ev, yes_bid_c=20, yes_ask_c=22) for n in ("A", "B", "C")]
+    diag = {}
+    assert dutchbook.find_dutch_books(rows, diag) == []
+    assert any(">2 two-way markets" in r["reason"] for r in diag.get("rejected", []))
+
+
+def test_a8_n_way_dutch_book_is_a_capability_flag_not_hardcoded_soccer():
+    import sports
+    assert sports.SOCCER.n_way_dutch_book is True
+    # Every other sport keeps the strict 2-market path (flag defaults False).
+    assert all((not c.n_way_dutch_book) for c in sports.all_sports() if c.sport_id != "soccer")
 
 
 def test_winner_field_overround_fires():

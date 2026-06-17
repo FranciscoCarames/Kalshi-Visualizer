@@ -370,6 +370,29 @@ def test_data_age_and_is_stale():
     assert data.data_age_seconds("garbage") is None
 
 
+def test_gate_stale_tradability_downgrades_only_actionable_on_stale():
+    opps = [
+        {"opportunity_id": "a", "sport": "tennis", "tradable_now": "Yes", "bucket": "actionable", "status": "X"},
+        {"opportunity_id": "b", "sport": "tennis", "tradable_now": "Yes — rule-dependent", "bucket": "actionable"},
+        {"opportunity_id": "c", "sport": "tennis", "tradable_now": "No", "bucket": "blocked"},
+    ]
+    # Fresh (age below threshold) → untouched.
+    fresh = data.gate_stale_tradability(opps, 100, 300)
+    assert [o["tradable_now"] for o in fresh] == ["Yes", "Yes — rule-dependent", "No"]
+    # Stale → the two "Yes…" rows downgrade; the already-"No" row and bucket/status are untouched.
+    stale = data.gate_stale_tradability(opps, 400, 300)
+    assert stale[0]["tradable_now"] == data.STALE_TRADABILITY
+    assert stale[1]["tradable_now"] == data.STALE_TRADABILITY
+    assert stale[2]["tradable_now"] == "No"
+    assert stale[0]["bucket"] == "actionable" and stale[0]["status"] == "X"   # classification untouched
+    # The input list is never mutated.
+    assert opps[0]["tradable_now"] == "Yes"
+    # Unknown age → no-op; per-sport override tightens the threshold.
+    assert data.gate_stale_tradability(opps, None, 300)[0]["tradable_now"] == "Yes"
+    tightened = data.gate_stale_tradability(opps, 150, 300, by_sport={"tennis": 120})
+    assert tightened[0]["tradable_now"] == data.STALE_TRADABILITY      # 150 > 120 sport override
+
+
 # --- Stage 1: opportunity_id shared helper -------------------------------------------
 def test_opportunity_id_is_deterministic_and_stable():
     a = data.opportunity_id("containment_adjacent", "uuid-x", "French Open", "Reach Final", "Win Tournament")

@@ -43,6 +43,7 @@ module is independently testable.
 """
 from __future__ import annotations
 
+import hashlib
 from typing import Any, NamedTuple
 
 import data
@@ -72,6 +73,12 @@ NEAR_MISS_DUTCH_BOOK = "NEAR_MISS_DUTCH_BOOK"
 CHECK_TYPE = "dutch_book"
 
 _NO_FIRM_QUALITY = ("No quote", "Crossed")  # a leg with this quote has no usable resting order
+# A "One-sided" book (only a bid OR only an ask, never both) is NOT firm enough to BUY NO: the reciprocal
+# 100−yes_bid is synthesized from a lone resting bid, and a bare no_ask_dollars without a corroborating
+# yes_bid can't be trusted to clear — either would inflate an overround into firing on a thin book
+# (audit A1). It is gated PER BUY LEG, not blanket: a one-sided ASK-only leg keeps a genuine firm YES ask
+# (so a valid exact-score "buy YES" leg is never suppressed just because its opposite side is empty).
+_ONE_SIDED_QUALITY = "One-sided"
 
 
 def _isna(x: Any) -> bool:
@@ -97,8 +104,13 @@ def _firm_yes_ask_c(row: dict[str, Any]) -> int | None:
 
 def _firm_no_ask_c(row: dict[str, Any]) -> int | None:
     """Cents to BUY NO on this leg — the real ``no_ask_c``, else the structural identity
-    ``100 − yes_bid_c`` (equal by construction on Kalshi's unified book). None when no usable order."""
-    if row.get("quote_quality") in _NO_FIRM_QUALITY:
+    ``100 − yes_bid_c`` (equal by construction on Kalshi's unified book). None when no usable order.
+
+    A "One-sided" book yields no firm NO (audit A1): both the direct ``no_ask_c`` and the
+    ``100 − yes_bid`` fallback rest on a single un-paired order that can't be trusted to clear for a
+    dutch-book floor. This blocks ONLY the NO side — buying YES off a genuine one-sided ask still works."""
+    q = row.get("quote_quality")
+    if q in _NO_FIRM_QUALITY or q == _ONE_SIDED_QUALITY:
         return None
     api = _num(row.get("no_ask_c"))
     if api is not None:
@@ -278,7 +290,7 @@ def _direction_candidate(side: str, a: dict[str, Any], b: dict[str, Any]) -> dic
 
 
 def _detect_pair(event_ticker: str, markets: list[dict[str, Any]],
-                 near_miss_max_over_c: int = 0) -> dict[str, Any] | None:
+                 near_miss_max_over_c: int = 0, diag: dict | None = None) -> dict[str, Any] | None:
     """Detect a dutch book on a single 2-outcome match event, or None.
 
     Requires EXACTLY two distinct-participant markets (the only shape we can prove MECE for the
@@ -286,6 +298,11 @@ def _detect_pair(event_ticker: str, markets: list[dict[str, Any]],
     additionally surfaces a near-miss watchlist row when no strict book fires (see `_select_edge`).
     """
     if len(markets) != 2:
+        # Audit A8: a >2-market two-way group is NOT a provable 2-outcome MECE (a draw-prone or
+        # mis-grouped event) — record it so it surfaces in Debug instead of vanishing silently.
+        if len(markets) > 2:
+            _record(diag, "rejected", event_ticker,
+                    f">2 two-way markets in event ({len(markets)}) — not a provable 2-outcome MECE")
         return None
     a, b = markets
     # Two distinct participants of the same match (defensive against duplicate rows).
@@ -417,7 +434,44 @@ def _detect_pair(event_ticker: str, markets: list[dict[str, Any]],
 #     payout floor is (n-1)*100c (needs MUTUALLY EXCLUSIVE). Fires if sum(no_ask) < (n-1)*100c.
 # (n=2 reduces to `_detect_pair`'s 100c floor.) Exact integer cents throughout.
 
-_DRAW_EXCLUDED_PHRASE = "does not include extra time or penalties"
+# A regulation-90-minute 3-way book lists a real Tie outcome BECAUSE extra time / penalties don't decide
+# it (those would collapse the draw and make the set a 2-way). We only trust the n-way MECE proof when a
+# leg's settlement rules explicitly say so. Audit A5 broadens the single literal to a PHRASE SET (live
+# wording varies) — but it stays FAIL-CLOSED: an unrecognized phrasing on an otherwise MECE-shaped event
+# does NOT fire; `_detect_n_way` instead raises a coverage alert so the new phrasing surfaces for review.
+_DRAW_EXCLUDED_PHRASES = (
+    "does not include extra time or penalties",
+    "does not include extra time",
+    "excludes extra time and penalties",
+    "excluding extra time and penalties",
+    "not include extra time or penalty",
+    "extra time and penalties are not included",
+    "extra time and penalty kicks are not included",
+    "result at the end of regulation",
+    "end of regulation time",
+    "regulation time only",
+)
+
+
+def _draw_excluded_phrase(event_rows: list[dict[str, Any]]) -> tuple[dict[str, Any], str] | None:
+    """The first (leg, matched phrase) proving a regulation 90-min 3-way (the Tie is a real outcome, not
+    collapsed by ET/penalties), or None when no recognized phrasing is present on any leg."""
+    for r in event_rows:
+        text = str(r.get("rules_primary") or "").lower()
+        for phrase in _DRAW_EXCLUDED_PHRASES:
+            if phrase in text:
+                return r, phrase
+    return None
+
+
+def _settlement_rules_hash(event_rows: list[dict[str, Any]]) -> str:
+    """A short, stable hash of the rule text that PASSED the draw-excluded probe (audit A5 provenance) —
+    so a finding records exactly which settlement wording proved its MECE shape and a later wording change
+    is detectable. '' when no phrase matched (the finding is then never emitted anyway)."""
+    matched = _draw_excluded_phrase(event_rows)
+    if matched is None:
+        return ""
+    return hashlib.sha256((matched[0].get("rules_primary") or "").encode("utf-8")).hexdigest()[:12]
 
 
 class MeceProof(NamedTuple):
@@ -442,9 +496,17 @@ def prove_mece(event_rows: list[dict[str, Any]], cfg: Any) -> MeceProof:
         return MeceProof(False, False, False, "", "expected exactly 2 participants + 1 tie")
     if len({str(r.get("player_key") or "") for r in event_rows}) != 3:
         return MeceProof(False, False, False, "", "duplicate participant keys")
+    # Audit A8: same-event grouping is necessary but not sufficient — require all legs to share the SERIES
+    # so an event-ticker collision can't fuse legs from two different books into one bogus 3-way.
+    if len({str(r.get("series") or "").upper() for r in event_rows}) != 1:
+        return MeceProof(False, False, False, "", "legs span multiple series")
     if not all(bool(r.get("mutually_exclusive")) for r in event_rows):
         return MeceProof(False, False, False, "", "event not flagged mutually_exclusive")
-    if not any(_DRAW_EXCLUDED_PHRASE in str(r.get("rules_primary") or "").lower() for r in event_rows):
+    if _draw_excluded_phrase(event_rows) is None:
+        # Fail CLOSED: the shape is MECE (3 distinct legs = 2 teams + tie, all mutually_exclusive) but no
+        # recognized regulation-only phrasing proves the tie survives ET/penalties. `mutually_exclusive`
+        # stays True so `_detect_n_way` can tell "shape OK, phrasing unrecognized" (a coverage alert) from
+        # a genuinely non-MECE event.
         return MeceProof(False, True, False, "", "missing draw-excluded settlement phrase")
     bases = {frozenset(data.rule_tokens(r.get("rules_primary"))) for r in event_rows}
     if len(bases) != 1:
@@ -483,7 +545,14 @@ def _detect_n_way(event_ticker: str, rows: list[dict[str, Any]], cfg: Any,
     """Detect an n-outcome dutch book on one MECE event (currently soccer 3-way games), or None."""
     proof = prove_mece(rows, cfg)
     if not proof.ok:
-        _record(diag, "rejected", event_ticker, proof.reason)
+        # A MECE-SHAPED event (mutually_exclusive, 2 teams + tie) that fails ONLY the regulation-only
+        # phrase check is a COVERAGE alert (a phrasing we should recognize), distinct from a genuine
+        # rejection — surfaced separately in Debug so it can be reviewed, never silently dropped (A5).
+        if proof.mutually_exclusive and "draw-excluded settlement phrase" in proof.reason:
+            _record(diag, "coverage_alert", event_ticker,
+                    "3-way MECE shape but unrecognized regulation-only phrasing — review settlement rules")
+        else:
+            _record(diag, "rejected", event_ticker, proof.reason)
         return None
     n = len(rows)
     candidates = [_n_direction_candidate("buy_yes", rows), _n_direction_candidate("buy_no", rows)]
@@ -564,6 +633,8 @@ def _detect_n_way(event_ticker: str, rows: list[dict[str, Any]], cfg: Any,
         # Non-blocking settlement caveat (soccer 3-way games are per-game → carry it; + flat-loss note on a
         # near-miss); advisory only.
         "settlement_caveat": settlement_caveat,
+        # Provenance (A5): hash of the rule text that proved the draw-excluded MECE shape.
+        "settlement_rules_hash": _settlement_rules_hash(rows),
         # Full N-leg plan in `legs`; action_1/2 backfilled from the first two legs so the unified 2-leg
         # columns + lifecycle still render. payout_floor_c is the (n-1)*100 (overround) / 100 (underround).
         "legs": legs, "n_legs": n, "payout_floor_c": floor,
@@ -610,6 +681,16 @@ def prove_field_mece(event_rows: list[dict[str, Any]], cfg: Any) -> MeceProof:
         return MeceProof(False, False, False, "", "duplicate participant keys")
     if not all(bool(r.get("mutually_exclusive")) for r in event_rows):
         return MeceProof(False, False, False, "", "event not flagged mutually_exclusive")
+    # Audit A8: same-event grouping (by event_ticker) is NECESSARY but NOT SUFFICIENT. Require every leg to
+    # share the SERIES, the FIELD FAMILY (kind), and the SETTLEMENT RULE CLASS (rule_tokens) — so a single
+    # event ticker can never fuse two scopes (e.g. a winner field + a pole field, or legs that void on
+    # different conditions) into one bogus field overround.
+    if len({str(r.get("series") or "").upper() for r in event_rows}) != 1:
+        return MeceProof(False, False, False, "", "field legs span multiple series")
+    if len({str(r.get("kind") or "") for r in event_rows}) != 1:
+        return MeceProof(False, False, False, "", "field legs span multiple families")
+    if len({frozenset(data.rule_tokens(r.get("rules_primary"))) for r in event_rows}) != 1:
+        return MeceProof(False, False, False, "", "field legs span multiple settlement rule classes")
     return MeceProof(True, True, False, "one-winner field (exactly one winner)", "")
 
 
@@ -944,7 +1025,9 @@ def find_dutch_books(rows: list[dict[str, Any]],
         if not markets:
             continue
         cfg = sports.sport_for_series(markets[0].get("series"))
-        if cfg.sport_id == "soccer":
+        if cfg.n_way_dutch_book:
+            # A8: capability flag (was a hardcoded `sport_id == "soccer"`) — any sport whose two-way group
+            # can be an n-outcome MECE event (3-way Home/Away/Tie) dispatches to the n-way detector.
             finding = _detect_n_way(event_ticker, markets, cfg, _diag, near_miss_max_over_c)
         elif (not cfg.game_mece_by_shape) and markets and markets[0].get("kind") == _GAME_FAMILY:
             # Tie-capable game (e.g. NFL): the 2-way book is valid ONLY if settlement proves a fixed-sum
@@ -961,7 +1044,7 @@ def find_dutch_books(rows: list[dict[str, Any]],
                     finding["settlement_caveat"] = "; ".join(
                         p for p in (finding.get("settlement_caveat", ""), proof.text) if p)
         else:
-            finding = _detect_pair(event_ticker, markets, near_miss_max_over_c)
+            finding = _detect_pair(event_ticker, markets, near_miss_max_over_c, _diag)
         if finding is not None:
             out.append(finding)
     for event_ticker, markets in field_groups.items():
