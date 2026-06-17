@@ -118,7 +118,9 @@ class OrderBook:
                 continue
             price_c = _price_to_cents(lvl[0])
             size = _to_int_size(lvl[1])
-            if price_c is None or size is None or size <= 0:
+            # A Kalshi book price is always 1..99¢; reject anything out of range (a malformed/garbage level
+            # must never poison best-bid/ask, which are min/max over the price keys).
+            if price_c is None or not 0 < price_c < 100 or size is None or size <= 0:
                 continue
             out[price_c] = size
         return out
@@ -143,7 +145,7 @@ class OrderBook:
         book = self.yes if side == "yes" else self.no if side == "no" else None
         price_c = _price_to_cents(price)
         d = _to_int_size(delta)
-        if book is None or price_c is None or d is None:
+        if book is None or price_c is None or not 0 < price_c < 100 or d is None:
             return False
         new_size = book.get(price_c, 0) + d
         if new_size > 0:
@@ -159,35 +161,47 @@ class OrderBook:
         self.synced = False
 
     # --- reads ----------------------------------------------------------------------------------------
+    # IMPORTANT (verified live 2026-06-17): with `use_yes_price:true`, BOTH ladders are in YES price.
+    # `yes` = the YES-BID ladder (best bid = HIGHEST price). `no` = the YES-ASK ladder (best ask = LOWEST
+    # price) — it is NOT a NO-bid ladder, so the reciprocal is `yes_ask = min(no)`, NOT `100 − max(no)`.
     @staticmethod
     def _best_bid(book: dict[int, int]) -> tuple[int | None, int]:
-        """(best bid price_c, its size) — the highest price with positive size; (None, 0) for an empty side."""
+        """(highest price_c, its size) — best bid; (None, 0) for an empty side."""
         if not book:
             return None, 0
         best = max(book)
         return best, book[best]
 
+    @staticmethod
+    def _best_ask(book: dict[int, int]) -> tuple[int | None, int]:
+        """(lowest price_c, its size) — best ask of the yes-ask ladder; (None, 0) for an empty side."""
+        if not book:
+            return None, 0
+        best = min(book)
+        return best, book[best]
+
     def rest_shape(self) -> dict[str, list[list[int]]]:
-        """The same `{yes,no:[[price_c,size]]}` ascending (best bid last) shape `get_orderbook` emits, so the
-        depth ladder + `/api/terminal/orderbook` reuse one shape."""
+        """The `{yes,no:[[price_c,size]]}` ascending (best bid last) shape `get_orderbook` emits, so the depth
+        ladder + `/api/terminal/orderbook` reuse one shape. The `no` book holds YES-ASK prices, so convert
+        each to its NO-BID price (`100 − p`) to match the REST 'no' side (resting NO bids)."""
         return {
             "yes": [[p, self.yes[p]] for p in sorted(self.yes)],
-            "no": [[p, self.no[p]] for p in sorted(self.no)],
+            "no": [[100 - p, self.no[p]] for p in sorted(self.no, reverse=True)],
         }
 
     def derived(self) -> dict[str, Any]:
-        """Top-of-book in the app's reciprocal NO-side model (matches `build_contracts`): a side's ask is
-        `100 − the other side's best bid`; sizes come from the opposite bid. Empty side → 0.00/1.00 (never a
-        fabricated 50%)."""
-        yb, yb_sz = self._best_bid(self.yes)
-        nb, nb_sz = self._best_bid(self.no)
+        """Top-of-book (matches `build_contracts`): best YES bid = max(yes); best YES ask = MIN(no) (the no
+        book is the yes-ask ladder under use_yes_price); the NO side is the reciprocal (`no_bid = 100 −
+        yes_ask`, `no_ask = 100 − yes_bid`). An empty side → 0.00/1.00, never a fabricated 50%."""
+        yb, yb_sz = self._best_bid(self.yes)        # best YES bid
+        ya, ya_sz = self._best_ask(self.no)         # best YES ask (lowest price in the yes-ask ladder)
         return {
             "yes_bid_c": yb if yb is not None else 0,
             "yes_bid_size": yb_sz,
-            "yes_ask_c": (100 - nb) if nb is not None else 100,
-            "yes_ask_size": nb_sz,
-            "no_bid_c": nb if nb is not None else 0,
-            "no_bid_size": nb_sz,
+            "yes_ask_c": ya if ya is not None else 100,
+            "yes_ask_size": ya_sz,
+            "no_bid_c": (100 - ya) if ya is not None else 0,
+            "no_bid_size": ya_sz,
             "no_ask_c": (100 - yb) if yb is not None else 100,
             "no_ask_size": yb_sz,
             "synced": self.synced,
@@ -385,7 +399,10 @@ class LiveFeed:
             tk = body.get("market_ticker") or self._sid_to_ticker.get(msg.get("sid"))
             if not tk:
                 return
-            self.book.book(tk).apply_snapshot(body.get("yes"), body.get("no"), msg.get("seq"), now=now)
+            # Kalshi WS snapshot carries `yes_dollars_fp`/`no_dollars_fp` — each a [[price$, size], …] bid
+            # ladder (verified live 2026-06-17), NOT `yes`/`no`. seq is top-level + per-market.
+            self.book.book(tk).apply_snapshot(
+                body.get("yes_dollars_fp"), body.get("no_dollars_fp"), msg.get("seq"), now=now)
             self._notify(tk)
             return
         if mtype == "orderbook_delta":
@@ -393,7 +410,8 @@ class LiveFeed:
             if not tk:
                 return
             ob = self.book.book(tk)
-            applied = ob.apply_delta(body.get("side"), body.get("price"), body.get("delta"),
+            # Delta fields are `price_dollars`/`delta_fp`/`side` (verified live 2026-06-17).
+            applied = ob.apply_delta(body.get("side"), body.get("price_dollars"), body.get("delta_fp"),
                                      msg.get("seq"), now=now)
             if not applied and not ob.synced:
                 with metrics.lock:
@@ -508,10 +526,13 @@ class LiveFeed:
             except Exception:                          # noqa: BLE001
                 pass
         if self._task is not None:
+            import asyncio
             self._task.cancel()
             try:
                 await self._task
-            except Exception:                          # noqa: BLE001 — CancelledError on teardown is expected
+            # CancelledError is a BaseException (NOT Exception) in 3.8+, so it MUST be caught explicitly —
+            # otherwise it propagates out of the lifespan shutdown ("Application shutdown failed").
+            except (asyncio.CancelledError, Exception):   # noqa: BLE001 — teardown is best-effort
                 pass
             self._task = None
 

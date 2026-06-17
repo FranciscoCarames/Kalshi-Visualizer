@@ -61,13 +61,14 @@ def test_auth_headers_shape():
 
 def test_snapshot_builds_reciprocal_top_of_book():
     ob = live_feed.OrderBook()
-    # YES bids up to 60¢, NO bids up to 38¢ → yes_ask = 100-38 = 62, no_ask = 100-60 = 40.
-    ob.apply_snapshot([["0.55", 10], ["0.60", 5]], [["0.30", 8], ["0.38", 4]], 100, now=1.0)
+    # Under use_yes_price: yes_dollars_fp = YES BID ladder (best = highest = 59), no_dollars_fp = YES ASK
+    # ladder (best = LOWEST = 61). NO side is the reciprocal (no_bid=100−yes_ask=39, no_ask=100−yes_bid=41).
+    ob.apply_snapshot([["0.55", 10], ["0.59", 5]], [["0.65", 8], ["0.61", 4]], 100, now=1.0)
     d = ob.derived()
-    assert (d["yes_bid_c"], d["yes_bid_size"]) == (60, 5)
-    assert (d["no_bid_c"], d["no_bid_size"]) == (38, 4)
-    assert (d["yes_ask_c"], d["yes_ask_size"]) == (62, 4)     # 100 − best no bid, size@that no bid
-    assert (d["no_ask_c"], d["no_ask_size"]) == (40, 5)       # 100 − best yes bid, size@that yes bid
+    assert (d["yes_bid_c"], d["yes_bid_size"]) == (59, 5)
+    assert (d["yes_ask_c"], d["yes_ask_size"]) == (61, 4)     # MIN of the yes-ask ladder, its size
+    assert (d["no_bid_c"], d["no_bid_size"]) == (39, 4)       # 100 − yes_ask
+    assert (d["no_ask_c"], d["no_ask_size"]) == (41, 5)       # 100 − yes_bid
     assert d["synced"] is True and d["seq"] == 100
 
 
@@ -103,7 +104,9 @@ def test_seq_gap_desyncs_and_blocks_until_reseed():
 
 def test_rest_shape_matches_get_orderbook_ascending():
     ob = live_feed.OrderBook()
-    ob.apply_snapshot([["0.60", 5], ["0.50", 10]], [["0.38", 4]], 1, now=1.0)
+    # no_dollars_fp holds YES-ASK prices (0.62 = a yes ask at 62¢); rest_shape converts each to its NO-BID
+    # price (100−62 = 38) so the depth ladder's `no` side matches REST (resting NO bids), ascending.
+    ob.apply_snapshot([["0.60", 5], ["0.50", 10]], [["0.62", 4]], 1, now=1.0)
     shape = ob.rest_shape()
     assert shape["yes"] == [[50, 10], [60, 5]]                  # ascending — best bid LAST (REST parity)
     assert shape["no"] == [[38, 4]]
@@ -124,11 +127,12 @@ def test_livebook_freshness_and_stats():
 # --- message dispatch -----------------------------------------------------------------------------------
 
 def test_dispatch_routes_snapshot_then_delta_by_ticker():
+    # Real Kalshi WS field names: yes_dollars_fp/no_dollars_fp (snapshot), price_dollars/delta_fp (delta).
     lf = live_feed.LiveFeed("kid", b"pem", tickers=["KXT"])
     lf._dispatch({"type": "orderbook_snapshot", "seq": 1,
-                  "msg": {"market_ticker": "KXT", "yes": [["0.50", 5]], "no": []}})
+                  "msg": {"market_ticker": "KXT", "yes_dollars_fp": [["0.50", 5]], "no_dollars_fp": []}})
     lf._dispatch({"type": "orderbook_delta", "seq": 2,
-                  "msg": {"market_ticker": "KXT", "side": "yes", "price": "0.55", "delta": 3}})
+                  "msg": {"market_ticker": "KXT", "side": "yes", "price_dollars": "0.55", "delta_fp": 3}})
     assert live_feed.book.derived("KXT")["yes_bid_c"] == 55
     assert live_feed.metrics.snapshot()["live_messages"] == 2
 
@@ -139,9 +143,9 @@ def test_dispatch_seq_gap_counts_and_resyncs(monkeypatch):
                         lambda tk, depth=10: {"ticker": tk, "yes": [["0.70", 9]], "no": []})
     lf = live_feed.LiveFeed("kid", b"pem", tickers=["KXT"])
     lf._dispatch({"type": "orderbook_snapshot", "seq": 1,
-                  "msg": {"market_ticker": "KXT", "yes": [["0.50", 5]], "no": []}})
+                  "msg": {"market_ticker": "KXT", "yes_dollars_fp": [["0.50", 5]], "no_dollars_fp": []}})
     lf._dispatch({"type": "orderbook_delta", "seq": 50,        # gap → desync → REST resync
-                  "msg": {"market_ticker": "KXT", "side": "yes", "price": "0.55", "delta": 3}})
+                  "msg": {"market_ticker": "KXT", "side": "yes", "price_dollars": "0.55", "delta_fp": 3}})
     assert live_feed.metrics.snapshot()["live_seq_gaps"] == 1
     assert live_feed.book.derived("KXT")["yes_bid_c"] == 70    # reseeded from the REST snapshot
 
