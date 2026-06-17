@@ -116,9 +116,21 @@ export default function Inspector({ row, lens, snapshotId, showNet, longShort }:
       ) : (<>
       <div className="sect">BUY-ONLY PLAN — {row.nlegs ?? legs.length} LEG{(row.nlegs ?? legs.length) === 1 ? "" : "S"}</div>
       {legs.length ? legs.map((l, i) => {
+        const href = safeHref(l.u);
+        // Book-only pseudo-leg (bo): a reference market the engine attached for the depth panel — NOT a
+        // buy instruction (no side/price). Render it as a reference row, never as a blank "NO @ —" leg
+        // (e.g. the exact-order bundle's qualifier comparator).
+        if (l.bo) return (
+          <div className="leg" key={i}>
+            <span className="dim">BOOK</span>
+            <span className="l2">{l.c || l.tk || "reference market"}</span>
+            <span className="dim">reference only</span>
+            <span className="dim" />
+            {href ? <a href={href} target="_blank" rel="noreferrer">↗</a> : null}
+          </div>
+        );
         const yes = String(l.side || "").includes("yes");
         const lbl = longShort ? (yes ? "LONG" : "SHORT") : (yes ? "YES" : "NO");
-        const href = safeHref(l.u);
         return (
           <div className="leg" key={i}>
             <span className={yes ? "y" : "n"}>{lbl}</span>
@@ -227,11 +239,30 @@ export function condRungRows(chain: Record<string, unknown>[]): CondRow[] {
 }
 
 export function Detail({ row, showIds, showRules = true }: { row: FeedRow | null; showIds?: boolean; showRules?: boolean }) {
-  const key = detailKey(row);
+  const baseKey = detailKey(row);   // the row's own single-participant anchor (sport+player_key+tournament)
+  // Distinct per-leg participants (field / multi-participant rows like a 2-way game or a winner field) →
+  // a participant chooser. Skips book-only legs and legs without a participant UUID.
+  const legParts: { pk: string; label: string }[] = [];
+  const _seen = new Set<string>();
+  for (const l of (row?.legs ?? [])) {
+    const pk = l.pk; if (!pk || l.bo || _seen.has(pk)) continue;
+    _seen.add(pk); legParts.push({ pk, label: l.c || pk });
+  }
+  const [pickPk, setPickPk] = useState<string | null>(null);
+  // A chooser is offered only when the row exposes sport_key + tournament (needed to form a detail key for
+  // a picked side). The picked participant overrides the row's own anchor; `validPick` guards against a
+  // stale pick carried across a row change.
+  const canPick = !!(row?.sport_key && row?.tournament) && legParts.length > 0;
+  const validPick = pickPk && legParts.some((p) => p.pk === pickPk) ? pickPk : null;
+  const pickedKey = canPick && validPick
+    ? { sport: String(row!.sport_key), player_key: validPick, tournament: String(row!.tournament) } : null;
+  const key = pickedKey ?? baseKey;
+  const keyStr = key ? `${key.sport}|${key.player_key}|${key.tournament}` : "";
   const [bundle, setBundle] = useState<DetailBundle | null>(null);
   const [ladder, setLadder] = useState<LadderData | null>(null);
   const [payoff, setPayoff] = useState<PayoffData | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  useEffect(() => { setPickPk(null); }, [row?.id]);   // reset the chosen side when the row changes
   useEffect(() => {
     setBundle(null); setLadder(null); setPayoff(null); setErr(null);
     if (!row) return;
@@ -243,7 +274,7 @@ export function Detail({ row, showIds, showRules = true }: { row: FeedRow | null
     loadPayoff(row.id).then((p) => alive && setPayoff(p)).catch(() => {});
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [row?.id]);
+  }, [row?.id, keyStr]);
 
   if (!row) return <div className="empty">Click a scanner row.</div>;
   const z = ZB[row.zone] ?? ZB.diag;
@@ -252,6 +283,17 @@ export function Detail({ row, showIds, showRules = true }: { row: FeedRow | null
     <div className="des">
       <div className="dtitle"><span className={"bk " + z[0]}>{z[1]}</span><span className="t">{row.name}</span></div>
       <div className="sub">{[row.sub, row.sport].filter(Boolean).join(" · ")} · participant detail</div>
+
+      {canPick ? (
+        <div className="note" style={{ marginTop: 6 }}>
+          <b>Participant:</b>{" "}
+          {baseKey ? <button className={!validPick ? "on" : ""} onClick={() => setPickPk(null)}>row default</button> : null}
+          {legParts.map((p) => (
+            <button key={p.pk} className={validPick === p.pk ? "on" : ""} onClick={() => setPickPk(p.pk)}>{p.label}</button>
+          ))}
+          {" "}<span className="uncal">pick a side to view its ladder</span>
+        </div>
+      ) : null}
 
       {hasCond ? (
         <>
@@ -285,10 +327,14 @@ export function Detail({ row, showIds, showRules = true }: { row: FeedRow | null
             on both the broader and deeper legs to imply P(deeper │ reached).
           </div>
         </>
-      ) : <div className="note" style={{ marginTop: 6 }}>No parent/child containment node on this row (e.g. a dutch-book field/game). Conditional probability applies to ladder (containment) rows only.</div>}
+      ) : key ? (
+        <div className="note" style={{ marginTop: 6 }}>Conditional probability needs a comparable broader+deeper pair, which this row doesn't have — the participant tables below still apply.</div>
+      ) : <div className="note" style={{ marginTop: 6 }}>No participant anchor on this row (e.g. a 2-way dutch-book game). {canPick ? "Pick a participant above to view its ladder." : "Participant detail applies to ladder (containment) rows."}</div>}
 
       {!key ? (
-        <div className="note" style={{ marginTop: 8 }}>No single-participant anchor on this row — drill-down tables (chain / spreads / contracts) apply to ladder rows with a participant key + tournament.</div>
+        <div className="note" style={{ marginTop: 8 }}>{canPick
+          ? "Pick a participant above to load its chain / spreads / contracts."
+          : "No single-participant anchor on this row — drill-down tables (chain / spreads / contracts) apply to ladder rows with a participant key + tournament."}</div>
       ) : err ? (
         <div className="note red" style={{ marginTop: 8 }}>detail unavailable: {err}</div>
       ) : !bundle ? (

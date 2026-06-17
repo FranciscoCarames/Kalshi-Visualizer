@@ -5,7 +5,7 @@ import { apiFetch } from "./http";
 
 // `bo` (book-only): a pseudo-leg added by the feed so the depth panel can show a market's book where no
 // executable leg carries the ticker — NOT a trade instruction (no side/price). See webui/feed._trim_legs.
-export interface FeedLeg { side?: string; c?: string; p?: number | null; sz?: number; tk?: string; u?: string; bo?: boolean; }
+export interface FeedLeg { side?: string; c?: string; p?: number | null; sz?: number; tk?: string; u?: string; bo?: boolean; pk?: string | null; }
 
 export interface FeedRow {
   id: string;

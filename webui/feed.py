@@ -103,9 +103,12 @@ def _trim_legs(o: dict[str, Any]) -> list[dict[str, Any]]:
             si += 1
         out.append({"side": leg.get("side"), "c": leg.get("contract"), "p": _num(leg.get("price_c")),
                     "sz": _num(leg.get("size")) or 0, "tk": tk, "bo": False,
+                    # pk: per-leg participant UUID (present on field/multi-participant rows) — lets the
+                    # Inspector offer a participant chooser. None on rows with no per-leg identity.
+                    "pk": leg.get("player_key") or None,
                     "u": _leg_deep_link(leg.get("url"), tk, leg.get("side"))})
     for t in spare[si:]:                            # (2) book-only legs for any still-unused market ticker
-        out.append({"side": "", "c": "", "p": None, "sz": 0, "tk": str(t), "bo": True,
+        out.append({"side": "", "c": "", "p": None, "sz": 0, "tk": str(t), "bo": True, "pk": None,
                     "u": _leg_deep_link(o.get("url") or o.get("url_2"), str(t), None)})
     return out[:24]
 
