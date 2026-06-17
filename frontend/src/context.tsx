@@ -102,9 +102,11 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
   const [extra, setExtra] = useState<ExtraPanel | null>(null);
   const [panelsMenuOpen, setPanelsMenuOpen] = useState(false);
   const [scanText, setScanText] = useState<string | null>(null);
-  // hideNetNegExec defaults OFF: all rows show by default. Opting the SETTINGS toggle ON hides executable
-  // rows whose TAKER net-of-fees estimate is negative (a display-only declutter — never re-buckets; the
-  // hidden-count chip reveals them again).
+  // hideNetNegExec defaults OFF (owner pref): all rows show by default. Turning the SETTINGS toggle ON
+  // hides executable rows whose TAKER net-of-fees estimate is negative — a display-only declutter that
+  // never re-buckets and never hides a MAKER-positive row (net_negative is taker-basis, set only on
+  // complete-fee actionable rows), with a hidden-count chip to reveal them. Persisted per-user
+  // (auth_store.sanitize_prefs); existing saved prefs are preserved (migrate-vs-accept → accept).
   const [settings, setSettings] = useState<Settings>({ longShort: false, showIds: false, resolutionCriteria: true, hideNetNegExec: false, textSize: "normal", tz: "local", autoRefresh: "10s" });
   // Per-section band overrides (bounded/nearmiss/cheapno). Untouched sections fall back to the engine's
   // default band (from meta.defaults), so bounded max-loss 5¢ and cheap-NO max-loss 15¢ never collide.

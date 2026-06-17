@@ -21,6 +21,7 @@ from collections import Counter
 from typing import Any
 
 import config
+import data
 import store
 import webui.viewmodel as vm
 
@@ -327,5 +328,17 @@ def feed_from_snapshot(snap: dict[str, Any] | None) -> dict[str, Any]:
 
 
 def build_feed(db_path: str | None = None) -> dict[str, Any]:
-    """The live terminal feed for the newest stored snapshot (read-only; same store the dashboard reads)."""
-    return feed_from_snapshot(store.latest(db_path=db_path))
+    """The live terminal feed for the newest stored snapshot (read-only; same store the dashboard reads).
+
+    Applies the Wave 1b staleness gate HERE (the live boundary, where the snapshot age is real) rather than
+    inside the pure `feed_from_snapshot` transform — so the transform stays verbatim/unit-testable while the
+    live feed downgrades `tradable_now` on a stale snapshot, using the SAME age + thresholds as api._opps so
+    the feed ↔ /opportunities parity holds."""
+    snap = store.latest(db_path=db_path)
+    if snap:
+        age = data.data_age_seconds(snap.get("fetched_at"))
+        gated = data.gate_stale_tradability(snap.get("opportunities") or [], age,
+                                            config.STALE_AFTER_SECONDS,
+                                            by_sport=config.STALE_AFTER_SECONDS_BY_SPORT)
+        snap = {**snap, "opportunities": gated}
+    return feed_from_snapshot(snap)
