@@ -13,6 +13,19 @@ export const LENSES: [string, string, string][] = [
   ["ripeness", "RIPENESS", "Parent ÷ max loss — in-the-money chance per ¢ at risk (bounded-loss). Higher = riper."],
 ];
 
+/* Which lenses make sense per zone (the rest sort on fields a zone's rows don't carry, so they'd be
+ * no-ops or misleading). Executable rows only have a gross edge → edge/blended; the speculative bucket has
+ * the full payoff-geometry set; diagnostic rows are review-only and get NO lens bar (engine order only). */
+const _LENSES_BY_ZONE: Record<string, Set<string>> = {
+  exec: new Set(["blended", "edge"]),
+  spec: new Set(["blended", "edge", "spread", "ratio", "ev", "ripeness"]),
+  diag: new Set(),
+};
+export function lensesFor(zone: string): [string, string, string][] {
+  const allow = _LENSES_BY_ZONE[zone] ?? _LENSES_BY_ZONE.spec;
+  return LENSES.filter(([k]) => allow.has(k));
+}
+
 const n = (v: unknown) => (typeof v === "number" && !isNaN(v) ? v : 0);
 
 /** Sort key for a lens (higher = ranked first). Mirrors the mockup exactly. */

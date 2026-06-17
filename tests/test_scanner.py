@@ -224,6 +224,25 @@ def test_consistency_leg_ticker_url_alignment():
     assert out2["url"] == "https://k/parent" and out2["url_2"] == "https://k/parent"
 
 
+def test_consistency_legs_carry_side_and_contract():
+    """L1 regression: a containment / risk-budget row must synthesize legs WITH side + contract (the
+    consistency row carries them; the unifier used to drop them). Without this the trade card shows
+    "NO/NO" and the per-leg deep link defaults op_order_side to "no" on BOTH legs. Leg 1 = Buy YES
+    broader, leg 2 = Buy NO deeper."""
+    r = {
+        "player": "P", "player_key": "k", "chain": "Reach Final ≤ Reach Semifinal",
+        "action_1_text": "Buy YES — Reach Semifinal @ 98", "action_1_side": "buy_yes",
+        "action_1_contract": "Reach Semifinal", "action_1_price_c": 98,
+        "action_2_text": "Buy NO — Reach Final @ 40", "action_2_side": "buy_no",
+        "action_2_contract": "Reach Final", "action_2_price_c": 40,
+        "parent_ticker": "PT", "child_ticker": "CT",
+    }
+    out = scanner._finalize_unified(scanner._to_unified_consistency(r, sports.TENNIS), payout_floor_c=100)
+    legs = out["legs"]
+    assert legs[0]["side"] == "buy_yes" and legs[0]["contract"] == "Reach Semifinal"
+    assert legs[1]["side"] == "buy_no" and legs[1]["contract"] == "Reach Final"
+
+
 def test_dutchbook_leg_ticker_url_shape():
     """Dutch-book row: two legs of one event -> both leg tickers, a single event link, no second link."""
     r = {"ticker_a": "TA", "ticker_b": "TB", "url": "https://k/event"}

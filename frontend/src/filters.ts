@@ -74,6 +74,7 @@ export interface BandState {
   maxLoss: number; minRatio: number; maxOverpay: number;
   minChildOutright: number; maxSpreadOverChild: number;
   cheapKind: string;            // "all" | "band" | "outright"
+  cheapScope: string;           // cheap-NO settlement scope tab: "all" | "event" | "tournament" | "championship"
   maxBuyNo: number;             // cheap-NO: cap the Buy-NO anchor cost (¢); 0 = off
   // cheap-NO ladder-shape filters (bands only; 0 = off, so defaults are no-op):
   minLadderDepth: number;       // require the ladder to run at least N priced rungs deep
@@ -82,7 +83,7 @@ export interface BandState {
   groupByLadder: boolean;
 }
 export const emptyBand = (): BandState =>
-  ({ maxLoss: 0, minRatio: 0, maxOverpay: 0, minChildOutright: 0, maxSpreadOverChild: 0, cheapKind: "all", maxBuyNo: 0,
+  ({ maxLoss: 0, minRatio: 0, maxOverpay: 0, minChildOutright: 0, maxSpreadOverChild: 0, cheapKind: "all", cheapScope: "all", maxBuyNo: 0,
      minLadderDepth: 0, maxLadderBottom: 0, maxStepRatio: 0, groupByLadder: false });
 
 /* Fallback band defaults if meta.defaults is absent — these literals match config.py
@@ -122,6 +123,9 @@ export function applyBand(rows: FeedRow[], section: string, b: BandState): FeedR
   if (section === "cheapno") {
     let r = rows.filter((o) => !overMax(o.max_loss, b.maxLoss) && !overMax(o.buy_no, b.maxBuyNo));
     if (b.cheapKind !== "all") r = r.filter((o) => String(o.kind || "").toLowerCase().includes(b.cheapKind));
+    // Settlement-scope sub-tab (Event / Tournament / Championship), mirroring the NiceGUI split. Rows with
+    // a blank/unknown scope are only dropped when a specific scope tab is active (fail-open on "all").
+    if (b.cheapScope !== "all") r = r.filter((o) => String(o.scope || "") === b.cheapScope);
     // Ladder-shape filters (bands only; fail-open — a row with no ladder metric is never hidden by them).
     r = r.filter((o) => !underMin(o.ladder_steps, b.minLadderDepth)
       && !overMax(o.ladder_bottom_c, b.maxLadderBottom) && !overMax(o.ladder_step_ratio, b.maxStepRatio));

@@ -135,6 +135,7 @@ export default function Inspector({ row, lens, snapshotId, showNet, longShort }:
           <div className="leg" key={i}>
             <span className={yes ? "y" : "n"}>{lbl}</span>
             <span className="l2">{l.c}</span>
+            {l.tk ? <span className="dim" style={{ fontFamily: "monospace", fontSize: "0.85em" }} title="market ticker">{l.tk}</span> : null}
             <span className="white">{l.p != null ? l.p + "¢" : "—"}</span>
             <span className="dim">×{l.sz ?? 0}</span>
             {href ? <a href={href} target="_blank" rel="noreferrer">↗</a> : null}
@@ -245,7 +246,10 @@ export function Detail({ row, showIds, showRules = true }: { row: FeedRow | null
   const legParts: { pk: string; label: string }[] = [];
   const _seen = new Set<string>();
   for (const l of (row?.legs ?? [])) {
-    const pk = l.pk; if (!pk || l.bo || _seen.has(pk)) continue;
+    const pk = l.pk;
+    // Real participants only: skip book-only legs, legs without a pk, and the synthetic Tie/draw leg
+    // (pk "tie::…") — a tie has no participant ladder, so it's never a chooser option.
+    if (!pk || l.bo || pk.startsWith("tie::") || _seen.has(pk)) continue;
     _seen.add(pk); legParts.push({ pk, label: l.c || pk });
   }
   const [pickPk, setPickPk] = useState<string | null>(null);
@@ -279,6 +283,11 @@ export function Detail({ row, showIds, showRules = true }: { row: FeedRow | null
   if (!row) return <div className="empty">Click a scanner row.</div>;
   const z = ZB[row.zone] ?? ZB.diag;
   const hasCond = row.cond_child != null || row.cond_child_firm != null;
+  // PD-fix: only a participant with ≥2 PRICED rungs is a real containment ladder. A match/game/single-
+  // contract row has 0-1 priced rungs, so the ladder/chain/spreads/expected sections would render empty
+  // templates (the "Bryce vs Suarez" confusion). Below we gate those on hasLadder and otherwise show just
+  // a clear note + ALL CONTRACTS + resolution (the actual evidence).
+  const hasLadder = !!bundle && condRungRows(bundle.chain).filter((r) => r.reaching != null).length >= 2;
   return (
     <div className="des">
       <div className="dtitle"><span className={"bk " + z[0]}>{z[1]}</span><span className="t">{row.name}</span></div>
@@ -287,9 +296,8 @@ export function Detail({ row, showIds, showRules = true }: { row: FeedRow | null
       {canPick ? (
         <div className="note" style={{ marginTop: 6 }}>
           <b>Participant:</b>{" "}
-          {baseKey ? <button className={!validPick ? "on" : ""} onClick={() => setPickPk(null)}>row default</button> : null}
           {legParts.map((p) => (
-            <button key={p.pk} className={validPick === p.pk ? "on" : ""} onClick={() => setPickPk(p.pk)}>{p.label}</button>
+            <button key={p.pk} className={(validPick ?? baseKey?.player_key) === p.pk ? "on" : ""} onClick={() => setPickPk(p.pk)}>{p.label}</button>
           ))}
           {" "}<span className="uncal">pick a side to view its ladder</span>
         </div>
@@ -328,7 +336,7 @@ export function Detail({ row, showIds, showRules = true }: { row: FeedRow | null
           </div>
         </>
       ) : key ? (
-        <div className="note" style={{ marginTop: 6 }}>Conditional probability needs a comparable broader+deeper pair, which this row doesn't have — the participant tables below still apply.</div>
+        <div className="note" style={{ marginTop: 6 }}>Conditional probability needs a comparable broader+deeper pair, which this row doesn't have.</div>
       ) : <div className="note" style={{ marginTop: 6 }}>No participant anchor on this row (e.g. a 2-way dutch-book game). {canPick ? "Pick a participant above to view its ladder." : "Participant detail applies to ladder (containment) rows."}</div>}
 
       {!key ? (
@@ -341,7 +349,11 @@ export function Detail({ row, showIds, showRules = true }: { row: FeedRow | null
         <div className="note" style={{ marginTop: 8 }}>loading participant detail…</div>
       ) : (
         <>
-          {bundle.chain.length ? (() => {
+          {!hasLadder ? (
+            <div className="note" style={{ marginTop: 8 }}>This market isn't part of a containment ladder
+              (no nested stages with prices to compare) — showing its contract(s) and resolution below.</div>
+          ) : null}
+          {hasLadder ? (() => {
             const cr = condRungRows(bundle.chain);
             const bounds = bundle.indicators.filter((ind) => ind.kind === "bound");   // golf make-cut etc.
             return (
@@ -365,7 +377,7 @@ export function Detail({ row, showIds, showRules = true }: { row: FeedRow | null
             );
           })() : null}
 
-          {bundle.chain.length ? (
+          {hasLadder ? (
             <><div className="sect">CONTAINMENT CHAIN (BROAD → DEEP)</div>
               <Tbl rows={bundle.chain} cols={[["layer", "Layer"], ["source", "Source"], ["display_pct", "Disp %"], ["bid_pct", "Bid %"], ["ask_pct", "Ask %"], ["quote", "Quote"]]} />
               <div className="note" style={{ marginTop: 4 }}>
@@ -379,12 +391,12 @@ export function Detail({ row, showIds, showRules = true }: { row: FeedRow | null
             <><div className="sect">PER-UNIT PAYOFF BY SCENARIO <span className="uncal">GROSS</span></div><PayoffChart data={payoff} /></>
           ) : null}
 
-          {bundle.spreads.length ? (
+          {hasLadder && bundle.spreads.length ? (
             <><div className="sect">RAW STAGE-LADDER SPREADS</div>
               <Tbl rows={bundle.spreads} cols={[["from_layer", "From"], ["to_layer", "To"], ["spread_pct", "Spread pp"], ["spread_cents", "Spread ¢"], ["quote", "Quote"]]} /></>
           ) : null}
 
-          {bundle.expected.length ? (
+          {hasLadder && bundle.expected.length ? (
             <><div className="sect">EXPECTED VS FOUND</div>
               <Tbl rows={bundle.expected} cols={[["layer", "Layer"], ["found", "Found"], ["source", "Source"], ["reason", "If missing"]]} />
               {bundle.expected.some((e) => !e.found) ? (

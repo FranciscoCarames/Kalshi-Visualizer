@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import AuthGate from "./AuthGate";
 import { TerminalProvider, useTerminal } from "./context";
 import { TILES } from "./feed";
-import { LENSES } from "./lens";
+import { lensesFor } from "./lens";
 import { loadDiagnostics, loadBacklog, loadBacklogEvents, loadTelemetry, type Diagnostics, type BacklogItem, type BacklogInterval, type Telemetry } from "./detail";
 import Workspace from "./Workspace";
 
@@ -250,6 +250,11 @@ function SecBar() {
   );
   if (t.section === "cheapno") return (
     <div className="secbar"><span className="tag">CHEAP-NO</span>
+      <span className="dim" style={{ fontSize: 9 }}>SCOPE</span>
+      <div className="lens">{([["all", "All"], ["event", "Event"], ["tournament", "Tournament"], ["championship", "Championship"]] as [string, string][]).map(([v, lbl]) => (
+        <button key={v} className={b.cheapScope === v ? "on" : ""} title={`Settlement scope: ${lbl}`}
+          onClick={() => t.setBand({ cheapScope: v })}>{lbl}</button>
+      ))}</div>
       <label>Kind <select value={b.cheapKind} onChange={(e) => t.setBand({ cheapKind: e.target.value })}>
         <option value="all">all</option><option value="band">band</option><option value="outright">outright</option></select></label>
       {numI(b.maxLoss, "maxLoss", "Max loss ¢")}
@@ -310,10 +315,12 @@ function Shell() {
           <button className="tbtn" onClick={() => t.setPaletteOpen(true)}>＋ ADD ▾</button>
           <button className="tbtn" onClick={() => t.setPanelsMenuOpen(true)}>▦ ELEMENTS ▾</button>
           <button className="tbtn" title="Reset the workspace to the selected layout preset" onClick={() => t.resetLayout()}>⟲ RESET</button>
-          <span className="dim" style={{ fontSize: 9 }}>LENS</span>
-          <div className="lens">{LENSES.map(([l, lbl, tip]) => (
-            <button key={l} className={t.lens === l ? "on" : ""} title={tip} onClick={() => t.toggleLens(l)}>{lbl}</button>
-          ))}</div>
+          {lensesFor(t.zone).length ? (<>
+            <span className="dim" style={{ fontSize: 9 }}>LENS</span>
+            <div className="lens">{lensesFor(t.zone).map(([l, lbl, tip]) => (
+              <button key={l} className={t.lens === l ? "on" : ""} title={tip} onClick={() => t.toggleLens(l)}>{lbl}</button>
+            ))}</div>
+          </>) : null}
           <div style={{ position: "relative" }}>
             <button className="tbtn" onClick={() => setSetOpen((v) => !v)}>⚙ SETTINGS ▾</button>
             {setOpen ? <SettingsMenu close={() => setSetOpen(false)} /> : null}
