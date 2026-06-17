@@ -409,3 +409,9 @@ AUTO_SCAN_PAUSE_WHEN_IDLE = True
 # background scan refreshes the snapshot while the SPA is open, and re-pauses this long after it closes).
 # Kept > the SPA poll interval so an open tab stays active across one missed beat (hidden-tab throttling).
 TERMINAL_PRESENCE_WINDOW_S = 30
+
+# Real-time Stage 1 (SSE push): seconds between `: keepalive` comments on an idle `/api/terminal/stream`
+# connection. Each keepalive also re-touches presence (the open stream is the viewer heartbeat, replacing
+# the feed poll), so this MUST stay < TERMINAL_PRESENCE_WINDOW_S or an idle-but-open tab would let the
+# idle-gate pause the scanner. Also keeps proxies from idling the connection out.
+SSE_KEEPALIVE_SECONDS = 15

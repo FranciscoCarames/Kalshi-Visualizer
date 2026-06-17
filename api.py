@@ -10,8 +10,11 @@ Run: `python serve.py` (or `uvicorn api:app`). OpenAPI docs at `/docs`.
 """
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import hmac
 import io
+import json
 import logging
 import os
 import threading
@@ -26,6 +29,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 import auth
 import config
 import data
+import events
 import fetch
 import kalshi_client
 import lifecycle
@@ -37,11 +41,25 @@ import sports
 import store
 from webui import diagnostics, feed
 
+
+@contextlib.asynccontextmanager
+async def _lifespan(_app: "FastAPI"):
+    """Capture the running uvicorn loop for the SSE cross-thread bridge (real-time Stage 1): scans complete
+    on a daemon thread and `events.publish` must hop onto THIS loop to reach the subscriber queues. Cleared
+    on shutdown so a closed loop is never used. A no-op for a TestClient used without its context manager
+    (lifespan doesn't run) — `events.publish` stays a safe no-op there, keeping `import api` side-effect-free."""
+    events.set_loop(asyncio.get_running_loop())
+    try:
+        yield
+    finally:
+        events.set_loop(None)
+
+
 # The OpenAPI docs routes are always CONSTRUCTED, but hidden at REQUEST time by the auth middleware when
 # `AUTH_ENABLED` and not `APP_DEV` (it returns 404). Doing this in the middleware — not via the
 # `FastAPI(docs_url=None)` constructor — is deliberate: `apply_runtime_defaults()` sets `AUTH_ENABLED`
 # AFTER `import api`, so a constructor-time check would miss the secure default. See `auth.gate_and_harden`.
-app = FastAPI(title="Kalshi Structured Scanner", version="4.0")
+app = FastAPI(title="Kalshi Structured Scanner", version="4.0", lifespan=_lifespan)
 # Host allowlist (default "*" — no restriction until an operator sets APP_ALLOWED_HOSTS) + the
 # deny-by-default auth gate / security-headers middleware. Both are no-ops for loopback/dev and the test
 # client until AUTH_ENABLED / APP_ALLOWED_HOSTS are set; see auth.py.
@@ -232,6 +250,9 @@ class Metrics(BaseModel):
     scan_in_progress_seconds: float | None = None
     last_scan_error: str | None = None
     viewer_count: int | None = None
+    # Real-time Stage 1 (SSE push): open stream subscribers + coalesced-payload drops (slow clients).
+    sse_subscribers: int = 0
+    sse_dropped: int = 0
     # Footprint counters (so the owner can see retention + incremental_vacuum bounding the store).
     db_size_bytes: int | None = None
     wal_size_bytes: int | None = None
@@ -409,9 +430,70 @@ def get_terminal_feed(db_path: str | None = Depends(db_path_dep)) -> dict[str, A
     `/opportunities` serves — parity is asserted in tests/test_feed.py. No re-bucketing, no re-ranking.
 
     Records a presence heartbeat (the SPA isn't a NiceGUI client) so the background scan's idle-gate keeps
-    refreshing the snapshot while this terminal is open. ONLY this endpoint touches terminal presence."""
+    refreshing the snapshot while this terminal is open. The SSE stream (`/api/terminal/stream`) touches
+    presence too, so an SPA on either transport keeps the scanner alive."""
     presence.touch()
     return feed.build_feed(db_path=db_path)
+
+
+def _sse_pack(payload: str) -> str:
+    """Frame a JSON payload as a NAMED SSE event. The client listens with ``addEventListener("feed", …)``
+    (NOT ``onmessage``), so the event name MUST be ``feed``."""
+    return f"event: feed\ndata: {payload}\n\n"
+
+
+@app.get("/api/terminal/stream")
+async def get_terminal_stream(request: Request, db_path: str | None = Depends(db_path_dep)) -> StreamingResponse:
+    """Server-Sent-Events push of the terminal feed (real-time Stage 1). Pushes the SAME `build_feed`
+    payload the SPA already polls — this is a live TRANSPORT for completed snapshots, NOT a live market
+    feed. The browser's `EventSource` carries the same-origin session cookie, so this auto-gates under
+    `auth.gate_and_harden` exactly like `/api/terminal/feed` (it is NOT in `auth.is_public`); a raw
+    machine-token `EventSource` can't send the header, so token clients keep polling the feed.
+
+    On connect it sends the current feed immediately (instant paint), then forwards each scan-completion
+    push. An idle connection emits a `: keepalive` comment every `SSE_KEEPALIVE_SECONDS`. Presence is
+    touched on connect AND after each SUCCESSFUL write to the client (the open stream is the viewer
+    heartbeat), so a dead/half-open stream stops counting as a viewer once writes start failing."""
+    presence.touch()                                   # connect heartbeat (synchronous, before streaming)
+    q = events.subscribe()
+
+    async def gen():
+        try:
+            # Instant paint: the latest stored feed, before waiting for the next push.
+            yield _sse_pack(json.dumps(feed.build_feed(db_path=db_path)))
+            presence.touch()
+            while True:
+                if await request.is_disconnected():
+                    break
+                try:
+                    payload = await asyncio.wait_for(q.get(), timeout=config.SSE_KEEPALIVE_SECONDS)
+                    yield _sse_pack(payload)
+                except asyncio.TimeoutError:
+                    yield ": keepalive\n\n"           # comment frame — keeps the conn (and proxies) alive
+                presence.touch()                       # only reached after a successful yield → live client
+        except asyncio.CancelledError:                 # client went away mid-await — normal teardown
+            raise
+        finally:
+            events.unsubscribe(q)
+
+    return StreamingResponse(
+        gen(), media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no", "Connection": "keep-alive"})
+
+
+def _publish_feed_after_scan(snapshot_id: int) -> None:
+    """ScanManager `on_complete` hook: build the fresh feed ONCE and fan it out to all SSE subscribers.
+    Runs on the scan daemon thread; `events.publish` bridges to the loop. Uses the configured store path
+    (the background scan's path) — the per-request `db_path` override only applies to the HTTP handlers."""
+    try:
+        events.publish(json.dumps(feed.build_feed()))
+    except Exception:                                  # noqa: BLE001 — a publish failure must not wedge scans
+        logger.exception("SSE publish after scan %s failed", snapshot_id)
+
+
+# Wire the notify hook on the shared singleton at import time (idempotent; default was None). Publishing is
+# a no-op until the loop is captured at startup, so `import api` in tests stays side-effect-free.
+scan_manager.manager.on_complete = _publish_feed_after_scan
 
 
 # --- Terminal Pro parity endpoints (read-only VIEWS; reuse engine/viewmodel/viz/export only) -----------
@@ -711,7 +793,8 @@ def get_metrics(db_path: str | None = Depends(db_path_dep)):
     base = diagnostics.build_metrics(
         snapshot=snap, scan_status=scan_manager.manager.status(), now_age=age,
         stale=stale, now=time.time(), viewer_count=presence.count())
-    return Metrics(**base, **store.footprint_stats(db_path=db_path))
+    return Metrics(**base, **store.footprint_stats(db_path=db_path),
+                   sse_subscribers=events.subscriber_count(), sse_dropped=events.dropped_count())
 
 
 @app.get("/alerts", response_model=Alerts)

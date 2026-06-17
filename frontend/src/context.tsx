@@ -3,6 +3,7 @@
  * (zone/section/lens/filters/selection/columns/panels). Still a read-only VIEW of the engine. */
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { loadFeed, rowsFor, SUBTABS, type Feed, type FeedRow, type FeedMeta } from "./feed";
+import { subscribeFeed } from "./stream";
 import { COLS, colKeyOf } from "./columns";
 import { applyLens, LENSES } from "./lens";
 import { downloadCsv } from "./csv";
@@ -172,13 +173,20 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
 
   // (The 1s snapshot-age clock now lives in <AgeClock> in App.tsx — a leaf with its own local tick — so it
   // no longer re-renders the whole provider tree every second.)
+  // Live feed: instant paint via loadFeed(), then PUSH updates over SSE (subscribeFeed), with a polling
+  // fallback baked in if the stream errors repeatedly. "off" = manual only (no live updates), matching the
+  // prior poll-disabled behavior. The fallback cadence reuses the auto-refresh interval, so this is a
+  // strict superset of the old polling loop.
   useEffect(() => {
     let alive = true;
-    const pull = () => loadFeed().then((f) => alive && (setFeed(f), setErr(null))).catch((e) => alive && setErr(String(e)));
-    pull();
-    const ms = AUTO_MS[settings.autoRefresh] ?? 10000;        // auto-refresh = feed-poll cadence (off = manual)
-    const poll = ms ? setInterval(pull, ms) : null;
-    return () => { alive = false; if (poll) clearInterval(poll); };
+    loadFeed().then((f) => alive && (setFeed(f), setErr(null))).catch((e) => alive && setErr(String(e)));
+    const ms = AUTO_MS[settings.autoRefresh] ?? 10000;        // auto-refresh = fallback poll cadence (off = manual)
+    if (!ms) return () => { alive = false; };                 // auto-refresh off → manual only, no live updates
+    const h = subscribeFeed(
+      (f) => { if (alive) { setFeed(f); setErr(null); } },
+      (e) => { if (alive) setErr(e); },
+      { pollMs: ms });
+    return () => { alive = false; h.close(); };
   }, [settings.autoRefresh]);
 
   // Per-user preferences: hydrate ONCE on mount (AuthGate has already authenticated), applying only valid

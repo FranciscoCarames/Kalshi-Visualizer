@@ -41,6 +41,12 @@ class ScanManager:
         self._lock = threading.Lock()
         self._thread: threading.Thread | None = None
         self._cooldown_until = 0.0
+        # Optional post-write notify hook (real-time Stage 1): called with the new snapshot_id in the
+        # SUCCESS branch of `_run`, the single choke point every snapshot write flows through. Default
+        # None ⇒ tests/imports stay decoupled (no SSE/engine coupling here). Wired in `api.py` to publish
+        # the fresh feed over SSE. A raised exception in the hook is swallowed — a notify failure must
+        # NEVER wedge the scan manager.
+        self.on_complete: Callable[[int], None] | None = None
         self._status: dict[str, Any] = {
             "status": "idle", "since": None, "last_snapshot_id": None, "last_result": None, "reason": None,
         }
@@ -113,6 +119,14 @@ class ScanManager:
                 self._cooldown_until = time.time() + config.SCAN_BUDGET_COOLDOWN_SECONDS
                 self._status["reason"] = "budget exceeded; cooling down"
             self._thread = None
+        # Notify AFTER releasing the lock (the hook may do real work — build a feed, fan out SSE) and only
+        # on success with a real snapshot id. Guarded: a notify failure can't fail the (already-succeeded)
+        # scan or wedge the manager.
+        if ok and sid is not None and self.on_complete is not None:
+            try:
+                self.on_complete(sid)
+            except Exception:                          # noqa: BLE001 — best-effort notify, never fatal
+                pass
 
 
 def _over_budget(coverage: dict[str, Any], duration: float) -> bool:
