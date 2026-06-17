@@ -1,0 +1,27 @@
+- main [ref=e5]:
+  - generic [ref=e7]:
+    - generic [ref=e8]:
+      - generic [ref=e9]: KALSHI TERMINAL PRO
+      - generic [ref=e10]:
+        - generic [ref=e11] [cursor=pointer]: OPP
+        - generic [ref=e12] [cursor=pointer]: RES
+        - generic [ref=e13] [cursor=pointer]: OPS
+        - generic [ref=e14] [cursor=pointer]: ALRT
+      - textbox [ref=e19]:
+        - /placeholder: "> filter participant / match"
+      - generic [ref=e20]: 20:47:39 UTC
+    - generic [ref=e21]:
+      - generic [ref=e22]: Data 17:09:04 UTC · age 185915s ⚠ STALE · 2,471 opportunities · 93 series · 10 failed · 2,977 contracts scanned · 1,830 checks tested · 275 Kalshi requests
+      - generic [ref=e23]: GROSS · TOP-OF-BOOK · $1 BASIS · READ-ONLY · NO ORDER ENTRY · NOT RISKLESS
+    - generic [ref=e287]:
+      - generic [ref=e288]: ALRT — trusted-state alerts
+      - generic [ref=e289]: New-actionable + blocked-change, diffed over the two most recent scans.
+      - generic [ref=e290]: NEW ACTIONABLE (6)
+      - generic [ref=e291]: ● Esports · Eternal Fire Academy vs Bushido Wildcats · edge 1.0¢
+      - generic [ref=e292]: ● Esports · TDK vs 1WIN · edge 1.0¢
+      - generic [ref=e293]: ● Esports · KT Rolster Challengers vs Top Esports Challenger · edge 1.0¢
+      - generic [ref=e294]: ● Motorsport · F1 · main-race · 26 winner field · edge 1.0¢
+      - generic [ref=e295]: ● Motorsport · F1 · main-race · BARGP26 winner field · edge 1.0¢
+      - generic [ref=e296]: ● Soccer (World Cup) · England vs Croatia · edge 1.0¢
+      - generic [ref=e297]: BLOCKED CHANGES (0)
+      - generic [ref=e298]: None since the previous scan.

@@ -1,0 +1,1418 @@
+- generic [ref=e2]:
+  - generic [ref=e237]:
+    - generic [ref=e238]:
+      - generic [ref=e239] [cursor=pointer]: OPP
+      - generic [ref=e240] [cursor=pointer]: RES
+      - generic [ref=e241] [cursor=pointer]: OPS
+      - generic [ref=e242] [cursor=pointer]: ALRT
+    - generic [ref=e243]:
+      - generic [ref=e244]: ">"
+      - textbox "Open command palette" [ref=e245]:
+        - /placeholder: SEARCH — functions · participants · lenses · layouts   (press / or Ctrl-K)
+      - generic [ref=e246]: Ctrl K
+      - button "<GO>" [ref=e247] [cursor=pointer]
+    - generic [ref=e248]: 1900s · KALSHI
+  - generic [ref=e249]:
+    - generic [ref=e250]:
+      - generic [ref=e251]: ●
+      - text: "SNAPSHOT #487 · 1900s ago"
+    - generic [ref=e252]:
+      - text: Opps
+      - generic [ref=e253]: 2,180
+    - generic [ref=e254]:
+      - text: Contracts
+      - generic [ref=e255]: 3,664
+    - generic [ref=e256]:
+      - text: Checks
+      - generic [ref=e257]: 1,314
+    - generic [ref=e258]:
+      - text: Requests
+      - generic [ref=e259]: "166"
+    - generic [ref=e260]:
+      - text: Sports
+      - generic [ref=e261]: "10"
+    - generic [ref=e262]:
+      - generic [ref=e263]: ●
+      - text: Failed
+      - generic [ref=e264]: "0"
+    - generic [ref=e265]:
+      - generic [ref=e266]: ●
+      - text: ALRT
+      - generic [ref=e267]: "10"
+    - generic [ref=e268]: GROSS · TOP-OF-BOOK · $1 BASIS · READ-ONLY · NO ORDER ENTRY · NOT RISKLESS · fees est. only
+  - generic [ref=e269]:
+    - generic [ref=e270] [cursor=pointer]:
+      - generic [ref=e271]: 1)
+      - text: OPP
+    - generic [ref=e272] [cursor=pointer]:
+      - generic [ref=e273]: 2)
+      - text: RES
+    - generic [ref=e274] [cursor=pointer]:
+      - generic [ref=e275]: 3)
+      - text: OPS
+    - generic [ref=e276]:
+      - generic [ref=e277]: LAYOUT
+      - combobox [ref=e278]:
+        - option "Default" [selected]
+        - option "Triage"
+        - option "Inspect"
+        - option "Research"
+        - option "Scanner full"
+      - button "＋ ADD ▾" [ref=e279] [cursor=pointer]
+      - button "▦ ELEMENTS ▾" [ref=e280] [cursor=pointer]
+      - button "⟲ RESET" [ref=e281] [cursor=pointer]
+      - generic [ref=e282]: LENS
+      - generic [ref=e283]:
+        - button "BLENDED" [ref=e284] [cursor=pointer]
+        - button "EDGE¢" [ref=e285] [cursor=pointer]
+        - button "SPREAD" [ref=e286] [cursor=pointer]
+        - button "OUTRIGHT+SPREAD" [ref=e287] [cursor=pointer]
+        - button "IMPLIED EV" [ref=e288] [cursor=pointer]
+        - button "RIPENESS" [ref=e289] [cursor=pointer]
+      - button "⚙ SETTINGS ▾" [ref=e291] [cursor=pointer]
+      - button "Scan now" [ref=e292] [cursor=pointer]: ▷ SCAN
+      - button "Force scan (bypass cooldown)" [ref=e293] [cursor=pointer]: ⚡
+      - button "Toggle theme" [ref=e294] [cursor=pointer]: ◐
+  - generic [ref=e295]:
+    - generic [ref=e296]: SPORT
+    - button "Filter by Sport (All)" [ref=e298] [cursor=pointer]: "Sport: All ▾"
+    - generic [ref=e299]: TOURNAMENT
+    - button "Filter by Tournament (All)" [ref=e301] [cursor=pointer]: "Tournament: All ▾"
+    - generic [ref=e302]: PARTICIPANT
+    - textbox "Filter by participant" [ref=e303]:
+      - /placeholder: contains…
+    - generic [ref=e304]: MIN SIZE
+    - spinbutton "Minimum size" [ref=e305]: "0"
+    - generic [ref=e306] [cursor=pointer]:
+      - checkbox "Tradable-only" [ref=e307]
+      - text: Tradable-only
+    - button "Export current view as CSV" [ref=e308] [cursor=pointer]: ⬇ CSV
+    - button "Export filtered snapshot as ZIP" [ref=e309] [cursor=pointer]: ⬇ ZIP
+    - generic [ref=e310]: 10 shown
+    - generic [ref=e311] [cursor=pointer]: clear
+  - generic [ref=e312]:
+    - generic [ref=e313] [cursor=pointer]:
+      - generic [ref=e314]: ACTIONABLE
+      - generic [ref=e315]: "10"
+      - generic [ref=e316]: executable now
+    - generic [ref=e317] [cursor=pointer]:
+      - generic [ref=e318]: REVIEW
+      - generic [ref=e319]: "14"
+      - generic [ref=e320]: settlement-dep
+    - generic [ref=e321] [cursor=pointer]:
+      - generic [ref=e322]: BLOCKED
+      - generic [ref=e323]: "5"
+      - generic [ref=e324]: not fillable
+    - generic [ref=e325] [cursor=pointer]:
+      - generic [ref=e326]: BOUNDED-LOSS
+      - generic [ref=e327]: "49"
+      - generic [ref=e328]: can lose money
+    - generic [ref=e329] [cursor=pointer]:
+      - generic [ref=e330]: NEAR-MISS
+      - generic [ref=e331]: "178"
+      - generic [ref=e332]: watchlist
+    - generic [ref=e333] [cursor=pointer]:
+      - generic [ref=e334]: QUALIFIER
+      - generic [ref=e335]: "48"
+      - generic [ref=e336]: WC setups
+    - generic [ref=e337] [cursor=pointer]:
+      - generic [ref=e338]: CHEAP-NO
+      - generic [ref=e339]: "72"
+      - generic [ref=e340]: NO fades
+    - generic [ref=e341] [cursor=pointer]:
+      - generic [ref=e342]: DATA-QUALITY
+      - generic [ref=e343]: "967"
+      - generic [ref=e344]: diagnostic
+  - generic [ref=e346]:
+    - generic [ref=e347]:
+      - generic [ref=e348]:
+        - generic [ref=e349]:
+          - generic [ref=e350]: "1"
+          - heading "SCANNER" [level=3] [ref=e351]
+          - generic [ref=e352]: click row · J/K · ENTER · drag splitters · ⚙ columns
+          - generic [ref=e353]:
+            - generic "Pop out" [ref=e354] [cursor=pointer]: ⧉
+            - generic "Maximize" [ref=e355] [cursor=pointer]: ▢
+            - generic "Collapse" [ref=e356] [cursor=pointer]: ▁
+            - generic "Remove from this view" [ref=e357] [cursor=pointer]: ✕
+        - generic [ref=e358]:
+          - generic [ref=e359]:
+            - generic [ref=e360] [cursor=pointer]: EXECUTABLE 29 firm · gross edge
+            - generic [ref=e361] [cursor=pointer]: SPECULATIVE 347 bounded-loss · convex EV · can lose money
+            - generic [ref=e362] [cursor=pointer]: DIAGNOSTIC 967 review-only · data quality
+          - generic [ref=e363]:
+            - generic [ref=e364] [cursor=pointer]: ACTIONABLE10
+            - generic [ref=e365] [cursor=pointer]: REVIEW14
+            - generic [ref=e366] [cursor=pointer]: BLOCKED5
+            - generic [ref=e367] [cursor=pointer]: ⚙ columns ▾
+          - table [ref=e369]:
+            - rowgroup [ref=e370]:
+              - row "Participant / market Sport Gross edge ¢ ROI % Max units Max gross profit Est. net edge $ Est. net max profit Est. fees $ Tradable Caveat" [ref=e371]:
+                - columnheader "Participant / market" [ref=e372]
+                - columnheader "Sport" [ref=e373]
+                - columnheader "Gross edge ¢" [ref=e374]
+                - columnheader "ROI %" [ref=e375]
+                - columnheader "Max units" [ref=e376]
+                - columnheader "Max gross profit" [ref=e377]
+                - columnheader "Est. net edge $" [ref=e378]
+                - columnheader "Est. net max profit" [ref=e379]
+                - columnheader "Est. fees $" [ref=e380]
+                - columnheader "Tradable" [ref=e381]
+                - columnheader "Caveat" [ref=e382]
+            - rowgroup [ref=e383]:
+              - 'row "Pro Basketball (M) · 27 winner field Pro Basketball (M) · 27 NBA 5¢ 0.3% 782.1 $39.11 -$0.01 $-9.27 $48.38 ● Yes Advisory One-winner-field overround: this buys NO on the priceable subset of a mutually-exclusive field (exactly one winner), not every entrant — safe because an untraded or unlisted winner only pays more. Gross, top-of-book; many legs are illiquid so the position is often only partly fillable." [ref=e384] [cursor=pointer]':
+                - cell "Pro Basketball (M) · 27 winner field Pro Basketball (M) · 27" [ref=e385]
+                - cell "NBA" [ref=e386]
+                - cell "5¢" [ref=e387]
+                - cell "0.3%" [ref=e388]
+                - cell "782.1" [ref=e389]
+                - cell "$39.11" [ref=e390]
+                - cell "-$0.01" [ref=e391]
+                - cell "$-9.27" [ref=e392]
+                - cell "$48.38" [ref=e393]
+                - cell "● Yes" [ref=e394]
+                - 'cell "Advisory One-winner-field overround: this buys NO on the priceable subset of a mutually-exclusive field (exactly one winner), not every entrant — safe because an untraded or unlisted winner only pays more. Gross, top-of-book; many legs are illiquid so the position is often only partly fillable." [ref=e395]'
+              - 'row "NASCAR Cup Series · main-race · AND26 winner field NASCAR Cup Series · main-race · AND26 Motorsport 2¢ 0.1% 64 $1.28 -$0.03 $-1.92 $3.20 ● Yes Advisory One-winner-field overround: this buys NO on the priceable subset of a mutually-exclusive field (exactly one winner), not every entrant — safe because an untraded or unlisted winner only pays more. Gross, top-of-book; many legs are illiquid so the position is often only partly fillable." [ref=e396] [cursor=pointer]':
+                - cell "NASCAR Cup Series · main-race · AND26 winner field NASCAR Cup Series · main-race · AND26" [ref=e397]
+                - cell "Motorsport" [ref=e398]
+                - cell "2¢" [ref=e399]
+                - cell "0.1%" [ref=e400]
+                - cell "64" [ref=e401]
+                - cell "$1.28" [ref=e402]
+                - cell "-$0.03" [ref=e403]
+                - cell "$-1.92" [ref=e404]
+                - cell "$3.20" [ref=e405]
+                - cell "● Yes" [ref=e406]
+                - 'cell "Advisory One-winner-field overround: this buys NO on the priceable subset of a mutually-exclusive field (exactly one winner), not every entrant — safe because an untraded or unlisted winner only pays more. Gross, top-of-book; many legs are illiquid so the position is often only partly fillable." [ref=e407]'
+              - 'row "Minnesota vs Texas Pro Baseball · 26 MLB 2¢ 2% 1 $0.02 -$0.02 $-0.02 $0.04 ● Yes Advisory Per-game settlement risk: if the game is postponed, delayed past its scheduled start window, abandoned, ruled no-contest, or not played as originally scheduled (some leagues then resolve to a fair market price), the legs may not settle together and the gross gap need not hold — review the settlement rules before trading." [ref=e408] [cursor=pointer]':
+                - cell "Minnesota vs Texas Pro Baseball · 26" [ref=e409]
+                - cell "MLB" [ref=e410]
+                - cell "2¢" [ref=e411]
+                - cell "2%" [ref=e412]
+                - cell "1" [ref=e413]
+                - cell "$0.02" [ref=e414]
+                - cell "-$0.02" [ref=e415]
+                - cell "$-0.02" [ref=e416]
+                - cell "$0.04" [ref=e417]
+                - cell "● Yes" [ref=e418]
+                - 'cell "Advisory Per-game settlement risk: if the game is postponed, delayed past its scheduled start window, abandoned, ruled no-contest, or not played as originally scheduled (some leagues then resolve to a fair market price), the legs may not settle together and the gross gap need not hold — review the settlement rules before trading." [ref=e419]'
+              - 'row "Tomas Martin Etcheverry vs Daniil Medvedev ATP Halle Tennis 1¢ 1% 6 $0.06 -$0.01 $-0.08 $0.14 ● Yes Fee: taker net-neg (est.)" [ref=e420] [cursor=pointer]':
+                - cell "Tomas Martin Etcheverry vs Daniil Medvedev ATP Halle" [ref=e421]
+                - cell "Tennis" [ref=e422]
+                - cell "1¢" [ref=e423]
+                - cell "1%" [ref=e424]
+                - cell "6" [ref=e425]
+                - cell "$0.06" [ref=e426]
+                - cell "-$0.01" [ref=e427]
+                - cell "$-0.08" [ref=e428]
+                - cell "$0.14" [ref=e429]
+                - cell "● Yes" [ref=e430]
+                - 'cell "Fee: taker net-neg (est.)" [ref=e431]'
+              - 'row "Romane Longueville vs Victoria Bosio ITF Tennis 1¢ 1% 5 $0.05 $0.00 $-0.01 $0.06 ● Yes Fee: taker net-neg (est.)" [ref=e432] [cursor=pointer]':
+                - cell "Romane Longueville vs Victoria Bosio ITF" [ref=e433]
+                - cell "Tennis" [ref=e434]
+                - cell "1¢" [ref=e435]
+                - cell "1%" [ref=e436]
+                - cell "5" [ref=e437]
+                - cell "$0.05" [ref=e438]
+                - cell "$0.00" [ref=e439]
+                - cell "$-0.01" [ref=e440]
+                - cell "$0.06" [ref=e441]
+                - cell "● Yes" [ref=e442]
+                - 'cell "Fee: taker net-neg (est.)" [ref=e443]'
+              - 'row "BetBoom vs Aurora Gaming CS2 · 26 Esports 1¢ 1% 33 $0.33 -$0.02 $-0.82 $1.15 ● Yes Advisory Per-game settlement risk: if the game is postponed, delayed past its scheduled start window, abandoned, ruled no-contest, or not played as originally scheduled (some leagues then resolve to a fair market price), the legs may not settle together and the gross gap need not hold — review the settlement rules before trading." [ref=e444] [cursor=pointer]':
+                - cell "BetBoom vs Aurora Gaming CS2 · 26" [ref=e445]
+                - cell "Esports" [ref=e446]
+                - cell "1¢" [ref=e447]
+                - cell "1%" [ref=e448]
+                - cell "33" [ref=e449]
+                - cell "$0.33" [ref=e450]
+                - cell "-$0.02" [ref=e451]
+                - cell "$-0.82" [ref=e452]
+                - cell "$1.15" [ref=e453]
+                - cell "● Yes" [ref=e454]
+                - 'cell "Advisory Per-game settlement risk: if the game is postponed, delayed past its scheduled start window, abandoned, ruled no-contest, or not played as originally scheduled (some leagues then resolve to a fair market price), the legs may not settle together and the gross gap need not hold — review the settlement rules before trading." [ref=e455]'
+              - 'row "Suzan Lamens vs Paula Badosa Berlin Tennis 1¢ 1% 6 $0.06 -$0.03 $-0.16 $0.22 ● Yes Fee: taker net-neg (est.)" [ref=e456] [cursor=pointer]':
+                - cell "Suzan Lamens vs Paula Badosa Berlin" [ref=e457]
+                - cell "Tennis" [ref=e458]
+                - cell "1¢" [ref=e459]
+                - cell "1%" [ref=e460]
+                - cell "6" [ref=e461]
+                - cell "$0.06" [ref=e462]
+                - cell "-$0.03" [ref=e463]
+                - cell "$-0.16" [ref=e464]
+                - cell "$0.22" [ref=e465]
+                - cell "● Yes" [ref=e466]
+                - 'cell "Fee: taker net-neg (est.)" [ref=e467]'
+              - 'row "Toronto vs Boston Pro Baseball · 26 MLB 1¢ 1% 162.4 $1.62 -$0.02 $-4.06 $5.68 ● Yes Advisory Per-game settlement risk: if the game is postponed, delayed past its scheduled start window, abandoned, ruled no-contest, or not played as originally scheduled (some leagues then resolve to a fair market price), the legs may not settle together and the gross gap need not hold — review the settlement rules before trading." [ref=e468] [cursor=pointer]':
+                - cell "Toronto vs Boston Pro Baseball · 26" [ref=e469]
+                - cell "MLB" [ref=e470]
+                - cell "1¢" [ref=e471]
+                - cell "1%" [ref=e472]
+                - cell "162.4" [ref=e473]
+                - cell "$1.62" [ref=e474]
+                - cell "-$0.02" [ref=e475]
+                - cell "$-4.06" [ref=e476]
+                - cell "$5.68" [ref=e477]
+                - cell "● Yes" [ref=e478]
+                - 'cell "Advisory Per-game settlement risk: if the game is postponed, delayed past its scheduled start window, abandoned, ruled no-contest, or not played as originally scheduled (some leagues then resolve to a fair market price), the legs may not settle together and the gross gap need not hold — review the settlement rules before trading." [ref=e479]'
+              - 'row "Group Stage — stage of elimination FIFA World Cup · 26 Soccer (World Cup) 1¢ 1% 13.0 $0.13 -$0.05 $-0.60 $0.73 ● Yes Fee: taker net-neg (est.)" [ref=e480] [cursor=pointer]':
+                - cell "Group Stage — stage of elimination FIFA World Cup · 26" [ref=e481]
+                - cell "Soccer (World Cup)" [ref=e482]
+                - cell "1¢" [ref=e483]
+                - cell "1%" [ref=e484]
+                - cell "13.0" [ref=e485]
+                - cell "$0.13" [ref=e486]
+                - cell "-$0.05" [ref=e487]
+                - cell "$-0.60" [ref=e488]
+                - cell "$0.73" [ref=e489]
+                - cell "● Yes" [ref=e490]
+                - 'cell "Fee: taker net-neg (est.)" [ref=e491]'
+              - 'row "Clemence Lesdos vs Chloe Noel ITF Tennis 1¢ 1% 254.8 $2.55 -$0.02 $-4.24 $6.79 ● Yes Fee: taker net-neg (est.)" [ref=e492] [cursor=pointer]':
+                - cell "Clemence Lesdos vs Chloe Noel ITF" [ref=e493]
+                - cell "Tennis" [ref=e494]
+                - cell "1¢" [ref=e495]
+                - cell "1%" [ref=e496]
+                - cell "254.8" [ref=e497]
+                - cell "$2.55" [ref=e498]
+                - cell "-$0.02" [ref=e499]
+                - cell "$-4.24" [ref=e500]
+                - cell "$6.79" [ref=e501]
+                - cell "● Yes" [ref=e502]
+                - 'cell "Fee: taker net-neg (est.)" [ref=e503]'
+          - generic [ref=e504]: Showing 10 of 10 in scope· 11 cols · engine order
+      - generic [ref=e506]:
+        - generic [ref=e507]:
+          - generic [ref=e508]: "2"
+          - heading "INSPECTOR" [level=3] [ref=e509]
+          - generic [ref=e510]: read-only · buy-only · gross
+          - generic [ref=e511]:
+            - generic "Pop out" [ref=e512] [cursor=pointer]: ⧉
+            - generic "Maximize" [ref=e513] [cursor=pointer]: ▢
+            - generic "Collapse" [ref=e514] [cursor=pointer]: ▁
+            - generic "Remove from this view" [ref=e515] [cursor=pointer]: ✕
+        - generic [ref=e516]:
+          - generic [ref=e517] [cursor=pointer]: TRADE CARD
+          - generic [ref=e518] [cursor=pointer]: PARTICIPANT DETAIL
+          - generic [ref=e519] [cursor=pointer]: FORMULAS
+        - generic [ref=e521]: Click a scanner row to load the trade card — legs · economics · evidence.
+    - generic [ref=e525]:
+      - generic [ref=e526]:
+        - generic [ref=e527]: "3"
+        - heading "DEPTH LADDER" [level=3] [ref=e528]
+        - generic [ref=e529]: live order book · top-of-book
+        - generic [ref=e530]:
+          - generic "Pop out" [ref=e531] [cursor=pointer]: ⧉
+          - generic "Maximize" [ref=e532] [cursor=pointer]: ▢
+          - generic "Collapse" [ref=e533] [cursor=pointer]: ▁
+          - generic "Remove from this view" [ref=e534] [cursor=pointer]: ✕
+      - generic [ref=e535]: READ-ONLY · LIVE KALSHI ORDER BOOK · TOP-OF-BOOK · POLL-REFRESHED
+      - generic [ref=e536]: —
+    - generic [ref=e539]:
+      - generic [ref=e540]:
+        - generic [ref=e541]:
+          - generic [ref=e542]: ★
+          - heading "WATCHLIST · TOP ACTIONABLE" [level=3] [ref=e543]
+          - generic [ref=e544]:
+            - generic "Pop out" [ref=e545] [cursor=pointer]: ⧉
+            - generic "Maximize" [ref=e546] [cursor=pointer]: ▢
+            - generic "Collapse" [ref=e547] [cursor=pointer]: ▁
+            - generic "Remove from this view" [ref=e548] [cursor=pointer]: ✕
+        - generic [ref=e549]:
+          - generic [ref=e550] [cursor=pointer]:
+            - generic [ref=e551]: ●
+            - generic [ref=e552]:
+              - text: Pro Basketball (M) · 27 winner field
+              - generic [ref=e553]: NBA · overround
+            - generic [ref=e554]: 5¢
+          - generic [ref=e555] [cursor=pointer]:
+            - generic [ref=e556]: ●
+            - generic [ref=e557]:
+              - text: NASCAR Cup Series · main-race · AND26 winner field
+              - generic [ref=e558]: Motorsport · overround
+            - generic [ref=e559]: 2¢
+          - generic [ref=e560] [cursor=pointer]:
+            - generic [ref=e561]: ●
+            - generic [ref=e562]:
+              - text: Minnesota vs Texas
+              - generic [ref=e563]: MLB · overround
+            - generic [ref=e564]: 2¢
+          - generic [ref=e565] [cursor=pointer]:
+            - generic [ref=e566]: ●
+            - generic [ref=e567]:
+              - text: Tomas Martin Etcheverry vs Daniil Medvedev
+              - generic [ref=e568]: Tennis · overround
+            - generic [ref=e569]: 1¢
+          - generic [ref=e570] [cursor=pointer]:
+            - generic [ref=e571]: ●
+            - generic [ref=e572]:
+              - text: Romane Longueville vs Victoria Bosio
+              - generic [ref=e573]: Tennis · overround
+            - generic [ref=e574]: 1¢
+          - generic [ref=e575] [cursor=pointer]:
+            - generic [ref=e576]: ●
+            - generic [ref=e577]:
+              - text: BetBoom vs Aurora Gaming
+              - generic [ref=e578]: Esports · overround
+            - generic [ref=e579]: 1¢
+          - generic [ref=e580] [cursor=pointer]:
+            - generic [ref=e581]: ●
+            - generic [ref=e582]:
+              - text: Suzan Lamens vs Paula Badosa
+              - generic [ref=e583]: Tennis · overround
+            - generic [ref=e584]: 1¢
+          - generic [ref=e586] [cursor=pointer]: REVIEW MOVERS
+          - generic [ref=e587] [cursor=pointer]:
+            - generic [ref=e588]: ◐
+            - generic [ref=e589]:
+              - text: Semifinals — Reach Semifinals (synthetic vs advance)
+              - generic [ref=e590]: Soccer (World Cup) · rule-dep
+          - generic [ref=e591] [cursor=pointer]:
+            - generic [ref=e592]: ◐
+            - generic [ref=e593]:
+              - text: Runner-Up — Reach Finals (synthetic vs advance)
+              - generic [ref=e594]: Soccer (World Cup) · rule-dep
+          - generic [ref=e595] [cursor=pointer]:
+            - generic [ref=e596]: ◐
+            - generic [ref=e597]:
+              - text: Runner-Up — Reach Finals (synthetic vs advance)
+              - generic [ref=e598]: Soccer (World Cup) · rule-dep
+          - generic [ref=e599] [cursor=pointer]:
+            - generic [ref=e600]: ◐
+            - generic [ref=e601]:
+              - text: Semifinals — Reach Semifinals (synthetic vs advance)
+              - generic [ref=e602]: Soccer (World Cup) · rule-dep
+      - generic [ref=e604]:
+        - generic [ref=e605]:
+          - generic [ref=e606]: "!"
+          - heading "ALERTS" [level=3] [ref=e607]
+          - generic [ref=e608]:
+            - generic "Pop out" [ref=e609] [cursor=pointer]: ⧉
+            - generic "Maximize" [ref=e610] [cursor=pointer]: ▢
+            - generic "Collapse" [ref=e611] [cursor=pointer]: ▁
+            - generic "Remove from this view" [ref=e612] [cursor=pointer]: ✕
+        - generic [ref=e614]: No prior scan baseline yet — alerts appear after the next scan.
+    - generic [ref=e658]:
+      - generic [ref=e659]: ADD A WINDOW — drag onto a drop-zone
+      - generic [ref=e660]: ＋ RESEARCH
+  - generic [ref=e649]:
+    - generic [ref=e650]: KALSHI STRUCTURED SCANNER · real viewmodel rows · full column catalog · bounded-loss + cheap-NO splits · read-only over the live snapshot
+    - generic [ref=e651]:
+      - generic [ref=e652]: Ctrl K palette
+      - generic [ref=e653]: 1-6 lens
+      - generic [ref=e654]: J/K rows
+      - generic [ref=e655]: ↵ open
+      - generic [ref=e656]: drag splitters resize
+      - generic [ref=e657]: Ctrl/Shift-click multi-select
+  - generic [ref=e662]:
+    - generic [ref=e663]:
+      - generic [ref=e664]: ⌘
+      - textbox "Type a function, participant, lens, layout… (e.g. OPS · golf · ripeness · triage · HELP)" [active] [ref=e665]
+    - generic [ref=e666]:
+      - generic [ref=e667]:
+        - generic [ref=e668]: SURFACE
+        - generic [ref=e669] [cursor=pointer]:
+          - generic [ref=e670]: OPP
+          - generic [ref=e671]: view
+      - generic [ref=e673] [cursor=pointer]:
+        - generic [ref=e674]: RES
+        - generic [ref=e675]: view
+      - generic [ref=e677] [cursor=pointer]:
+        - generic [ref=e678]: OPS
+        - generic [ref=e679]: view
+      - generic [ref=e681] [cursor=pointer]:
+        - generic [ref=e682]: ALRT
+        - generic [ref=e683]: view
+      - generic [ref=e684]:
+        - generic [ref=e685]: LENS
+        - generic [ref=e686] [cursor=pointer]:
+          - generic [ref=e687]: BLENDED
+          - generic [ref=e688]: Weighted mix of edge + ROI + payoff geometry — the all-rounder.
+          - generic [ref=e689]: lens
+      - generic [ref=e691] [cursor=pointer]:
+        - generic [ref=e692]: EDGE¢
+        - generic [ref=e693]: Pure per-unit gross edge ¢ — biggest mispricing first.
+        - generic [ref=e694]: lens
+      - generic [ref=e696] [cursor=pointer]:
+        - generic [ref=e697]: SPREAD
+        - generic [ref=e698]: Best-case payoff spread (how much you can win).
+        - generic [ref=e699]: lens
+      - generic [ref=e701] [cursor=pointer]:
+        - generic [ref=e702]: OUTRIGHT+SPREAD
+        - generic [ref=e703]: Child outright magnitude, then spread÷outright — cheap longshots with room.
+        - generic [ref=e704]: lens
+      - generic [ref=e706] [cursor=pointer]:
+        - generic [ref=e707]: IMPLIED EV
+        - generic [ref=e708]: Display-spread minus overpay — a ranking aid, NOT a real edge.
+        - generic [ref=e709]: lens
+      - generic [ref=e711] [cursor=pointer]:
+        - generic [ref=e712]: RIPENESS
+        - generic [ref=e713]: Parent ÷ max loss — in-the-money chance per ¢ at risk (bounded-loss). Higher = riper.
+        - generic [ref=e714]: lens
+      - generic [ref=e715]:
+        - generic [ref=e716]: SECTION
+        - generic [ref=e717] [cursor=pointer]:
+          - generic [ref=e718]: ACTIONABLE
+          - generic [ref=e719]: exec
+          - generic [ref=e720]: go
+      - generic [ref=e722] [cursor=pointer]:
+        - generic [ref=e723]: REVIEW
+        - generic [ref=e724]: exec
+        - generic [ref=e725]: go
+      - generic [ref=e727] [cursor=pointer]:
+        - generic [ref=e728]: BLOCKED
+        - generic [ref=e729]: exec
+        - generic [ref=e730]: go
+      - generic [ref=e732] [cursor=pointer]:
+        - generic [ref=e733]: BOUNDED-LOSS
+        - generic [ref=e734]: spec
+        - generic [ref=e735]: go
+      - generic [ref=e737] [cursor=pointer]:
+        - generic [ref=e738]: NEAR-MISS
+        - generic [ref=e739]: spec
+        - generic [ref=e740]: go
+      - generic [ref=e742] [cursor=pointer]:
+        - generic [ref=e743]: QUALIFIER
+        - generic [ref=e744]: spec
+        - generic [ref=e745]: go
+      - generic [ref=e747] [cursor=pointer]:
+        - generic [ref=e748]: CHEAP-NO
+        - generic [ref=e749]: spec
+        - generic [ref=e750]: go
+      - generic [ref=e752] [cursor=pointer]:
+        - generic [ref=e753]: DIAGNOSTIC
+        - generic [ref=e754]: diag
+        - generic [ref=e755]: go
+      - generic [ref=e756]:
+        - generic [ref=e757]: LAYOUT
+        - generic [ref=e758] [cursor=pointer]:
+          - generic [ref=e759]: Default
+          - generic [ref=e760]: layout
+      - generic [ref=e762] [cursor=pointer]:
+        - generic [ref=e763]: Triage
+        - generic [ref=e764]: layout
+      - generic [ref=e766] [cursor=pointer]:
+        - generic [ref=e767]: Inspect
+        - generic [ref=e768]: layout
+      - generic [ref=e770] [cursor=pointer]:
+        - generic [ref=e771]: Research
+        - generic [ref=e772]: layout
+      - generic [ref=e774] [cursor=pointer]:
+        - generic [ref=e775]: Scanner full
+        - generic [ref=e776]: layout
+      - generic [ref=e777]:
+        - generic [ref=e778]: THEME
+        - generic [ref=e779] [cursor=pointer]:
+          - generic [ref=e780]: Amber
+          - generic [ref=e781]: theme
+      - generic [ref=e783] [cursor=pointer]:
+        - generic [ref=e784]: High contrast
+        - generic [ref=e785]: theme
+      - generic [ref=e786]:
+        - generic [ref=e787]: TOGGLE
+        - generic [ref=e788] [cursor=pointer]:
+          - generic [ref=e789]: Net of fees (est.)
+          - generic [ref=e790]: toggle
+      - generic [ref=e791]:
+        - generic [ref=e792]: TEXT SIZE
+        - generic [ref=e793] [cursor=pointer]:
+          - generic [ref=e794]: "Text size: compact"
+          - generic [ref=e795]: set
+      - generic [ref=e797] [cursor=pointer]:
+        - generic [ref=e798]: "Text size: normal"
+        - generic [ref=e799]: set
+      - generic [ref=e801] [cursor=pointer]:
+        - generic [ref=e802]: "Text size: large"
+        - generic [ref=e803]: set
+      - generic [ref=e805] [cursor=pointer]:
+        - generic [ref=e806]: "Text size: xlarge"
+        - generic [ref=e807]: set
+      - generic [ref=e808]:
+        - generic [ref=e809]: TOGGLE
+        - generic [ref=e810] [cursor=pointer]:
+          - generic [ref=e811]: Long / short wording
+          - generic [ref=e812]: toggle
+      - generic [ref=e814] [cursor=pointer]:
+        - generic [ref=e815]: Show IDs & codes
+        - generic [ref=e816]: toggle
+      - generic [ref=e817]:
+        - generic [ref=e818]: HELP
+        - generic [ref=e819] [cursor=pointer]:
+          - generic [ref=e820]: "Keyboard: Ctrl-K · 1-6 lens · J/K rows · ↵ open"
+          - generic [ref=e821]: help
+      - generic [ref=e822]:
+        - generic [ref=e823]: PARTICIPANT
+        - generic [ref=e824] [cursor=pointer]:
+          - generic [ref=e825]: Pro Basketball (M) · 27 winner field
+          - generic [ref=e826]: NBA · actionable
+          - generic [ref=e827]: row
+      - generic [ref=e829] [cursor=pointer]:
+        - generic [ref=e830]: NASCAR Cup Series · main-race · AND26 winner field
+        - generic [ref=e831]: Motorsport · actionable
+        - generic [ref=e832]: row
+      - generic [ref=e834] [cursor=pointer]:
+        - generic [ref=e835]: Minnesota vs Texas
+        - generic [ref=e836]: MLB · actionable
+        - generic [ref=e837]: row
+      - generic [ref=e839] [cursor=pointer]:
+        - generic [ref=e840]: Tomas Martin Etcheverry vs Daniil Medvedev
+        - generic [ref=e841]: Tennis · actionable
+        - generic [ref=e842]: row
+      - generic [ref=e844] [cursor=pointer]:
+        - generic [ref=e845]: Romane Longueville vs Victoria Bosio
+        - generic [ref=e846]: Tennis · actionable
+        - generic [ref=e847]: row
+      - generic [ref=e849] [cursor=pointer]:
+        - generic [ref=e850]: BetBoom vs Aurora Gaming
+        - generic [ref=e851]: Esports · actionable
+        - generic [ref=e852]: row
+      - generic [ref=e854] [cursor=pointer]:
+        - generic [ref=e855]: Suzan Lamens vs Paula Badosa
+        - generic [ref=e856]: Tennis · actionable
+        - generic [ref=e857]: row
+      - generic [ref=e859] [cursor=pointer]:
+        - generic [ref=e860]: Toronto vs Boston
+        - generic [ref=e861]: MLB · actionable
+        - generic [ref=e862]: row
+      - generic [ref=e864] [cursor=pointer]:
+        - generic [ref=e865]: Group Stage — stage of elimination
+        - generic [ref=e866]: Soccer (World Cup) · actionable
+        - generic [ref=e867]: row
+      - generic [ref=e869] [cursor=pointer]:
+        - generic [ref=e870]: Clemence Lesdos vs Chloe Noel
+        - generic [ref=e871]: Tennis · actionable
+        - generic [ref=e872]: row
+      - generic [ref=e874] [cursor=pointer]:
+        - generic [ref=e875]: Semifinals — Reach Semifinals (synthetic vs advance)
+        - generic [ref=e876]: Soccer (World Cup) · review_signal
+        - generic [ref=e877]: row
+      - generic [ref=e879] [cursor=pointer]:
+        - generic [ref=e880]: Runner-Up — Reach Finals (synthetic vs advance)
+        - generic [ref=e881]: Soccer (World Cup) · review_signal
+        - generic [ref=e882]: row
+      - generic [ref=e884] [cursor=pointer]:
+        - generic [ref=e885]: Semifinals — Reach Semifinals (synthetic vs advance)
+        - generic [ref=e886]: Soccer (World Cup) · review_signal
+        - generic [ref=e887]: row
+      - generic [ref=e889] [cursor=pointer]:
+        - generic [ref=e890]: Semifinals — Reach Semifinals (synthetic vs advance)
+        - generic [ref=e891]: Soccer (World Cup) · review_signal
+        - generic [ref=e892]: row
+      - generic [ref=e894] [cursor=pointer]:
+        - generic [ref=e895]: Outright Winner — Win the World Cup (synthetic vs advance)
+        - generic [ref=e896]: Soccer (World Cup) · review_signal
+        - generic [ref=e897]: row
+      - generic [ref=e899] [cursor=pointer]:
+        - generic [ref=e900]: Quarterfinals — Reach Quarterfinals (synthetic vs advance)
+        - generic [ref=e901]: Soccer (World Cup) · review_signal
+        - generic [ref=e902]: row
+      - generic [ref=e904] [cursor=pointer]:
+        - generic [ref=e905]: Outright Winner — Win the World Cup (synthetic vs advance)
+        - generic [ref=e906]: Soccer (World Cup) · review_signal
+        - generic [ref=e907]: row
+      - generic [ref=e909] [cursor=pointer]:
+        - generic [ref=e910]: Quarterfinals — Reach Quarterfinals (synthetic vs advance)
+        - generic [ref=e911]: Soccer (World Cup) · blocked
+        - generic [ref=e912]: row
+      - generic [ref=e914] [cursor=pointer]:
+        - generic [ref=e915]: Round of 16 — Reach Round of 16 (synthetic vs advance)
+        - generic [ref=e916]: Soccer (World Cup) · blocked
+        - generic [ref=e917]: row
+      - generic [ref=e919] [cursor=pointer]:
+        - generic [ref=e920]: Runner-Up — Reach Finals (synthetic vs advance)
+        - generic [ref=e921]: Soccer (World Cup) · blocked
+        - generic [ref=e922]: row
+      - generic [ref=e924] [cursor=pointer]:
+        - generic [ref=e925]: Taihei Sato
+        - generic [ref=e926]: Golf · risk_budget
+        - generic [ref=e927]: row
+      - generic [ref=e929] [cursor=pointer]:
+        - generic [ref=e930]: Pittsburgh
+        - generic [ref=e931]: NFL · risk_budget
+        - generic [ref=e932]: row
+      - generic [ref=e934] [cursor=pointer]:
+        - generic [ref=e935]: Czechia
+        - generic [ref=e936]: Soccer (World Cup) · risk_budget
+        - generic [ref=e937]: row
+      - generic [ref=e939] [cursor=pointer]:
+        - generic [ref=e940]: Graeme McDowell
+        - generic [ref=e941]: Golf · risk_budget
+        - generic [ref=e942]: row
+      - generic [ref=e944] [cursor=pointer]:
+        - generic [ref=e945]: Mason Howell
+        - generic [ref=e946]: Golf · risk_budget
+        - generic [ref=e947]: row
+      - generic [ref=e949] [cursor=pointer]:
+        - generic [ref=e950]: Patrick Rodgers
+        - generic [ref=e951]: Golf · risk_budget
+        - generic [ref=e952]: row
+      - generic [ref=e954] [cursor=pointer]:
+        - generic [ref=e955]: Adrien Dumont De Chassart
+        - generic [ref=e956]: Golf · risk_budget
+        - generic [ref=e957]: row
+      - generic [ref=e959] [cursor=pointer]:
+        - generic [ref=e960]: Jackson Herrington
+        - generic [ref=e961]: Golf · risk_budget
+        - generic [ref=e962]: row
+      - generic [ref=e964] [cursor=pointer]:
+        - generic [ref=e965]: Atlanta
+        - generic [ref=e966]: NFL · risk_budget
+        - generic [ref=e967]: row
+      - generic [ref=e969] [cursor=pointer]:
+        - generic [ref=e970]: Tampa Bay
+        - generic [ref=e971]: NFL · risk_budget
+        - generic [ref=e972]: row
+      - generic [ref=e974] [cursor=pointer]:
+        - generic [ref=e975]: Minnesota
+        - generic [ref=e976]: NFL · risk_budget
+        - generic [ref=e977]: row
+      - generic [ref=e979] [cursor=pointer]:
+        - generic [ref=e980]: Ethan Fang
+        - generic [ref=e981]: Golf · risk_budget
+        - generic [ref=e982]: row
+      - generic [ref=e984] [cursor=pointer]:
+        - generic [ref=e985]: Indianapolis
+        - generic [ref=e986]: NFL · risk_budget
+        - generic [ref=e987]: row
+      - generic [ref=e989] [cursor=pointer]:
+        - generic [ref=e990]: Peter Uihlein
+        - generic [ref=e991]: Golf · risk_budget
+        - generic [ref=e992]: row
+      - generic [ref=e994] [cursor=pointer]:
+        - generic [ref=e995]: Filippo Celli
+        - generic [ref=e996]: Golf · risk_budget
+        - generic [ref=e997]: row
+      - generic [ref=e999] [cursor=pointer]:
+        - generic [ref=e1000]: Washington
+        - generic [ref=e1001]: NFL · risk_budget
+        - generic [ref=e1002]: row
+      - generic [ref=e1004] [cursor=pointer]:
+        - generic [ref=e1005]: Caleb Surratt
+        - generic [ref=e1006]: Golf · risk_budget
+        - generic [ref=e1007]: row
+      - generic [ref=e1009] [cursor=pointer]:
+        - generic [ref=e1010]: Cape Verde
+        - generic [ref=e1011]: Soccer (World Cup) · risk_budget
+        - generic [ref=e1012]: row
+      - generic [ref=e1014] [cursor=pointer]:
+        - generic [ref=e1015]: Chandler Phillips
+        - generic [ref=e1016]: Golf · risk_budget
+        - generic [ref=e1017]: row
+      - generic [ref=e1019] [cursor=pointer]:
+        - generic [ref=e1020]: Ecuador
+        - generic [ref=e1021]: Soccer (World Cup) · risk_budget
+        - generic [ref=e1022]: row
+      - generic [ref=e1024] [cursor=pointer]:
+        - generic [ref=e1025]: Akshay Bhatia
+        - generic [ref=e1026]: Golf · risk_budget
+        - generic [ref=e1027]: row
+      - generic [ref=e1029] [cursor=pointer]:
+        - generic [ref=e1030]: San Francisco
+        - generic [ref=e1031]: NFL · risk_budget
+        - generic [ref=e1032]: row
+      - generic [ref=e1034] [cursor=pointer]:
+        - generic [ref=e1035]: Angel Hidalgo
+        - generic [ref=e1036]: Golf · risk_budget
+        - generic [ref=e1037]: row
+      - generic [ref=e1039] [cursor=pointer]:
+        - generic [ref=e1040]: Brandon Holtz
+        - generic [ref=e1041]: Golf · risk_budget
+        - generic [ref=e1042]: row
+      - generic [ref=e1044] [cursor=pointer]:
+        - generic [ref=e1045]: Padraig Harrington
+        - generic [ref=e1046]: Golf · risk_budget
+        - generic [ref=e1047]: row
+      - generic [ref=e1049] [cursor=pointer]:
+        - generic [ref=e1050]: Sweden
+        - generic [ref=e1051]: Soccer (World Cup) · risk_budget
+        - generic [ref=e1052]: row
+      - generic [ref=e1054] [cursor=pointer]:
+        - generic [ref=e1055]: Niklas Norgaard Moller
+        - generic [ref=e1056]: Golf · risk_budget
+        - generic [ref=e1057]: row
+      - generic [ref=e1059] [cursor=pointer]:
+        - generic [ref=e1060]: Senegal
+        - generic [ref=e1061]: Soccer (World Cup) · risk_budget
+        - generic [ref=e1062]: row
+      - generic [ref=e1064] [cursor=pointer]:
+        - generic [ref=e1065]: Ben Silverman
+        - generic [ref=e1066]: Golf · risk_budget
+        - generic [ref=e1067]: row
+      - generic [ref=e1069] [cursor=pointer]:
+        - generic [ref=e1070]: Matti Schmid
+        - generic [ref=e1071]: Golf · risk_budget
+        - generic [ref=e1072]: row
+      - generic [ref=e1074] [cursor=pointer]:
+        - generic [ref=e1075]: New York G
+        - generic [ref=e1076]: NFL · risk_budget
+        - generic [ref=e1077]: row
+      - generic [ref=e1079] [cursor=pointer]:
+        - generic [ref=e1080]: Mateo Pulcini
+        - generic [ref=e1081]: Golf · risk_budget
+        - generic [ref=e1082]: row
+      - generic [ref=e1084] [cursor=pointer]:
+        - generic [ref=e1085]: Corey Conners
+        - generic [ref=e1086]: Golf · risk_budget
+        - generic [ref=e1087]: row
+      - generic [ref=e1089] [cursor=pointer]:
+        - generic [ref=e1090]: Ivory Coast
+        - generic [ref=e1091]: Soccer (World Cup) · risk_budget
+        - generic [ref=e1092]: row
+      - generic [ref=e1094] [cursor=pointer]:
+        - generic [ref=e1095]: Billy Horschel
+        - generic [ref=e1096]: Golf · risk_budget
+        - generic [ref=e1097]: row
+      - generic [ref=e1099] [cursor=pointer]:
+        - generic [ref=e1100]: Turkiye
+        - generic [ref=e1101]: Soccer (World Cup) · risk_budget
+        - generic [ref=e1102]: row
+      - generic [ref=e1104] [cursor=pointer]:
+        - generic [ref=e1105]: Philadelphia
+        - generic [ref=e1106]: NFL · risk_budget
+        - generic [ref=e1107]: row
+      - generic [ref=e1109] [cursor=pointer]:
+        - generic [ref=e1110]: Sungjae Im
+        - generic [ref=e1111]: Golf · risk_budget
+        - generic [ref=e1112]: row
+      - generic [ref=e1114] [cursor=pointer]:
+        - generic [ref=e1115]: Laurie Canter
+        - generic [ref=e1116]: Golf · risk_budget
+        - generic [ref=e1117]: row
+      - generic [ref=e1119] [cursor=pointer]:
+        - generic [ref=e1120]: Houston
+        - generic [ref=e1121]: NFL · risk_budget
+        - generic [ref=e1122]: row
+      - generic [ref=e1124] [cursor=pointer]:
+        - generic [ref=e1125]: Lucas Herbert
+        - generic [ref=e1126]: Golf · risk_budget
+        - generic [ref=e1127]: row
+      - generic [ref=e1129] [cursor=pointer]:
+        - generic [ref=e1130]: Jason Day
+        - generic [ref=e1131]: Golf · risk_budget
+        - generic [ref=e1132]: row
+      - generic [ref=e1134] [cursor=pointer]:
+        - generic [ref=e1135]: Denver
+        - generic [ref=e1136]: NFL · risk_budget
+        - generic [ref=e1137]: row
+      - generic [ref=e1139] [cursor=pointer]:
+        - generic [ref=e1140]: J.T. Poston
+        - generic [ref=e1141]: Golf · risk_budget
+        - generic [ref=e1142]: row
+      - generic [ref=e1144] [cursor=pointer]:
+        - generic [ref=e1145]: Detroit
+        - generic [ref=e1146]: NFL · risk_budget
+        - generic [ref=e1147]: row
+      - generic [ref=e1149] [cursor=pointer]:
+        - generic [ref=e1150]: Andrew Novak
+        - generic [ref=e1151]: Golf · risk_budget
+        - generic [ref=e1152]: row
+      - generic [ref=e1154] [cursor=pointer]:
+        - generic [ref=e1155]: Chicago
+        - generic [ref=e1156]: NFL · risk_budget
+        - generic [ref=e1157]: row
+      - generic [ref=e1159] [cursor=pointer]:
+        - generic [ref=e1160]: Paraguay
+        - generic [ref=e1161]: Soccer (World Cup) · risk_budget
+        - generic [ref=e1162]: row
+      - generic [ref=e1164] [cursor=pointer]:
+        - generic [ref=e1165]: Harry Hall
+        - generic [ref=e1166]: Golf · risk_budget
+        - generic [ref=e1167]: row
+      - generic [ref=e1169] [cursor=pointer]:
+        - generic [ref=e1170]: Chris Kirk
+        - generic [ref=e1171]: Golf · risk_budget
+        - generic [ref=e1172]: row
+      - generic [ref=e1174] [cursor=pointer]:
+        - generic [ref=e1175]: Sahith Theegala
+        - generic [ref=e1176]: Golf · risk_budget
+        - generic [ref=e1177]: row
+      - generic [ref=e1179] [cursor=pointer]:
+        - generic [ref=e1180]: Michael Kim
+        - generic [ref=e1181]: Golf · risk_budget
+        - generic [ref=e1182]: row
+      - generic [ref=e1184] [cursor=pointer]:
+        - generic [ref=e1185]: Kevin Roy
+        - generic [ref=e1186]: Golf · risk_budget
+        - generic [ref=e1187]: row
+      - generic [ref=e1189] [cursor=pointer]:
+        - generic [ref=e1190]: Matthew Jordan
+        - generic [ref=e1191]: Golf · risk_budget
+        - generic [ref=e1192]: row
+      - generic [ref=e1194] [cursor=pointer]:
+        - generic [ref=e1195]: Seattle
+        - generic [ref=e1196]: NFL · risk_budget
+        - generic [ref=e1197]: row
+      - generic [ref=e1199] [cursor=pointer]:
+        - generic [ref=e1200]: Adrien Saddier
+        - generic [ref=e1201]: Golf · risk_budget
+        - generic [ref=e1202]: row
+      - generic [ref=e1204] [cursor=pointer]:
+        - generic [ref=e1205]: Green Bay
+        - generic [ref=e1206]: NFL · risk_budget
+        - generic [ref=e1207]: row
+      - generic [ref=e1209] [cursor=pointer]:
+        - generic [ref=e1210]: Matthew McCarty
+        - generic [ref=e1211]: Golf · risk_budget
+        - generic [ref=e1212]: row
+      - generic [ref=e1214] [cursor=pointer]:
+        - generic [ref=e1215]: Cincinnati
+        - generic [ref=e1216]: NFL · risk_budget
+        - generic [ref=e1217]: row
+      - generic [ref=e1219] [cursor=pointer]:
+        - generic [ref=e1220]: Tom Kim
+        - generic [ref=e1221]: Golf · risk_budget
+        - generic [ref=e1222]: row
+      - generic [ref=e1224] [cursor=pointer]:
+        - generic [ref=e1225]: Switzerland
+        - generic [ref=e1226]: Soccer (World Cup) · risk_budget
+        - generic [ref=e1227]: row
+      - generic [ref=e1229] [cursor=pointer]:
+        - generic [ref=e1230]: Ugo Coussaud
+        - generic [ref=e1231]: Golf · risk_budget
+        - generic [ref=e1232]: row
+      - generic [ref=e1234] [cursor=pointer]:
+        - generic [ref=e1235]: Dallas
+        - generic [ref=e1236]: NFL · risk_budget
+        - generic [ref=e1237]: row
+      - generic [ref=e1239] [cursor=pointer]:
+        - generic [ref=e1240]: Nicolai Hojgaard
+        - generic [ref=e1241]: Golf · risk_budget
+        - generic [ref=e1242]: row
+      - generic [ref=e1244] [cursor=pointer]:
+        - generic [ref=e1245]: Alex Noren
+        - generic [ref=e1246]: Golf · risk_budget
+        - generic [ref=e1247]: row
+      - generic [ref=e1249] [cursor=pointer]:
+        - generic [ref=e1250]: Tunisia
+        - generic [ref=e1251]: Soccer (World Cup) · risk_budget
+        - generic [ref=e1252]: row
+      - generic [ref=e1254] [cursor=pointer]:
+        - generic [ref=e1255]: Panama
+        - generic [ref=e1256]: Soccer (World Cup) · risk_budget
+        - generic [ref=e1257]: row
+      - generic [ref=e1259] [cursor=pointer]:
+        - generic [ref=e1260]: Japan
+        - generic [ref=e1261]: Soccer (World Cup) · risk_budget
+        - generic [ref=e1262]: row
+      - generic [ref=e1264] [cursor=pointer]:
+        - generic [ref=e1265]: Benjamin James
+        - generic [ref=e1266]: Golf · risk_budget
+        - generic [ref=e1267]: row
+      - generic [ref=e1269] [cursor=pointer]:
+        - generic [ref=e1270]: Daniel Berger
+        - generic [ref=e1271]: Golf · risk_budget
+        - generic [ref=e1272]: row
+      - generic [ref=e1274] [cursor=pointer]:
+        - generic [ref=e1275]: Scotland
+        - generic [ref=e1276]: Soccer (World Cup) · risk_budget
+        - generic [ref=e1277]: row
+      - generic [ref=e1279] [cursor=pointer]:
+        - generic [ref=e1280]: Davis Thompson
+        - generic [ref=e1281]: Golf · risk_budget
+        - generic [ref=e1282]: row
+      - generic [ref=e1284] [cursor=pointer]:
+        - generic [ref=e1285]: Ryo Hisatsune
+        - generic [ref=e1286]: Golf · risk_budget
+        - generic [ref=e1287]: row
+      - generic [ref=e1289] [cursor=pointer]:
+        - generic [ref=e1290]: Uruguay
+        - generic [ref=e1291]: Soccer (World Cup) · risk_budget
+        - generic [ref=e1292]: row
+      - generic [ref=e1294] [cursor=pointer]:
+        - generic [ref=e1295]: Jacksonville
+        - generic [ref=e1296]: NFL · risk_budget
+        - generic [ref=e1297]: row
+      - generic [ref=e1299] [cursor=pointer]:
+        - generic [ref=e1300]: Bosnia and Herzegovina
+        - generic [ref=e1301]: Soccer (World Cup) · risk_budget
+        - generic [ref=e1302]: row
+      - generic [ref=e1304] [cursor=pointer]:
+        - generic [ref=e1305]: New England
+        - generic [ref=e1306]: NFL · risk_budget
+        - generic [ref=e1307]: row
+      - generic [ref=e1309] [cursor=pointer]:
+        - generic [ref=e1310]: Ryan Gerard
+        - generic [ref=e1311]: Golf · risk_budget
+        - generic [ref=e1312]: row
+      - generic [ref=e1314] [cursor=pointer]:
+        - generic [ref=e1315]: Nathan Kimsey
+        - generic [ref=e1316]: Golf · risk_budget
+        - generic [ref=e1317]: row
+      - generic [ref=e1319] [cursor=pointer]:
+        - generic [ref=e1320]: Shane Lowry
+        - generic [ref=e1321]: Golf · risk_budget
+        - generic [ref=e1322]: row
+      - generic [ref=e1324] [cursor=pointer]:
+        - generic [ref=e1325]: John Parry
+        - generic [ref=e1326]: Golf · risk_budget
+        - generic [ref=e1327]: row
+      - generic [ref=e1329] [cursor=pointer]:
+        - generic [ref=e1330]: Australia
+        - generic [ref=e1331]: Soccer (World Cup) · risk_budget
+        - generic [ref=e1332]: row
+      - generic [ref=e1334] [cursor=pointer]:
+        - generic [ref=e1335]: Dustin Johnson
+        - generic [ref=e1336]: Golf · risk_budget
+        - generic [ref=e1337]: row
+      - generic [ref=e1339] [cursor=pointer]:
+        - generic [ref=e1340]: Cameron Smith
+        - generic [ref=e1341]: Golf · risk_budget
+        - generic [ref=e1342]: row
+      - generic [ref=e1344] [cursor=pointer]:
+        - generic [ref=e1345]: David Puig
+        - generic [ref=e1346]: Golf · risk_budget
+        - generic [ref=e1347]: row
+      - generic [ref=e1349] [cursor=pointer]:
+        - generic [ref=e1350]: Bryson DeChambeau
+        - generic [ref=e1351]: Golf · risk_budget
+        - generic [ref=e1352]: row
+      - generic [ref=e1354] [cursor=pointer]:
+        - generic [ref=e1355]: Carlos Ortiz
+        - generic [ref=e1356]: Golf · risk_budget
+        - generic [ref=e1357]: row
+      - generic [ref=e1359] [cursor=pointer]:
+        - generic [ref=e1360]: Jayden Trey Schaper
+        - generic [ref=e1361]: Golf · risk_budget
+        - generic [ref=e1362]: row
+      - generic [ref=e1364] [cursor=pointer]:
+        - generic [ref=e1365]: William Mouw
+        - generic [ref=e1366]: Golf · risk_budget
+        - generic [ref=e1367]: row
+      - generic [ref=e1369] [cursor=pointer]:
+        - generic [ref=e1370]: Brian Harman
+        - generic [ref=e1371]: Golf · risk_budget
+        - generic [ref=e1372]: row
+      - generic [ref=e1374] [cursor=pointer]:
+        - generic [ref=e1375]: Saudi Arabia
+        - generic [ref=e1376]: Soccer (World Cup) · risk_budget
+        - generic [ref=e1377]: row
+      - generic [ref=e1379] [cursor=pointer]:
+        - generic [ref=e1380]: Nick Taylor
+        - generic [ref=e1381]: Golf · risk_budget
+        - generic [ref=e1382]: row
+      - generic [ref=e1384] [cursor=pointer]:
+        - generic [ref=e1385]: Zac Blair
+        - generic [ref=e1386]: Golf · risk_budget
+        - generic [ref=e1387]: row
+      - generic [ref=e1389] [cursor=pointer]:
+        - generic [ref=e1390]: Hideki Matsuyama
+        - generic [ref=e1391]: Golf · risk_budget
+        - generic [ref=e1392]: row
+      - generic [ref=e1394] [cursor=pointer]:
+        - generic [ref=e1395]: Maverick McNealy
+        - generic [ref=e1396]: Golf · risk_budget
+        - generic [ref=e1397]: row
+      - generic [ref=e1399] [cursor=pointer]:
+        - generic [ref=e1400]: Austria
+        - generic [ref=e1401]: Soccer (World Cup) · risk_budget
+        - generic [ref=e1402]: row
+      - generic [ref=e1404] [cursor=pointer]:
+        - generic [ref=e1405]: Keegan Bradley
+        - generic [ref=e1406]: Golf · risk_budget
+        - generic [ref=e1407]: row
+      - generic [ref=e1409] [cursor=pointer]:
+        - generic [ref=e1410]: Los Angeles C
+        - generic [ref=e1411]: NFL · risk_budget
+        - generic [ref=e1412]: row
+      - generic [ref=e1414] [cursor=pointer]:
+        - generic [ref=e1415]: Rickie Fowler
+        - generic [ref=e1416]: Golf · risk_budget
+        - generic [ref=e1417]: row
+      - generic [ref=e1419] [cursor=pointer]:
+        - generic [ref=e1420]: Sepp Straka
+        - generic [ref=e1421]: Golf · risk_budget
+        - generic [ref=e1422]: row
+      - generic [ref=e1424] [cursor=pointer]:
+        - generic [ref=e1425]: Nicolas Echavarria
+        - generic [ref=e1426]: Golf · risk_budget
+        - generic [ref=e1427]: row
+      - generic [ref=e1429] [cursor=pointer]:
+        - generic [ref=e1430]: Baltimore
+        - generic [ref=e1431]: NFL · risk_budget
+        - generic [ref=e1432]: row
+      - generic [ref=e1434] [cursor=pointer]:
+        - generic [ref=e1435]: Kansas City
+        - generic [ref=e1436]: NFL · risk_budget
+        - generic [ref=e1437]: row
+      - generic [ref=e1439] [cursor=pointer]:
+        - generic [ref=e1440]: Alex Smalley
+        - generic [ref=e1441]: Golf · risk_budget
+        - generic [ref=e1442]: row
+      - generic [ref=e1444] [cursor=pointer]:
+        - generic [ref=e1445]: Ghana
+        - generic [ref=e1446]: Soccer (World Cup) · risk_budget
+        - generic [ref=e1447]: row
+      - generic [ref=e1449] [cursor=pointer]:
+        - generic [ref=e1450]: Congo DR
+        - generic [ref=e1451]: Soccer (World Cup) · risk_budget
+        - generic [ref=e1452]: row
+      - generic [ref=e1454] [cursor=pointer]:
+        - generic [ref=e1455]: Aaron Rai
+        - generic [ref=e1456]: Golf · risk_budget
+        - generic [ref=e1457]: row
+      - generic [ref=e1459] [cursor=pointer]:
+        - generic [ref=e1460]: Harris English
+        - generic [ref=e1461]: Golf · risk_budget
+        - generic [ref=e1462]: row
+      - generic [ref=e1464] [cursor=pointer]:
+        - generic [ref=e1465]: Egypt
+        - generic [ref=e1466]: Soccer (World Cup) · risk_budget
+        - generic [ref=e1467]: row
+      - generic [ref=e1469] [cursor=pointer]:
+        - generic [ref=e1470]: Michael Brennan
+        - generic [ref=e1471]: Golf · risk_budget
+        - generic [ref=e1472]: row
+      - generic [ref=e1474] [cursor=pointer]:
+        - generic [ref=e1475]: Colombia
+        - generic [ref=e1476]: Soccer (World Cup) · risk_budget
+        - generic [ref=e1477]: row
+      - generic [ref=e1479] [cursor=pointer]:
+        - generic [ref=e1480]: Jordan Spieth
+        - generic [ref=e1481]: Golf · risk_budget
+        - generic [ref=e1482]: row
+      - generic [ref=e1484] [cursor=pointer]:
+        - generic [ref=e1485]: Mexico
+        - generic [ref=e1486]: Soccer (World Cup) · risk_budget
+        - generic [ref=e1487]: row
+      - generic [ref=e1489] [cursor=pointer]:
+        - generic [ref=e1490]: Wyndham Clark
+        - generic [ref=e1491]: Golf · risk_budget
+        - generic [ref=e1492]: row
+      - generic [ref=e1494] [cursor=pointer]:
+        - generic [ref=e1495]: Patrick Cantlay
+        - generic [ref=e1496]: Golf · risk_budget
+        - generic [ref=e1497]: row
+      - generic [ref=e1499] [cursor=pointer]:
+        - generic [ref=e1500]: Buffalo
+        - generic [ref=e1501]: NFL · risk_budget
+        - generic [ref=e1502]: row
+      - generic [ref=e1504] [cursor=pointer]:
+        - generic [ref=e1505]: Gary Woodland
+        - generic [ref=e1506]: Golf · risk_budget
+        - generic [ref=e1507]: row
+      - generic [ref=e1509] [cursor=pointer]:
+        - generic [ref=e1510]: Jacob Bridgeman
+        - generic [ref=e1511]: Golf · risk_budget
+        - generic [ref=e1512]: row
+      - generic [ref=e1514] [cursor=pointer]:
+        - generic [ref=e1515]: IR Iran
+        - generic [ref=e1516]: Soccer (World Cup) · risk_budget
+        - generic [ref=e1517]: row
+      - generic [ref=e1519] [cursor=pointer]:
+        - generic [ref=e1520]: Jackson Koivun
+        - generic [ref=e1521]: Golf · risk_budget
+        - generic [ref=e1522]: row
+      - generic [ref=e1524] [cursor=pointer]:
+        - generic [ref=e1525]: Uzbekistan
+        - generic [ref=e1526]: Soccer (World Cup) · risk_budget
+        - generic [ref=e1527]: row
+      - generic [ref=e1529] [cursor=pointer]:
+        - generic [ref=e1530]: Norway
+        - generic [ref=e1531]: Soccer (World Cup) · risk_budget
+        - generic [ref=e1532]: row
+      - generic [ref=e1534] [cursor=pointer]:
+        - generic [ref=e1535]: Iraq
+        - generic [ref=e1536]: Soccer (World Cup) · risk_budget
+        - generic [ref=e1537]: row
+      - generic [ref=e1539] [cursor=pointer]:
+        - generic [ref=e1540]: Rocco Repetto Taylor
+        - generic [ref=e1541]: Golf · risk_budget
+        - generic [ref=e1542]: row
+      - generic [ref=e1544] [cursor=pointer]:
+        - generic [ref=e1545]: Tyrrell Hatton
+        - generic [ref=e1546]: Golf · risk_budget
+        - generic [ref=e1547]: row
+      - generic [ref=e1549] [cursor=pointer]:
+        - generic [ref=e1550]: Brooks Koepka
+        - generic [ref=e1551]: Golf · risk_budget
+        - generic [ref=e1552]: row
+      - generic [ref=e1554] [cursor=pointer]:
+        - generic [ref=e1555]: Pierceson Coody
+        - generic [ref=e1556]: Golf · risk_budget
+        - generic [ref=e1557]: row
+      - generic [ref=e1559] [cursor=pointer]:
+        - generic [ref=e1560]: Patrick Reed
+        - generic [ref=e1561]: Golf · risk_budget
+        - generic [ref=e1562]: row
+      - generic [ref=e1564] [cursor=pointer]:
+        - generic [ref=e1565]: John Keefer
+        - generic [ref=e1566]: Golf · risk_budget
+        - generic [ref=e1567]: row
+      - generic [ref=e1569] [cursor=pointer]:
+        - generic [ref=e1570]: Ben Kohles
+        - generic [ref=e1571]: Golf · risk_budget
+        - generic [ref=e1572]: row
+      - generic [ref=e1574] [cursor=pointer]:
+        - generic [ref=e1575]: Viktor Hovland
+        - generic [ref=e1576]: Golf · risk_budget
+        - generic [ref=e1577]: row
+      - generic [ref=e1579] [cursor=pointer]:
+        - generic [ref=e1580]: Min Woo Lee
+        - generic [ref=e1581]: Golf · risk_budget
+        - generic [ref=e1582]: row
+      - generic [ref=e1584] [cursor=pointer]:
+        - generic [ref=e1585]: Alex Fitzpatrick
+        - generic [ref=e1586]: Golf · risk_budget
+        - generic [ref=e1587]: row
+      - generic [ref=e1589] [cursor=pointer]:
+        - generic [ref=e1590]: Robert MacIntyre
+        - generic [ref=e1591]: Golf · risk_budget
+        - generic [ref=e1592]: row
+      - generic [ref=e1594] [cursor=pointer]:
+        - generic [ref=e1595]: Jackson Suber
+        - generic [ref=e1596]: Golf · risk_budget
+        - generic [ref=e1597]: row
+      - generic [ref=e1599] [cursor=pointer]:
+        - generic [ref=e1600]: Cooper Dossey
+        - generic [ref=e1601]: Golf · risk_budget
+        - generic [ref=e1602]: row
+      - generic [ref=e1604] [cursor=pointer]:
+        - generic [ref=e1605]: Bud Cauley
+        - generic [ref=e1606]: Golf · risk_budget
+        - generic [ref=e1607]: row
+      - generic [ref=e1609] [cursor=pointer]:
+        - generic [ref=e1610]: Kristoffer Reitan
+        - generic [ref=e1611]: Golf · risk_budget
+        - generic [ref=e1612]: row
+      - generic [ref=e1614] [cursor=pointer]:
+        - generic [ref=e1615]: Los Angeles R
+        - generic [ref=e1616]: NFL · risk_budget
+        - generic [ref=e1617]: row
+      - generic [ref=e1619] [cursor=pointer]:
+        - generic [ref=e1620]: Collin Morikawa
+        - generic [ref=e1621]: Golf · risk_budget
+        - generic [ref=e1622]: row
+      - generic [ref=e1624] [cursor=pointer]:
+        - generic [ref=e1625]: Adam Scott
+        - generic [ref=e1626]: Golf · risk_budget
+        - generic [ref=e1627]: row
+      - generic [ref=e1629] [cursor=pointer]:
+        - generic [ref=e1630]: Kurt Kitayama
+        - generic [ref=e1631]: Golf · risk_budget
+        - generic [ref=e1632]: row
+      - generic [ref=e1634] [cursor=pointer]:
+        - generic [ref=e1635]: Jake Knapp
+        - generic [ref=e1636]: Golf · risk_budget
+        - generic [ref=e1637]: row
+      - generic [ref=e1639] [cursor=pointer]:
+        - generic [ref=e1640]: Si Woo Kim
+        - generic [ref=e1641]: Golf · risk_budget
+        - generic [ref=e1642]: row
+      - generic [ref=e1644] [cursor=pointer]:
+        - generic [ref=e1645]: Sudarshan Yellamaraju
+        - generic [ref=e1646]: Golf · risk_budget
+        - generic [ref=e1647]: row
+      - generic [ref=e1649] [cursor=pointer]:
+        - generic [ref=e1650]: Andrew Putnam
+        - generic [ref=e1651]: Golf · risk_budget
+        - generic [ref=e1652]: row
+      - generic [ref=e1654] [cursor=pointer]:
+        - generic [ref=e1655]: Sam Burns
+        - generic [ref=e1656]: Golf · risk_budget
+        - generic [ref=e1657]: row
+      - generic [ref=e1659] [cursor=pointer]:
+        - generic [ref=e1660]: Ben Griffin
+        - generic [ref=e1661]: Golf · risk_budget
+        - generic [ref=e1662]: row
+      - generic [ref=e1664] [cursor=pointer]:
+        - generic [ref=e1665]: J.J. Spaun
+        - generic [ref=e1666]: Golf · risk_budget
+        - generic [ref=e1667]: row
+      - generic [ref=e1669] [cursor=pointer]:
+        - generic [ref=e1670]: Canada
+        - generic [ref=e1671]: Soccer (World Cup) · risk_budget
+        - generic [ref=e1672]: row
+      - generic [ref=e1674] [cursor=pointer]:
+        - generic [ref=e1675]: Cameron Young
+        - generic [ref=e1676]: Golf · risk_budget
+        - generic [ref=e1677]: row
+      - generic [ref=e1679] [cursor=pointer]:
+        - generic [ref=e1680]: Chris Gotterup
+        - generic [ref=e1681]: Golf · risk_budget
+        - generic [ref=e1682]: row
+      - generic [ref=e1684] [cursor=pointer]:
+        - generic [ref=e1685]: Justin Rose
+        - generic [ref=e1686]: Golf · risk_budget
+        - generic [ref=e1687]: row
+      - generic [ref=e1689] [cursor=pointer]:
+        - generic [ref=e1690]: Joaquin Niemann
+        - generic [ref=e1691]: Golf · risk_budget
+        - generic [ref=e1692]: row
+      - generic [ref=e1694] [cursor=pointer]:
+        - generic [ref=e1695]: Ryan Fox
+        - generic [ref=e1696]: Golf · risk_budget
+        - generic [ref=e1697]: row
+      - generic [ref=e1699] [cursor=pointer]:
+        - generic [ref=e1700]: Ludvig Aberg
+        - generic [ref=e1701]: Golf · risk_budget
+        - generic [ref=e1702]: row
+      - generic [ref=e1704] [cursor=pointer]:
+        - generic [ref=e1705]: Korea Republic
+        - generic [ref=e1706]: Soccer (World Cup) · risk_budget
+        - generic [ref=e1707]: row
+      - generic [ref=e1709] [cursor=pointer]:
+        - generic [ref=e1710]: Justin Thomas
+        - generic [ref=e1711]: Golf · risk_budget
+        - generic [ref=e1712]: row
+      - generic [ref=e1714] [cursor=pointer]:
+        - generic [ref=e1715]: Layne Riggs
+        - generic [ref=e1716]: Motorsport · risk_budget
+        - generic [ref=e1717]: row
+      - generic [ref=e1719] [cursor=pointer]:
+        - generic [ref=e1720]: Keith Mitchell
+        - generic [ref=e1721]: Golf · risk_budget
+        - generic [ref=e1722]: row
+      - generic [ref=e1724] [cursor=pointer]:
+        - generic [ref=e1725]: Germany
+        - generic [ref=e1726]: Soccer (World Cup) · risk_budget
+        - generic [ref=e1727]: row
+      - generic [ref=e1729] [cursor=pointer]:
+        - generic [ref=e1730]: Sam Stevens
+        - generic [ref=e1731]: Golf · risk_budget
+        - generic [ref=e1732]: row
+      - generic [ref=e1734] [cursor=pointer]:
+        - generic [ref=e1735]: Cincinnati
+        - generic [ref=e1736]: MLB · risk_budget
+        - generic [ref=e1737]: row
+      - generic [ref=e1739] [cursor=pointer]:
+        - generic [ref=e1740]: France
+        - generic [ref=e1741]: Soccer (World Cup) · risk_budget
+        - generic [ref=e1742]: row
+      - generic [ref=e1744] [cursor=pointer]:
+        - generic [ref=e1745]: Max Greyserman
+        - generic [ref=e1746]: Golf · risk_budget
+        - generic [ref=e1747]: row
+      - generic [ref=e1749] [cursor=pointer]:
+        - generic [ref=e1750]: Jon Rahm
+        - generic [ref=e1751]: Golf · risk_budget
+        - generic [ref=e1752]: row
+      - generic [ref=e1754] [cursor=pointer]:
+        - generic [ref=e1755]: Russell Henley
+        - generic [ref=e1756]: Golf · risk_budget
+        - generic [ref=e1757]: row
+      - generic [ref=e1759] [cursor=pointer]:
+        - generic [ref=e1760]: Rory McIlroy
+        - generic [ref=e1761]: Golf · risk_budget
+        - generic [ref=e1762]: row
+      - generic [ref=e1764] [cursor=pointer]:
+        - generic [ref=e1765]: Tommy Fleetwood
+        - generic [ref=e1766]: Golf · risk_budget
+        - generic [ref=e1767]: row
+      - generic [ref=e1769] [cursor=pointer]:
+        - generic [ref=e1770]: England
+        - generic [ref=e1771]: Soccer (World Cup) · risk_budget
+        - generic [ref=e1772]: row
+      - generic [ref=e1774] [cursor=pointer]:
+        - generic [ref=e1775]: Matt Fitzpatrick
+        - generic [ref=e1776]: Golf · risk_budget
+        - generic [ref=e1777]: row
+      - generic [ref=e1779] [cursor=pointer]:
+        - generic [ref=e1780]: Ty Gibbs
+        - generic [ref=e1781]: Motorsport · risk_budget
+        - generic [ref=e1782]: row
+      - generic [ref=e1784] [cursor=pointer]:
+        - generic [ref=e1785]: Michael McDowell
+        - generic [ref=e1786]: Motorsport · risk_budget
+        - generic [ref=e1787]: row
+      - generic [ref=e1789] [cursor=pointer]:
+        - generic [ref=e1790]: Scottie Scheffler
+        - generic [ref=e1791]: Golf · risk_budget
+        - generic [ref=e1792]: row
+      - generic [ref=e1794] [cursor=pointer]:
+        - generic [ref=e1795]: Ben Rhodes
+        - generic [ref=e1796]: Motorsport · risk_budget
+        - generic [ref=e1797]: row
+      - generic [ref=e1799] [cursor=pointer]:
+        - generic [ref=e1800]: Jordan
+        - generic [ref=e1801]: Soccer (World Cup) · risk_budget
+        - generic [ref=e1802]: row
+      - generic [ref=e1804] [cursor=pointer]:
+        - generic [ref=e1805]: Marco Penge
+        - generic [ref=e1806]: Golf · risk_budget
+        - generic [ref=e1807]: row
+      - generic [ref=e1809] [cursor=pointer]:
+        - generic [ref=e1810]: New York M
+        - generic [ref=e1811]: MLB · risk_budget
+        - generic [ref=e1812]: row
+      - generic [ref=e1814] [cursor=pointer]:
+        - generic [ref=e1815]: Xander Schauffele
+        - generic [ref=e1816]: Golf · risk_budget
+        - generic [ref=e1817]: row
+      - generic [ref=e1819] [cursor=pointer]:
+        - generic [ref=e1820]: Chase Briscoe
+        - generic [ref=e1821]: Motorsport · risk_budget
+        - generic [ref=e1822]: row
+      - generic [ref=e1824] [cursor=pointer]:
+        - generic [ref=e1825]: William Byron
+        - generic [ref=e1826]: Motorsport · risk_budget
+        - generic [ref=e1827]: row
+      - generic [ref=e1829] [cursor=pointer]:
+        - generic [ref=e1830]: Chase Elliott
+        - generic [ref=e1831]: Motorsport · risk_budget
+        - generic [ref=e1832]: row
+      - generic [ref=e1834] [cursor=pointer]:
+        - generic [ref=e1835]: Carson Hocevar
+        - generic [ref=e1836]: Motorsport · risk_budget
+        - generic [ref=e1837]: row
+      - generic [ref=e1839] [cursor=pointer]:
+        - generic [ref=e1840]: Chris Buescher
+        - generic [ref=e1841]: Motorsport · risk_budget
+        - generic [ref=e1842]: row
+      - generic [ref=e1844] [cursor=pointer]:
+        - generic [ref=e1845]: AJ Allmendinger
+        - generic [ref=e1846]: Motorsport · risk_budget
+        - generic [ref=e1847]: row
+      - generic [ref=e1849] [cursor=pointer]:
+        - generic [ref=e1850]: Kyle Larson
+        - generic [ref=e1851]: Motorsport · risk_budget
+        - generic [ref=e1852]: row
+      - generic [ref=e1854] [cursor=pointer]:
+        - generic [ref=e1855]: Las Vegas
+        - generic [ref=e1856]: NFL · risk_budget
+        - generic [ref=e1857]: row
+      - generic [ref=e1859] [cursor=pointer]:
+        - generic [ref=e1860]: Jimmie Johnson
+        - generic [ref=e1861]: Motorsport · risk_budget
+        - generic [ref=e1862]: row
+      - generic [ref=e1864] [cursor=pointer]:
+        - generic [ref=e1865]: Ryan Blaney
+        - generic [ref=e1866]: Motorsport · risk_budget
+        - generic [ref=e1867]: row
+      - generic [ref=e1869] [cursor=pointer]:
+        - generic [ref=e1870]: Daniel Suárez
+        - generic [ref=e1871]: Motorsport · risk_budget
+        - generic [ref=e1872]: row
+      - generic [ref=e1874] [cursor=pointer]:
+        - generic [ref=e1875]: Connor Mosack
+        - generic [ref=e1876]: Motorsport · risk_budget
+        - generic [ref=e1877]: row
+      - generic [ref=e1879] [cursor=pointer]:
+        - generic [ref=e1880]: Giovanni Ruggiero
+        - generic [ref=e1881]: Motorsport · risk_budget
+        - generic [ref=e1882]: row
+      - generic [ref=e1884] [cursor=pointer]:
+        - generic [ref=e1885]: Ross Chastain
+        - generic [ref=e1886]: Motorsport · risk_budget
+        - generic [ref=e1887]: row
+      - generic [ref=e1889] [cursor=pointer]:
+        - generic [ref=e1890]: Boston
+        - generic [ref=e1891]: MLB · risk_budget
+        - generic [ref=e1892]: row
+      - generic [ref=e1894] [cursor=pointer]:
+        - generic [ref=e1895]: Chandler Smith
+        - generic [ref=e1896]: Motorsport · risk_budget
+        - generic [ref=e1897]: row
+      - generic [ref=e1899] [cursor=pointer]:
+        - generic [ref=e1900]: Stewart Friesen
+        - generic [ref=e1901]: Motorsport · risk_budget
+        - generic [ref=e1902]: row
+      - generic [ref=e1904] [cursor=pointer]:
+        - generic [ref=e1905]: Denny Hamlin
+        - generic [ref=e1906]: Motorsport · risk_budget
+        - generic [ref=e1907]: row
+      - generic [ref=e1908] [cursor=pointer]: +359 more — keep typing to narrow
+    - generic [ref=e1909]:
+      - generic [ref=e1910]: ↑↓ move
+      - generic [ref=e1911]: ↵ run
+      - generic [ref=e1912]: esc close
+      - generic [ref=e1913]: discoverable — start typing

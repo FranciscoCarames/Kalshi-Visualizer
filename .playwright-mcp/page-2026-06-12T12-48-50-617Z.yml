@@ -1,0 +1,1728 @@
+- main [ref=e5]:
+  - generic [ref=e6]:
+    - generic [ref=e7]: Kalshi Opportunity Engine — Cross-Sport
+    - generic [ref=e8]: Opportunities across all sports, ranked best→worst. Core series, gross of fees — NOT all of Kalshi.
+    - generic [ref=e9]:
+      - generic [ref=e12] [cursor=pointer]:
+        - generic [ref=e13]:
+          - generic: Sport
+          - generic "Filter by sport" [ref=e14]:
+            - combobox "Sport" [ref=e15]
+        - generic [ref=e17]: arrow_drop_down
+      - generic [ref=e20] [cursor=pointer]:
+        - generic [ref=e21]:
+          - generic: Tournament
+          - generic "Filter by tournament" [ref=e22]:
+            - combobox "Tournament" [ref=e23]
+        - generic [ref=e25]: arrow_drop_down
+      - generic [ref=e28]:
+        - generic [ref=e29]:
+          - generic: Players / matches
+          - combobox "Filter by players or matches" [ref=e31]
+        - generic [ref=e33] [cursor=pointer]: arrow_drop_down
+      - generic [ref=e37]:
+        - generic: Min size
+        - spinbutton "Minimum tradable size" [ref=e38]
+      - button "Refresh snapshot" [ref=e39] [cursor=pointer]:
+        - generic [ref=e41]: Refresh snapshot
+      - button "Clear all filters" [ref=e42] [cursor=pointer]:
+        - generic [ref=e44]: Clear filters
+      - button "Open settings" [ref=e45] [cursor=pointer]:
+        - img [ref=e47]: settings
+    - generic [ref=e48]:
+      - generic [ref=e49]: Data 13:47:43 WEST · age 64s · 2,926 opportunities · 93 series · 1 failed · 4,099 contracts scanned · 1,987 checks tested · 290 Kalshi requests
+      - generic "Scan in progress indicator" [ref=e50]: Scanning — new data shortly…
+    - generic [ref=e51]: "Actionable: 12 shown · Review: 12 shown · Blocked: hidden by settings (2 in scope) · Speculative: 333 shown · Near-miss: 247 shown · Qualifier setups: 51 shown · Cheap NO fades: 615 shown"
+    - generic [ref=e52]: 1 newly actionable
+    - separator [ref=e53]
+    - generic [ref=e55]:
+      - button "Collapse" [expanded] [ref=e56] [cursor=pointer]:
+        - generic [ref=e57]:
+          - generic [ref=e58]: unfold_more
+          - generic [ref=e59]: Actionable — executable gross edges (12)
+          - button [ref=e61]:
+            - img [ref=e63]: view_column
+        - generic [ref=e65]: keyboard_arrow_down
+      - generic [ref=e67]:
+        - generic [ref=e68]: Firm, sized, currently-tradable gross pricing discrepancies. Gross of fees.
+        - generic "Actionable opportunities" [ref=e69]:
+          - table [ref=e71]:
+            - rowgroup [ref=e72]:
+              - row "Sport Participant / match Detail Action plan Gross edge ¢ ROI % Max units Max gross profit Tradable Caveat" [ref=e73]:
+                - columnheader [ref=e74]
+                - columnheader [ref=e75]
+                - columnheader "Sport" [ref=e76] [cursor=pointer]:
+                  - text: Sport
+                  - generic [ref=e77]: arrow_upward
+                - columnheader "Participant / match" [ref=e78] [cursor=pointer]:
+                  - text: Participant / match
+                  - generic [ref=e79]: arrow_upward
+                - columnheader "Detail" [ref=e80]
+                - columnheader "Action plan" [ref=e81]
+                - columnheader "Gross edge ¢" [ref=e82] [cursor=pointer]:
+                  - text: Gross edge ¢
+                  - generic [ref=e83]: arrow_upward
+                - columnheader "ROI %" [ref=e84] [cursor=pointer]:
+                  - text: ROI %
+                  - generic [ref=e85]: arrow_upward
+                - columnheader "Max units" [ref=e86] [cursor=pointer]:
+                  - text: Max units
+                  - generic [ref=e87]: arrow_upward
+                - columnheader "Max gross profit" [ref=e88] [cursor=pointer]:
+                  - text: Max gross profit
+                  - generic [ref=e89]: arrow_upward
+                - columnheader "Tradable" [ref=e90]
+                - columnheader "Caveat" [ref=e91]
+            - rowgroup [ref=e92]:
+              - row "Esports FUT Esports vs EDward Gaming overround Buy NO — FUT Esports @ 43¢ + Buy NO — EDward Gaming @ 54¢ 3 3.1 162.49 4.87 Yes" [ref=e93]:
+                - cell [ref=e94]:
+                  - checkbox [ref=e95] [cursor=pointer]:
+                    - img [ref=e98]
+                - cell [ref=e100]
+                - cell "Esports" [ref=e101]
+                - cell "FUT Esports vs EDward Gaming" [ref=e102]
+                - cell "overround" [ref=e103]
+                - cell "Buy NO — FUT Esports @ 43¢ + Buy NO — EDward Gaming @ 54¢" [ref=e104]
+                - cell "3" [ref=e105]:
+                  - generic [ref=e106]: "3"
+                - cell "3.1" [ref=e107]
+                - cell "162.49" [ref=e108]
+                - cell "4.87" [ref=e109]
+                - cell "Yes" [ref=e110]
+                - cell [ref=e111]:
+                  - status [ref=e112]: Settlement caveat
+              - row "Tennis Francesca Curmi vs Elena Ruxandra Bertea overround Buy NO — Francesca Curmi @ 42¢ + Buy NO — Elena Ruxandra Bertea @ 55¢ 3 3.1 136 4.08 Yes" [ref=e113]:
+                - cell [ref=e114]:
+                  - checkbox [ref=e115] [cursor=pointer]:
+                    - img [ref=e118]
+                - cell [ref=e120]:
+                  - status [ref=e121]: NEW
+                - cell "Tennis" [ref=e122]
+                - cell "Francesca Curmi vs Elena Ruxandra Bertea" [ref=e123]
+                - cell "overround" [ref=e124]
+                - cell "Buy NO — Francesca Curmi @ 42¢ + Buy NO — Elena Ruxandra Bertea @ 55¢" [ref=e125]
+                - cell "3" [ref=e126]:
+                  - generic [ref=e127]: "3"
+                - cell "3.1" [ref=e128]
+                - cell "136" [ref=e129]
+                - cell "4.08" [ref=e130]
+                - cell "Yes" [ref=e131]
+                - cell [ref=e132]
+              - row "Motorsport NASCAR Cup Series · main-race · GREAG4PB26 winner field overround 20-leg plan — open details for legs 5 0.3 2.25 0.11 Yes" [ref=e133]:
+                - cell [ref=e134]:
+                  - checkbox [ref=e135] [cursor=pointer]:
+                    - img [ref=e138]
+                - cell [ref=e140]
+                - cell "Motorsport" [ref=e141]
+                - cell "NASCAR Cup Series · main-race · GREAG4PB26 winner field" [ref=e142]
+                - cell "overround" [ref=e143]
+                - cell "20-leg plan — open details for legs" [ref=e144]
+                - cell "5" [ref=e145]:
+                  - generic [ref=e146]: "5"
+                - cell "0.3" [ref=e147]
+                - cell "2.25" [ref=e148]
+                - cell "0.11" [ref=e149]
+                - cell "Yes" [ref=e150]
+                - cell [ref=e151]:
+                  - status [ref=e152]: Settlement caveat
+              - row "Soccer (World Cup) Group Stage — stage of elimination underround 7-leg plan — open details for legs 2 2 0.66 0.01 Yes" [ref=e153]:
+                - cell [ref=e154]:
+                  - checkbox [ref=e155] [cursor=pointer]:
+                    - img [ref=e158]
+                - cell [ref=e160]
+                - cell "Soccer (World Cup)" [ref=e161]
+                - cell "Group Stage — stage of elimination" [ref=e162]
+                - cell "underround" [ref=e163]
+                - cell "7-leg plan — open details for legs" [ref=e164]
+                - cell "2" [ref=e165]:
+                  - generic [ref=e166]: "2"
+                - cell "2" [ref=e167]
+                - cell "0.66" [ref=e168]
+                - cell "0.01" [ref=e169]
+                - cell "Yes" [ref=e170]
+                - cell [ref=e171]
+              - row "Soccer (World Cup) Group K Team to Finish Bottom 🏆 WC Qualifier · no_basket 4-leg plan — open details for legs 2 0.7 250 5 Yes" [ref=e172]:
+                - cell [ref=e173]:
+                  - checkbox [ref=e174] [cursor=pointer]:
+                    - img [ref=e177]
+                - cell [ref=e179]
+                - cell "Soccer (World Cup)" [ref=e180]
+                - cell "Group K Team to Finish Bottom" [ref=e181]
+                - cell "🏆 WC Qualifier · no_basket" [ref=e182]
+                - cell "4-leg plan — open details for legs" [ref=e183]
+                - cell "2" [ref=e184]:
+                  - generic [ref=e185]: "2"
+                - cell "0.7" [ref=e186]
+                - cell "250" [ref=e187]
+                - cell "5" [ref=e188]
+                - cell "Yes" [ref=e189]
+                - cell [ref=e190]:
+                  - status [ref=e191]: Settlement caveat
+              - row "NFL Los Angeles R vs San Francisco overround Buy NO — Los Angeles R @ 38¢ + Buy NO — San Francisco @ 61¢ 1 1 16 0.16 Yes" [ref=e192]:
+                - cell [ref=e193]:
+                  - checkbox [ref=e194] [cursor=pointer]:
+                    - img [ref=e197]
+                - cell [ref=e199]
+                - cell "NFL" [ref=e200]
+                - cell "Los Angeles R vs San Francisco" [ref=e201]
+                - cell "overround" [ref=e202]
+                - cell "Buy NO — Los Angeles R @ 38¢ + Buy NO — San Francisco @ 61¢" [ref=e203]
+                - cell "1" [ref=e204]:
+                  - generic [ref=e205]: "1"
+                - cell "1" [ref=e206]
+                - cell "16" [ref=e207]
+                - cell "0.16" [ref=e208]
+                - cell "Yes" [ref=e209]
+                - cell [ref=e210]:
+                  - status [ref=e211]: Settlement caveat
+              - row "MLB Detroit vs Cleveland underround Buy YES — Detroit @ 55¢ + Buy YES — Cleveland @ 44¢ 1 1 584.96 5.85 Yes" [ref=e212]:
+                - cell [ref=e213]:
+                  - checkbox [ref=e214] [cursor=pointer]:
+                    - img [ref=e217]
+                - cell [ref=e219]
+                - cell "MLB" [ref=e220]
+                - cell "Detroit vs Cleveland" [ref=e221]
+                - cell "underround" [ref=e222]
+                - cell "Buy YES — Detroit @ 55¢ + Buy YES — Cleveland @ 44¢" [ref=e223]
+                - cell "1" [ref=e224]:
+                  - generic [ref=e225]: "1"
+                - cell "1" [ref=e226]
+                - cell "584.96" [ref=e227]
+                - cell "5.85" [ref=e228]
+                - cell "Yes" [ref=e229]
+                - cell [ref=e230]:
+                  - status [ref=e231]: Settlement caveat
+              - row "Motorsport NASCAR Cup Series · main-race · GREAG4PB26 winner field overround 18-leg plan — open details for legs 2 0.1 0.13 0 Yes" [ref=e232]:
+                - cell [ref=e233]:
+                  - checkbox [ref=e234] [cursor=pointer]:
+                    - img [ref=e237]
+                - cell [ref=e239]
+                - cell "Motorsport" [ref=e240]
+                - cell "NASCAR Cup Series · main-race · GREAG4PB26 winner field" [ref=e241]
+                - cell "overround" [ref=e242]
+                - cell "18-leg plan — open details for legs" [ref=e243]
+                - cell "2" [ref=e244]:
+                  - generic [ref=e245]: "2"
+                - cell "0.1" [ref=e246]
+                - cell "0.13" [ref=e247]
+                - cell "0" [ref=e248]
+                - cell "Yes" [ref=e249]
+                - cell [ref=e250]:
+                  - status [ref=e251]: Settlement caveat
+              - row "Soccer (World Cup) Mexico vs Korea Republic overround 3-leg plan — open details for legs 1 0.5 5,679.71 56.8 Yes" [ref=e252]:
+                - cell [ref=e253]:
+                  - checkbox [ref=e254] [cursor=pointer]:
+                    - img [ref=e257]
+                - cell [ref=e259]
+                - cell "Soccer (World Cup)" [ref=e260]
+                - cell "Mexico vs Korea Republic" [ref=e261]
+                - cell "overround" [ref=e262]
+                - cell "3-leg plan — open details for legs" [ref=e263]
+                - cell "1" [ref=e264]:
+                  - generic [ref=e265]: "1"
+                - cell "0.5" [ref=e266]
+                - cell "5,679.71" [ref=e267]
+                - cell "56.8" [ref=e268]
+                - cell "Yes" [ref=e269]
+                - cell [ref=e270]:
+                  - status [ref=e271]: Settlement caveat
+              - row "Soccer (World Cup) Argentina vs Austria overround 3-leg plan — open details for legs 1 0.5 27.25 0.27 Yes" [ref=e272]:
+                - cell [ref=e273]:
+                  - checkbox [ref=e274] [cursor=pointer]:
+                    - img [ref=e277]
+                - cell [ref=e279]
+                - cell "Soccer (World Cup)" [ref=e280]
+                - cell "Argentina vs Austria" [ref=e281]
+                - cell "overround" [ref=e282]
+                - cell "3-leg plan — open details for legs" [ref=e283]
+                - cell "1" [ref=e284]:
+                  - generic [ref=e285]: "1"
+                - cell "0.5" [ref=e286]
+                - cell "27.25" [ref=e287]
+                - cell "0.27" [ref=e288]
+                - cell "Yes" [ref=e289]
+                - cell [ref=e290]:
+                  - status [ref=e291]: Settlement caveat
+              - row "Motorsport F1 · main-race · BARGP26 winner field overround 8-leg plan — open details for legs 1 0.1 1 0.01 Yes" [ref=e292]:
+                - cell [ref=e293]:
+                  - checkbox [ref=e294] [cursor=pointer]:
+                    - img [ref=e297]
+                - cell [ref=e299]
+                - cell "Motorsport" [ref=e300]
+                - cell "F1 · main-race · BARGP26 winner field" [ref=e301]
+                - cell "overround" [ref=e302]
+                - cell "8-leg plan — open details for legs" [ref=e303]
+                - cell "1" [ref=e304]:
+                  - generic [ref=e305]: "1"
+                - cell "0.1" [ref=e306]
+                - cell "1" [ref=e307]
+                - cell "0.01" [ref=e308]
+                - cell "Yes" [ref=e309]
+                - cell [ref=e310]:
+                  - status [ref=e311]: Settlement caveat
+              - row "Motorsport NASCAR O'Reilly Auto Parts Series · main-race · MILB2PB26 winner field overround 18-leg plan — open details for legs 1 0.1 33.82 0.34 Yes" [ref=e312]:
+                - cell [ref=e313]:
+                  - checkbox [ref=e314] [cursor=pointer]:
+                    - img [ref=e317]
+                - cell [ref=e319]
+                - cell "Motorsport" [ref=e320]
+                - cell "NASCAR O'Reilly Auto Parts Series · main-race · MILB2PB26 winner field" [ref=e321]
+                - cell "overround" [ref=e322]
+                - cell "18-leg plan — open details for legs" [ref=e323]
+                - cell "1" [ref=e324]:
+                  - generic [ref=e325]: "1"
+                - cell "0.1" [ref=e326]
+                - cell "33.82" [ref=e327]
+                - cell "0.34" [ref=e328]
+                - cell "Yes" [ref=e329]
+                - cell [ref=e330]:
+                  - status [ref=e331]: Settlement caveat
+          - generic [ref=e332]:
+            - generic [ref=e333]:
+              - generic [ref=e334]: "Records per page:"
+              - generic [ref=e337] [cursor=pointer]:
+                - generic [ref=e339]:
+                  - generic [ref=e340]: "15"
+                  - combobox "15" [ref=e341]
+                - generic [ref=e343]: arrow_drop_down
+            - generic [ref=e345]: 1-12 of 12
+    - generic [ref=e347]:
+      - button "Collapse" [expanded] [ref=e348] [cursor=pointer]:
+        - generic [ref=e349]:
+          - generic [ref=e350]: unfold_more
+          - generic [ref=e351]: Review Required — settlement-dependent (12)
+          - button [ref=e353]:
+            - img [ref=e355]: view_column
+        - generic [ref=e357]: keyboard_arrow_down
+      - generic [ref=e359]:
+        - generic [ref=e360]: Real, executable-looking edges whose legs may not settle together (e.g. an exact-score bundle vs the match winner) — verify the settlement rules first; never auto-tradable.
+        - generic "Review-required opportunities" [ref=e361]:
+          - table [ref=e363]:
+            - rowgroup [ref=e364]:
+              - row "Sport Participant / match Detail Action plan Gross edge ¢ ROI % Max units Max gross profit Tradable Caveat" [ref=e365]:
+                - columnheader [ref=e366]
+                - columnheader [ref=e367]
+                - columnheader "Sport" [ref=e368] [cursor=pointer]:
+                  - text: Sport
+                  - generic [ref=e369]: arrow_upward
+                - columnheader "Participant / match" [ref=e370] [cursor=pointer]:
+                  - text: Participant / match
+                  - generic [ref=e371]: arrow_upward
+                - columnheader "Detail" [ref=e372]
+                - columnheader "Action plan" [ref=e373]
+                - columnheader "Gross edge ¢" [ref=e374] [cursor=pointer]:
+                  - text: Gross edge ¢
+                  - generic [ref=e375]: arrow_upward
+                - columnheader "ROI %" [ref=e376] [cursor=pointer]:
+                  - text: ROI %
+                  - generic [ref=e377]: arrow_upward
+                - columnheader "Max units" [ref=e378] [cursor=pointer]:
+                  - text: Max units
+                  - generic [ref=e379]: arrow_upward
+                - columnheader "Max gross profit" [ref=e380] [cursor=pointer]:
+                  - text: Max gross profit
+                  - generic [ref=e381]: arrow_upward
+                - columnheader "Tradable" [ref=e382]
+                - columnheader "Caveat" [ref=e383]
+            - rowgroup [ref=e384]:
+              - row "Soccer (World Cup) Quarterfinals — Reach Quarterfinals (synthetic vs advance) forward 5-leg plan — open details for legs 4 4.2 0.56 0.02 Review rules" [ref=e385]:
+                - cell [ref=e386]:
+                  - checkbox [ref=e387] [cursor=pointer]:
+                    - img [ref=e390]
+                - cell [ref=e392]
+                - cell "Soccer (World Cup)" [ref=e393]
+                - cell "Quarterfinals — Reach Quarterfinals (synthetic vs advance)" [ref=e394]
+                - cell "forward" [ref=e395]
+                - cell "5-leg plan — open details for legs" [ref=e396]
+                - cell "4" [ref=e397]:
+                  - generic [ref=e398]: "4"
+                - cell "4.2" [ref=e399]
+                - cell "0.56" [ref=e400]
+                - cell "0.02" [ref=e401]
+                - cell "Review rules" [ref=e402]
+                - cell [ref=e403]:
+                  - status [ref=e404]: Review rules
+              - row "Soccer (World Cup) Round of 16 — Reach Round of 16 (synthetic vs advance) forward 6-leg plan — open details for legs 2 2 0.66 0.01 Review rules" [ref=e405]:
+                - cell [ref=e406]:
+                  - checkbox [ref=e407] [cursor=pointer]:
+                    - img [ref=e410]
+                - cell [ref=e412]
+                - cell "Soccer (World Cup)" [ref=e413]
+                - cell "Round of 16 — Reach Round of 16 (synthetic vs advance)" [ref=e414]
+                - cell "forward" [ref=e415]
+                - cell "6-leg plan — open details for legs" [ref=e416]
+                - cell "2" [ref=e417]:
+                  - generic [ref=e418]: "2"
+                - cell "2" [ref=e419]
+                - cell "0.66" [ref=e420]
+                - cell "0.01" [ref=e421]
+                - cell "Review rules" [ref=e422]
+                - cell [ref=e423]:
+                  - status [ref=e424]: Review rules
+              - row "Soccer (World Cup) Outright Winner — Win the World Cup (synthetic vs advance) reverse Buy NO — Outright Winner @ 90¢ + Buy YES — Brazil @ 8¢ 2 2 8.26 0.17 Review rules" [ref=e425]:
+                - cell [ref=e426]:
+                  - checkbox [ref=e427] [cursor=pointer]:
+                    - img [ref=e430]
+                - cell [ref=e432]
+                - cell "Soccer (World Cup)" [ref=e433]
+                - cell "Outright Winner — Win the World Cup (synthetic vs advance)" [ref=e434]
+                - cell "reverse" [ref=e435]
+                - cell "Buy NO — Outright Winner @ 90¢ + Buy YES — Brazil @ 8¢" [ref=e436]
+                - cell "2" [ref=e437]:
+                  - generic [ref=e438]: "2"
+                - cell "2" [ref=e439]
+                - cell "8.26" [ref=e440]
+                - cell "0.17" [ref=e441]
+                - cell "Review rules" [ref=e442]
+                - cell [ref=e443]:
+                  - status [ref=e444]: Review rules
+              - row "Soccer (World Cup) Quarterfinals — Reach Quarterfinals (synthetic vs advance) forward 5-leg plan — open details for legs 2 2 1 0.02 Review rules" [ref=e445]:
+                - cell [ref=e446]:
+                  - checkbox [ref=e447] [cursor=pointer]:
+                    - img [ref=e450]
+                - cell [ref=e452]
+                - cell "Soccer (World Cup)" [ref=e453]
+                - cell "Quarterfinals — Reach Quarterfinals (synthetic vs advance)" [ref=e454]
+                - cell "forward" [ref=e455]
+                - cell "5-leg plan — open details for legs" [ref=e456]
+                - cell "2" [ref=e457]:
+                  - generic [ref=e458]: "2"
+                - cell "2" [ref=e459]
+                - cell "1" [ref=e460]
+                - cell "0.02" [ref=e461]
+                - cell "Review rules" [ref=e462]
+                - cell [ref=e463]:
+                  - status [ref=e464]: Review rules
+              - row "Soccer (World Cup) Semifinals — Reach Semifinals (synthetic vs advance) reverse 4-leg plan — open details for legs 2 0.7 1 0.02 Review rules" [ref=e465]:
+                - cell [ref=e466]:
+                  - checkbox [ref=e467] [cursor=pointer]:
+                    - img [ref=e470]
+                - cell [ref=e472]
+                - cell "Soccer (World Cup)" [ref=e473]
+                - cell "Semifinals — Reach Semifinals (synthetic vs advance)" [ref=e474]
+                - cell "reverse" [ref=e475]
+                - cell "4-leg plan — open details for legs" [ref=e476]
+                - cell "2" [ref=e477]:
+                  - generic [ref=e478]: "2"
+                - cell "0.7" [ref=e479]
+                - cell "1" [ref=e480]
+                - cell "0.02" [ref=e481]
+                - cell "Review rules" [ref=e482]
+                - cell [ref=e483]:
+                  - status [ref=e484]: Review rules
+              - row "Soccer (World Cup) Quarterfinals — Reach Quarterfinals (synthetic vs advance) reverse 5-leg plan — open details for legs 2 0.5 1 0.02 Review rules" [ref=e485]:
+                - cell [ref=e486]:
+                  - checkbox [ref=e487] [cursor=pointer]:
+                    - img [ref=e490]
+                - cell [ref=e492]
+                - cell "Soccer (World Cup)" [ref=e493]
+                - cell "Quarterfinals — Reach Quarterfinals (synthetic vs advance)" [ref=e494]
+                - cell "reverse" [ref=e495]
+                - cell "5-leg plan — open details for legs" [ref=e496]
+                - cell "2" [ref=e497]:
+                  - generic [ref=e498]: "2"
+                - cell "0.5" [ref=e499]
+                - cell "1" [ref=e500]
+                - cell "0.02" [ref=e501]
+                - cell "Review rules" [ref=e502]
+                - cell [ref=e503]:
+                  - status [ref=e504]: Review rules
+              - row "Soccer (World Cup) Outright Winner — Win the World Cup (synthetic vs advance) forward Buy YES — Outright Winner @ 5¢ + Buy NO — Germany @ 94¢ 1 1 3.28 0.03 Review rules" [ref=e505]:
+                - cell [ref=e506]:
+                  - checkbox [ref=e507] [cursor=pointer]:
+                    - img [ref=e510]
+                - cell [ref=e512]
+                - cell "Soccer (World Cup)" [ref=e513]
+                - cell "Outright Winner — Win the World Cup (synthetic vs advance)" [ref=e514]
+                - cell "forward" [ref=e515]
+                - cell "Buy YES — Outright Winner @ 5¢ + Buy NO — Germany @ 94¢" [ref=e516]
+                - cell "1" [ref=e517]:
+                  - generic [ref=e518]: "1"
+                - cell "1" [ref=e519]
+                - cell "3.28" [ref=e520]
+                - cell "0.03" [ref=e521]
+                - cell "Review rules" [ref=e522]
+                - cell [ref=e523]:
+                  - status [ref=e524]: Review rules
+              - row "Soccer (World Cup) Round of 16 — Reach Round of 16 (synthetic vs advance) forward 6-leg plan — open details for legs 1 1 5.24 0.05 Review rules" [ref=e525]:
+                - cell [ref=e526]:
+                  - checkbox [ref=e527] [cursor=pointer]:
+                    - img [ref=e530]
+                - cell [ref=e532]
+                - cell "Soccer (World Cup)" [ref=e533]
+                - cell "Round of 16 — Reach Round of 16 (synthetic vs advance)" [ref=e534]
+                - cell "forward" [ref=e535]
+                - cell "6-leg plan — open details for legs" [ref=e536]
+                - cell "1" [ref=e537]:
+                  - generic [ref=e538]: "1"
+                - cell "1" [ref=e539]
+                - cell "5.24" [ref=e540]
+                - cell "0.05" [ref=e541]
+                - cell "Review rules" [ref=e542]
+                - cell [ref=e543]:
+                  - status [ref=e544]: Review rules
+              - row "Soccer (World Cup) Outright Winner — Win the World Cup (synthetic vs advance) reverse Buy NO — Outright Winner @ 81¢ + Buy YES — Spain @ 18¢ 1 1 1,208 12.08 Review rules" [ref=e545]:
+                - cell [ref=e546]:
+                  - checkbox [ref=e547] [cursor=pointer]:
+                    - img [ref=e550]
+                - cell [ref=e552]
+                - cell "Soccer (World Cup)" [ref=e553]
+                - cell "Outright Winner — Win the World Cup (synthetic vs advance)" [ref=e554]
+                - cell "reverse" [ref=e555]
+                - cell "Buy NO — Outright Winner @ 81¢ + Buy YES — Spain @ 18¢" [ref=e556]
+                - cell "1" [ref=e557]:
+                  - generic [ref=e558]: "1"
+                - cell "1" [ref=e559]
+                - cell "1,208" [ref=e560]
+                - cell "12.08" [ref=e561]
+                - cell "Review rules" [ref=e562]
+                - cell [ref=e563]:
+                  - status [ref=e564]: Review rules
+              - row "Soccer (World Cup) Semifinals — Reach Semifinals (synthetic vs advance) forward 4-leg plan — open details for legs 1 1 561.2 5.61 Review rules" [ref=e565]:
+                - cell [ref=e566]:
+                  - checkbox [ref=e567] [cursor=pointer]:
+                    - img [ref=e570]
+                - cell [ref=e572]
+                - cell "Soccer (World Cup)" [ref=e573]
+                - cell "Semifinals — Reach Semifinals (synthetic vs advance)" [ref=e574]
+                - cell "forward" [ref=e575]
+                - cell "4-leg plan — open details for legs" [ref=e576]
+                - cell "1" [ref=e577]:
+                  - generic [ref=e578]: "1"
+                - cell "1" [ref=e579]
+                - cell "561.2" [ref=e580]
+                - cell "5.61" [ref=e581]
+                - cell "Review rules" [ref=e582]
+                - cell [ref=e583]:
+                  - status [ref=e584]: Review rules
+          - generic [ref=e585]:
+            - generic [ref=e586]:
+              - generic [ref=e587]: "Records per page:"
+              - generic [ref=e590] [cursor=pointer]:
+                - generic [ref=e592]:
+                  - generic [ref=e593]: "10"
+                  - combobox "10" [ref=e594]
+                - generic [ref=e596]: arrow_drop_down
+            - generic [ref=e597]:
+              - generic [ref=e598]: 1-10 of 12
+              - button "Previous page" [disabled] [ref=e599]:
+                - img [ref=e601]: chevron_left
+              - button "Next page" [ref=e602] [cursor=pointer]:
+                - img [ref=e604]: chevron_right
+    - generic [ref=e605]: Discrepancies that exist but aren't tradable now (no firm size / an inactive leg).
+    - generic "Bounded-loss bets section" [ref=e606]:
+      - generic [ref=e607]:
+        - button "Collapse" [expanded] [ref=e608] [cursor=pointer]:
+          - generic [ref=e609]:
+            - generic [ref=e610]: unfold_more
+            - generic [ref=e611]: Bounded-Loss Bets — capped downside, convex upside (38)
+          - generic [ref=e613]: keyboard_arrow_down
+        - generic [ref=e615]:
+          - generic [ref=e616]: "Buy the broader YES + the deeper NO for just over 100¢: your loss is capped at the small overpay, with convex upside (the broader-but-not-deeper outcome pays about +$1). A bet, NOT an edge — gross of fees."
+          - generic [ref=e617]: Market gap (pp) = parent−child display-price gap (the UNCONDITIONAL implied chance of the payoff zone). Success given reached % = the CONDITIONAL chance the payoff zone hits given the broader outcome happens (1 − child/parent); Deeper given reached % = its complement child/parent (the chance the deeper outcome also occurs) — a market-implied / uncalibrated pair, less sensitive to a common overround but NOT de-vigged. Firm success gap ¢ = the conservative parent-bid − child-ask gap; ≤ 0 (the 'Midpoint-only' flag) means the display positive isn't confirmed by firm quotes. Gap vs breakeven (pp) = implied chance minus the chance needed to clear the overpay. Parent ÷ max loss = the parent's in-the-money probability per cent of max loss (cost − 100, the at-risk overpay); higher = more likely-to-reach per cent at risk; deep longshots sink.
+          - generic [ref=e618]: All gross, top-of-book, display-implied — comparison aids, NOT a guarantee or a calibrated probability model. Fees, slippage, full-depth fill, latency, and settlement-rule edge cases are not modeled. A negative gap means an inverted ladder (flagged 'Inverted / diagnostic'), never a chance.
+          - generic [ref=e619]:
+            - generic [ref=e620]: All bounded-loss bets (38)
+            - generic [ref=e621]: info
+            - button [ref=e623] [cursor=pointer]:
+              - img [ref=e625]: view_column
+          - generic "Bounded-loss bets (all)" [ref=e626]:
+            - table [ref=e628]:
+              - rowgroup [ref=e629]:
+                - row "Signal Flags Kind Cheap vs peers Sport Participant / chain Detail Wins if… Max loss ¢ Max profit ¢ Max units Max loss @ $100 ($) Best upside @ $100 ($) Quote health Upside:risk Market gap (pp) Success given reached % Deeper given reached % Firm success gap ¢ Gap vs breakeven (pp) Parent ÷ max loss Caveat" [ref=e630]:
+                  - columnheader [ref=e631]
+                  - columnheader [ref=e632]
+                  - columnheader "Signal" [ref=e633] [cursor=pointer]:
+                    - text: Signal
+                    - generic [ref=e634]: arrow_upward
+                  - columnheader "Flags" [ref=e635]
+                  - columnheader "Kind" [ref=e636] [cursor=pointer]:
+                    - text: Kind
+                    - generic [ref=e637]: arrow_upward
+                  - columnheader "Cheap vs peers" [ref=e638] [cursor=pointer]:
+                    - text: Cheap vs peers
+                    - generic [ref=e639]: arrow_upward
+                  - columnheader "Sport" [ref=e640] [cursor=pointer]:
+                    - text: Sport
+                    - generic [ref=e641]: arrow_upward
+                  - columnheader "Participant / chain" [ref=e642] [cursor=pointer]:
+                    - text: Participant / chain
+                    - generic [ref=e643]: arrow_upward
+                  - columnheader "Detail" [ref=e644]
+                  - columnheader "Wins if…" [ref=e645] [cursor=pointer]:
+                    - text: Wins if…
+                    - generic [ref=e646]: arrow_upward
+                  - columnheader "Max loss ¢" [ref=e647] [cursor=pointer]:
+                    - text: Max loss ¢
+                    - generic [ref=e648]: arrow_upward
+                  - columnheader "Max profit ¢" [ref=e649] [cursor=pointer]:
+                    - text: Max profit ¢
+                    - generic [ref=e650]: arrow_upward
+                  - columnheader "Max units" [ref=e651] [cursor=pointer]:
+                    - text: Max units
+                    - generic [ref=e652]: arrow_upward
+                  - columnheader "Max loss @ $100 ($)" [ref=e653] [cursor=pointer]:
+                    - text: Max loss @ $100 ($)
+                    - generic [ref=e654]: arrow_upward
+                  - columnheader "Best upside @ $100 ($)" [ref=e655] [cursor=pointer]:
+                    - text: Best upside @ $100 ($)
+                    - generic [ref=e656]: arrow_upward
+                  - columnheader "Quote health" [ref=e657] [cursor=pointer]:
+                    - text: Quote health
+                    - generic [ref=e658]: arrow_upward
+                  - columnheader "Upside:risk" [ref=e659] [cursor=pointer]:
+                    - text: Upside:risk
+                    - generic [ref=e660]: arrow_upward
+                  - columnheader "Market gap (pp)" [ref=e661] [cursor=pointer]:
+                    - text: Market gap (pp)
+                    - generic [ref=e662]: arrow_upward
+                  - columnheader "Success given reached %" [ref=e663] [cursor=pointer]:
+                    - text: Success given reached %
+                    - generic [ref=e664]: arrow_upward
+                  - columnheader "Deeper given reached %" [ref=e665] [cursor=pointer]:
+                    - text: Deeper given reached %
+                    - generic [ref=e666]: arrow_upward
+                  - columnheader "Firm success gap ¢" [ref=e667] [cursor=pointer]:
+                    - text: Firm success gap ¢
+                    - generic [ref=e668]: arrow_upward
+                  - columnheader "Gap vs breakeven (pp)" [ref=e669] [cursor=pointer]:
+                    - text: Gap vs breakeven (pp)
+                    - generic [ref=e670]: arrow_upward
+                  - columnheader "Parent ÷ max loss" [ref=e671] [cursor=pointer]:
+                    - text: Parent ÷ max loss
+                    - generic [ref=e672]: arrow_upward
+                  - columnheader "Caveat" [ref=e673]
+              - rowgroup [ref=e674]:
+                - row "Negative proxy Vertical cost, ratio Golf Denny McCarthy Top 5 ≤ Top 10 Top 10 but not Top 5 2 98 13 0.3 12.7 Tight 49 0 — 100% 0¢ -2 1" [ref=e675]:
+                  - cell [ref=e676]:
+                    - checkbox [ref=e677] [cursor=pointer]:
+                      - img [ref=e680]
+                  - cell [ref=e682]
+                  - cell "Negative proxy" [ref=e683]
+                  - cell [ref=e684]
+                  - cell "Vertical" [ref=e685]
+                  - cell "cost, ratio" [ref=e686]
+                  - cell "Golf" [ref=e687]
+                  - cell "Denny McCarthy" [ref=e688]
+                  - cell "Top 5 ≤ Top 10" [ref=e689]
+                  - cell "Top 10 but not Top 5" [ref=e690]
+                  - cell "2" [ref=e691]
+                  - cell "98" [ref=e692]
+                  - cell "13" [ref=e693]
+                  - cell "0.3" [ref=e694]
+                  - cell "12.7" [ref=e695]
+                  - cell "Tight" [ref=e696]
+                  - cell "49" [ref=e697]
+                  - cell "0" [ref=e698]
+                  - cell "—" [ref=e699]
+                  - cell "100%" [ref=e700]:
+                    - generic [ref=e701]: 100%
+                  - cell "0¢" [ref=e702]:
+                    - generic [ref=e703]: 0¢
+                  - cell "-2" [ref=e704]
+                  - cell "1" [ref=e705]:
+                    - generic [ref=e706]: "1"
+                  - cell [ref=e707]
+                - row "Negative proxy Calendar cost, ratio NFL Pittsburgh Win Super Bowl ≤ Win Conference Win Conference but not Win Super Bowl 2 98 30,461.7 2 96 Tight 49 0 — 100% -1¢ -2 1" [ref=e708]:
+                  - cell [ref=e709]:
+                    - checkbox [ref=e710] [cursor=pointer]:
+                      - img [ref=e713]
+                  - cell [ref=e715]
+                  - cell "Negative proxy" [ref=e716]
+                  - cell [ref=e717]
+                  - cell "Calendar" [ref=e718]
+                  - cell "cost, ratio" [ref=e719]
+                  - cell "NFL" [ref=e720]
+                  - cell "Pittsburgh" [ref=e721]
+                  - cell "Win Super Bowl ≤ Win Conference" [ref=e722]
+                  - cell "Win Conference but not Win Super Bowl" [ref=e723]
+                  - cell "2" [ref=e724]
+                  - cell "98" [ref=e725]
+                  - cell "30,461.7" [ref=e726]
+                  - cell "2" [ref=e727]
+                  - cell "96" [ref=e728]
+                  - cell "Tight" [ref=e729]
+                  - cell "49" [ref=e730]
+                  - cell "0" [ref=e731]
+                  - cell "—" [ref=e732]
+                  - cell "100%" [ref=e733]:
+                    - generic [ref=e734]: 100%
+                  - cell "-1¢" [ref=e735]:
+                    - generic [ref=e736]: "-1¢"
+                  - cell "-2" [ref=e737]
+                  - cell "1" [ref=e738]:
+                    - generic [ref=e739]: "1"
+                  - cell [ref=e740]
+                - row "Negative proxy Calendar cost, ratio NFL Atlanta Win Super Bowl ≤ Win Conference Win Conference but not Win Super Bowl 2 98 38,053.61 2 96 Tight 49 0 — 100% 0¢ -2 1" [ref=e741]:
+                  - cell [ref=e742]:
+                    - checkbox [ref=e743] [cursor=pointer]:
+                      - img [ref=e746]
+                  - cell [ref=e748]
+                  - cell "Negative proxy" [ref=e749]
+                  - cell [ref=e750]
+                  - cell "Calendar" [ref=e751]
+                  - cell "cost, ratio" [ref=e752]
+                  - cell "NFL" [ref=e753]
+                  - cell "Atlanta" [ref=e754]
+                  - cell "Win Super Bowl ≤ Win Conference" [ref=e755]
+                  - cell "Win Conference but not Win Super Bowl" [ref=e756]
+                  - cell "2" [ref=e757]
+                  - cell "98" [ref=e758]
+                  - cell "38,053.61" [ref=e759]
+                  - cell "2" [ref=e760]
+                  - cell "96" [ref=e761]
+                  - cell "Tight" [ref=e762]
+                  - cell "49" [ref=e763]
+                  - cell "0" [ref=e764]
+                  - cell "—" [ref=e765]
+                  - cell "100%" [ref=e766]:
+                    - generic [ref=e767]: 100%
+                  - cell "0¢" [ref=e768]:
+                    - generic [ref=e769]: 0¢
+                  - cell "-2" [ref=e770]
+                  - cell "1" [ref=e771]:
+                    - generic [ref=e772]: "1"
+                  - cell [ref=e773]
+                - row "Negative proxy Calendar cost, ratio NFL Tampa Bay Win Super Bowl ≤ Win Conference Win Conference but not Win Super Bowl 2 98 8,501.5 2 96 Tight 49 0 — 100% 0¢ -2 1" [ref=e774]:
+                  - cell [ref=e775]:
+                    - checkbox [ref=e776] [cursor=pointer]:
+                      - img [ref=e779]
+                  - cell [ref=e781]
+                  - cell "Negative proxy" [ref=e782]
+                  - cell [ref=e783]
+                  - cell "Calendar" [ref=e784]
+                  - cell "cost, ratio" [ref=e785]
+                  - cell "NFL" [ref=e786]
+                  - cell "Tampa Bay" [ref=e787]
+                  - cell "Win Super Bowl ≤ Win Conference" [ref=e788]
+                  - cell "Win Conference but not Win Super Bowl" [ref=e789]
+                  - cell "2" [ref=e790]
+                  - cell "98" [ref=e791]
+                  - cell "8,501.5" [ref=e792]
+                  - cell "2" [ref=e793]
+                  - cell "96" [ref=e794]
+                  - cell "Tight" [ref=e795]
+                  - cell "49" [ref=e796]
+                  - cell "0" [ref=e797]
+                  - cell "—" [ref=e798]
+                  - cell "100%" [ref=e799]:
+                    - generic [ref=e800]: 100%
+                  - cell "0¢" [ref=e801]:
+                    - generic [ref=e802]: 0¢
+                  - cell "-2" [ref=e803]
+                  - cell "1" [ref=e804]:
+                    - generic [ref=e805]: "1"
+                  - cell [ref=e806]
+                - row "Negative proxy Vertical cost, ratio Golf Thorbjorn Olesen Top 10 ≤ Top 20 Top 20 but not Top 10 3 97 5,000 2.9 94.1 Tight 32.3 1 33.3% 66.7% -1¢ -2 1" [ref=e807]:
+                  - cell [ref=e808]:
+                    - checkbox [ref=e809] [cursor=pointer]:
+                      - img [ref=e812]
+                  - cell [ref=e814]
+                  - cell "Negative proxy" [ref=e815]
+                  - cell [ref=e816]:
+                    - status [ref=e817]: Midpoint-only
+                  - cell "Vertical" [ref=e818]
+                  - cell "cost, ratio" [ref=e819]
+                  - cell "Golf" [ref=e820]
+                  - cell "Thorbjorn Olesen" [ref=e821]
+                  - cell "Top 10 ≤ Top 20" [ref=e822]
+                  - cell "Top 20 but not Top 10" [ref=e823]
+                  - cell "3" [ref=e824]
+                  - cell "97" [ref=e825]
+                  - cell "5,000" [ref=e826]
+                  - cell "2.9" [ref=e827]
+                  - cell "94.1" [ref=e828]
+                  - cell "Tight" [ref=e829]
+                  - cell "32.3" [ref=e830]
+                  - cell "1" [ref=e831]
+                  - cell "33.3%" [ref=e832]:
+                    - generic [ref=e833]: 33.3%
+                  - cell "66.7%" [ref=e834]:
+                    - generic [ref=e835]: 66.7%
+                  - cell "-1¢" [ref=e836]:
+                    - generic [ref=e837]: "-1¢"
+                  - cell "-2" [ref=e838]
+                  - cell "1" [ref=e839]:
+                    - generic [ref=e840]: "1"
+                  - cell [ref=e841]
+                - row "Negative proxy Calendar NFL Minnesota Win Super Bowl ≤ Win Conference Win Conference but not Win Super Bowl 3 97 8,380.09 2.9 94.1 Tight 32.3 2 50% 50% 1¢ -1 1.33" [ref=e842]:
+                  - cell [ref=e843]:
+                    - checkbox [ref=e844] [cursor=pointer]:
+                      - img [ref=e847]
+                  - cell [ref=e849]
+                  - cell "Negative proxy" [ref=e850]
+                  - cell [ref=e851]
+                  - cell "Calendar" [ref=e852]
+                  - cell [ref=e853]
+                  - cell "NFL" [ref=e854]
+                  - cell "Minnesota" [ref=e855]
+                  - cell "Win Super Bowl ≤ Win Conference" [ref=e856]
+                  - cell "Win Conference but not Win Super Bowl" [ref=e857]
+                  - cell "3" [ref=e858]
+                  - cell "97" [ref=e859]
+                  - cell "8,380.09" [ref=e860]
+                  - cell "2.9" [ref=e861]
+                  - cell "94.1" [ref=e862]
+                  - cell "Tight" [ref=e863]
+                  - cell "32.3" [ref=e864]
+                  - cell "2" [ref=e865]
+                  - cell "50%" [ref=e866]:
+                    - generic [ref=e867]: 50%
+                  - cell "50%" [ref=e868]:
+                    - generic [ref=e869]: 50%
+                  - cell "1¢" [ref=e870]:
+                    - generic [ref=e871]: 1¢
+                  - cell "-1" [ref=e872]
+                  - cell "1.33" [ref=e873]:
+                    - generic [ref=e874]: "1.33"
+                  - cell [ref=e875]
+                - row "Negative proxy Calendar NFL Indianapolis Win Super Bowl ≤ Win Conference Win Conference but not Win Super Bowl 3 97 63,783.95 2.9 94.1 Tight 32.3 2 50% 50% 1¢ -1 1.33" [ref=e876]:
+                  - cell [ref=e877]:
+                    - checkbox [ref=e878] [cursor=pointer]:
+                      - img [ref=e881]
+                  - cell [ref=e883]
+                  - cell "Negative proxy" [ref=e884]
+                  - cell [ref=e885]
+                  - cell "Calendar" [ref=e886]
+                  - cell [ref=e887]
+                  - cell "NFL" [ref=e888]
+                  - cell "Indianapolis" [ref=e889]
+                  - cell "Win Super Bowl ≤ Win Conference" [ref=e890]
+                  - cell "Win Conference but not Win Super Bowl" [ref=e891]
+                  - cell "3" [ref=e892]
+                  - cell "97" [ref=e893]
+                  - cell "63,783.95" [ref=e894]
+                  - cell "2.9" [ref=e895]
+                  - cell "94.1" [ref=e896]
+                  - cell "Tight" [ref=e897]
+                  - cell "32.3" [ref=e898]
+                  - cell "2" [ref=e899]
+                  - cell "50%" [ref=e900]:
+                    - generic [ref=e901]: 50%
+                  - cell "50%" [ref=e902]:
+                    - generic [ref=e903]: 50%
+                  - cell "1¢" [ref=e904]:
+                    - generic [ref=e905]: 1¢
+                  - cell "-1" [ref=e906]
+                  - cell "1.33" [ref=e907]:
+                    - generic [ref=e908]: "1.33"
+                  - cell [ref=e909]
+                - row "Negative proxy Calendar NFL Washington Win Super Bowl ≤ Win Conference Win Conference but not Win Super Bowl 3 97 13,032 2.9 94.1 Tight 32.3 2 50% 50% 1¢ -1 1.33" [ref=e910]:
+                  - cell [ref=e911]:
+                    - checkbox [ref=e912] [cursor=pointer]:
+                      - img [ref=e915]
+                  - cell [ref=e917]
+                  - cell "Negative proxy" [ref=e918]
+                  - cell [ref=e919]
+                  - cell "Calendar" [ref=e920]
+                  - cell [ref=e921]
+                  - cell "NFL" [ref=e922]
+                  - cell "Washington" [ref=e923]
+                  - cell "Win Super Bowl ≤ Win Conference" [ref=e924]
+                  - cell "Win Conference but not Win Super Bowl" [ref=e925]
+                  - cell "3" [ref=e926]
+                  - cell "97" [ref=e927]
+                  - cell "13,032" [ref=e928]
+                  - cell "2.9" [ref=e929]
+                  - cell "94.1" [ref=e930]
+                  - cell "Tight" [ref=e931]
+                  - cell "32.3" [ref=e932]
+                  - cell "2" [ref=e933]
+                  - cell "50%" [ref=e934]:
+                    - generic [ref=e935]: 50%
+                  - cell "50%" [ref=e936]:
+                    - generic [ref=e937]: 50%
+                  - cell "1¢" [ref=e938]:
+                    - generic [ref=e939]: 1¢
+                  - cell "-1" [ref=e940]
+                  - cell "1.33" [ref=e941]:
+                    - generic [ref=e942]: "1.33"
+                  - cell [ref=e943]
+                - row "Negative proxy Calendar cost, ratio Soccer (World Cup) Australia Reach Semifinals ≤ Reach Quarterfinals Reach Quarterfinals but not Reach Semifinals 3 97 859 2.9 94.1 Tight 32.3 1 33.3% 66.7% -2¢ -2 1" [ref=e944]:
+                  - cell [ref=e945]:
+                    - checkbox [ref=e946] [cursor=pointer]:
+                      - img [ref=e949]
+                  - cell [ref=e951]
+                  - cell "Negative proxy" [ref=e952]
+                  - cell [ref=e953]:
+                    - status [ref=e954]: Midpoint-only
+                  - cell "Calendar" [ref=e955]
+                  - cell "cost, ratio" [ref=e956]
+                  - cell "Soccer (World Cup)" [ref=e957]
+                  - cell "Australia" [ref=e958]
+                  - cell "Reach Semifinals ≤ Reach Quarterfinals" [ref=e959]
+                  - cell "Reach Quarterfinals but not Reach Semifinals" [ref=e960]
+                  - cell "3" [ref=e961]
+                  - cell "97" [ref=e962]
+                  - cell "859" [ref=e963]
+                  - cell "2.9" [ref=e964]
+                  - cell "94.1" [ref=e965]
+                  - cell "Tight" [ref=e966]
+                  - cell "32.3" [ref=e967]
+                  - cell "1" [ref=e968]
+                  - cell "33.3%" [ref=e969]:
+                    - generic [ref=e970]: 33.3%
+                  - cell "66.7%" [ref=e971]:
+                    - generic [ref=e972]: 66.7%
+                  - cell "-2¢" [ref=e973]:
+                    - generic [ref=e974]: "-2¢"
+                  - cell "-2" [ref=e975]
+                  - cell "1" [ref=e976]:
+                    - generic [ref=e977]: "1"
+                  - cell [ref=e978]
+                - row "Negative proxy Calendar Soccer (World Cup) Cape Verde Reach Quarterfinals ≤ Reach Round of 16 Reach Round of 16 but not Reach Quarterfinals 4 96 13 0.5 12.5 Tight 24 2 50% 50% 2¢ -2 1" [ref=e979]:
+                  - cell [ref=e980]:
+                    - checkbox [ref=e981] [cursor=pointer]:
+                      - img [ref=e984]
+                  - cell [ref=e986]
+                  - cell "Negative proxy" [ref=e987]
+                  - cell [ref=e988]
+                  - cell "Calendar" [ref=e989]
+                  - cell [ref=e990]
+                  - cell "Soccer (World Cup)" [ref=e991]
+                  - cell "Cape Verde" [ref=e992]
+                  - cell "Reach Quarterfinals ≤ Reach Round of 16" [ref=e993]
+                  - cell "Reach Round of 16 but not Reach Quarterfinals" [ref=e994]
+                  - cell "4" [ref=e995]
+                  - cell "96" [ref=e996]
+                  - cell "13" [ref=e997]
+                  - cell "0.5" [ref=e998]
+                  - cell "12.5" [ref=e999]
+                  - cell "Tight" [ref=e1000]
+                  - cell "24" [ref=e1001]
+                  - cell "2" [ref=e1002]
+                  - cell "50%" [ref=e1003]:
+                    - generic [ref=e1004]: 50%
+                  - cell "50%" [ref=e1005]:
+                    - generic [ref=e1006]: 50%
+                  - cell "2¢" [ref=e1007]:
+                    - generic [ref=e1008]: 2¢
+                  - cell "-2" [ref=e1009]
+                  - cell "1" [ref=e1010]:
+                    - generic [ref=e1011]: "1"
+                  - cell [ref=e1012]
+            - generic [ref=e1013]:
+              - generic [ref=e1014]:
+                - generic [ref=e1015]: "Records per page:"
+                - generic [ref=e1018] [cursor=pointer]:
+                  - generic [ref=e1020]:
+                    - generic [ref=e1021]: "10"
+                    - combobox "10" [ref=e1022]
+                  - generic [ref=e1024]: arrow_drop_down
+              - generic [ref=e1025]:
+                - generic [ref=e1026]: 1-10 of 38
+                - button "First page" [disabled] [ref=e1027]:
+                  - img [ref=e1029]: first_page
+                - button "Previous page" [disabled] [ref=e1030]:
+                  - img [ref=e1032]: chevron_left
+                - button "Next page" [ref=e1033] [cursor=pointer]:
+                  - img [ref=e1035]: chevron_right
+                - button "Last page" [ref=e1036] [cursor=pointer]:
+                  - img [ref=e1038]: last_page
+          - generic [ref=e1039]:
+            - generic [ref=e1040]: Vertical — both legs resolve together (21)
+            - generic [ref=e1041]: info
+            - button [ref=e1043] [cursor=pointer]:
+              - img [ref=e1045]: view_column
+          - generic "Bounded-loss bets (vertical)" [ref=e1046]:
+            - table [ref=e1048]:
+              - rowgroup [ref=e1049]:
+                - row "Signal Flags Cheap vs peers Sport Participant / chain Detail Wins if… Max loss ¢ Max profit ¢ Max units Max loss @ $100 ($) Best upside @ $100 ($) Quote health Upside:risk Market gap (pp) Success given reached % Deeper given reached % Firm success gap ¢ Gap vs breakeven (pp) Parent ÷ max loss Caveat" [ref=e1050]:
+                  - columnheader [ref=e1051]
+                  - columnheader [ref=e1052]
+                  - columnheader "Signal" [ref=e1053] [cursor=pointer]:
+                    - text: Signal
+                    - generic [ref=e1054]: arrow_upward
+                  - columnheader "Flags" [ref=e1055]
+                  - columnheader "Cheap vs peers" [ref=e1056] [cursor=pointer]:
+                    - text: Cheap vs peers
+                    - generic [ref=e1057]: arrow_upward
+                  - columnheader "Sport" [ref=e1058] [cursor=pointer]:
+                    - text: Sport
+                    - generic [ref=e1059]: arrow_upward
+                  - columnheader "Participant / chain" [ref=e1060] [cursor=pointer]:
+                    - text: Participant / chain
+                    - generic [ref=e1061]: arrow_upward
+                  - columnheader "Detail" [ref=e1062]
+                  - columnheader "Wins if…" [ref=e1063] [cursor=pointer]:
+                    - text: Wins if…
+                    - generic [ref=e1064]: arrow_upward
+                  - columnheader "Max loss ¢" [ref=e1065] [cursor=pointer]:
+                    - text: Max loss ¢
+                    - generic [ref=e1066]: arrow_upward
+                  - columnheader "Max profit ¢" [ref=e1067] [cursor=pointer]:
+                    - text: Max profit ¢
+                    - generic [ref=e1068]: arrow_upward
+                  - columnheader "Max units" [ref=e1069] [cursor=pointer]:
+                    - text: Max units
+                    - generic [ref=e1070]: arrow_upward
+                  - columnheader "Max loss @ $100 ($)" [ref=e1071] [cursor=pointer]:
+                    - text: Max loss @ $100 ($)
+                    - generic [ref=e1072]: arrow_upward
+                  - columnheader "Best upside @ $100 ($)" [ref=e1073] [cursor=pointer]:
+                    - text: Best upside @ $100 ($)
+                    - generic [ref=e1074]: arrow_upward
+                  - columnheader "Quote health" [ref=e1075] [cursor=pointer]:
+                    - text: Quote health
+                    - generic [ref=e1076]: arrow_upward
+                  - columnheader "Upside:risk" [ref=e1077] [cursor=pointer]:
+                    - text: Upside:risk
+                    - generic [ref=e1078]: arrow_upward
+                  - columnheader "Market gap (pp)" [ref=e1079] [cursor=pointer]:
+                    - text: Market gap (pp)
+                    - generic [ref=e1080]: arrow_upward
+                  - columnheader "Success given reached %" [ref=e1081] [cursor=pointer]:
+                    - text: Success given reached %
+                    - generic [ref=e1082]: arrow_upward
+                  - columnheader "Deeper given reached %" [ref=e1083] [cursor=pointer]:
+                    - text: Deeper given reached %
+                    - generic [ref=e1084]: arrow_upward
+                  - columnheader "Firm success gap ¢" [ref=e1085] [cursor=pointer]:
+                    - text: Firm success gap ¢
+                    - generic [ref=e1086]: arrow_upward
+                  - columnheader "Gap vs breakeven (pp)" [ref=e1087] [cursor=pointer]:
+                    - text: Gap vs breakeven (pp)
+                    - generic [ref=e1088]: arrow_upward
+                  - columnheader "Parent ÷ max loss" [ref=e1089] [cursor=pointer]:
+                    - text: Parent ÷ max loss
+                    - generic [ref=e1090]: arrow_upward
+                  - columnheader "Caveat" [ref=e1091]
+              - rowgroup [ref=e1092]:
+                - row "Negative proxy cost, ratio Golf Denny McCarthy Top 5 ≤ Top 10 Top 10 but not Top 5 2 98 13 0.3 12.7 Tight 49 0 — 100% 0¢ -2 1" [ref=e1093]:
+                  - cell [ref=e1094]:
+                    - checkbox [ref=e1095] [cursor=pointer]:
+                      - img [ref=e1098]
+                  - cell [ref=e1100]
+                  - cell "Negative proxy" [ref=e1101]
+                  - cell [ref=e1102]
+                  - cell "cost, ratio" [ref=e1103]
+                  - cell "Golf" [ref=e1104]
+                  - cell "Denny McCarthy" [ref=e1105]
+                  - cell "Top 5 ≤ Top 10" [ref=e1106]
+                  - cell "Top 10 but not Top 5" [ref=e1107]
+                  - cell "2" [ref=e1108]
+                  - cell "98" [ref=e1109]
+                  - cell "13" [ref=e1110]
+                  - cell "0.3" [ref=e1111]
+                  - cell "12.7" [ref=e1112]
+                  - cell "Tight" [ref=e1113]
+                  - cell "49" [ref=e1114]
+                  - cell "0" [ref=e1115]
+                  - cell "—" [ref=e1116]
+                  - cell "100%" [ref=e1117]:
+                    - generic [ref=e1118]: 100%
+                  - cell "0¢" [ref=e1119]:
+                    - generic [ref=e1120]: 0¢
+                  - cell "-2" [ref=e1121]
+                  - cell "1" [ref=e1122]:
+                    - generic [ref=e1123]: "1"
+                  - cell [ref=e1124]
+                - row "Negative proxy cost, ratio Golf Thorbjorn Olesen Top 10 ≤ Top 20 Top 20 but not Top 10 3 97 5,000 2.9 94.1 Tight 32.3 1 33.3% 66.7% -1¢ -2 1" [ref=e1125]:
+                  - cell [ref=e1126]:
+                    - checkbox [ref=e1127] [cursor=pointer]:
+                      - img [ref=e1130]
+                  - cell [ref=e1132]
+                  - cell "Negative proxy" [ref=e1133]
+                  - cell [ref=e1134]:
+                    - status [ref=e1135]: Midpoint-only
+                  - cell "cost, ratio" [ref=e1136]
+                  - cell "Golf" [ref=e1137]
+                  - cell "Thorbjorn Olesen" [ref=e1138]
+                  - cell "Top 10 ≤ Top 20" [ref=e1139]
+                  - cell "Top 20 but not Top 10" [ref=e1140]
+                  - cell "3" [ref=e1141]
+                  - cell "97" [ref=e1142]
+                  - cell "5,000" [ref=e1143]
+                  - cell "2.9" [ref=e1144]
+                  - cell "94.1" [ref=e1145]
+                  - cell "Tight" [ref=e1146]
+                  - cell "32.3" [ref=e1147]
+                  - cell "1" [ref=e1148]
+                  - cell "33.3%" [ref=e1149]:
+                    - generic [ref=e1150]: 33.3%
+                  - cell "66.7%" [ref=e1151]:
+                    - generic [ref=e1152]: 66.7%
+                  - cell "-1¢" [ref=e1153]:
+                    - generic [ref=e1154]: "-1¢"
+                  - cell "-2" [ref=e1155]
+                  - cell "1" [ref=e1156]:
+                    - generic [ref=e1157]: "1"
+                  - cell [ref=e1158]
+                - row "Breakeven cost Golf Beau Hossler Top 5 ≤ Top 10 Top 10 but not Top 5 4 96 5,000 3.8 92.2 Tight 24 4 66.7% 33.3% 2¢ 0 1.5" [ref=e1159]:
+                  - cell [ref=e1160]:
+                    - checkbox [ref=e1161] [cursor=pointer]:
+                      - img [ref=e1164]
+                  - cell [ref=e1166]
+                  - cell "Breakeven" [ref=e1167]
+                  - cell [ref=e1168]
+                  - cell "cost" [ref=e1169]
+                  - cell "Golf" [ref=e1170]
+                  - cell "Beau Hossler" [ref=e1171]
+                  - cell "Top 5 ≤ Top 10" [ref=e1172]
+                  - cell "Top 10 but not Top 5" [ref=e1173]
+                  - cell "4" [ref=e1174]
+                  - cell "96" [ref=e1175]
+                  - cell "5,000" [ref=e1176]
+                  - cell "3.8" [ref=e1177]
+                  - cell "92.2" [ref=e1178]
+                  - cell "Tight" [ref=e1179]
+                  - cell "24" [ref=e1180]
+                  - cell "4" [ref=e1181]
+                  - cell "66.7%" [ref=e1182]:
+                    - generic [ref=e1183]: 66.7%
+                  - cell "33.3%" [ref=e1184]:
+                    - generic [ref=e1185]: 33.3%
+                  - cell "2¢" [ref=e1186]:
+                    - generic [ref=e1187]: 2¢
+                  - cell "0" [ref=e1188]
+                  - cell "1.5" [ref=e1189]:
+                    - generic [ref=e1190]: "1.5"
+                  - cell [ref=e1191]
+                - row "Negative proxy cost Golf Corey Conners Top 10 ≤ Top 20 Top 20 but not Top 10 4 96 4,760 3.8 92.2 Tight 24 2 50% 50% 2¢ -2 1" [ref=e1192]:
+                  - cell [ref=e1193]:
+                    - checkbox [ref=e1194] [cursor=pointer]:
+                      - img [ref=e1197]
+                  - cell [ref=e1199]
+                  - cell "Negative proxy" [ref=e1200]
+                  - cell [ref=e1201]
+                  - cell "cost" [ref=e1202]
+                  - cell "Golf" [ref=e1203]
+                  - cell "Corey Conners" [ref=e1204]
+                  - cell "Top 10 ≤ Top 20" [ref=e1205]
+                  - cell "Top 20 but not Top 10" [ref=e1206]
+                  - cell "4" [ref=e1207]
+                  - cell "96" [ref=e1208]
+                  - cell "4,760" [ref=e1209]
+                  - cell "3.8" [ref=e1210]
+                  - cell "92.2" [ref=e1211]
+                  - cell "Tight" [ref=e1212]
+                  - cell "24" [ref=e1213]
+                  - cell "2" [ref=e1214]
+                  - cell "50%" [ref=e1215]:
+                    - generic [ref=e1216]: 50%
+                  - cell "50%" [ref=e1217]:
+                    - generic [ref=e1218]: 50%
+                  - cell "2¢" [ref=e1219]:
+                    - generic [ref=e1220]: 2¢
+                  - cell "-2" [ref=e1221]
+                  - cell "1" [ref=e1222]:
+                    - generic [ref=e1223]: "1"
+                  - cell [ref=e1224]
+                - row "Breakeven cost Golf Sudarshan Yellamaraju Top 5 ≤ Top 10 Top 10 but not Top 5 4 96 5,000 3.8 92.2 Tight 24 4 66.7% 33.3% 2¢ 0 1.5" [ref=e1225]:
+                  - cell [ref=e1226]:
+                    - checkbox [ref=e1227] [cursor=pointer]:
+                      - img [ref=e1230]
+                  - cell [ref=e1232]
+                  - cell "Breakeven" [ref=e1233]
+                  - cell [ref=e1234]
+                  - cell "cost" [ref=e1235]
+                  - cell "Golf" [ref=e1236]
+                  - cell "Sudarshan Yellamaraju" [ref=e1237]
+                  - cell "Top 5 ≤ Top 10" [ref=e1238]
+                  - cell "Top 10 but not Top 5" [ref=e1239]
+                  - cell "4" [ref=e1240]
+                  - cell "96" [ref=e1241]
+                  - cell "5,000" [ref=e1242]
+                  - cell "3.8" [ref=e1243]
+                  - cell "92.2" [ref=e1244]
+                  - cell "Tight" [ref=e1245]
+                  - cell "24" [ref=e1246]
+                  - cell "4" [ref=e1247]
+                  - cell "66.7%" [ref=e1248]:
+                    - generic [ref=e1249]: 66.7%
+                  - cell "33.3%" [ref=e1250]:
+                    - generic [ref=e1251]: 33.3%
+                  - cell "2¢" [ref=e1252]:
+                    - generic [ref=e1253]: 2¢
+                  - cell "0" [ref=e1254]
+                  - cell "1.5" [ref=e1255]:
+                    - generic [ref=e1256]: "1.5"
+                  - cell [ref=e1257]
+                - row "Breakeven cost Golf Matthieu Pavon Top 5 ≤ Top 10 Top 10 but not Top 5 4 96 5,000 3.8 92.2 Tight 24 4 66.7% 33.3% 2¢ 0 1.5" [ref=e1258]:
+                  - cell [ref=e1259]:
+                    - checkbox [ref=e1260] [cursor=pointer]:
+                      - img [ref=e1263]
+                  - cell [ref=e1265]
+                  - cell "Breakeven" [ref=e1266]
+                  - cell [ref=e1267]
+                  - cell "cost" [ref=e1268]
+                  - cell "Golf" [ref=e1269]
+                  - cell "Matthieu Pavon" [ref=e1270]
+                  - cell "Top 5 ≤ Top 10" [ref=e1271]
+                  - cell "Top 10 but not Top 5" [ref=e1272]
+                  - cell "4" [ref=e1273]
+                  - cell "96" [ref=e1274]
+                  - cell "5,000" [ref=e1275]
+                  - cell "3.8" [ref=e1276]
+                  - cell "92.2" [ref=e1277]
+                  - cell "Tight" [ref=e1278]
+                  - cell "24" [ref=e1279]
+                  - cell "4" [ref=e1280]
+                  - cell "66.7%" [ref=e1281]:
+                    - generic [ref=e1282]: 66.7%
+                  - cell "33.3%" [ref=e1283]:
+                    - generic [ref=e1284]: 33.3%
+                  - cell "2¢" [ref=e1285]:
+                    - generic [ref=e1286]: 2¢
+                  - cell "0" [ref=e1287]
+                  - cell "1.5" [ref=e1288]:
+                    - generic [ref=e1289]: "1.5"
+                  - cell [ref=e1290]
+                - row "Negative proxy cost, ratio Golf Padraig Harrington Top 10 ≤ Top 20 Top 20 but not Top 10 4 96 10 0.4 9.6 OK 24 1 33.3% 66.7% -3¢ -3 0.75" [ref=e1291]:
+                  - cell [ref=e1292]:
+                    - checkbox [ref=e1293] [cursor=pointer]:
+                      - img [ref=e1296]
+                  - cell [ref=e1298]
+                  - cell "Negative proxy" [ref=e1299]
+                  - cell [ref=e1300]:
+                    - status [ref=e1301]: Midpoint-only
+                  - cell "cost, ratio" [ref=e1302]
+                  - cell "Golf" [ref=e1303]
+                  - cell "Padraig Harrington" [ref=e1304]
+                  - cell "Top 10 ≤ Top 20" [ref=e1305]
+                  - cell "Top 20 but not Top 10" [ref=e1306]
+                  - cell "4" [ref=e1307]
+                  - cell "96" [ref=e1308]
+                  - cell "10" [ref=e1309]
+                  - cell "0.4" [ref=e1310]
+                  - cell "9.6" [ref=e1311]
+                  - cell "OK" [ref=e1312]
+                  - cell "24" [ref=e1313]
+                  - cell "1" [ref=e1314]
+                  - cell "33.3%" [ref=e1315]:
+                    - generic [ref=e1316]: 33.3%
+                  - cell "66.7%" [ref=e1317]:
+                    - generic [ref=e1318]: 66.7%
+                  - cell "-3¢" [ref=e1319]:
+                    - generic [ref=e1320]: "-3¢"
+                  - cell "-3" [ref=e1321]
+                  - cell "0.75" [ref=e1322]:
+                    - generic [ref=e1323]: "0.75"
+                  - cell [ref=e1324]
+                - row "Negative proxy cost Golf Michael Brennan Top 5 ≤ Top 10 Top 10 but not Top 5 4 96 5,000 3.8 92.2 Tight 24 2 50% 50% 1¢ -2 1" [ref=e1325]:
+                  - cell [ref=e1326]:
+                    - checkbox [ref=e1327] [cursor=pointer]:
+                      - img [ref=e1330]
+                  - cell [ref=e1332]
+                  - cell "Negative proxy" [ref=e1333]
+                  - cell [ref=e1334]
+                  - cell "cost" [ref=e1335]
+                  - cell "Golf" [ref=e1336]
+                  - cell "Michael Brennan" [ref=e1337]
+                  - cell "Top 5 ≤ Top 10" [ref=e1338]
+                  - cell "Top 10 but not Top 5" [ref=e1339]
+                  - cell "4" [ref=e1340]
+                  - cell "96" [ref=e1341]
+                  - cell "5,000" [ref=e1342]
+                  - cell "3.8" [ref=e1343]
+                  - cell "92.2" [ref=e1344]
+                  - cell "Tight" [ref=e1345]
+                  - cell "24" [ref=e1346]
+                  - cell "2" [ref=e1347]
+                  - cell "50%" [ref=e1348]:
+                    - generic [ref=e1349]: 50%
+                  - cell "50%" [ref=e1350]:
+                    - generic [ref=e1351]: 50%
+                  - cell "1¢" [ref=e1352]:
+                    - generic [ref=e1353]: 1¢
+                  - cell "-2" [ref=e1354]
+                  - cell "1" [ref=e1355]:
+                    - generic [ref=e1356]: "1"
+                  - cell [ref=e1357]
+                - row "Breakeven cost Golf Collin Morikawa Top 5 ≤ Top 10 Top 10 but not Top 5 4 96 130.41 3.8 92.2 Tight 24 4 50% 50% 2¢ 0 2" [ref=e1358]:
+                  - cell [ref=e1359]:
+                    - checkbox [ref=e1360] [cursor=pointer]:
+                      - img [ref=e1363]
+                  - cell [ref=e1365]
+                  - cell "Breakeven" [ref=e1366]
+                  - cell [ref=e1367]
+                  - cell "cost" [ref=e1368]
+                  - cell "Golf" [ref=e1369]
+                  - cell "Collin Morikawa" [ref=e1370]
+                  - cell "Top 5 ≤ Top 10" [ref=e1371]
+                  - cell "Top 10 but not Top 5" [ref=e1372]
+                  - cell "4" [ref=e1373]
+                  - cell "96" [ref=e1374]
+                  - cell "130.41" [ref=e1375]
+                  - cell "3.8" [ref=e1376]
+                  - cell "92.2" [ref=e1377]
+                  - cell "Tight" [ref=e1378]
+                  - cell "24" [ref=e1379]
+                  - cell "4" [ref=e1380]
+                  - cell "50%" [ref=e1381]:
+                    - generic [ref=e1382]: 50%
+                  - cell "50%" [ref=e1383]:
+                    - generic [ref=e1384]: 50%
+                  - cell "2¢" [ref=e1385]:
+                    - generic [ref=e1386]: 2¢
+                  - cell "0" [ref=e1387]
+                  - cell "2" [ref=e1388]:
+                    - generic [ref=e1389]: "2"
+                  - cell [ref=e1390]
+                - row "Negative proxy Golf Kris Ventura Top 10 ≤ Top 20 Top 20 but not Top 10 5 95 48 2.4 45.6 Tight 19 3 50% 50% 2¢ -2 1.2" [ref=e1391]:
+                  - cell [ref=e1392]:
+                    - checkbox [ref=e1393] [cursor=pointer]:
+                      - img [ref=e1396]
+                  - cell [ref=e1398]
+                  - cell "Negative proxy" [ref=e1399]
+                  - cell [ref=e1400]
+                  - cell [ref=e1401]
+                  - cell "Golf" [ref=e1402]
+                  - cell "Kris Ventura" [ref=e1403]
+                  - cell "Top 10 ≤ Top 20" [ref=e1404]
+                  - cell "Top 20 but not Top 10" [ref=e1405]
+                  - cell "5" [ref=e1406]
+                  - cell "95" [ref=e1407]
+                  - cell "48" [ref=e1408]
+                  - cell "2.4" [ref=e1409]
+                  - cell "45.6" [ref=e1410]
+                  - cell "Tight" [ref=e1411]
+                  - cell "19" [ref=e1412]
+                  - cell "3" [ref=e1413]
+                  - cell "50%" [ref=e1414]:
+                    - generic [ref=e1415]: 50%
+                  - cell "50%" [ref=e1416]:
+                    - generic [ref=e1417]: 50%
+                  - cell "2¢" [ref=e1418]:
+                    - generic [ref=e1419]: 2¢
+                  - cell "-2" [ref=e1420]
+                  - cell "1.2" [ref=e1421]:
+                    - generic [ref=e1422]: "1.2"
+                  - cell [ref=e1423]
+            - generic [ref=e1424]:
+              - generic [ref=e1425]:
+                - generic [ref=e1426]: "Records per page:"
+                - generic [ref=e1429] [cursor=pointer]:
+                  - generic [ref=e1431]:
+                    - generic [ref=e1432]: "10"
+                    - combobox "10" [ref=e1433]
+                  - generic [ref=e1435]: arrow_drop_down
+              - generic [ref=e1436]:
+                - generic [ref=e1437]: 1-10 of 21
+                - button "First page" [disabled] [ref=e1438]:
+                  - img [ref=e1440]: first_page
+                - button "Previous page" [disabled] [ref=e1441]:
+                  - img [ref=e1443]: chevron_left
+                - button "Next page" [ref=e1444] [cursor=pointer]:
+                  - img [ref=e1446]: chevron_right
+                - button "Last page" [ref=e1447] [cursor=pointer]:
+                  - img [ref=e1449]: last_page
+          - generic [ref=e1450]:
+            - generic [ref=e1451]: Calendar — legs resolve on different days (17)
+            - generic [ref=e1452]: info
+            - button [ref=e1454] [cursor=pointer]:
+              - img [ref=e1456]: view_column
+          - generic "Bounded-loss bets (calendar)" [ref=e1457]:
+            - table [ref=e1459]:
+              - rowgroup [ref=e1460]:
+                - row "Signal Flags Cheap vs peers Sport Participant / chain Detail Wins if… Max loss ¢ Max profit ¢ Max units Max loss @ $100 ($) Best upside @ $100 ($) Quote health Upside:risk Market gap (pp) Success given reached % Deeper given reached % Firm success gap ¢ Gap vs breakeven (pp) Parent ÷ max loss Caveat" [ref=e1461]:
+                  - columnheader [ref=e1462]
+                  - columnheader [ref=e1463]
+                  - columnheader "Signal" [ref=e1464] [cursor=pointer]:
+                    - text: Signal
+                    - generic [ref=e1465]: arrow_upward
+                  - columnheader "Flags" [ref=e1466]
+                  - columnheader "Cheap vs peers" [ref=e1467] [cursor=pointer]:
+                    - text: Cheap vs peers
+                    - generic [ref=e1468]: arrow_upward
+                  - columnheader "Sport" [ref=e1469] [cursor=pointer]:
+                    - text: Sport
+                    - generic [ref=e1470]: arrow_upward
+                  - columnheader "Participant / chain" [ref=e1471] [cursor=pointer]:
+                    - text: Participant / chain
+                    - generic [ref=e1472]: arrow_upward
+                  - columnheader "Detail" [ref=e1473]
+                  - columnheader "Wins if…" [ref=e1474] [cursor=pointer]:
+                    - text: Wins if…
+                    - generic [ref=e1475]: arrow_upward
+                  - columnheader "Max loss ¢" [ref=e1476] [cursor=pointer]:
+                    - text: Max loss ¢
+                    - generic [ref=e1477]: arrow_upward
+                  - columnheader "Max profit ¢" [ref=e1478] [cursor=pointer]:
+                    - text: Max profit ¢
+                    - generic [ref=e1479]: arrow_upward
+                  - columnheader "Max units" [ref=e1480] [cursor=pointer]:
+                    - text: Max units
+                    - generic [ref=e1481]: arrow_upward
+                  - columnheader "Max loss @ $100 ($)" [ref=e1482] [cursor=pointer]:
+                    - text: Max loss @ $100 ($)
+                    - generic [ref=e1483]: arrow_upward
+                  - columnheader "Best upside @ $100 ($)" [ref=e1484] [cursor=pointer]:
+                    - text: Best upside @ $100 ($)
+                    - generic [ref=e1485]: arrow_upward
+                  - columnheader "Quote health" [ref=e1486] [cursor=pointer]:
+                    - text: Quote health
+                    - generic [ref=e1487]: arrow_upward
+                  - columnheader "Upside:risk" [ref=e1488] [cursor=pointer]:
+                    - text: Upside:risk
+                    - generic [ref=e1489]: arrow_upward
+                  - columnheader "Market gap (pp)" [ref=e1490] [cursor=pointer]:
+                    - text: Market gap (pp)
+                    - generic [ref=e1491]: arrow_upward
+                  - columnheader "Success given reached %" [ref=e1492] [cursor=pointer]:
+                    - text: Success given reached %
+                    - generic [ref=e1493]: arrow_upward
+                  - columnheader "Deeper given reached %" [ref=e1494] [cursor=pointer]:
+                    - text: Deeper given reached %
+                    - generic [ref=e1495]: arrow_upward
+                  - columnheader "Firm success gap ¢" [ref=e1496] [cursor=pointer]:
+                    - text: Firm success gap ¢
+                    - generic [ref=e1497]: arrow_upward
+                  - columnheader "Gap vs breakeven (pp)" [ref=e1498] [cursor=pointer]:
+                    - text: Gap vs breakeven (pp)
+                    - generic [ref=e1499]: arrow_upward
+                  - columnheader "Parent ÷ max loss" [ref=e1500] [cursor=pointer]:
+                    - text: Parent ÷ max loss
+                    - generic [ref=e1501]: arrow_upward
+                  - columnheader "Caveat" [ref=e1502]
+              - rowgroup [ref=e1503]:
+                - row "Negative proxy cost, ratio NFL Pittsburgh Win Super Bowl ≤ Win Conference Win Conference but not Win Super Bowl 2 98 30,461.7 2 96 Tight 49 0 — 100% -1¢ -2 1" [ref=e1504]:
+                  - cell [ref=e1505]:
+                    - checkbox [ref=e1506] [cursor=pointer]:
+                      - img [ref=e1509]
+                  - cell [ref=e1511]
+                  - cell "Negative proxy" [ref=e1512]
+                  - cell [ref=e1513]
+                  - cell "cost, ratio" [ref=e1514]
+                  - cell "NFL" [ref=e1515]
+                  - cell "Pittsburgh" [ref=e1516]
+                  - cell "Win Super Bowl ≤ Win Conference" [ref=e1517]
+                  - cell "Win Conference but not Win Super Bowl" [ref=e1518]
+                  - cell "2" [ref=e1519]
+                  - cell "98" [ref=e1520]
+                  - cell "30,461.7" [ref=e1521]
+                  - cell "2" [ref=e1522]
+                  - cell "96" [ref=e1523]
+                  - cell "Tight" [ref=e1524]
+                  - cell "49" [ref=e1525]
+                  - cell "0" [ref=e1526]
+                  - cell "—" [ref=e1527]
+                  - cell "100%" [ref=e1528]:
+                    - generic [ref=e1529]: 100%
+                  - cell "-1¢" [ref=e1530]:
+                    - generic [ref=e1531]: "-1¢"
+                  - cell "-2" [ref=e1532]
+                  - cell "1" [ref=e1533]:
+                    - generic [ref=e1534]: "1"
+                  - cell [ref=e1535]
+                - row "Negative proxy cost, ratio NFL Atlanta Win Super Bowl ≤ Win Conference Win Conference but not Win Super Bowl 2 98 38,053.61 2 96 Tight 49 0 — 100% 0¢ -2 1" [ref=e1536]:
+                  - cell [ref=e1537]:
+                    - checkbox [ref=e1538] [cursor=pointer]:
+                      - img [ref=e1541]
+                  - cell [ref=e1543]
+                  - cell "Negative proxy" [ref=e1544]
+                  - cell [ref=e1545]
+                  - cell "cost, ratio" [ref=e1546]
+                  - cell "NFL" [ref=e1547]
+                  - cell "Atlanta" [ref=e1548]
+                  - cell "Win Super Bowl ≤ Win Conference" [ref=e1549]
+                  - cell "Win Conference but not Win Super Bowl" [ref=e1550]
+                  - cell "2" [ref=e1551]
+                  - cell "98" [ref=e1552]
+                  - cell "38,053.61" [ref=e1553]
+                  - cell "2" [ref=e1554]
+                  - cell "96" [ref=e1555]
+                  - cell "Tight" [ref=e1556]
+                  - cell "49" [ref=e1557]
+                  - cell "0" [ref=e1558]
+                  - cell "—" [ref=e1559]
+                  - cell "100%" [ref=e1560]:
+                    - generic [ref=e1561]: 100%
+                  - cell "0¢" [ref=e1562]:
+                    - generic [ref=e1563]: 0¢
+                  - cell "-2" [ref=e1564]
+                  - cell "1" [ref=e1565]:
+                    - generic [ref=e1566]: "1"
+                  - cell [ref=e1567]
+                - row "Negative proxy cost, ratio NFL Tampa Bay Win Super Bowl ≤ Win Conference Win Conference but not Win Super Bowl 2 98 8,501.5 2 96 Tight 49 0 — 100% 0¢ -2 1" [ref=e1568]:
+                  - cell [ref=e1569]:
+                    - checkbox [ref=e1570] [cursor=pointer]:
+                      - img [ref=e1573]
+                  - cell [ref=e1575]
+                  - cell "Negative proxy" [ref=e1576]
+                  - cell [ref=e1577]
+                  - cell "cost, ratio" [ref=e1578]
+                  - cell "NFL" [ref=e1579]
+                  - cell "Tampa Bay" [ref=e1580]
+                  - cell "Win Super Bowl ≤ Win Conference" [ref=e1581]
+                  - cell "Win Conference but not Win Super Bowl" [ref=e1582]
+                  - cell "2" [ref=e1583]
+                  - cell "98" [ref=e1584]
+                  - cell "8,501.5" [ref=e1585]
+                  - cell "2" [ref=e1586]
+                  - cell "96" [ref=e1587]
+                  - cell "Tight" [ref=e1588]
+                  - cell "49" [ref=e1589]
+                  - cell "0" [ref=e1590]
+                  - cell "—" [ref=e1591]
+                  - cell "100%" [ref=e1592]:
+                    - generic [ref=e1593]: 100%
+                  - cell "0¢" [ref=e1594]:
+                    - generic [ref=e1595]: 0¢
+                  - cell "-2" [ref=e1596]
+                  - cell "1" [ref=e1597]:
+                    - generic [ref=e1598]: "1"
+                  - cell [ref=e1599]
+                - row "Negative proxy NFL Minnesota Win Super Bowl ≤ Win Conference Win Conference but not Win Super Bowl 3 97 8,380.09 2.9 94.1 Tight 32.3 2 50% 50% 1¢ -1 1.33" [ref=e1600]:
+                  - cell [ref=e1601]:
+                    - checkbox [ref=e1602] [cursor=pointer]:
+                      - img [ref=e1605]
+                  - cell [ref=e1607]
+                  - cell "Negative proxy" [ref=e1608]
+                  - cell [ref=e1609]
+                  - cell [ref=e1610]
+                  - cell "NFL" [ref=e1611]
+                  - cell "Minnesota" [ref=e1612]
+                  - cell "Win Super Bowl ≤ Win Conference" [ref=e1613]
+                  - cell "Win Conference but not Win Super Bowl" [ref=e1614]
+                  - cell "3" [ref=e1615]
+                  - cell "97" [ref=e1616]
+                  - cell "8,380.09" [ref=e1617]
+                  - cell "2.9" [ref=e1618]
+                  - cell "94.1" [ref=e1619]
+                  - cell "Tight" [ref=e1620]
+                  - cell "32.3" [ref=e1621]
+                  - cell "2" [ref=e1622]
+                  - cell "50%" [ref=e1623]:
+                    - generic [ref=e1624]: 50%
+                  - cell "50%" [ref=e1625]:
+                    - generic [ref=e1626]: 50%
+                  - cell "1¢" [ref=e1627]:
+                    - generic [ref=e1628]: 1¢
+                  - cell "-1" [ref=e1629]
+                  - cell "1.33" [ref=e1630]:
+                    - generic [ref=e1631]: "1.33"
+                  - cell [ref=e1632]
+                - row "Negative proxy NFL Indianapolis Win Super Bowl ≤ Win Conference Win Conference but not Win Super Bowl 3 97 63,783.95 2.9 94.1 Tight 32.3 2 50% 50% 1¢ -1 1.33" [ref=e1633]:
+                  - cell [ref=e1634]:
+                    - checkbox [ref=e1635] [cursor=pointer]:
+                      - img [ref=e1638]
+                  - cell [ref=e1640]
+                  - cell "Negative proxy" [ref=e1641]
+                  - cell [ref=e1642]
+                  - cell [ref=e1643]
+                  - cell "NFL" [ref=e1644]
+                  - cell "Indianapolis" [ref=e1645]
+                  - cell "Win Super Bowl ≤ Win Conference" [ref=e1646]
+                  - cell "Win Conference but not Win Super Bowl" [ref=e1647]
+                  - cell "3" [ref=e1648]
+                  - cell "97" [ref=e1649]
+                  - cell "63,783.95" [ref=e1650]
+                  - cell "2.9" [ref=e1651]
+                  - cell "94.1" [ref=e1652]
+                  - cell "Tight" [ref=e1653]
+                  - cell "32.3" [ref=e1654]
+                  - cell "2" [ref=e1655]
+                  - cell "50%" [ref=e1656]:
+                    - generic [ref=e1657]: 50%
+                  - cell "50%" [ref=e1658]:
+                    - generic [ref=e1659]: 50%
+                  - cell "1¢" [ref=e1660]:
+                    - generic [ref=e1661]: 1¢
+                  - cell "-1" [ref=e1662]
+                  - cell "1.33" [ref=e1663]:
+                    - generic [ref=e1664]: "1.33"
+                  - cell [ref=e1665]
+                - row "Negative proxy NFL Washington Win Super Bowl ≤ Win Conference Win Conference but not Win Super Bowl 3 97 13,032 2.9 94.1 Tight 32.3 2 50% 50% 1¢ -1 1.33" [ref=e1666]:
+                  - cell [ref=e1667]:
+                    - checkbox [ref=e1668] [cursor=pointer]:
+                      - img [ref=e1671]
+                  - cell [ref=e1673]
+                  - cell "Negative proxy" [ref=e1674]
+                  - cell [ref=e1675]
+                  - cell [ref=e1676]
+                  - cell "NFL" [ref=e1677]
+                  - cell "Washington" [ref=e1678]
+                  - cell "Win Super Bowl ≤ Win Conference" [ref=e1679]
+                  - cell "Win Conference but not Win Super Bowl" [ref=e1680]
+                  - cell "3" [ref=e1681]
+                  - cell "97" [ref=e1682]
+                  - cell "13,032" [ref=e1683]
+                  - cell "2.9" [ref=e1684]
+                  - cell "94.1" [ref=e1685]
+                  - cell "Tight" [ref=e1686]
+                  - cell "32.3" [ref=e1687]
+                  - cell "2" [ref=e1688]
+                  - cell "50%" [ref=e1689]:
+                    - generic [ref=e1690]: 50%
+                  - cell "50%" [ref=e1691]:
+                    - generic [ref=e1692]: 50%
+                  - cell "1¢" [ref=e1693]:
+                    - generic [ref=e1694]: 1¢
+                  - cell "-1" [ref=e1695]
+                  - cell "1.33" [ref=e1696]:
+                    - generic [ref=e1697]: "1.33"
+                  - cell [ref=e1698]
+                - row "Negative proxy cost, ratio Soccer (World Cup) Australia Reach Semifinals ≤ Reach Quarterfinals Reach Quarterfinals but not Reach Semifinals 3 97 859 2.9 94.1 Tight 32.3 1 33.3% 66.7% -2¢ -2 1" [ref=e1699]:
+                  - cell [ref=e1700]:
+                    - checkbox [ref=e1701] [cursor=pointer]:
+                      - img [ref=e1704]
+                  - cell [ref=e1706]
+                  - cell "Negative proxy" [ref=e1707]
+                  - cell [ref=e1708]:
+                    - status [ref=e1709]: Midpoint-only
+                  - cell "cost, ratio" [ref=e1710]
+                  - cell "Soccer (World Cup)" [ref=e1711]
+                  - cell "Australia" [ref=e1712]
+                  - cell "Reach Semifinals ≤ Reach Quarterfinals" [ref=e1713]
+                  - cell "Reach Quarterfinals but not Reach Semifinals" [ref=e1714]
+                  - cell "3" [ref=e1715]
+                  - cell "97" [ref=e1716]
+                  - cell "859" [ref=e1717]
+                  - cell "2.9" [ref=e1718]
+                  - cell "94.1" [ref=e1719]
+                  - cell "Tight" [ref=e1720]
+                  - cell "32.3" [ref=e1721]
+                  - cell "1" [ref=e1722]
+                  - cell "33.3%" [ref=e1723]:
+                    - generic [ref=e1724]: 33.3%
+                  - cell "66.7%" [ref=e1725]:
+                    - generic [ref=e1726]: 66.7%
+                  - cell "-2¢" [ref=e1727]:
+                    - generic [ref=e1728]: "-2¢"
+                  - cell "-2" [ref=e1729]
+                  - cell "1" [ref=e1730]:
+                    - generic [ref=e1731]: "1"
+                  - cell [ref=e1732]
+                - row "Negative proxy Soccer (World Cup) Cape Verde Reach Quarterfinals ≤ Reach Round of 16 Reach Round of 16 but not Reach Quarterfinals 4 96 13 0.5 12.5 Tight 24 2 50% 50% 2¢ -2 1" [ref=e1733]:
+                  - cell [ref=e1734]:
+                    - checkbox [ref=e1735] [cursor=pointer]:
+                      - img [ref=e1738]
+                  - cell [ref=e1740]
+                  - cell "Negative proxy" [ref=e1741]
+                  - cell [ref=e1742]
+                  - cell [ref=e1743]
+                  - cell "Soccer (World Cup)" [ref=e1744]
+                  - cell "Cape Verde" [ref=e1745]
+                  - cell "Reach Quarterfinals ≤ Reach Round of 16" [ref=e1746]
+                  - cell "Reach Round of 16 but not Reach Quarterfinals" [ref=e1747]
+                  - cell "4" [ref=e1748]
+                  - cell "96" [ref=e1749]
+                  - cell "13" [ref=e1750]
+                  - cell "0.5" [ref=e1751]
+                  - cell "12.5" [ref=e1752]
+                  - cell "Tight" [ref=e1753]
+                  - cell "24" [ref=e1754]
+                  - cell "2" [ref=e1755]
+                  - cell "50%" [ref=e1756]:
+                    - generic [ref=e1757]: 50%
+                  - cell "50%" [ref=e1758]:
+                    - generic [ref=e1759]: 50%
+                  - cell "2¢" [ref=e1760]:
+                    - generic [ref=e1761]: 2¢
+                  - cell "-2" [ref=e1762]
+                  - cell "1" [ref=e1763]:
+                    - generic [ref=e1764]: "1"
+                  - cell [ref=e1765]
+                - row "Breakeven NFL San Francisco Win Super Bowl ≤ Win Conference Win Conference but not Win Super Bowl 4 96 29,156.92 3.8 92.2 Tight 24 4 50% 50% 2¢ 0 2" [ref=e1766]:
+                  - cell [ref=e1767]:
+                    - checkbox [ref=e1768] [cursor=pointer]:
+                      - img [ref=e1771]
+                  - cell [ref=e1773]
+                  - cell "Breakeven" [ref=e1774]
+                  - cell [ref=e1775]
+                  - cell [ref=e1776]
+                  - cell "NFL" [ref=e1777]
+                  - cell "San Francisco" [ref=e1778]
+                  - cell "Win Super Bowl ≤ Win Conference" [ref=e1779]
+                  - cell "Win Conference but not Win Super Bowl" [ref=e1780]
+                  - cell "4" [ref=e1781]
+                  - cell "96" [ref=e1782]
+                  - cell "29,156.92" [ref=e1783]
+                  - cell "3.8" [ref=e1784]
+                  - cell "92.2" [ref=e1785]
+                  - cell "Tight" [ref=e1786]
+                  - cell "24" [ref=e1787]
+                  - cell "4" [ref=e1788]
+                  - cell "50%" [ref=e1789]:
+                    - generic [ref=e1790]: 50%
+                  - cell "50%" [ref=e1791]:
+                    - generic [ref=e1792]: 50%
+                  - cell "2¢" [ref=e1793]:
+                    - generic [ref=e1794]: 2¢
+                  - cell "0" [ref=e1795]
+                  - cell "2" [ref=e1796]:
+                    - generic [ref=e1797]: "2"
+                  - cell [ref=e1798]
+                - row "Negative proxy Soccer (World Cup) Qatar Reach Quarterfinals ≤ Reach Round of 16 Reach Round of 16 but not Reach Quarterfinals 4 96 1,000 3.8 92.2 Tight 24 2 50% 50% 2¢ -2 1" [ref=e1799]:
+                  - cell [ref=e1800]:
+                    - checkbox [ref=e1801] [cursor=pointer]:
+                      - img [ref=e1804]
+                  - cell [ref=e1806]
+                  - cell "Negative proxy" [ref=e1807]
+                  - cell [ref=e1808]
+                  - cell [ref=e1809]
+                  - cell "Soccer (World Cup)" [ref=e1810]
+                  - cell "Qatar" [ref=e1811]
+                  - cell "Reach Quarterfinals ≤ Reach Round of 16" [ref=e1812]
+                  - cell "Reach Round of 16 but not Reach Quarterfinals" [ref=e1813]
+                  - cell "4" [ref=e1814]
+                  - cell "96" [ref=e1815]
+                  - cell "1,000" [ref=e1816]
+                  - cell "3.8" [ref=e1817]
+                  - cell "92.2" [ref=e1818]
+                  - cell "Tight" [ref=e1819]
+                  - cell "24" [ref=e1820]
+                  - cell "2" [ref=e1821]
+                  - cell "50%" [ref=e1822]:
+                    - generic [ref=e1823]: 50%
+                  - cell "50%" [ref=e1824]:
+                    - generic [ref=e1825]: 50%
+                  - cell "2¢" [ref=e1826]:
+                    - generic [ref=e1827]: 2¢
+                  - cell "-2" [ref=e1828]
+                  - cell "1" [ref=e1829]:
+                    - generic [ref=e1830]: "1"
+                  - cell [ref=e1831]
+            - generic [ref=e1832]:
+              - generic [ref=e1833]:
+                - generic [ref=e1834]: "Records per page:"
+                - generic [ref=e1837] [cursor=pointer]:
+                  - generic [ref=e1839]:
+                    - generic [ref=e1840]: "10"
+                    - combobox "10" [ref=e1841]
+                  - generic [ref=e1843]: arrow_drop_down
+              - generic [ref=e1844]:
+                - generic [ref=e1845]: 1-10 of 17
+                - button "Previous page" [disabled] [ref=e1846]:
+                  - img [ref=e1848]: chevron_left
+                - button "Next page" [ref=e1849] [cursor=pointer]:
+                  - img [ref=e1851]: chevron_right
+    - generic "Cheap NO fades section" [ref=e1852]:
+      - button "Expand" [ref=e1854] [cursor=pointer]:
+        - generic [ref=e1855]:
+          - generic [ref=e1856]: unfold_more
+          - generic [ref=e1857]: Cheap NO fades — bounded-loss NO anchor, watch-only (123)
+        - generic [ref=e1859]: keyboard_arrow_down
+    - button "Expand" [ref=e1862] [cursor=pointer]:
+      - generic [ref=e1863]:
+        - generic [ref=e1864]: unfold_more
+        - generic [ref=e1865]: Qualifier setups — World Cup group-stage ideas & signals (51)
+        - button [ref=e1867]:
+          - img [ref=e1869]: view_column
+      - generic [ref=e1871]: keyboard_arrow_down
+    - generic "Overpriced books section" [ref=e1872]:
+      - button "Expand" [ref=e1874] [cursor=pointer]:
+        - generic [ref=e1875]:
+          - generic [ref=e1876]: unfold_more
+          - generic [ref=e1877]: Overpriced Books — flat guaranteed loss, watch-only (201)
+          - button [ref=e1879]:
+            - img [ref=e1881]: view_column
+        - generic [ref=e1883]: keyboard_arrow_down
+    - button "Expand \"Recently Actionable — recently left the set\"" [ref=e1886] [cursor=pointer]:
+      - generic [ref=e1888]: Recently Actionable — recently left the set
+      - generic [ref=e1890]: keyboard_arrow_down
+    - button "Expand \"Durable backlog (last 7 days) — survives restarts\"" [ref=e1893] [cursor=pointer]:
+      - generic [ref=e1895]: Durable backlog (last 7 days) — survives restarts
+      - generic [ref=e1897]: keyboard_arrow_down
+    - button "Expand \"Market Telemetry — Liquidity & Volatility (context, not signals)\"" [ref=e1900] [cursor=pointer]:
+      - generic [ref=e1902]: Market Telemetry — Liquidity & Volatility (context, not signals)
+      - generic [ref=e1904]: keyboard_arrow_down
+    - generic "Selected detail" [ref=e1905]:
+      - button "Expand \"Selected Detail — click a row\"" [ref=e1907] [cursor=pointer]:
+        - generic [ref=e1909]: Selected Detail — click a row
+        - generic [ref=e1911]: keyboard_arrow_down
+    - generic "Diagnostics and debug" [ref=e1912]:
+      - button "Expand \"Diagnostics & Debug\"" [ref=e1914] [cursor=pointer]:
+        - generic [ref=e1916]: Diagnostics & Debug
+        - generic [ref=e1918]: keyboard_arrow_down

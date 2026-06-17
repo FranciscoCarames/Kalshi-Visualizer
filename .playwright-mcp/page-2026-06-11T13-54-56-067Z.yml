@@ -1,0 +1,245 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e4]: KSS SPIKE · 20260611-TERMINAL-PRO-MOCKUP · DECISION REPORT
+    - heading "Terminal Pro — go/no-go for the NiceGUI rebuild" [level=1] [ref=e5]
+    - generic [ref=e6]: Is the chosen UI direction (Bloomberg identity + Trading Technologies layout + Hybrid usability) a sound basis to build for real? Read top→bottom, then make the three calls at the bottom.
+    - generic [ref=e7]:
+      - generic [ref=e8]: VERDICT
+      - text: YES — promote to a phased milestone · gated on two pre-steps
+  - generic [ref=e9]:
+    - generic [ref=e10]:
+      - generic [ref=e11]: DECISION QUESTIONS
+      - generic [ref=e12]: 5 / 6
+      - generic [ref=e13]: 1 partial (depth)
+    - generic [ref=e14]:
+      - generic [ref=e15]: STRICT INVARIANTS
+      - generic [ref=e16]: 4 / 4
+      - generic [ref=e17]: all preserved
+    - generic [ref=e18]:
+      - generic [ref=e19]: ROADMAP §9 SLOTS
+      - generic [ref=e20]: 8 / 8
+      - generic [ref=e21]: every region maps
+    - generic [ref=e22]:
+      - generic [ref=e23]: OPEN RISKS
+      - generic [ref=e24]: 2 + 3
+      - generic [ref=e25]: 2 gating · 3 refine
+    - generic [ref=e26]:
+      - generic [ref=e27]: BUILD PHASES
+      - generic [ref=e28]: 2 + 4
+      - generic [ref=e29]: 2 gates → P1–P4
+  - generic [ref=e30]:
+    - generic [ref=e31]: "01"
+    - heading "The 6 decision questions a trader UI must answer" [level=2] [ref=e32]
+    - generic [ref=e33]: 5 pass · 1 partial
+  - table [ref=e34]:
+    - rowgroup [ref=e35]:
+      - row "# Question Status Where / gap" [ref=e36]:
+        - columnheader "#" [ref=e37]
+        - columnheader "Question" [ref=e38]
+        - columnheader "Status" [ref=e39]
+        - columnheader "Where / gap" [ref=e40]
+    - rowgroup [ref=e41]:
+      - row "1 What deserves attention now? PASS Landing tiles + lens-ranked blotter + Watch/Movers" [ref=e42]:
+        - cell "1" [ref=e43]
+        - cell "What deserves attention now?" [ref=e44]
+        - cell "PASS" [ref=e45]:
+          - generic [ref=e46]: PASS
+        - cell "Landing tiles + lens-ranked blotter + Watch/Movers" [ref=e47]
+      - row "2 Actionable vs review-only vs blocked? PASS Blotter tabs, per-bucket colour+label+icon; Research distinct" [ref=e48]:
+        - cell "2" [ref=e49]
+        - cell "Actionable vs review-only vs blocked?" [ref=e50]
+        - cell "PASS" [ref=e51]:
+          - generic [ref=e52]: PASS
+        - cell "Blotter tabs, per-bucket colour+label+icon; Research distinct" [ref=e53]
+      - 'row "3 Why was this row flagged? PASS DES card: why flagged / ranked / improve / risk" [ref=e54]':
+        - cell "3" [ref=e55]
+        - cell "Why was this row flagged?" [ref=e56]
+        - cell "PASS" [ref=e57]:
+          - generic [ref=e58]: PASS
+        - 'cell "DES card: why flagged / ranked / improve / risk" [ref=e59]'
+      - row "4 What's the fill / liquidity limit? PARTIAL MD ladder + fillable + eff-fill@50 — but depth is synthetic & real source unproven (R1)" [ref=e60]:
+        - cell "4" [ref=e61]
+        - cell "What's the fill / liquidity limit?" [ref=e62]
+        - cell "PARTIAL" [ref=e63]:
+          - generic [ref=e64]: PARTIAL
+        - cell "MD ladder + fillable + eff-fill@50 — but depth is synthetic & real source unproven (R1)" [ref=e65]
+      - row "5 What changed since last scan? PASS NEW/▲/▼/↺ + flash + Movers + alerts; no replay yet (deferred)" [ref=e66]:
+        - cell "5" [ref=e67]
+        - cell "What changed since last scan?" [ref=e68]
+        - cell "PASS" [ref=e69]:
+          - generic [ref=e70]: PASS
+        - cell "NEW/▲/▼/↺ + flash + Movers + alerts; no replay yet (deferred)" [ref=e71]
+      - 'row "6 Is the data fresh & trustworthy? PASS Always-on trust line: age/phase, failed-series, \"paused ≠ stale\", disclaimer" [ref=e72]':
+        - cell "6" [ref=e73]
+        - cell "Is the data fresh & trustworthy?" [ref=e74]
+        - cell "PASS" [ref=e75]:
+          - generic [ref=e76]: PASS
+        - 'cell "Always-on trust line: age/phase, failed-series, \"paused ≠ stale\", disclaimer" [ref=e77]'
+  - generic [ref=e78]:
+    - generic [ref=e79]: "02"
+    - heading "Strict invariants — all preserved" [level=2] [ref=e80]
+  - table [ref=e81]:
+    - rowgroup [ref=e82]:
+      - row "OK Read-only / no order entry MD ladder banner READ-ONLY DEPTH VIEW — NO ORDERS; zero buy/sell/qty/ticket controls" [ref=e83]:
+        - cell "OK" [ref=e84]:
+          - generic [ref=e85]: OK
+        - cell "Read-only / no order entry" [ref=e86]
+        - cell "MD ladder banner READ-ONLY DEPTH VIEW — NO ORDERS; zero buy/sell/qty/ticket controls" [ref=e87]
+      - row "OK Label discipline GROSS · TOP-OF-BOOK · $1 BASIS · READ-ONLY · NO ORDER ENTRY · NOT RISKLESS — no \"arbitrage/locked/riskless\"" [ref=e88]:
+        - cell "OK" [ref=e89]:
+          - generic [ref=e90]: OK
+        - cell "Label discipline" [ref=e91]
+        - cell "GROSS · TOP-OF-BOOK · $1 BASIS · READ-ONLY · NO ORDER ENTRY · NOT RISKLESS — no \"arbitrage/locked/riskless\"" [ref=e92]
+      - row "OK Bucket separation Actionable/Review/Blocked tabs; Research = violet \"not a trade\", no edge/tradable framing" [ref=e93]:
+        - cell "OK" [ref=e94]:
+          - generic [ref=e95]: OK
+        - cell "Bucket separation" [ref=e96]
+        - cell "Actionable/Review/Blocked tabs; Research = violet \"not a trade\", no edge/tradable framing" [ref=e97]
+      - row "OK $1 canonical basis $1 default; $100 a derived display toggle on the card" [ref=e98]:
+        - cell "OK" [ref=e99]:
+          - generic [ref=e100]: OK
+        - cell "$1 canonical basis" [ref=e101]
+        - cell "$1 default; $100 a derived display toggle on the card" [ref=e102]
+  - generic [ref=e103]:
+    - generic [ref=e104]: "03"
+    - heading "Roadmap §9 mapping — every region has a slot" [level=2] [ref=e105]
+  - table [ref=e106]:
+    - rowgroup [ref=e107]:
+      - row "UI region Backlog section" [ref=e108]:
+        - columnheader "UI region" [ref=e109]
+        - columnheader "Backlog section" [ref=e110]
+    - rowgroup [ref=e111]:
+      - row "3 surfaces (OPP / RES / OPS) §9.1 three surfaces" [ref=e112]:
+        - cell "3 surfaces (OPP / RES / OPS)" [ref=e113]
+        - cell "§9.1 three surfaces" [ref=e114]
+      - row "Status / trust line §14 data-quality states" [ref=e115]:
+        - cell "Status / trust line" [ref=e116]
+        - cell "§14 data-quality states" [ref=e117]
+      - row "DES trade-card + EvidencePack + 9-dim confidence §8 / §3 / §7" [ref=e118]:
+        - cell "DES trade-card + EvidencePack + 9-dim confidence" [ref=e119]
+        - cell "§8 / §3 / §7" [ref=e120]
+      - row "Lens switcher (5 modes → lens library) §7 ranking & lenses" [ref=e121]:
+        - cell "Lens switcher (5 modes → lens library)" [ref=e122]
+        - cell "§7 ranking & lenses" [ref=e123]
+      - row "Alerts flyout §10 alerts" [ref=e124]:
+        - cell "Alerts flyout" [ref=e125]
+        - cell "§10 alerts" [ref=e126]
+      - row "Watchlist / movers §9.3 workstation features" [ref=e127]:
+        - cell "Watchlist / movers" [ref=e128]
+        - cell "§9.3 workstation features" [ref=e129]
+      - row "Research surface §5 / §11 research & outcome loop" [ref=e130]:
+        - cell "Research surface" [ref=e131]
+        - cell "§5 / §11 research & outcome loop" [ref=e132]
+      - row "Operations surface §1 / §13 capability & perf" [ref=e133]:
+        - cell "Operations surface" [ref=e134]
+        - cell "§1 / §13 capability & perf" [ref=e135]
+  - generic [ref=e136]:
+    - generic [ref=e137]: "04"
+    - heading "Real vs mock — what to reconcile in the rebuild" [level=2] [ref=e138]
+  - generic [ref=e139]:
+    - generic [ref=e140]:
+      - generic [ref=e141]: ✓ EXISTS IN THE ENGINE TODAY
+      - list [ref=e142]:
+        - listitem [ref=e143]: Blotter rows — scanner.unified_opportunities
+        - listitem [ref=e144]: Columns — MAIN_COLUMNS
+        - listitem [ref=e145]: The 5 lenses — viewmodel.RANK_MODES
+        - listitem [ref=e146]: Buckets — Actionable / Review / Blocked
+        - listitem [ref=e147]: Buy-only legs, tradable, caveat, change signals
+        - listitem [ref=e148]: Status/trust facts (scan age, failed series, exchange)
+    - generic [ref=e149]:
+      - generic [ref=e150]: ◷ ROADMAP-FUTURE (phase it; keep §0.1 isolation)
+      - list [ref=e151]:
+        - listitem [ref=e152]: 9-dim confidence, EvidencePack, tape, scenario table
+        - listitem [ref=e153]: Lens library beyond the 5 modes
+        - listitem [ref=e154]: RES + OPS surfaces, alerts
+        - listitem [ref=e155]: Real order-book depth for the MD ladder (R1)
+        - listitem [ref=e156]: "The amber-CRT shell: docking + command line + ladder is heavy custom front-end, not a Quasar reskin (R2)"
+  - generic [ref=e157]:
+    - generic [ref=e158]: "05"
+    - heading "Risks & gaps" [level=2] [ref=e159]
+    - generic [ref=e160]: 2 gating · 3 refinements
+  - generic [ref=e161]:
+    - generic [ref=e162]: R1
+    - generic [ref=e163]:
+      - generic [ref=e164]: Order-book depth is unproven — and it's the ladder's whole point
+      - generic [ref=e165]: Kalshi orderbook auth is documentation-conflicted → (probe) in §1; the app is unauthenticated by default. Without proven access the MD ladder is top-of-book only, not a real DOM. Gates the centrepiece.
+  - generic [ref=e166]:
+    - generic [ref=e167]: R2
+    - generic [ref=e168]:
+      - generic [ref=e169]: NiceGUI feasibility of the dense terminal shell
+      - generic [ref=e170]: Today's UI is Quasar ui.table. Docking + command-line parser + amber grid + ladder is a substantial custom build and may trip §13's "dedicated front-end if NiceGUI blocks core UX" trigger. Validate one slice before full commit.
+  - generic [ref=e171]:
+    - generic [ref=e172]: G3
+    - generic [ref=e173]:
+      - generic [ref=e174]: Research appears twice
+      - generic [ref=e175]: A blotter "Research" tab AND the RES surface. To honour §0.1 separation, keep research OFF the executable blotter — RES surface + card-attached evidence only.
+  - generic [ref=e176]:
+    - generic [ref=e177]: G4
+    - generic [ref=e178]:
+      - generic [ref=e179]: Default theme
+      - generic [ref=e180]: Amber-on-black is the signature but can fatigue; the high-contrast toggle mitigates. Owner call below.
+  - generic [ref=e181]:
+    - generic [ref=e182]: G5
+    - generic [ref=e183]:
+      - generic [ref=e184]: Accessibility
+      - generic [ref=e185]: Carry colourblind-safe, non-colour-only cues (icon+text) through to the rebuild (§9.3).
+  - generic [ref=e186]:
+    - generic [ref=e187]: "06"
+    - heading "Recommended path" [level=2] [ref=e188]
+    - generic [ref=e189]: 2 gates, then a 4-phase milestone
+  - generic [ref=e190]:
+    - generic [ref=e191]: GATE A
+    - generic [ref=e192]: "Probe order-book depth (R1). Decide: real DOM vs labelled top-of-book preview. Gates the ladder."
+  - generic [ref=e193]:
+    - generic [ref=e194]: GATE B
+    - generic [ref=e195]: NiceGUI shell feasibility spike (R2). Build one real slice — amber theme + blotter grid + command line + one docked panel — or trigger the dedicated-front-end decision.
+  - generic [ref=e196]:
+    - generic [ref=e197]: P1 · SHELL
+    - generic [ref=e198]: Command line + status/trust strip + tiles + blotter from the real engine; full clickable nav (command line = accelerator, never required).
+  - generic [ref=e199]:
+    - generic [ref=e200]: P2 · CARD
+    - generic [ref=e201]: DES trade-card from real fields (legs/quote/EvidencePack); confidence only for dims that exist; $1⇄$100.
+  - generic [ref=e202]:
+    - generic [ref=e203]: P3 · LADDER
+    - generic [ref=e204]: MD ladder — gated on Gate A.
+  - generic [ref=e205]:
+    - generic [ref=e206]: P4 · SURFACES
+    - generic [ref=e207]: RES / OPS surfaces + alerts (roadmap-future; every metric behind §0.1 isolation tests).
+  - generic [ref=e208]:
+    - generic [ref=e209]: "07"
+    - heading "Your three calls" [level=2] [ref=e210]
+    - generic [ref=e211]: pick one each → copy as markdown
+  - generic [ref=e212]:
+    - generic [ref=e213]:
+      - generic [ref=e214]: Default theme
+      - generic [ref=e215]:
+        - button "Balanced-dark default, amber opt-in◆ REC Readability for everyone; amber stays the signature 'terminal' theme." [ref=e216] [cursor=pointer]:
+          - text: Balanced-dark default, amber opt-in◆ REC
+          - generic [ref=e217]: Readability for everyone; amber stays the signature 'terminal' theme.
+        - button "Amber-on-black default Maximal Bloomberg identity; rely on the high-contrast toggle for fatigue." [ref=e218] [cursor=pointer]:
+          - text: Amber-on-black default
+          - generic [ref=e219]: Maximal Bloomberg identity; rely on the high-contrast toggle for fatigue.
+    - generic [ref=e220]:
+      - generic [ref=e221]: MD ladder data
+      - generic [ref=e222]:
+        - button "Top-of-book preview now; full DOM after probe◆ REC Ships honestly without unproven order-book auth; upgrade once Gate A passes." [ref=e223] [cursor=pointer]:
+          - text: Top-of-book preview now; full DOM after probe◆ REC
+          - generic [ref=e224]: Ships honestly without unproven order-book auth; upgrade once Gate A passes.
+        - button "Hold the ladder until real depth is proven Cleaner, but loses the fill/liquidity answer (Q4) in the interim." [ref=e225] [cursor=pointer]:
+          - text: Hold the ladder until real depth is proven
+          - generic [ref=e226]: Cleaner, but loses the fill/liquidity answer (Q4) in the interim.
+    - generic [ref=e227]:
+      - generic [ref=e228]: Sequencing
+      - generic [ref=e229]:
+        - button "Run Gate B (NiceGUI feasibility) first◆ REC Cheapest way to de-risk the whole aesthetic before committing the milestone." [ref=e230] [cursor=pointer]:
+          - text: Run Gate B (NiceGUI feasibility) first◆ REC
+          - generic [ref=e231]: Cheapest way to de-risk the whole aesthetic before committing the milestone.
+        - button "Start P1 shell directly Faster to something runnable; higher risk the wrapper fights the design." [ref=e232] [cursor=pointer]:
+          - text: Start P1 shell directly
+          - generic [ref=e233]: Faster to something runnable; higher risk the wrapper fights the design.
+  - generic [ref=e234]:
+    - generic [ref=e235]:
+      - text: DECISIONS — MARKDOWN
+      - button "COPY" [ref=e236] [cursor=pointer]
+    - generic [ref=e237]: "## Terminal Pro — owner decisions - **Default theme:** Balanced-dark default, amber opt-in - **MD ladder data:** Top-of-book preview now; full DOM after probe - **Sequencing:** Run Gate B (NiceGUI feasibility) first Verdict: yes → phased milestone. Gates: A) order-book depth probe · B) NiceGUI shell feasibility spike."
+  - generic [ref=e238]: "Source: .kss/spikes/20260611-terminal-pro-mockup/README.md · mockup ui-mockup-7-terminal-pro.html · offline-safe, no network. Selections are local to this page; copy the markdown into the spike or a milestone plan. Next: plan-milestone --from-spike .kss/spikes/20260611-terminal-pro-mockup/README.md"

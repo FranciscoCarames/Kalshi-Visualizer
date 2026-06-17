@@ -1,0 +1,11 @@
+[   13949ms] [WARNING] AG Grid: warning #29 tried to call sizeColumnsToFit() but the grid is coming back with zero width, maybe the grid is not visible yet on the screen? 
+See https://www.ag-grid.com/javascript-data-grid/errors/29?_version_=34.2.0 @ http://127.0.0.1:8000/_nicegui/3.12.1/esm/3bacee81d94ad4f90becff832b897bfb/index.js:0
+[   83002ms] [LOG] reloading because implicit handshake failed for clientId 3dc52c79-2e24-4b64-afd6-c68b0d1cde1a @ http://127.0.0.1:8000/_nicegui/3.12.1/static/nicegui.js:467
+[  103804ms] [WARNING] AG Grid: warning #29 tried to call sizeColumnsToFit() but the grid is coming back with zero width, maybe the grid is not visible yet on the screen? 
+See https://www.ag-grid.com/javascript-data-grid/errors/29?_version_=34.2.0 @ http://127.0.0.1:8000/_nicegui/3.12.1/esm/3bacee81d94ad4f90becff832b897bfb/index.js:0
+[  186292ms] [LOG] reloading because connection timed out @ http://127.0.0.1:8000/_nicegui/3.12.1/static/nicegui.js:464
+[  186292ms] [WARNING] WebSocket connection to 'ws://127.0.0.1:8000/_nicegui_ws/socket.io/?client_id=9e3677eb-cf2c-46b2-9dab-d0d50ec3ec00&next_message_id=56&implicit_handshake=true&document_id=f85c40f6-4cdf-4623-9d55-f392dd92627b&tab_id=d7cb76bb-d8fd-4a51-a76b-b399daaec7ff&old_tab_id=null&EIO=4&transport=websocket' failed: WebSocket is closed before the connection is established. @ http://127.0.0.1:8000/_nicegui/3.12.1/static/socket.io.min.js:5
+[  209272ms] [LOG] reloading because connection timed out @ http://127.0.0.1:8000/_nicegui/3.12.1/static/nicegui.js:464
+[  209275ms] [WARNING] WebSocket connection to 'ws://127.0.0.1:8000/_nicegui_ws/socket.io/?client_id=9e3677eb-cf2c-46b2-9dab-d0d50ec3ec00&next_message_id=56&implicit_handshake=true&document_id=f85c40f6-4cdf-4623-9d55-f392dd92627b&tab_id=d7cb76bb-d8fd-4a51-a76b-b399daaec7ff&old_tab_id=null&EIO=4&transport=websocket' failed: WebSocket is closed before the connection is established. @ http://127.0.0.1:8000/_nicegui/3.12.1/static/socket.io.min.js:5
+[  245427ms] [WARNING] AG Grid: warning #29 tried to call sizeColumnsToFit() but the grid is coming back with zero width, maybe the grid is not visible yet on the screen? 
+See https://www.ag-grid.com/javascript-data-grid/errors/29?_version_=34.2.0 @ http://127.0.0.1:8000/_nicegui/3.12.1/esm/3bacee81d94ad4f90becff832b897bfb/index.js:0

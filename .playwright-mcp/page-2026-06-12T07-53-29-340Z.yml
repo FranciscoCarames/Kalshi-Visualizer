@@ -1,0 +1,514 @@
+- generic [ref=e1]:
+  - main [ref=e5]:
+    - generic [ref=e6]:
+      - generic [ref=e7]: Kalshi Opportunity Engine — Cross-Sport
+      - generic [ref=e8]: Opportunities across all sports, ranked best→worst. Core series, gross of fees — NOT all of Kalshi.
+      - generic [ref=e9]:
+        - generic [ref=e12] [cursor=pointer]:
+          - generic [ref=e13]:
+            - generic: Sport
+            - generic "Filter by sport" [ref=e14]:
+              - generic [ref=e10641]: Tennis
+              - combobox "Sport" [ref=e15]: Tennis
+          - generic [ref=e17]: arrow_drop_down
+        - generic [ref=e20] [cursor=pointer]:
+          - generic [ref=e21]:
+            - generic: Tournament
+            - generic "Filter by tournament" [ref=e22]:
+              - combobox "Tournament" [ref=e23]
+          - generic [ref=e25]: arrow_drop_down
+        - generic [ref=e28]:
+          - generic [ref=e29]:
+            - generic: Players / matches
+            - combobox "Filter by players or matches" [ref=e31]
+          - generic [ref=e33] [cursor=pointer]: arrow_drop_down
+        - generic [ref=e37]:
+          - generic: Min size
+          - spinbutton "Minimum tradable size" [ref=e38]
+        - button "Refresh snapshot" [ref=e39] [cursor=pointer]:
+          - generic [ref=e41]: Refresh snapshot
+        - button "Clear all filters" [ref=e42] [cursor=pointer]:
+          - generic [ref=e44]: Clear filters
+        - button "Open settings" [ref=e45] [cursor=pointer]:
+          - img [ref=e47]: settings
+      - status [ref=e10677]: "sport: Tennis"
+      - generic [ref=e48]:
+        - generic [ref=e49]: Data 08:52:36 WEST · age 52s · 3,264 opportunities · 93 series · 0 failed · 4,217 contracts scanned · 2,163 checks tested · 188 Kalshi requests
+        - generic "Scan in progress indicator" [ref=e50]: Scanning — new data shortly…
+      - generic [ref=e51]: "Near-miss: 113 shown · Cheap NO fades: 39 shown"
+      - generic [ref=e52]: 1 newly actionable
+      - separator [ref=e53]
+      - generic [ref=e55]:
+        - button "Collapse" [expanded] [ref=e56] [cursor=pointer]:
+          - generic [ref=e57]:
+            - generic [ref=e58]: unfold_more
+            - generic [ref=e59]: Actionable — executable gross edges (0)
+            - button [ref=e61]:
+              - img [ref=e63]: view_column
+          - generic [ref=e65]: keyboard_arrow_down
+        - generic [ref=e67]:
+          - generic [ref=e68]: Firm, sized, currently-tradable gross pricing discrepancies. Gross of fees.
+          - generic "Actionable opportunities" [ref=e69]:
+            - table [ref=e71]:
+              - rowgroup [ref=e72]:
+                - row "Sport Participant / match Detail Action plan Gross edge ¢ ROI % Max units Max gross profit Tradable Caveat" [ref=e73]:
+                  - columnheader [ref=e74]
+                  - columnheader [ref=e75]
+                  - columnheader "Sport" [ref=e76] [cursor=pointer]:
+                    - text: Sport
+                    - generic [ref=e77]: arrow_upward
+                  - columnheader "Participant / match" [ref=e78] [cursor=pointer]:
+                    - text: Participant / match
+                    - generic [ref=e79]: arrow_upward
+                  - columnheader "Detail" [ref=e80]
+                  - columnheader "Action plan" [ref=e81]
+                  - columnheader "Gross edge ¢" [ref=e82] [cursor=pointer]:
+                    - text: Gross edge ¢
+                    - generic [ref=e83]: arrow_upward
+                  - columnheader "ROI %" [ref=e84] [cursor=pointer]:
+                    - text: ROI %
+                    - generic [ref=e85]: arrow_upward
+                  - columnheader "Max units" [ref=e86] [cursor=pointer]:
+                    - text: Max units
+                    - generic [ref=e87]: arrow_upward
+                  - columnheader "Max gross profit" [ref=e88] [cursor=pointer]:
+                    - text: Max gross profit
+                    - generic [ref=e89]: arrow_upward
+                  - columnheader "Tradable" [ref=e90]
+                  - columnheader "Caveat" [ref=e91]
+              - rowgroup
+            - generic [ref=e337]:
+              - generic [ref=e10678]: warning
+              - text: No actionable opportunities in the current filters.
+      - generic [ref=e352]:
+        - button "Collapse" [expanded] [ref=e353] [cursor=pointer]:
+          - generic [ref=e354]:
+            - generic [ref=e355]: unfold_more
+            - generic [ref=e356]: Review Required — settlement-dependent (0)
+            - button [ref=e358]:
+              - img [ref=e360]: view_column
+          - generic [ref=e362]: keyboard_arrow_down
+        - generic [ref=e364]:
+          - generic [ref=e365]: Real, executable-looking edges whose legs may not settle together (e.g. an exact-score bundle vs the match winner) — verify the settlement rules first; never auto-tradable.
+          - generic "Review-required opportunities" [ref=e366]:
+            - table [ref=e368]:
+              - rowgroup [ref=e369]:
+                - row "Sport Participant / match Detail Action plan Gross edge ¢ ROI % Max units Max gross profit Tradable Caveat" [ref=e370]:
+                  - columnheader [ref=e371]
+                  - columnheader [ref=e372]
+                  - columnheader "Sport" [ref=e373] [cursor=pointer]:
+                    - text: Sport
+                    - generic [ref=e374]: arrow_upward
+                  - columnheader "Participant / match" [ref=e375] [cursor=pointer]:
+                    - text: Participant / match
+                    - generic [ref=e376]: arrow_upward
+                  - columnheader "Detail" [ref=e377]
+                  - columnheader "Action plan" [ref=e378]
+                  - columnheader "Gross edge ¢" [ref=e379] [cursor=pointer]:
+                    - text: Gross edge ¢
+                    - generic [ref=e380]: arrow_upward
+                  - columnheader "ROI %" [ref=e381] [cursor=pointer]:
+                    - text: ROI %
+                    - generic [ref=e382]: arrow_upward
+                  - columnheader "Max units" [ref=e383] [cursor=pointer]:
+                    - text: Max units
+                    - generic [ref=e384]: arrow_upward
+                  - columnheader "Max gross profit" [ref=e385] [cursor=pointer]:
+                    - text: Max gross profit
+                    - generic [ref=e386]: arrow_upward
+                  - columnheader "Tradable" [ref=e387]
+                  - columnheader "Caveat" [ref=e388]
+              - rowgroup
+            - generic [ref=e590]:
+              - generic [ref=e10664]: warning
+              - text: No review-required opportunities in the current filters.
+      - generic [ref=e610]: Discrepancies that exist but aren't tradable now (no firm size / an inactive leg).
+      - generic "Bounded-loss bets section" [ref=e611]:
+        - generic [ref=e612]:
+          - button "Collapse" [expanded] [ref=e613] [cursor=pointer]:
+            - generic [ref=e614]:
+              - generic [ref=e615]: unfold_more
+              - generic [ref=e616]: Bounded-Loss Bets — capped downside, convex upside (0)
+            - generic [ref=e618]: keyboard_arrow_down
+          - generic [ref=e620]:
+            - generic [ref=e621]: "Buy the broader YES + the deeper NO for just over 100¢: your loss is capped at the small overpay, with convex upside (the broader-but-not-deeper outcome pays about +$1). A bet, NOT an edge — gross of fees."
+            - generic [ref=e622]: Market gap (pp) = parent−child display-price gap (the UNCONDITIONAL implied chance of the payoff zone). Success given reached % = the CONDITIONAL chance the payoff zone hits given the broader outcome happens (1 − child/parent); Deeper given reached % = its complement child/parent (the chance the deeper outcome also occurs) — a market-implied / uncalibrated pair, less sensitive to a common overround but NOT de-vigged. Firm success gap ¢ = the conservative parent-bid − child-ask gap; ≤ 0 (the 'Midpoint-only' flag) means the display positive isn't confirmed by firm quotes. Gap vs breakeven (pp) = implied chance minus the chance needed to clear the overpay. Parent ÷ max loss = the parent's in-the-money probability per cent of max loss (cost − 100, the at-risk overpay); higher = more likely-to-reach per cent at risk; deep longshots sink.
+            - generic [ref=e623]: All gross, top-of-book, display-implied — comparison aids, NOT a guarantee or a calibrated probability model. Fees, slippage, full-depth fill, latency, and settlement-rule edge cases are not modeled. A negative gap means an inverted ladder (flagged 'Inverted / diagnostic'), never a chance.
+            - generic [ref=e624]:
+              - generic [ref=e625]: All bounded-loss bets (0)
+              - generic [ref=e626]: info
+              - button [ref=e628] [cursor=pointer]:
+                - img [ref=e630]: view_column
+            - generic "Bounded-loss bets (all)" [ref=e631]:
+              - table [ref=e633]:
+                - rowgroup [ref=e634]:
+                  - row "Signal Flags Kind Cheap vs peers Sport Participant / chain Detail Wins if… Max loss ¢ Max profit ¢ Max units Max loss @ $100 ($) Best upside @ $100 ($) Quote health Upside:risk Market gap (pp) Success given reached % Deeper given reached % Firm success gap ¢ Gap vs breakeven (pp) Parent ÷ max loss Caveat" [ref=e635]:
+                    - columnheader [ref=e636]
+                    - columnheader [ref=e637]
+                    - columnheader "Signal" [ref=e638] [cursor=pointer]:
+                      - text: Signal
+                      - generic [ref=e639]: arrow_upward
+                    - columnheader "Flags" [ref=e640]
+                    - columnheader "Kind" [ref=e641] [cursor=pointer]:
+                      - text: Kind
+                      - generic [ref=e642]: arrow_upward
+                    - columnheader "Cheap vs peers" [ref=e643] [cursor=pointer]:
+                      - text: Cheap vs peers
+                      - generic [ref=e644]: arrow_upward
+                    - columnheader "Sport" [ref=e645] [cursor=pointer]:
+                      - text: Sport
+                      - generic [ref=e646]: arrow_upward
+                    - columnheader "Participant / chain" [ref=e647] [cursor=pointer]:
+                      - text: Participant / chain
+                      - generic [ref=e648]: arrow_upward
+                    - columnheader "Detail" [ref=e649]
+                    - columnheader "Wins if…" [ref=e650] [cursor=pointer]:
+                      - text: Wins if…
+                      - generic [ref=e651]: arrow_upward
+                    - columnheader "Max loss ¢" [ref=e652] [cursor=pointer]:
+                      - text: Max loss ¢
+                      - generic [ref=e653]: arrow_upward
+                    - columnheader "Max profit ¢" [ref=e654] [cursor=pointer]:
+                      - text: Max profit ¢
+                      - generic [ref=e655]: arrow_upward
+                    - columnheader "Max units" [ref=e656] [cursor=pointer]:
+                      - text: Max units
+                      - generic [ref=e657]: arrow_upward
+                    - columnheader "Max loss @ $100 ($)" [ref=e658] [cursor=pointer]:
+                      - text: Max loss @ $100 ($)
+                      - generic [ref=e659]: arrow_upward
+                    - columnheader "Best upside @ $100 ($)" [ref=e660] [cursor=pointer]:
+                      - text: Best upside @ $100 ($)
+                      - generic [ref=e661]: arrow_upward
+                    - columnheader "Quote health" [ref=e662] [cursor=pointer]:
+                      - text: Quote health
+                      - generic [ref=e663]: arrow_upward
+                    - columnheader "Upside:risk" [ref=e664] [cursor=pointer]:
+                      - text: Upside:risk
+                      - generic [ref=e665]: arrow_upward
+                    - columnheader "Market gap (pp)" [ref=e666] [cursor=pointer]:
+                      - text: Market gap (pp)
+                      - generic [ref=e667]: arrow_upward
+                    - columnheader "Success given reached %" [ref=e668] [cursor=pointer]:
+                      - text: Success given reached %
+                      - generic [ref=e669]: arrow_upward
+                    - columnheader "Deeper given reached %" [ref=e670] [cursor=pointer]:
+                      - text: Deeper given reached %
+                      - generic [ref=e671]: arrow_upward
+                    - columnheader "Firm success gap ¢" [ref=e672] [cursor=pointer]:
+                      - text: Firm success gap ¢
+                      - generic [ref=e673]: arrow_upward
+                    - columnheader "Gap vs breakeven (pp)" [ref=e674] [cursor=pointer]:
+                      - text: Gap vs breakeven (pp)
+                      - generic [ref=e675]: arrow_upward
+                    - columnheader "Parent ÷ max loss" [ref=e676] [cursor=pointer]:
+                      - text: Parent ÷ max loss
+                      - generic [ref=e677]: arrow_upward
+                    - columnheader "Caveat" [ref=e678]
+                - rowgroup
+              - generic [ref=e1015]:
+                - generic [ref=e10665]: warning
+                - text: No bounded-loss bets in the current filters.
+            - generic [ref=e1041]:
+              - generic [ref=e1042]: Vertical — both legs resolve together (0)
+              - generic [ref=e1043]: info
+              - button [ref=e1045] [cursor=pointer]:
+                - img [ref=e1047]: view_column
+            - generic "Bounded-loss bets (vertical)" [ref=e1048]:
+              - table [ref=e1050]:
+                - rowgroup [ref=e1051]:
+                  - row "Signal Flags Cheap vs peers Sport Participant / chain Detail Wins if… Max loss ¢ Max profit ¢ Max units Max loss @ $100 ($) Best upside @ $100 ($) Quote health Upside:risk Market gap (pp) Success given reached % Deeper given reached % Firm success gap ¢ Gap vs breakeven (pp) Parent ÷ max loss Caveat" [ref=e1052]:
+                    - columnheader [ref=e1053]
+                    - columnheader [ref=e1054]
+                    - columnheader "Signal" [ref=e1055] [cursor=pointer]:
+                      - text: Signal
+                      - generic [ref=e1056]: arrow_upward
+                    - columnheader "Flags" [ref=e1057]
+                    - columnheader "Cheap vs peers" [ref=e1058] [cursor=pointer]:
+                      - text: Cheap vs peers
+                      - generic [ref=e1059]: arrow_upward
+                    - columnheader "Sport" [ref=e1060] [cursor=pointer]:
+                      - text: Sport
+                      - generic [ref=e1061]: arrow_upward
+                    - columnheader "Participant / chain" [ref=e1062] [cursor=pointer]:
+                      - text: Participant / chain
+                      - generic [ref=e1063]: arrow_upward
+                    - columnheader "Detail" [ref=e1064]
+                    - columnheader "Wins if…" [ref=e1065] [cursor=pointer]:
+                      - text: Wins if…
+                      - generic [ref=e1066]: arrow_upward
+                    - columnheader "Max loss ¢" [ref=e1067] [cursor=pointer]:
+                      - text: Max loss ¢
+                      - generic [ref=e1068]: arrow_upward
+                    - columnheader "Max profit ¢" [ref=e1069] [cursor=pointer]:
+                      - text: Max profit ¢
+                      - generic [ref=e1070]: arrow_upward
+                    - columnheader "Max units" [ref=e1071] [cursor=pointer]:
+                      - text: Max units
+                      - generic [ref=e1072]: arrow_upward
+                    - columnheader "Max loss @ $100 ($)" [ref=e1073] [cursor=pointer]:
+                      - text: Max loss @ $100 ($)
+                      - generic [ref=e1074]: arrow_upward
+                    - columnheader "Best upside @ $100 ($)" [ref=e1075] [cursor=pointer]:
+                      - text: Best upside @ $100 ($)
+                      - generic [ref=e1076]: arrow_upward
+                    - columnheader "Quote health" [ref=e1077] [cursor=pointer]:
+                      - text: Quote health
+                      - generic [ref=e1078]: arrow_upward
+                    - columnheader "Upside:risk" [ref=e1079] [cursor=pointer]:
+                      - text: Upside:risk
+                      - generic [ref=e1080]: arrow_upward
+                    - columnheader "Market gap (pp)" [ref=e1081] [cursor=pointer]:
+                      - text: Market gap (pp)
+                      - generic [ref=e1082]: arrow_upward
+                    - columnheader "Success given reached %" [ref=e1083] [cursor=pointer]:
+                      - text: Success given reached %
+                      - generic [ref=e1084]: arrow_upward
+                    - columnheader "Deeper given reached %" [ref=e1085] [cursor=pointer]:
+                      - text: Deeper given reached %
+                      - generic [ref=e1086]: arrow_upward
+                    - columnheader "Firm success gap ¢" [ref=e1087] [cursor=pointer]:
+                      - text: Firm success gap ¢
+                      - generic [ref=e1088]: arrow_upward
+                    - columnheader "Gap vs breakeven (pp)" [ref=e1089] [cursor=pointer]:
+                      - text: Gap vs breakeven (pp)
+                      - generic [ref=e1090]: arrow_upward
+                    - columnheader "Parent ÷ max loss" [ref=e1091] [cursor=pointer]:
+                      - text: Parent ÷ max loss
+                      - generic [ref=e1092]: arrow_upward
+                    - columnheader "Caveat" [ref=e1093]
+                - rowgroup
+              - generic [ref=e1425]:
+                - generic [ref=e10666]: warning
+                - text: No vertical (same-event) bounded-loss bets in the current filters.
+            - generic [ref=e1451]:
+              - generic [ref=e1452]: Calendar — legs resolve on different days (0)
+              - generic [ref=e1453]: info
+              - button [ref=e1455] [cursor=pointer]:
+                - img [ref=e1457]: view_column
+            - generic "Bounded-loss bets (calendar)" [ref=e1458]:
+              - table [ref=e1460]:
+                - rowgroup [ref=e1461]:
+                  - row "Signal Flags Cheap vs peers Sport Participant / chain Detail Wins if… Max loss ¢ Max profit ¢ Max units Max loss @ $100 ($) Best upside @ $100 ($) Quote health Upside:risk Market gap (pp) Success given reached % Deeper given reached % Firm success gap ¢ Gap vs breakeven (pp) Parent ÷ max loss Caveat" [ref=e1462]:
+                    - columnheader [ref=e1463]
+                    - columnheader [ref=e1464]
+                    - columnheader "Signal" [ref=e1465] [cursor=pointer]:
+                      - text: Signal
+                      - generic [ref=e1466]: arrow_upward
+                    - columnheader "Flags" [ref=e1467]
+                    - columnheader "Cheap vs peers" [ref=e1468] [cursor=pointer]:
+                      - text: Cheap vs peers
+                      - generic [ref=e1469]: arrow_upward
+                    - columnheader "Sport" [ref=e1470] [cursor=pointer]:
+                      - text: Sport
+                      - generic [ref=e1471]: arrow_upward
+                    - columnheader "Participant / chain" [ref=e1472] [cursor=pointer]:
+                      - text: Participant / chain
+                      - generic [ref=e1473]: arrow_upward
+                    - columnheader "Detail" [ref=e1474]
+                    - columnheader "Wins if…" [ref=e1475] [cursor=pointer]:
+                      - text: Wins if…
+                      - generic [ref=e1476]: arrow_upward
+                    - columnheader "Max loss ¢" [ref=e1477] [cursor=pointer]:
+                      - text: Max loss ¢
+                      - generic [ref=e1478]: arrow_upward
+                    - columnheader "Max profit ¢" [ref=e1479] [cursor=pointer]:
+                      - text: Max profit ¢
+                      - generic [ref=e1480]: arrow_upward
+                    - columnheader "Max units" [ref=e1481] [cursor=pointer]:
+                      - text: Max units
+                      - generic [ref=e1482]: arrow_upward
+                    - columnheader "Max loss @ $100 ($)" [ref=e1483] [cursor=pointer]:
+                      - text: Max loss @ $100 ($)
+                      - generic [ref=e1484]: arrow_upward
+                    - columnheader "Best upside @ $100 ($)" [ref=e1485] [cursor=pointer]:
+                      - text: Best upside @ $100 ($)
+                      - generic [ref=e1486]: arrow_upward
+                    - columnheader "Quote health" [ref=e1487] [cursor=pointer]:
+                      - text: Quote health
+                      - generic [ref=e1488]: arrow_upward
+                    - columnheader "Upside:risk" [ref=e1489] [cursor=pointer]:
+                      - text: Upside:risk
+                      - generic [ref=e1490]: arrow_upward
+                    - columnheader "Market gap (pp)" [ref=e1491] [cursor=pointer]:
+                      - text: Market gap (pp)
+                      - generic [ref=e1492]: arrow_upward
+                    - columnheader "Success given reached %" [ref=e1493] [cursor=pointer]:
+                      - text: Success given reached %
+                      - generic [ref=e1494]: arrow_upward
+                    - columnheader "Deeper given reached %" [ref=e1495] [cursor=pointer]:
+                      - text: Deeper given reached %
+                      - generic [ref=e1496]: arrow_upward
+                    - columnheader "Firm success gap ¢" [ref=e1497] [cursor=pointer]:
+                      - text: Firm success gap ¢
+                      - generic [ref=e1498]: arrow_upward
+                    - columnheader "Gap vs breakeven (pp)" [ref=e1499] [cursor=pointer]:
+                      - text: Gap vs breakeven (pp)
+                      - generic [ref=e1500]: arrow_upward
+                    - columnheader "Parent ÷ max loss" [ref=e1501] [cursor=pointer]:
+                      - text: Parent ÷ max loss
+                      - generic [ref=e1502]: arrow_upward
+                    - columnheader "Caveat" [ref=e1503]
+                - rowgroup
+              - generic [ref=e1830]:
+                - generic [ref=e10667]: warning
+                - text: No calendar (multi-day) bounded-loss bets in the current filters.
+      - generic "Cheap NO fades section" [ref=e1850]:
+        - button "Expand" [ref=e1852] [cursor=pointer]:
+          - generic [ref=e1853]:
+            - generic [ref=e1854]: unfold_more
+            - generic [ref=e1855]: Cheap NO fades — bounded-loss NO anchor, watch-only (18)
+            - button [ref=e1857]:
+              - img [ref=e1859]: view_column
+          - generic [ref=e1861]: keyboard_arrow_down
+      - button "Expand" [ref=e1864] [cursor=pointer]:
+        - generic [ref=e1865]:
+          - generic [ref=e1866]: unfold_more
+          - generic [ref=e1867]: Qualifier setups — World Cup group-stage ideas & signals (0)
+          - button [ref=e1869]:
+            - img [ref=e1871]: view_column
+        - generic [ref=e1873]: keyboard_arrow_down
+      - generic "Overpriced books section" [ref=e1874]:
+        - button "Expand" [ref=e1876] [cursor=pointer]:
+          - generic [ref=e1877]:
+            - generic [ref=e1878]: unfold_more
+            - generic [ref=e1879]: Overpriced Books — flat guaranteed loss, watch-only (89)
+            - button [ref=e1881]:
+              - img [ref=e1883]: view_column
+          - generic [ref=e1885]: keyboard_arrow_down
+      - button "Expand \"Recently Actionable — recently left the set\"" [ref=e1888] [cursor=pointer]:
+        - generic [ref=e1890]: Recently Actionable — recently left the set
+        - generic [ref=e1892]: keyboard_arrow_down
+      - button "Expand \"Durable backlog (last 7 days) — survives restarts\"" [ref=e1895] [cursor=pointer]:
+        - generic [ref=e1897]: Durable backlog (last 7 days) — survives restarts
+        - generic [ref=e1899]: keyboard_arrow_down
+      - button "Expand \"Market Telemetry — Liquidity & Volatility (context, not signals)\"" [ref=e1902] [cursor=pointer]:
+        - generic [ref=e1904]: Market Telemetry — Liquidity & Volatility (context, not signals)
+        - generic [ref=e1906]: keyboard_arrow_down
+      - generic "Selected detail" [ref=e1907]:
+        - button "Expand \"Selected Detail — click a row\"" [ref=e1909] [cursor=pointer]:
+          - generic [ref=e1911]: Selected Detail — click a row
+          - generic [ref=e1913]: keyboard_arrow_down
+      - generic "Diagnostics and debug" [ref=e1914]:
+        - button "Expand \"Diagnostics & Debug\"" [ref=e1916] [cursor=pointer]:
+          - generic [ref=e1918]: Diagnostics & Debug
+          - generic [ref=e1920]: keyboard_arrow_down
+  - generic:
+    - dialog:
+      - generic [ref=e10680]:
+        - generic [ref=e10681]: Settings
+        - generic [ref=e10682]: Display
+        - generic [ref=e10683]:
+          - switch "Dark mode" [checked] [ref=e10684] [cursor=pointer]:
+            - generic [ref=e10688]: Dark mode
+          - switch "Larger text" [ref=e10689] [cursor=pointer]:
+            - generic [ref=e10693]: Larger text
+          - switch "Show IDs and codes" [ref=e10694] [cursor=pointer]:
+            - generic [ref=e10698]: Show IDs & codes
+          - switch "Show resolution criteria" [ref=e10699] [cursor=pointer]:
+            - generic [ref=e10703]: Resolution criteria
+          - switch "Long / short position wording" [ref=e10704] [cursor=pointer]:
+            - generic [ref=e10708]: Long / short wording
+          - switch "Show estimated net-of-fees columns" [ref=e10709] [cursor=pointer]:
+            - generic [ref=e10713]: Show net of fees
+        - generic [ref=e10714]: Sections
+        - generic [ref=e10715]:
+          - switch "Show the Review-signal section" [checked] [ref=e10716] [cursor=pointer]:
+            - generic [ref=e10720]: Review
+          - switch "Show the Blocked section" [ref=e10721] [cursor=pointer]:
+            - generic [ref=e10725]: Blocked
+          - switch "Show the Qualifier setups section" [checked] [ref=e10726] [cursor=pointer]:
+            - generic [ref=e10730]: Qualifier setups
+        - generic [ref=e10731]:
+          - switch "Show speculative bounded-loss structures" [checked] [ref=e10732] [cursor=pointer]:
+            - generic [ref=e10736]: Speculative bounded-loss structures
+          - generic [ref=e10740]:
+            - generic: Max loss ¢
+            - spinbutton "Speculative max loss in cents" [ref=e10741]: "5"
+          - generic [ref=e10745]:
+            - generic: Min upside:risk
+            - spinbutton "Speculative minimum upside-to-risk ratio" [ref=e10746]: "0.0"
+          - generic [ref=e10750]:
+            - generic: Min child outright ¢
+            - spinbutton "Speculative minimum child display outright in cents" [ref=e10751]: "0"
+          - generic [ref=e10755]:
+            - generic: Max spread÷outright
+            - spinbutton "Speculative maximum child display spread-to-outright ratio" [ref=e10756]: "0.00"
+          - switch "Show overpriced books (near-miss)" [checked] [ref=e10757] [cursor=pointer]:
+            - generic [ref=e10761]: Near-miss books
+          - generic [ref=e10765]:
+            - generic: Max overpay ¢
+            - spinbutton "Near-miss max overpay in cents" [ref=e10766]: "3"
+          - switch "Show cheap NO fades" [checked] [ref=e10767] [cursor=pointer]:
+            - generic [ref=e10771]: Cheap NO fades
+          - generic [ref=e10774] [cursor=pointer]:
+            - generic [ref=e10775]:
+              - generic: NO-fade kind
+              - generic "Cheap NO fade kind" [ref=e10776]:
+                - generic [ref=e10777]: All
+                - combobox "NO-fade kind" [ref=e10778]: All
+            - generic [ref=e10780]: arrow_drop_down
+          - generic [ref=e10784]:
+            - generic: Max loss ¢
+            - spinbutton "Cheap NO fade max loss in cents" [ref=e10785]: "15"
+          - generic [ref=e10789]:
+            - generic: Max Buy-NO ¢
+            - spinbutton "Cheap NO fade max Buy-NO cost in cents" [ref=e10790]: "15"
+          - switch "Group cheap NO fades by participant ladder" [ref=e10791] [cursor=pointer]:
+            - generic [ref=e10795]: Group by participant (ladder)
+          - generic [ref=e10797]:
+            - generic:
+              - generic:
+                - generic: Ladder sort
+                - generic "NO-fade ladder sort":
+                  - generic: Safest first
+              - generic:
+                - generic: arrow_drop_down
+        - generic [ref=e10798]: Filters & thresholds
+        - generic [ref=e10799]:
+          - switch "Active markets only" [ref=e10800] [cursor=pointer]:
+            - generic [ref=e10804]: Active only
+          - generic [ref=e10807] [cursor=pointer]:
+            - generic [ref=e10808]:
+              - generic: Rank by
+              - generic "Rank opportunities by" [ref=e10809]:
+                - generic [ref=e10810]: Blended
+                - combobox "Rank by" [ref=e10811]: Blended
+            - generic [ref=e10813]: arrow_drop_down
+          - generic [ref=e10816] [cursor=pointer]:
+            - generic [ref=e10817]:
+              - generic: Backlog window
+              - generic "Backlog window" [ref=e10818]:
+                - generic [ref=e10819]: 1 hour
+                - combobox "Backlog window" [ref=e10820]: 1 hour
+            - generic [ref=e10822]: arrow_drop_down
+        - generic [ref=e10823]: Time & refresh
+        - generic [ref=e10824]:
+          - generic [ref=e10827] [cursor=pointer]:
+            - generic [ref=e10828]:
+              - generic: Time zone
+              - generic "Time zone" [ref=e10829]:
+                - generic [ref=e10830]: Europe/Lisbon
+                - combobox "Time zone" [ref=e10831]: Europe/Lisbon
+            - generic [ref=e10833]: arrow_drop_down
+          - generic [ref=e10836] [cursor=pointer]:
+            - generic [ref=e10837]:
+              - generic: New-actionable banner
+              - generic "New-actionable banner persistence" [ref=e10838]:
+                - generic [ref=e10839]: Until next refresh
+                - combobox "New-actionable banner" [ref=e10840]: Until next refresh
+            - generic [ref=e10842]: arrow_drop_down
+          - switch "Auto-refresh in the background" [checked] [ref=e10843] [cursor=pointer]:
+            - generic [ref=e10847]: Auto-refresh
+          - generic [ref=e10850] [cursor=pointer]:
+            - generic [ref=e10851]:
+              - generic: Every (s)
+              - generic "Auto-scan interval (seconds)" [ref=e10852]:
+                - generic [ref=e10853]: "10"
+                - combobox "Every (s)" [ref=e10854]: "10"
+            - generic [ref=e10856]: arrow_drop_down
+        - generic [ref=e10857]:
+          - button "Export snapshot ZIP" [ref=e10858] [cursor=pointer]:
+            - generic [ref=e10860]: Export (ZIP)
+          - button "Close" [ref=e10861] [cursor=pointer]:
+            - generic [ref=e10863]: Close

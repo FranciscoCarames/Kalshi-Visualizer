@@ -1,0 +1,593 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6] [cursor=pointer]: OPP
+      - generic [ref=e7] [cursor=pointer]: RES
+      - generic [ref=e8] [cursor=pointer]: OPS
+      - generic [ref=e9] [cursor=pointer]: ALRT
+    - generic [ref=e10]:
+      - generic [ref=e11]: ">"
+      - textbox "SEARCH — functions · participants · lenses · layouts (Ctrl-K · Phase B3)" [ref=e12]:
+        - /placeholder: SEARCH — functions · participants · lenses · layouts  (Ctrl-K · Phase B3)
+      - button "<GO>" [ref=e13] [cursor=pointer]
+    - generic [ref=e14]: 2928s · KALSHI
+  - generic [ref=e15]:
+    - generic [ref=e16]:
+      - generic [ref=e17]: ●
+      - text: "SNAPSHOT #2545 · 2928s ago"
+    - generic [ref=e18]:
+      - text: Opps
+      - generic [ref=e19]: 2,370
+    - generic [ref=e20]:
+      - text: Contracts
+      - generic [ref=e21]: 3,778
+    - generic [ref=e22]:
+      - text: Checks
+      - generic [ref=e23]: 1,574
+    - generic [ref=e24]:
+      - text: Requests
+      - generic [ref=e25]: "188"
+    - generic [ref=e26]:
+      - text: Sports
+      - generic [ref=e27]: "10"
+    - generic [ref=e28]:
+      - generic [ref=e29]: ●
+      - text: Failed
+      - generic [ref=e30]: "0"
+    - generic [ref=e31]: GROSS · TOP-OF-BOOK · $1 BASIS · READ-ONLY · NO ORDER ENTRY · NOT RISKLESS
+  - generic [ref=e32]:
+    - generic [ref=e33] [cursor=pointer]:
+      - generic [ref=e34]: 1)
+      - text: OPP
+    - generic [ref=e35] [cursor=pointer]:
+      - generic [ref=e36]: 2)
+      - text: RES
+    - generic [ref=e37] [cursor=pointer]:
+      - generic [ref=e38]: 3)
+      - text: OPS
+    - generic [ref=e39]:
+      - generic [ref=e40]: LENS
+      - generic [ref=e41]:
+        - button "BLENDED" [ref=e42] [cursor=pointer]
+        - button "EDGE¢" [ref=e43] [cursor=pointer]
+        - button "SPREAD" [ref=e44] [cursor=pointer]
+        - button "OUTRIGHT+SPREAD" [ref=e45] [cursor=pointer]
+        - button "IMPLIED EV" [ref=e46] [cursor=pointer]
+        - button "RIPENESS" [ref=e47] [cursor=pointer]
+      - generic [ref=e48]: engine order
+  - generic [ref=e49]:
+    - button "ACTIONABLE 12 executable now" [ref=e179] [cursor=pointer]:
+      - generic [ref=e51]: ACTIONABLE
+      - generic [ref=e52]: "12"
+      - generic [ref=e53]: executable now
+    - button "REVIEW 29 settlement-dep" [ref=e180] [cursor=pointer]:
+      - generic [ref=e55]: REVIEW
+      - generic [ref=e56]: "29"
+      - generic [ref=e57]: settlement-dep
+    - button "BLOCKED 13 not fillable" [ref=e181] [cursor=pointer]:
+      - generic [ref=e59]: BLOCKED
+      - generic [ref=e60]: "13"
+      - generic [ref=e61]: not fillable
+    - button "BOUNDED-LOSS 231 can lose money" [ref=e182] [cursor=pointer]:
+      - generic [ref=e63]: BOUNDED-LOSS
+      - generic [ref=e64]: "231"
+      - generic [ref=e65]: can lose money
+    - button "NEAR-MISS 205 watchlist" [ref=e183] [cursor=pointer]:
+      - generic [ref=e67]: NEAR-MISS
+      - generic [ref=e68]: "205"
+      - generic [ref=e69]: watchlist
+    - button "QUALIFIER 50 WC setups" [ref=e184] [cursor=pointer]:
+      - generic [ref=e71]: QUALIFIER
+      - generic [ref=e72]: "50"
+      - generic [ref=e73]: WC setups
+    - button "CHEAP-NO 488 NO fades" [ref=e185] [cursor=pointer]:
+      - generic [ref=e75]: CHEAP-NO
+      - generic [ref=e76]: "488"
+      - generic [ref=e77]: NO fades
+    - button "DATA-QUALITY 1,342 diagnostic" [ref=e186] [cursor=pointer]:
+      - generic [ref=e79]: DATA-QUALITY
+      - generic [ref=e80]: 1,342
+      - generic [ref=e81]: diagnostic
+  - generic [ref=e82]:
+    - generic [ref=e83]: SPORT
+    - combobox [ref=e84]:
+      - option "All" [selected]
+      - option "Esports"
+      - option "Golf"
+      - option "MLB"
+      - option "Motorsport"
+      - option "NBA"
+      - option "NFL"
+      - option "NHL"
+      - option "Soccer (World Cup)"
+      - option "Tennis"
+      - option "WNBA"
+    - generic [ref=e85]: PARTICIPANT
+    - textbox "contains…" [ref=e86]
+    - generic [ref=e87] [cursor=pointer]: clear
+  - generic [ref=e88]:
+    - generic [ref=e89]:
+      - generic [ref=e90]:
+        - generic [ref=e91]: "1"
+        - heading "BLOTTER" [level=3] [ref=e92]
+        - generic [ref=e93]: read-only VIEW of the engine · bucket/status verbatim · drag headers to reorder
+      - generic [ref=e94]:
+        - generic [ref=e95] [cursor=pointer]: EXECUTABLE 12 firm · gross edge
+        - generic [ref=e96] [cursor=pointer]: SPECULATIVE 231 bounded-loss · can lose money
+        - generic [ref=e97] [cursor=pointer]: DIAGNOSTIC 1,342 review-only · data quality
+      - generic [ref=e98]:
+        - generic [ref=e99] [cursor=pointer]: ACTIONABLE12
+        - generic [ref=e100] [cursor=pointer]: REVIEW29
+        - generic [ref=e101] [cursor=pointer]: BLOCKED13
+        - generic [ref=e102]: Showing 12 · 8 cols · ⚙ columns ▾
+      - generic [ref=e105]:
+        - generic [ref=e106]: Press SPACE to deselect this row
+        - grid [ref=e107]:
+          - rowgroup [ref=e109]:
+            - row "Participant / match Sport Gross edge ¢ ROI % Max units Max gross profit" [ref=e187]:
+              - columnheader "Participant / match" [ref=e111]:
+                - text: 
+                - generic [ref=e113] [cursor=pointer]: Participant / match
+                - text: 
+                - generic:    
+              - columnheader "Sport" [ref=e114]:
+                - text: 
+                - generic [ref=e116] [cursor=pointer]: Sport
+                - text: 
+                - generic:    
+              - columnheader "Gross edge ¢" [ref=e117]:
+                - text: 
+                - generic [ref=e119] [cursor=pointer]: Gross edge ¢
+                - text: 
+                - generic:    
+              - columnheader "ROI %" [ref=e120]:
+                - text: 
+                - generic [ref=e122] [cursor=pointer]: ROI %
+                - text: 
+                - generic:    
+              - columnheader "Max units" [ref=e123]:
+                - text: 
+                - generic [ref=e125] [cursor=pointer]: Max units
+                - text: 
+                - generic:    
+              - columnheader "Max gross profit" [ref=e188]:
+                - text: 
+                - generic [ref=e190] [cursor=pointer]: Max gross profit
+                - text: 
+                - generic:    
+          - rowgroup [ref=e126]:
+            - row "<span class=\"nm\">Pro Basketball (M) · 27 winner field</span> <span class=\"sub\">Pro Basketball (M) · 27</span> NBA 4¢ 0.2% 10.7 $0.43" [active] [selected] [ref=e191]:
+              - gridcell "<span class=\"nm\">Pro Basketball (M) · 27 winner field</span> <span class=\"sub\">Pro Basketball (M) · 27</span>" [ref=e192]
+              - gridcell "NBA" [ref=e193]
+              - gridcell "4¢" [ref=e194]
+              - gridcell "0.2%" [ref=e195]
+              - gridcell "10.7" [ref=e196]
+              - gridcell "$0.43" [ref=e197]
+            - row "<span class=\"nm\">Group Stage — stage of elimination</span> <span class=\"sub\">FIFA World Cup · 26</span> Soccer (World Cup) 4¢ 0.7% 1.5 $0.06" [ref=e198]:
+              - gridcell "<span class=\"nm\">Group Stage — stage of elimination</span> <span class=\"sub\">FIFA World Cup · 26</span>" [ref=e199]
+              - gridcell "Soccer (World Cup)" [ref=e200]
+              - gridcell "4¢" [ref=e201]
+              - gridcell "0.7%" [ref=e202]
+              - gridcell "1.5" [ref=e203]
+              - gridcell "$0.06" [ref=e204]
+            - row "<span class=\"nm\">Group Stage — stage of elimination</span> <span class=\"sub\">FIFA World Cup · 26</span> Soccer (World Cup) 3¢ 0.5% 1 $0.03" [ref=e205]:
+              - gridcell "<span class=\"nm\">Group Stage — stage of elimination</span> <span class=\"sub\">FIFA World Cup · 26</span>" [ref=e206]
+              - gridcell "Soccer (World Cup)" [ref=e207]
+              - gridcell "3¢" [ref=e208]
+              - gridcell "0.5%" [ref=e209]
+              - gridcell "1" [ref=e210]
+              - gridcell "$0.03" [ref=e211]
+            - row "<span class=\"nm\">Carolina Royal Ravens vs Riyadh Falcons</span> <span class=\"sub\">Call of Duty · 26</span> Esports 2¢ 2% 138 $2.76" [ref=e212]:
+              - gridcell "<span class=\"nm\">Carolina Royal Ravens vs Riyadh Falcons</span> <span class=\"sub\">Call of Duty · 26</span>" [ref=e213]
+              - gridcell "Esports" [ref=e214]
+              - gridcell "2¢" [ref=e215]
+              - gridcell "2%" [ref=e216]
+              - gridcell "138" [ref=e217]
+              - gridcell "$2.76" [ref=e218]
+            - row "<span class=\"nm\">ODDIK vs paiN Academy</span> <span class=\"sub\">CS2 · 26</span> Esports 2¢ 2% 4 $0.08" [ref=e219]:
+              - gridcell "<span class=\"nm\">ODDIK vs paiN Academy</span> <span class=\"sub\">CS2 · 26</span>" [ref=e220]
+              - gridcell "Esports" [ref=e221]
+              - gridcell "2¢" [ref=e222]
+              - gridcell "2%" [ref=e223]
+              - gridcell "4" [ref=e224]
+              - gridcell "$0.08" [ref=e225]
+            - row "<span class=\"nm\">Scotland vs Morocco</span> <span class=\"sub\">FIFA World Cup · 26</span> Soccer (World Cup) 2¢ 1% 63.7 $1.27" [ref=e226]:
+              - gridcell "<span class=\"nm\">Scotland vs Morocco</span> <span class=\"sub\">FIFA World Cup · 26</span>" [ref=e227]
+              - gridcell "Soccer (World Cup)" [ref=e228]
+              - gridcell "2¢" [ref=e229]
+              - gridcell "1%" [ref=e230]
+              - gridcell "63.7" [ref=e231]
+              - gridcell "$1.27" [ref=e232]
+            - row "<span class=\"nm\">Cape Verde</span> <span class=\"sub\">FIFA World Cup · 26</span> Soccer (World Cup) 1¢ 1% 3 $0.03" [ref=e233]:
+              - gridcell "<span class=\"nm\">Cape Verde</span> <span class=\"sub\">FIFA World Cup · 26</span>" [ref=e234]
+              - gridcell "Soccer (World Cup)" [ref=e235]
+              - gridcell "1¢" [ref=e236]
+              - gridcell "1%" [ref=e237]
+              - gridcell "3" [ref=e238]
+              - gridcell "$0.03" [ref=e239]
+            - row "<span class=\"nm\">Cape Verde vs Saudi Arabia</span> <span class=\"sub\">FIFA World Cup · 26</span> Soccer (World Cup) 1¢ 1% 608.2 $6.08" [ref=e240]:
+              - gridcell "<span class=\"nm\">Cape Verde vs Saudi Arabia</span> <span class=\"sub\">FIFA World Cup · 26</span>" [ref=e241]
+              - gridcell "Soccer (World Cup)" [ref=e242]
+              - gridcell "1¢" [ref=e243]
+              - gridcell "1%" [ref=e244]
+              - gridcell "608.2" [ref=e245]
+              - gridcell "$6.08" [ref=e246]
+            - row "<span class=\"nm\">F1 · main-race · 26 winner field</span> <span class=\"sub\">F1 · main-race · 26</span> Motorsport 1¢ 0.3% 8 $0.08" [ref=e247]:
+              - gridcell "<span class=\"nm\">F1 · main-race · 26 winner field</span> <span class=\"sub\">F1 · main-race · 26</span>" [ref=e248]
+              - gridcell "Motorsport" [ref=e249]
+              - gridcell "1¢" [ref=e250]
+              - gridcell "0.3%" [ref=e251]
+              - gridcell "8" [ref=e252]
+              - gridcell "$0.08" [ref=e253]
+            - row "<span class=\"nm\">Tessa Johanna Brockmann vs Alycia Parks</span> <span class=\"sub\">Berlin</span> Tennis 1¢ 1% 1 $0.01" [ref=e254]:
+              - gridcell "<span class=\"nm\">Tessa Johanna Brockmann vs Alycia Parks</span> <span class=\"sub\">Berlin</span>" [ref=e255]
+              - gridcell "Tennis" [ref=e256]
+              - gridcell "1¢" [ref=e257]
+              - gridcell "1%" [ref=e258]
+              - gridcell "1" [ref=e259]
+              - gridcell "$0.01" [ref=e260]
+            - row "<span class=\"nm\">Tommy Paul vs Zachary Svajda</span> <span class=\"sub\">ATP London</span> Tennis 1¢ 1% 34 $0.34" [ref=e261]:
+              - gridcell "<span class=\"nm\">Tommy Paul vs Zachary Svajda</span> <span class=\"sub\">ATP London</span>" [ref=e262]
+              - gridcell "Tennis" [ref=e263]
+              - gridcell "1¢" [ref=e264]
+              - gridcell "1%" [ref=e265]
+              - gridcell "34" [ref=e266]
+              - gridcell "$0.34" [ref=e267]
+            - row "<span class=\"nm\">Croatia vs Ghana</span> <span class=\"sub\">FIFA World Cup · 26</span> Soccer (World Cup) 1¢ 0.5% 103 $1.03" [ref=e268]:
+              - gridcell "<span class=\"nm\">Croatia vs Ghana</span> <span class=\"sub\">FIFA World Cup · 26</span>" [ref=e269]
+              - gridcell "Soccer (World Cup)" [ref=e270]
+              - gridcell "1¢" [ref=e271]
+              - gridcell "0.5%" [ref=e272]
+              - gridcell "103" [ref=e273]
+              - gridcell "$1.03" [ref=e274]
+          - rowgroup
+          - rowgroup [ref=e127]
+          - rowgroup
+        - text:    
+    - generic [ref=e130]:
+      - generic [ref=e131]:
+        - generic [ref=e132]: "2"
+        - heading "INSPECTOR — TRADE CARD" [level=3] [ref=e133]
+        - generic [ref=e134]: read-only · buy-only · gross
+      - generic [ref=e136]:
+        - generic [ref=e280]:
+          - generic [ref=e281]: EXECUTABLE
+          - generic [ref=e282]: Pro Basketball (M) · 27 winner field
+          - generic [ref=e283]:
+            - button "$1" [ref=e284] [cursor=pointer]
+            - button "$100" [ref=e285] [cursor=pointer]
+        - generic [ref=e286]: Pro Basketball (M) · 27 · NBA · calendar
+        - generic [ref=e287]: BUY-ONLY PLAN — 19 LEGS
+        - generic [ref=e288]:
+          - generic [ref=e289]: "NO"
+          - generic [ref=e290]: Atlanta
+          - generic [ref=e291]: 99¢
+          - generic [ref=e292]: ×13.64
+          - link "↗" [ref=e293] [cursor=pointer]:
+            - /url: https://kalshi.com/markets/kxnba/pro-basketball-champion/kxnba-27
+        - generic [ref=e294]:
+          - generic [ref=e295]: "NO"
+          - generic [ref=e296]: Boston
+          - generic [ref=e297]: 87¢
+          - generic [ref=e298]: ×1071.66
+          - link "↗" [ref=e299] [cursor=pointer]:
+            - /url: https://kalshi.com/markets/kxnba/pro-basketball-champion/kxnba-27
+        - generic [ref=e300]:
+          - generic [ref=e301]: "NO"
+          - generic [ref=e302]: Charlotte
+          - generic [ref=e303]: 99¢
+          - generic [ref=e304]: ×12143.64
+          - link "↗" [ref=e305] [cursor=pointer]:
+            - /url: https://kalshi.com/markets/kxnba/pro-basketball-champion/kxnba-27
+        - generic [ref=e306]:
+          - generic [ref=e307]: "NO"
+          - generic [ref=e308]: Cleveland
+          - generic [ref=e309]: 98¢
+          - generic [ref=e310]: ×4811.73
+          - link "↗" [ref=e311] [cursor=pointer]:
+            - /url: https://kalshi.com/markets/kxnba/pro-basketball-champion/kxnba-27
+        - generic [ref=e312]:
+          - generic [ref=e313]: "NO"
+          - generic [ref=e314]: Denver
+          - generic [ref=e315]: 97¢
+          - generic [ref=e316]: ×21256.82
+          - link "↗" [ref=e317] [cursor=pointer]:
+            - /url: https://kalshi.com/markets/kxnba/pro-basketball-champion/kxnba-27
+        - generic [ref=e318]:
+          - generic [ref=e319]: "NO"
+          - generic [ref=e320]: Detroit
+          - generic [ref=e321]: 96¢
+          - generic [ref=e322]: ×10.66
+          - link "↗" [ref=e323] [cursor=pointer]:
+            - /url: https://kalshi.com/markets/kxnba/pro-basketball-champion/kxnba-27
+        - generic [ref=e324]:
+          - generic [ref=e325]: "NO"
+          - generic [ref=e326]: Golden State
+          - generic [ref=e327]: 98¢
+          - generic [ref=e328]: ×50
+          - link "↗" [ref=e329] [cursor=pointer]:
+            - /url: https://kalshi.com/markets/kxnba/pro-basketball-champion/kxnba-27
+        - generic [ref=e330]:
+          - generic [ref=e331]: "NO"
+          - generic [ref=e332]: Houston
+          - generic [ref=e333]: 99¢
+          - generic [ref=e334]: ×10614.64
+          - link "↗" [ref=e335] [cursor=pointer]:
+            - /url: https://kalshi.com/markets/kxnba/pro-basketball-champion/kxnba-27
+        - generic [ref=e336]:
+          - generic [ref=e337]: "NO"
+          - generic [ref=e338]: Indiana
+          - generic [ref=e339]: 97¢
+          - generic [ref=e340]: ×109.1
+          - link "↗" [ref=e341] [cursor=pointer]:
+            - /url: https://kalshi.com/markets/kxnba/pro-basketball-champion/kxnba-27
+        - generic [ref=e342]:
+          - generic [ref=e343]: "NO"
+          - generic [ref=e344]: Los Angeles L
+          - generic [ref=e345]: 97¢
+          - generic [ref=e346]: ×4864.88
+          - link "↗" [ref=e347] [cursor=pointer]:
+            - /url: https://kalshi.com/markets/kxnba/pro-basketball-champion/kxnba-27
+        - generic [ref=e348]:
+          - generic [ref=e349]: "NO"
+          - generic [ref=e350]: Miami
+          - generic [ref=e351]: 98¢
+          - generic [ref=e352]: ×11915.64
+          - link "↗" [ref=e353] [cursor=pointer]:
+            - /url: https://kalshi.com/markets/kxnba/pro-basketball-champion/kxnba-27
+        - generic [ref=e354]:
+          - generic [ref=e355]: "NO"
+          - generic [ref=e356]: Minnesota
+          - generic [ref=e357]: 98¢
+          - generic [ref=e358]: ×11206.64
+          - link "↗" [ref=e359] [cursor=pointer]:
+            - /url: https://kalshi.com/markets/kxnba/pro-basketball-champion/kxnba-27
+        - generic [ref=e360]:
+          - generic [ref=e361]: "NO"
+          - generic [ref=e362]: New York
+          - generic [ref=e363]: 87¢
+          - generic [ref=e364]: ×3600.73
+          - link "↗" [ref=e365] [cursor=pointer]:
+            - /url: https://kalshi.com/markets/kxnba/pro-basketball-champion/kxnba-27
+        - generic [ref=e366]:
+          - generic [ref=e367]: "NO"
+          - generic [ref=e368]: Oklahoma City
+          - generic [ref=e369]: 74¢
+          - generic [ref=e370]: ×9417.68
+          - link "↗" [ref=e371] [cursor=pointer]:
+            - /url: https://kalshi.com/markets/kxnba/pro-basketball-champion/kxnba-27
+        - generic [ref=e372]:
+          - generic [ref=e373]: "NO"
+          - generic [ref=e374]: Orlando
+          - generic [ref=e375]: 99¢
+          - generic [ref=e376]: ×477.45
+          - link "↗" [ref=e377] [cursor=pointer]:
+            - /url: https://kalshi.com/markets/kxnba/pro-basketball-champion/kxnba-27
+        - generic [ref=e378]:
+          - generic [ref=e379]: "NO"
+          - generic [ref=e380]: Philadelphia
+          - generic [ref=e381]: 99¢
+          - generic [ref=e382]: ×6607.45
+          - link "↗" [ref=e383] [cursor=pointer]:
+            - /url: https://kalshi.com/markets/kxnba/pro-basketball-champion/kxnba-27
+        - generic [ref=e384]:
+          - generic [ref=e385]: "NO"
+          - generic [ref=e386]: Portland
+          - generic [ref=e387]: 99¢
+          - generic [ref=e388]: ×12.64
+          - link "↗" [ref=e389] [cursor=pointer]:
+            - /url: https://kalshi.com/markets/kxnba/pro-basketball-champion/kxnba-27
+        - generic [ref=e390]:
+          - generic [ref=e391]: "NO"
+          - generic [ref=e392]: San Antonio
+          - generic [ref=e393]: 76¢
+          - generic [ref=e394]: ×2047.39
+          - link "↗" [ref=e395] [cursor=pointer]:
+            - /url: https://kalshi.com/markets/kxnba/pro-basketball-champion/kxnba-27
+        - generic [ref=e396]:
+          - generic [ref=e397]: "NO"
+          - generic [ref=e398]: Toronto
+          - generic [ref=e399]: 99¢
+          - generic [ref=e400]: ×209.45
+          - link "↗" [ref=e401] [cursor=pointer]:
+            - /url: https://kalshi.com/markets/kxnba/pro-basketball-champion/kxnba-27
+        - generic [ref=e402]: ECONOMICS (PER UNIT)
+        - generic [ref=e403]:
+          - generic [ref=e404]: Cost
+          - generic [ref=e405]: —
+          - generic [ref=e406]: Worst case
+          - generic [ref=e407]: —
+          - generic [ref=e408]: Best case
+          - generic [ref=e409]: 0¢
+          - generic [ref=e410]: ROI
+          - generic [ref=e411]: 0.2%
+          - generic [ref=e412]: Max units
+          - generic [ref=e413]: "10.66"
+          - generic [ref=e414]: Quote
+          - generic [ref=e415]: —
+          - generic [ref=e416]: Tradable
+          - generic [ref=e417]: "Yes"
+        - generic [ref=e418]: WHY RANKED HERE · ENGINE ORDER
+        - generic [ref=e419]:
+          - generic [ref=e420]: "Promotes:"
+          - generic [ref=e421]: baseline
+        - generic [ref=e422]:
+          - generic [ref=e423]: "Demotes:"
+          - generic [ref=e424]: none
+        - generic [ref=e425]: SETTLEMENT / RULES
+        - generic [ref=e426]: "One-winner-field overround: this buys NO on the priceable subset of a mutually-exclusive field (exactly one winner), not every entrant — safe because an untraded or unlisted winner only pays more. Gross, top-of-book; many legs are illiquid so the position is often only partly fillable."
+        - generic [ref=e427]: EVIDENCEPACK
+        - generic [ref=e428]:
+          - generic [ref=e429]: Snapshot
+          - generic [ref=e430]: "#2545"
+          - generic [ref=e431]: Status
+          - generic [ref=e432]: EXECUTABLE_DUTCH_BOOK
+          - generic [ref=e433]: Opp id
+          - generic [ref=e434]: 52ee01e0194a0d93
+          - generic [ref=e435]: Market
+          - link "open ↗" [ref=e437] [cursor=pointer]:
+            - /url: https://kalshi.com/markets/kxnba/pro-basketball-champion/kxnba-27
+    - generic [ref=e137]:
+      - generic [ref=e138]:
+        - generic [ref=e139]: "3"
+        - heading "MD LADDER" [level=3] [ref=e140]
+        - generic [ref=e141]: top-of-book + derived
+      - generic [ref=e142]: READ-ONLY DEPTH VIEW — NO ORDERS · TOP-OF-BOOK + DERIVED
+      - generic [ref=e143]:
+        - generic [ref=e438]:
+          - text: Pro Basketball (M) · 27 winner field
+          - generic [ref=e439]: · 19 contracts
+        - combobox [ref=e440]:
+          - option "NO · Atlanta @ 99¢" [selected]
+          - option "NO · Boston @ 87¢"
+          - option "NO · Charlotte @ 99¢"
+          - option "NO · Cleveland @ 98¢"
+          - option "NO · Denver @ 97¢"
+          - option "NO · Detroit @ 96¢"
+          - option "NO · Golden State @ 98¢"
+          - option "NO · Houston @ 99¢"
+          - option "NO · Indiana @ 97¢"
+          - option "NO · Los Angeles L @ 97¢"
+          - option "NO · Miami @ 98¢"
+          - option "NO · Minnesota @ 98¢"
+          - option "NO · New York @ 87¢"
+          - option "NO · Oklahoma City @ 74¢"
+          - option "NO · Orlando @ 99¢"
+          - option "NO · Philadelphia @ 99¢"
+          - option "NO · Portland @ 99¢"
+          - option "NO · San Antonio @ 76¢"
+          - option "NO · Toronto @ 99¢"
+      - table [ref=e442]:
+        - rowgroup [ref=e443]:
+          - row "Bid size Px¢ Ask size" [ref=e444]:
+            - columnheader "Bid size" [ref=e445]
+            - columnheader "Px¢" [ref=e446]
+            - columnheader "Ask size" [ref=e447]
+        - rowgroup [ref=e448]:
+          - row "20 99 20" [ref=e449]:
+            - cell "20" [ref=e450]: "20"
+            - cell "99" [ref=e452]
+            - cell "20" [ref=e453]: "20"
+          - row "34 98" [ref=e455]:
+            - cell "34" [ref=e456]: "34"
+            - cell "98" [ref=e458]
+            - cell [ref=e459]
+          - row "48 97" [ref=e460]:
+            - cell "48" [ref=e461]: "48"
+            - cell "97" [ref=e463]
+            - cell [ref=e464]
+          - row "62 96" [ref=e465]:
+            - cell "62" [ref=e466]: "62"
+            - cell "96" [ref=e468]
+            - cell [ref=e469]
+          - row "76 95" [ref=e470]:
+            - cell "76" [ref=e471]: "76"
+            - cell "95" [ref=e473]
+            - cell [ref=e474]
+          - row "90 94" [ref=e475]:
+            - cell "90" [ref=e476]: "90"
+            - cell "94" [ref=e478]
+            - cell [ref=e479]
+          - row "104 93" [ref=e480]:
+            - cell "104" [ref=e481]: "104"
+            - cell "93" [ref=e483]
+            - cell [ref=e484]
+      - generic [ref=e485]:
+        - generic [ref=e486]: Touch 99¢
+        - generic [ref=e487]: top size 20 · derived depth
+    - generic [ref=e144]:
+      - generic [ref=e145]:
+        - generic [ref=e146]: ★
+        - heading "RECENTLY ACTIONABLE" [level=3] [ref=e147]
+      - generic [ref=e148]:
+        - generic [ref=e488] [cursor=pointer]:
+          - generic [ref=e489]: ●
+          - generic [ref=e490]:
+            - text: Pro Basketball (M) · 27 winner field
+            - generic [ref=e491]: NBA · overround
+          - generic [ref=e492]: 4¢
+        - generic [ref=e493] [cursor=pointer]:
+          - generic [ref=e494]: ●
+          - generic [ref=e495]:
+            - text: Group Stage — stage of elimination
+            - generic [ref=e496]: Soccer (World Cup) · overround
+          - generic [ref=e497]: 4¢
+        - generic [ref=e498] [cursor=pointer]:
+          - generic [ref=e499]: ●
+          - generic [ref=e500]:
+            - text: Group Stage — stage of elimination
+            - generic [ref=e501]: Soccer (World Cup) · overround
+          - generic [ref=e502]: 3¢
+        - generic [ref=e503] [cursor=pointer]:
+          - generic [ref=e504]: ●
+          - generic [ref=e505]:
+            - text: Carolina Royal Ravens vs Riyadh Falcons
+            - generic [ref=e506]: Esports · underround
+          - generic [ref=e507]: 2¢
+        - generic [ref=e508] [cursor=pointer]:
+          - generic [ref=e509]: ●
+          - generic [ref=e510]:
+            - text: ODDIK vs paiN Academy
+            - generic [ref=e511]: Esports · overround
+          - generic [ref=e512]: 2¢
+        - generic [ref=e513] [cursor=pointer]:
+          - generic [ref=e514]: ●
+          - generic [ref=e515]:
+            - text: Scotland vs Morocco
+            - generic [ref=e516]: Soccer (World Cup) · overround
+          - generic [ref=e517]: 2¢
+        - generic [ref=e518] [cursor=pointer]:
+          - generic [ref=e519]: ●
+          - generic [ref=e520]:
+            - text: Cape Verde
+            - generic [ref=e521]: Soccer (World Cup) · Reach Semifinals ≤ Reach Quarterfinals
+          - generic [ref=e522]: 1¢
+        - generic [ref=e150] [cursor=pointer]: REVIEW MOVERS
+        - generic [ref=e523] [cursor=pointer]:
+          - generic [ref=e524]: ◐
+          - generic [ref=e525]:
+            - text: Round of 32 — Reach Round of 32 (synthetic vs advance)
+            - generic [ref=e526]: Soccer (World Cup) · rule-dep
+        - generic [ref=e527] [cursor=pointer]:
+          - generic [ref=e528]: ◐
+          - generic [ref=e529]:
+            - text: Quarterfinals — Reach Quarterfinals (synthetic vs advance)
+            - generic [ref=e530]: Soccer (World Cup) · rule-dep
+        - generic [ref=e531] [cursor=pointer]:
+          - generic [ref=e532]: ◐
+          - generic [ref=e533]:
+            - text: Round of 16 — Reach Round of 16 (synthetic vs advance)
+            - generic [ref=e534]: Soccer (World Cup) · rule-dep
+        - generic [ref=e535] [cursor=pointer]:
+          - generic [ref=e536]: ◐
+          - generic [ref=e537]:
+            - text: Round of 16 — Reach Round of 16 (synthetic vs advance)
+            - generic [ref=e538]: Soccer (World Cup) · rule-dep
+    - generic [ref=e151]:
+      - generic [ref=e152]:
+        - generic [ref=e153]: "!"
+        - heading "ALERTS" [level=3] [ref=e154]
+      - generic [ref=e155]:
+        - generic [ref=e156]:
+          - generic [ref=e157]: ●
+          - generic [ref=e158]:
+            - generic [ref=e159]: became executable — Pro Basketball (M) · 27 winner field
+            - generic [ref=e160]: firm both legs
+        - generic [ref=e161]:
+          - generic [ref=e162]: ●
+          - generic [ref=e163]:
+            - generic [ref=e164]: bucket changed — → Review · rule-check
+            - generic [ref=e165]: settlement check
+        - generic [ref=e166]:
+          - generic [ref=e167]: ●
+          - generic [ref=e168]:
+            - generic [ref=e169]: series failed — 0 series
+            - generic [ref=e170]: coverage partial
+        - generic [ref=e171]:
+          - generic [ref=e172]: ●
+          - generic [ref=e173]:
+            - generic [ref=e174]: new bounded-loss — Pittsburgh
+            - generic [ref=e175]: watchlist
+  - generic [ref=e176]:
+    - generic [ref=e177]: TERMINAL PRO · Phase B1
+    - generic [ref=e178]: multi-panel workspace · 6 lenses (sort-only) · per-bucket columns + chooser · inspector + ladder · Dockview / palette / multi-select land in B2–B4

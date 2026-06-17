@@ -1,0 +1,386 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e3]: Kalshi ◆ Workstation
+    - tablist [ref=e4]:
+      - tab "Opportunity 6" [selected] [ref=e5] [cursor=pointer]:
+        - text: Opportunity
+        - generic [ref=e6]: "6"
+      - tab "Research Lab" [ref=e7] [cursor=pointer]
+      - tab "Operations" [ref=e8] [cursor=pointer]
+    - button "▷ Simulate scan" [ref=e9] [cursor=pointer]
+    - button "⌘ Command Ctrl K" [ref=e10] [cursor=pointer]:
+      - text: ⌘ Command
+      - generic [ref=e11]: Ctrl K
+    - button "⊟ Density" [ref=e12] [cursor=pointer]
+    - button "◐ Theme" [ref=e13] [cursor=pointer]
+    - button "🔔 4" [ref=e14] [cursor=pointer]:
+      - text: 🔔
+      - generic [ref=e15]: "4"
+    - button "?" [ref=e16] [cursor=pointer]:
+      - generic [ref=e17]: "?"
+  - generic [ref=e18]:
+    - generic [ref=e19]:
+      - generic [ref=e21]: Idle
+      - generic [ref=e22]: · last scan 12s ago
+    - generic [ref=e23]:
+      - text: Data age
+      - generic [ref=e24]: 12s
+    - generic [ref=e25]:
+      - text: Contracts
+      - generic [ref=e26]: 1,204
+    - generic [ref=e27]:
+      - text: Checks
+      - generic [ref=e28]: "747"
+    - generic [ref=e29]:
+      - text: Kalshi req
+      - generic [ref=e30]: "49"
+    - generic [ref=e31]:
+      - text: Exchange
+      - generic [ref=e33]: Open
+    - generic [ref=e34]:
+      - text: Auto-scan
+      - generic [ref=e36]: on · 30s
+    - generic [ref=e37]:
+      - text: Failed series
+      - generic [ref=e39]: "1"
+    - generic [ref=e40]:
+      - text: DB
+      - generic [ref=e41]: 42 MB
+    - generic [ref=e42]: Gross & top-of-book · $1 payout basis · read-only · never "arbitrage"
+  - tabpanel [ref=e44]:
+    - generic [ref=e45]:
+      - generic [ref=e46]:
+        - generic [ref=e47]:
+          - button "Act-now 4 executable" [ref=e48] [cursor=pointer]:
+            - generic [ref=e50]: Act-now
+            - generic [ref=e51]: "4"
+            - generic [ref=e52]: executable
+          - button "Review 2 settlement-dep." [ref=e53] [cursor=pointer]:
+            - generic [ref=e55]: Review
+            - generic [ref=e56]: "2"
+            - generic [ref=e57]: settlement-dep.
+          - button "New 2 this scan" [ref=e58] [cursor=pointer]:
+            - generic [ref=e60]: New
+            - generic [ref=e61]: "2"
+            - generic [ref=e62]: this scan
+          - button "Movers 3 edge changed" [ref=e63] [cursor=pointer]:
+            - generic [ref=e65]: Movers
+            - generic [ref=e66]: "3"
+            - generic [ref=e67]: edge changed
+          - button "Stale 1 one-sided" [ref=e68] [cursor=pointer]:
+            - generic [ref=e70]: Stale
+            - generic [ref=e71]: "1"
+            - generic [ref=e72]: one-sided
+          - button "Failed series 1 KXMOTOGP…" [ref=e73] [cursor=pointer]:
+            - generic [ref=e75]: Failed series
+            - generic [ref=e76]: "1"
+            - generic [ref=e77]: KXMOTOGP…
+          - button "Top lens +7¢ Sinner" [ref=e78] [cursor=pointer]:
+            - generic [ref=e80]: Top lens
+            - generic [ref=e81]: +7¢
+            - generic [ref=e82]: Sinner
+        - generic [ref=e83]:
+          - generic [ref=e84]:
+            - generic [ref=e85]: Sport
+            - combobox [ref=e86]:
+              - option "All sports" [selected]
+              - option "Tennis"
+              - option "Soccer"
+              - option "NHL"
+              - option "Esports"
+              - option "NBA"
+              - option "MLB"
+          - generic [ref=e87]:
+            - generic [ref=e88]: Tournament
+            - combobox [ref=e89]:
+              - option "All" [selected]
+              - option "Wimbledon"
+              - option "World Cup"
+              - option "Stanley Cup"
+              - option "CS2 Major"
+              - option "NBA Playoffs"
+              - option "World Series"
+          - generic [ref=e90]:
+            - generic [ref=e91]: Participant
+            - textbox "any" [ref=e92]
+          - generic [ref=e93]:
+            - generic [ref=e94]: Min size
+            - spinbutton [ref=e95]: "0"
+          - generic [ref=e96]:
+            - generic [ref=e97]: Lens
+            - generic [ref=e98]:
+              - button "Blended" [pressed] [ref=e99] [cursor=pointer]
+              - button "Edge ¢" [ref=e100] [cursor=pointer]
+              - button "Spread upside" [ref=e101] [cursor=pointer]
+              - button "Outright+spread" [ref=e102] [cursor=pointer]
+              - button "Implied EV" [ref=e103] [cursor=pointer]
+          - generic [ref=e104]:
+            - generic [ref=e105]: Search
+            - generic [ref=e106]:
+              - generic [ref=e107]: ⌕
+              - textbox "/ to search" [ref=e108]
+          - generic [ref=e110]: Active only
+          - generic [ref=e113]: Show marginal
+          - generic [ref=e115]:
+            - generic [ref=e116]: Saved view
+            - combobox [ref=e117]:
+              - option "Default" [selected]
+              - option "Liquidity-first"
+              - option "Settlement-safe"
+              - option "My WC desk"
+        - generic [ref=e118]:
+          - generic [ref=e119]:
+            - generic [ref=e121] [cursor=pointer]:
+              - generic [ref=e122]: ▾
+              - heading "Actionable" [level=3] [ref=e123]
+              - generic [ref=e124]: executable gross edges
+              - generic [ref=e125]: "4"
+            - table [ref=e127]:
+              - rowgroup [ref=e128]:
+                - row "Sport Participant / match Setup Action plan Gross edge ¢ ROI % Max units Max profit $ Tradable Caveat" [ref=e129]:
+                  - columnheader [ref=e130] [cursor=pointer]
+                  - columnheader "Sport" [ref=e131] [cursor=pointer]
+                  - columnheader "Participant / match" [ref=e132] [cursor=pointer]
+                  - columnheader "Setup" [ref=e133] [cursor=pointer]
+                  - columnheader "Action plan" [ref=e134] [cursor=pointer]
+                  - columnheader "Gross edge ¢" [ref=e135] [cursor=pointer]
+                  - columnheader "ROI %" [ref=e136] [cursor=pointer]
+                  - columnheader "Max units" [ref=e137] [cursor=pointer]
+                  - columnheader "Max profit $" [ref=e138] [cursor=pointer]
+                  - columnheader "Tradable" [ref=e139] [cursor=pointer]
+                  - columnheader "Caveat" [ref=e140] [cursor=pointer]
+              - rowgroup [ref=e141]:
+                - row "NEW Tennis J. Sinner Reach Final ⊇ Win Tournament Containment ladder Buy YES Reach Final 38¢ · Buy NO Win 55¢ 7 14.0 140 9.80 ● Yes —" [ref=e142] [cursor=pointer]:
+                  - cell "NEW" [ref=e143]
+                  - cell "Tennis" [ref=e144]:
+                    - generic [ref=e145]: Tennis
+                  - cell "J. Sinner Reach Final ⊇ Win Tournament" [ref=e146]:
+                    - generic [ref=e147]: J. Sinner
+                    - generic [ref=e148]:
+                      - text: Reach Final ⊇ Win Tournament
+                      - img [ref=e149]
+                  - cell "Containment ladder" [ref=e151]
+                  - cell "Buy YES Reach Final 38¢ · Buy NO Win 55¢" [ref=e152]
+                  - cell "7" [ref=e153]
+                  - cell "14.0" [ref=e154]
+                  - cell "140" [ref=e155]
+                  - cell "9.80" [ref=e156]
+                  - cell "● Yes" [ref=e157]
+                  - cell "—" [ref=e158]
+                - row "▲ Soccer Brazil vs Serbia Home / Away / Tie 3-way Dutch book (overround) Buy NO Home 61¢ · Buy NO Away 78¢ · Buy NO Tie 72¢ 11 5.5 90 9.90 ● Yes Per-game postponement caveat" [ref=e159] [cursor=pointer]:
+                  - cell "▲" [ref=e160]
+                  - cell "Soccer" [ref=e161]:
+                    - generic [ref=e162]: Soccer
+                  - cell "Brazil vs Serbia Home / Away / Tie 3-way" [ref=e163]:
+                    - generic [ref=e164]: Brazil vs Serbia
+                    - generic [ref=e165]:
+                      - text: Home / Away / Tie 3-way
+                      - img [ref=e166]
+                  - cell "Dutch book (overround)" [ref=e168]
+                  - cell "Buy NO Home 61¢ · Buy NO Away 78¢ · Buy NO Tie 72¢" [ref=e169]
+                  - cell "11" [ref=e170]
+                  - cell "5.5" [ref=e171]
+                  - cell "90" [ref=e172]
+                  - cell "9.90" [ref=e173]
+                  - cell "● Yes" [ref=e174]
+                  - cell "Per-game postponement caveat" [ref=e175]:
+                    - generic "Per-game postponement caveat" [ref=e176]
+                - row "NHL Oilers @ Panthers Head-to-head (bo1) Game dutch book Buy YES OILERS 47¢ · Buy YES PANTHERS 49¢ 4 4.0 200 8.00 ● Yes —" [ref=e177] [cursor=pointer]:
+                  - cell [ref=e178]
+                  - cell "NHL" [ref=e179]:
+                    - generic [ref=e180]: NHL
+                  - cell "Oilers @ Panthers Head-to-head (bo1)" [ref=e181]:
+                    - generic [ref=e182]: Oilers @ Panthers
+                    - generic [ref=e183]:
+                      - text: Head-to-head (bo1)
+                      - img [ref=e184]
+                  - cell "Game dutch book" [ref=e186]
+                  - cell "Buy YES OILERS 47¢ · Buy YES PANTHERS 49¢" [ref=e187]
+                  - cell "4" [ref=e188]
+                  - cell "4.0" [ref=e189]
+                  - cell "200" [ref=e190]
+                  - cell "8.00" [ref=e191]
+                  - cell "● Yes" [ref=e192]
+                  - cell "—" [ref=e193]
+                - row "↺ Esports FaZe vs Vitality Map winner (draw-free) Map-1 dutch book Buy YES FaZe 52¢ · Buy YES Vitality 45¢ 3 3.0 60 1.80 ● Yes —" [ref=e194] [cursor=pointer]:
+                  - cell "↺" [ref=e195]
+                  - cell "Esports" [ref=e196]:
+                    - generic [ref=e197]: Esports
+                  - cell "FaZe vs Vitality Map winner (draw-free)" [ref=e198]:
+                    - generic [ref=e199]: FaZe vs Vitality
+                    - generic [ref=e200]:
+                      - text: Map winner (draw-free)
+                      - img [ref=e201]
+                  - cell "Map-1 dutch book" [ref=e203]
+                  - cell "Buy YES FaZe 52¢ · Buy YES Vitality 45¢" [ref=e204]
+                  - cell "3" [ref=e205]
+                  - cell "3.0" [ref=e206]
+                  - cell "60" [ref=e207]
+                  - cell "1.80" [ref=e208]
+                  - cell "● Yes" [ref=e209]
+                  - cell "—" [ref=e210]
+          - generic [ref=e211]:
+            - generic [ref=e213] [cursor=pointer]:
+              - generic [ref=e214]: ▾
+              - heading "Review Required" [level=3] [ref=e215]
+              - generic [ref=e216]: settlement-dependent · never auto-tradable
+              - generic [ref=e217]: "2"
+            - table [ref=e219]:
+              - rowgroup [ref=e220]:
+                - row "Sport Participant / match Setup Action plan Gross edge ¢ ROI % Max units Max profit $ Tradable Caveat" [ref=e221]:
+                  - columnheader [ref=e222] [cursor=pointer]
+                  - columnheader "Sport" [ref=e223] [cursor=pointer]
+                  - columnheader "Participant / match" [ref=e224] [cursor=pointer]
+                  - columnheader "Setup" [ref=e225] [cursor=pointer]
+                  - columnheader "Action plan" [ref=e226] [cursor=pointer]
+                  - columnheader "Gross edge ¢" [ref=e227] [cursor=pointer]
+                  - columnheader "ROI %" [ref=e228] [cursor=pointer]
+                  - columnheader "Max units" [ref=e229] [cursor=pointer]
+                  - columnheader "Max profit $" [ref=e230] [cursor=pointer]
+                  - columnheader "Tradable" [ref=e231] [cursor=pointer]
+                  - columnheader "Caveat" [ref=e232] [cursor=pointer]
+              - rowgroup [ref=e233]:
+                - 'row "Tennis C. Alcaraz Exact-score bundle ≡ Win match Synthetic bundle Buy YES {3-0,3-1,3-2} · Buy NO Match winner 5 5.0 40 2.00 ◐ Review rules SETTLEMENT_CHECK_REQUIRED" [ref=e234] [cursor=pointer]':
+                  - cell [ref=e235]
+                  - cell "Tennis" [ref=e236]:
+                    - generic [ref=e237]: Tennis
+                  - cell "C. Alcaraz Exact-score bundle ≡ Win match" [ref=e238]:
+                    - generic [ref=e239]: C. Alcaraz
+                    - generic [ref=e240]:
+                      - text: Exact-score bundle ≡ Win match
+                      - img [ref=e241]
+                  - cell "Synthetic bundle" [ref=e243]
+                  - 'cell "Buy YES {3-0,3-1,3-2} · Buy NO Match winner" [ref=e244]'
+                  - cell "5" [ref=e245]
+                  - cell "5.0" [ref=e246]
+                  - cell "40" [ref=e247]
+                  - cell "2.00" [ref=e248]
+                  - cell "◐ Review rules" [ref=e249]
+                  - cell "SETTLEMENT_CHECK_REQUIRED" [ref=e250]:
+                    - generic "SETTLEMENT_CHECK_REQUIRED" [ref=e251]
+                - row "NEW NBA Boston Celtics Reach SF ≡ Win Conference Match-alignment equivalence Buy YES Reach SF 71¢ · Buy NO Win Conf 33¢ 4 6.0 50 2.00 ◐ Rule-dependent RULE_CHECK_REQUIRED" [ref=e252] [cursor=pointer]:
+                  - cell "NEW" [ref=e253]
+                  - cell "NBA" [ref=e254]:
+                    - generic [ref=e255]: NBA
+                  - cell "Boston Celtics Reach SF ≡ Win Conference" [ref=e256]:
+                    - generic [ref=e257]: Boston Celtics
+                    - generic [ref=e258]:
+                      - text: Reach SF ≡ Win Conference
+                      - img [ref=e259]
+                  - cell "Match-alignment equivalence" [ref=e261]
+                  - cell "Buy YES Reach SF 71¢ · Buy NO Win Conf 33¢" [ref=e262]
+                  - cell "4" [ref=e263]
+                  - cell "6.0" [ref=e264]
+                  - cell "50" [ref=e265]
+                  - cell "2.00" [ref=e266]
+                  - cell "◐ Rule-dependent" [ref=e267]
+                  - cell "RULE_CHECK_REQUIRED" [ref=e268]:
+                    - generic "RULE_CHECK_REQUIRED" [ref=e269]
+          - generic [ref=e272] [cursor=pointer]:
+            - generic [ref=e273]: ▾
+            - heading "Blocked" [level=3] [ref=e274]
+            - generic [ref=e275]: exist but not currently executable
+            - generic [ref=e276]: "1"
+          - generic [ref=e279] [cursor=pointer]:
+            - generic [ref=e280]: ▾
+            - heading "Qualifier setups" [level=3] [ref=e281]
+            - generic [ref=e282]: World Cup group-stage ideas & signals · speculative, review-only
+            - generic [ref=e283]: "3"
+          - generic [ref=e284]:
+            - generic [ref=e286] [cursor=pointer]:
+              - generic [ref=e287]: ▾
+              - heading "Bounded-Loss Bets" [level=3] [ref=e288]
+              - generic [ref=e289]: capped downside, convex upside
+              - generic [ref=e290]: "2"
+            - table [ref=e292]:
+              - rowgroup [ref=e293]:
+                - row "Sport Participant Setup Cost / $1 ¢ Worst ¢ Best ¢ Quote" [ref=e294]:
+                  - columnheader "Sport" [ref=e295] [cursor=pointer]
+                  - columnheader "Participant" [ref=e296] [cursor=pointer]
+                  - columnheader "Setup" [ref=e297] [cursor=pointer]
+                  - columnheader "Cost / $1 ¢" [ref=e298] [cursor=pointer]
+                  - columnheader "Worst ¢" [ref=e299] [cursor=pointer]
+                  - columnheader "Best ¢" [ref=e300] [cursor=pointer]
+                  - columnheader "Quote" [ref=e301] [cursor=pointer]
+              - rowgroup [ref=e302]:
+                - row "Golf S. Scheffler Make-cut floor + Top-5 upside 22 -22 +78 OK" [ref=e303] [cursor=pointer]:
+                  - cell "Golf" [ref=e304]:
+                    - generic [ref=e305]: Golf
+                  - cell "S. Scheffler" [ref=e306]
+                  - cell "Make-cut floor + Top-5 upside" [ref=e307]
+                  - cell "22" [ref=e308]
+                  - cell "-22" [ref=e309]
+                  - cell "+78" [ref=e310]
+                  - cell "OK" [ref=e311]:
+                    - generic [ref=e312]: OK
+                - row "Tennis A. Sabalenka Reach SF floor, Win convex 31 -31 +69 Tight" [ref=e313] [cursor=pointer]:
+                  - cell "Tennis" [ref=e314]:
+                    - generic [ref=e315]: Tennis
+                  - cell "A. Sabalenka" [ref=e316]
+                  - cell "Reach SF floor, Win convex" [ref=e317]
+                  - cell "31" [ref=e318]
+                  - cell "-31" [ref=e319]
+                  - cell "+69" [ref=e320]
+                  - cell "Tight" [ref=e321]:
+                    - generic [ref=e322]: Tight
+          - generic [ref=e325] [cursor=pointer]:
+            - generic [ref=e326]: ▾
+            - heading "Overround Books" [level=3] [ref=e327]
+            - generic [ref=e328]: flat guaranteed loss, watch-only
+            - generic [ref=e329]: "1"
+          - generic [ref=e332] [cursor=pointer]:
+            - generic [ref=e333]: ▾
+            - heading "Recently actionable" [level=3] [ref=e334]
+            - generic [ref=e335]: left Actionable within the backlog window
+            - generic [ref=e336]: "2"
+        - generic [ref=e337]: "Blueprint — how this UI pre-wires the roadmap (MASTER_BACKLOG): status strip → §14 data-quality states · trade-card drawer + EvidencePack → §8/§3 · 9-dim confidence + lens switcher → §7 · Research Lab tab → §5/§6/§11 · Operations tab → §1/§13 · alerts bell → §10 · watchlist / saved views / command palette → §9.3 · $1⇄$100 basis → §0.3/§8. Every future detector family already has a slot: a bucket, a card shape, a confidence breakdown, and a lens."
+      - complementary [ref=e338]:
+        - generic [ref=e339]:
+          - heading "★ Watchlist 4" [level=4] [ref=e340]:
+            - text: ★ Watchlist
+            - generic [ref=e341]: "4"
+          - generic [ref=e342]:
+            - generic [ref=e343]:
+              - generic [ref=e345]:
+                - generic [ref=e346]: Sinner — Reach Final ⊇ Win
+                - generic [ref=e347]: Tennis · executable
+              - generic [ref=e348]: live
+            - generic [ref=e349]:
+              - generic [ref=e351]:
+                - generic [ref=e352]: Celtics — SF ≡ Win Conf
+                - generic [ref=e353]: NBA · rule-check
+              - generic [ref=e354]: +1¢
+            - generic [ref=e355]:
+              - generic [ref=e357]:
+                - generic [ref=e358]: CS2 Map 1 dutch book
+                - generic [ref=e359]: Esports · watching
+              - generic [ref=e360]: +2¢
+            - generic [ref=e361]:
+              - generic [ref=e363]:
+                - generic [ref=e364]: Dodgers — WS ladder
+                - generic [ref=e365]: MLB · needs size
+              - generic [ref=e366]: size 0
+        - generic [ref=e367]:
+          - heading "≈ Movers (last scan)" [level=4] [ref=e368]
+          - generic [ref=e369]:
+            - generic [ref=e370]:
+              - generic [ref=e371]: ▲
+              - generic [ref=e372]:
+                - generic [ref=e373]: Brazil vs Serbia
+                - generic [ref=e374]: Soccer · Dutch book (overround)
+              - generic [ref=e375]: 11¢
+            - generic [ref=e376]:
+              - generic [ref=e377]: ↺
+              - generic [ref=e378]:
+                - generic [ref=e379]: FaZe vs Vitality
+                - generic [ref=e380]: Esports · Map-1 dutch book
+              - generic [ref=e381]: 3¢
+        - generic [ref=e382]:
+          - heading "⚑ Legend" [level=4] [ref=e383]
+          - generic [ref=e384]:
+            - generic [ref=e385]: Actionable — executable gross edge
+            - generic [ref=e387]: Review — settlement-dependent
+            - generic [ref=e389]: Blocked — not executable now
+            - generic [ref=e391]: Speculative — bounded-loss / research
+            - generic [ref=e393]: Colour is never the only cue — every status also carries text + icon.
+  - complementary "Trade card detail" [ref=e394]

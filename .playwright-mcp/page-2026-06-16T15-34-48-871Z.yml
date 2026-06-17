@@ -1,0 +1,11 @@
+- generic [ref=e224]:
+  - generic [ref=e225]: KALSHI STRUCTURED SCANNER
+  - generic [ref=e226]: create an account
+  - generic [ref=e227]: username
+  - textbox [ref=e228]
+  - generic [ref=e229]: password
+  - textbox [ref=e230]
+  - generic [ref=e234]: confirm password
+  - textbox [ref=e235]
+  - button "CREATE ACCOUNT" [ref=e236] [cursor=pointer]
+  - generic [ref=e233]: have an account? sign in

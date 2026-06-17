@@ -1,0 +1,539 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - generic [ref=e5]: "1"
+      - heading "SCANNER" [level=3] [ref=e6]
+      - generic [ref=e7]: click row · J/K · ENTER · drag splitters · ⚙ columns
+    - generic [ref=e8]:
+      - generic [ref=e9]:
+        - generic [ref=e10] [cursor=pointer]: EXECUTABLE 41 firm · gross edge
+        - generic [ref=e11] [cursor=pointer]: SPECULATIVE 495 bounded-loss · convex EV · can lose money
+        - generic [ref=e12] [cursor=pointer]: DIAGNOSTIC 2,139 review-only · data quality
+      - generic [ref=e13]:
+        - generic [ref=e14] [cursor=pointer]: ACTIONABLE11
+        - generic [ref=e15] [cursor=pointer]: REVIEW9
+        - generic [ref=e16] [cursor=pointer]: BLOCKED21
+        - generic [ref=e17] [cursor=pointer]: ⚙ columns ▾
+      - table [ref=e19]:
+        - rowgroup [ref=e20]:
+          - row "Participant / market Sport Gross edge ¢ ROI % Max units Max gross profit Est. net edge $ Est. net max profit Est. fees $ Tradable Caveat" [ref=e21]:
+            - columnheader "Participant / market" [ref=e22]
+            - columnheader "Sport" [ref=e23]
+            - columnheader "Gross edge ¢" [ref=e24]
+            - columnheader "ROI %" [ref=e25]
+            - columnheader "Max units" [ref=e26]
+            - columnheader "Max gross profit" [ref=e27]
+            - columnheader "Est. net edge $" [ref=e28]
+            - columnheader "Est. net max profit" [ref=e29]
+            - columnheader "Est. fees $" [ref=e30]
+            - columnheader "Tradable" [ref=e31]
+            - columnheader "Caveat" [ref=e32]
+        - rowgroup [ref=e33]:
+          - 'row "Pro Basketball (M) · 27 winner field Pro Basketball (M) · 27 NBA 5¢ 0.3% 21.2 $1.06 -$0.02 $-0.32 $1.38 ● Yes Advisory One-winner-field overround: this buys NO on the priceable subset of a mutually-exclusive field (exactly one winner), not every entrant — safe because an untraded or unlisted winner only pays more. Gross, top-of-book; many legs are illiquid so the position is often only partly fillable." [ref=e34] [cursor=pointer]':
+            - cell "Pro Basketball (M) · 27 winner field Pro Basketball (M) · 27" [ref=e35]
+            - cell "NBA" [ref=e36]
+            - cell "5¢" [ref=e37]
+            - cell "0.3%" [ref=e38]
+            - cell "21.2" [ref=e39]
+            - cell "$1.06" [ref=e40]
+            - cell "-$0.02" [ref=e41]
+            - cell "$-0.32" [ref=e42]
+            - cell "$1.38" [ref=e43]
+            - cell "● Yes" [ref=e44]
+            - 'cell "Advisory One-winner-field overround: this buys NO on the priceable subset of a mutually-exclusive field (exactly one winner), not every entrant — safe because an untraded or unlisted winner only pays more. Gross, top-of-book; many legs are illiquid so the position is often only partly fillable." [ref=e45]'
+          - 'row "Group Stage — stage of elimination World Cup · 26 Soccer (World Cup) 3¢ 3.1% 5 $0.15 -$0.03 $-0.16 $0.31 ● Yes Fee: taker net-neg (est.)" [ref=e46] [cursor=pointer]':
+            - cell "Group Stage — stage of elimination World Cup · 26" [ref=e47]
+            - cell "Soccer (World Cup)" [ref=e48]
+            - cell "3¢" [ref=e49]
+            - cell "3.1%" [ref=e50]
+            - cell "5" [ref=e51]
+            - cell "$0.15" [ref=e52]
+            - cell "-$0.03" [ref=e53]
+            - cell "$-0.16" [ref=e54]
+            - cell "$0.31" [ref=e55]
+            - cell "● Yes" [ref=e56]
+            - 'cell "Fee: taker net-neg (est.)" [ref=e57]'
+          - 'row "FURIA vs 9z CS2 · 26 Esports 1¢ 1% 15 $0.15 -$0.02 $-0.34 $0.49 ● Yes Advisory Per-game settlement risk: if the game is postponed, delayed past its scheduled start window, abandoned, ruled no-contest, or not played as originally scheduled (some leagues then resolve to a fair market price), the legs may not settle together and the gross gap need not hold — review the settlement rules before trading." [ref=e58] [cursor=pointer]':
+            - cell "FURIA vs 9z CS2 · 26" [ref=e59]
+            - cell "Esports" [ref=e60]
+            - cell "1¢" [ref=e61]
+            - cell "1%" [ref=e62]
+            - cell "15" [ref=e63]
+            - cell "$0.15" [ref=e64]
+            - cell "-$0.02" [ref=e65]
+            - cell "$-0.34" [ref=e66]
+            - cell "$0.49" [ref=e67]
+            - cell "● Yes" [ref=e68]
+            - 'cell "Advisory Per-game settlement risk: if the game is postponed, delayed past its scheduled start window, abandoned, ruled no-contest, or not played as originally scheduled (some leagues then resolve to a fair market price), the legs may not settle together and the gross gap need not hold — review the settlement rules before trading." [ref=e69]'
+          - 'row "Bryce Nakashima Nakashima vs Billy Suarez ITF Tennis 1¢ 1% 4 $0.04 -$0.02 $-0.10 $0.14 ● Yes Fee: taker net-neg (est.)" [ref=e70] [cursor=pointer]':
+            - cell "Bryce Nakashima Nakashima vs Billy Suarez ITF" [ref=e71]
+            - cell "Tennis" [ref=e72]
+            - cell "1¢" [ref=e73]
+            - cell "1%" [ref=e74]
+            - cell "4" [ref=e75]
+            - cell "$0.04" [ref=e76]
+            - cell "-$0.02" [ref=e77]
+            - cell "$-0.10" [ref=e78]
+            - cell "$0.14" [ref=e79]
+            - cell "● Yes" [ref=e80]
+            - 'cell "Fee: taker net-neg (est.)" [ref=e81]'
+          - 'row "Wildcard Gaming vs DarkZero Esports R6 · 26 Esports 1¢ 1% 9.1 $0.09 -$0.02 $-0.21 $0.30 ● Yes Advisory Per-game settlement risk: if the game is postponed, delayed past its scheduled start window, abandoned, ruled no-contest, or not played as originally scheduled (some leagues then resolve to a fair market price), the legs may not settle together and the gross gap need not hold — review the settlement rules before trading." [ref=e82] [cursor=pointer]':
+            - cell "Wildcard Gaming vs DarkZero Esports R6 · 26" [ref=e83]
+            - cell "Esports" [ref=e84]
+            - cell "1¢" [ref=e85]
+            - cell "1%" [ref=e86]
+            - cell "9.1" [ref=e87]
+            - cell "$0.09" [ref=e88]
+            - cell "-$0.02" [ref=e89]
+            - cell "$-0.21" [ref=e90]
+            - cell "$0.30" [ref=e91]
+            - cell "● Yes" [ref=e92]
+            - 'cell "Advisory Per-game settlement risk: if the game is postponed, delayed past its scheduled start window, abandoned, ruled no-contest, or not played as originally scheduled (some leagues then resolve to a fair market price), the legs may not settle together and the gross gap need not hold — review the settlement rules before trading." [ref=e93]'
+          - 'row "Chicago WS vs Detroit Pro Baseball · 26 MLB 1¢ 1% 1 $0.01 -$0.03 $-0.03 $0.04 ● Yes Advisory Per-game settlement risk: if the game is postponed, delayed past its scheduled start window, abandoned, ruled no-contest, or not played as originally scheduled (some leagues then resolve to a fair market price), the legs may not settle together and the gross gap need not hold — review the settlement rules before trading." [ref=e94] [cursor=pointer]':
+            - cell "Chicago WS vs Detroit Pro Baseball · 26" [ref=e95]
+            - cell "MLB" [ref=e96]
+            - cell "1¢" [ref=e97]
+            - cell "1%" [ref=e98]
+            - cell "1" [ref=e99]
+            - cell "$0.01" [ref=e100]
+            - cell "-$0.03" [ref=e101]
+            - cell "$-0.03" [ref=e102]
+            - cell "$0.04" [ref=e103]
+            - cell "● Yes" [ref=e104]
+            - 'cell "Advisory Per-game settlement risk: if the game is postponed, delayed past its scheduled start window, abandoned, ruled no-contest, or not played as originally scheduled (some leagues then resolve to a fair market price), the legs may not settle together and the gross gap need not hold — review the settlement rules before trading." [ref=e105]'
+          - 'row "Cloud9 New York vs Miami Heretics Call of Duty · 26 Esports 1¢ 1% 660 $6.60 -$0.02 $-13.35 $19.95 ● Yes Advisory Per-game settlement risk: if the game is postponed, delayed past its scheduled start window, abandoned, ruled no-contest, or not played as originally scheduled (some leagues then resolve to a fair market price), the legs may not settle together and the gross gap need not hold — review the settlement rules before trading." [ref=e106] [cursor=pointer]':
+            - cell "Cloud9 New York vs Miami Heretics Call of Duty · 26" [ref=e107]
+            - cell "Esports" [ref=e108]
+            - cell "1¢" [ref=e109]
+            - cell "1%" [ref=e110]
+            - cell "660" [ref=e111]
+            - cell "$6.60" [ref=e112]
+            - cell "-$0.02" [ref=e113]
+            - cell "$-13.35" [ref=e114]
+            - cell "$19.95" [ref=e115]
+            - cell "● Yes" [ref=e116]
+            - 'cell "Advisory Per-game settlement risk: if the game is postponed, delayed past its scheduled start window, abandoned, ruled no-contest, or not played as originally scheduled (some leagues then resolve to a fair market price), the legs may not settle together and the gross gap need not hold — review the settlement rules before trading." [ref=e117]'
+          - 'row "Cincinnati vs Tampa Bay Pro Football · 26 NFL 1¢ 1% 2 $0.02 -$0.03 $-0.06 $0.08 ● Yes Advisory Per-game settlement risk: if the game is postponed, delayed past its scheduled start window, abandoned, ruled no-contest, or not played as originally scheduled (some leagues then resolve to a fair market price), the legs may not settle together and the gross gap need not hold — review the settlement rules before trading.; dutch-booked only because the settlement rules prove a fixed-sum two-way (a tie pays $0.50 to each side, so the 100¢ floor holds in every outcome — or no tie is possible); gross, top-of-book, fees not modeled" [ref=e118] [cursor=pointer]':
+            - cell "Cincinnati vs Tampa Bay Pro Football · 26" [ref=e119]
+            - cell "NFL" [ref=e120]
+            - cell "1¢" [ref=e121]
+            - cell "1%" [ref=e122]
+            - cell "2" [ref=e123]
+            - cell "$0.02" [ref=e124]
+            - cell "-$0.03" [ref=e125]
+            - cell "$-0.06" [ref=e126]
+            - cell "$0.08" [ref=e127]
+            - cell "● Yes" [ref=e128]
+            - 'cell "Advisory Per-game settlement risk: if the game is postponed, delayed past its scheduled start window, abandoned, ruled no-contest, or not played as originally scheduled (some leagues then resolve to a fair market price), the legs may not settle together and the gross gap need not hold — review the settlement rules before trading.; dutch-booked only because the settlement rules prove a fixed-sum two-way (a tie pays $0.50 to each side, so the 100¢ floor holds in every outcome — or no tie is possible); gross, top-of-book, fees not modeled" [ref=e129]'
+          - 'row "Toronto vs Boston Pro Baseball · 26 MLB 1¢ 1% 568.0 $5.68 -$0.02 $-14.19 $19.87 ● Yes Advisory Per-game settlement risk: if the game is postponed, delayed past its scheduled start window, abandoned, ruled no-contest, or not played as originally scheduled (some leagues then resolve to a fair market price), the legs may not settle together and the gross gap need not hold — review the settlement rules before trading." [ref=e130] [cursor=pointer]':
+            - cell "Toronto vs Boston Pro Baseball · 26" [ref=e131]
+            - cell "MLB" [ref=e132]
+            - cell "1¢" [ref=e133]
+            - cell "1%" [ref=e134]
+            - cell "568.0" [ref=e135]
+            - cell "$5.68" [ref=e136]
+            - cell "-$0.02" [ref=e137]
+            - cell "$-14.19" [ref=e138]
+            - cell "$19.87" [ref=e139]
+            - cell "● Yes" [ref=e140]
+            - 'cell "Advisory Per-game settlement risk: if the game is postponed, delayed past its scheduled start window, abandoned, ruled no-contest, or not played as originally scheduled (some leagues then resolve to a fair market price), the legs may not settle together and the gross gap need not hold — review the settlement rules before trading." [ref=e141]'
+          - 'row "Nino Ehrenschneider vs Moritz Kudernatsch ITF Tennis 1¢ 1% 3 $0.03 -$0.02 $-0.07 $0.10 ● Yes Fee: taker net-neg (est.)" [ref=e142] [cursor=pointer]':
+            - cell "Nino Ehrenschneider vs Moritz Kudernatsch ITF" [ref=e143]
+            - cell "Tennis" [ref=e144]
+            - cell "1¢" [ref=e145]
+            - cell "1%" [ref=e146]
+            - cell "3" [ref=e147]
+            - cell "$0.03" [ref=e148]
+            - cell "-$0.02" [ref=e149]
+            - cell "$-0.07" [ref=e150]
+            - cell "$0.10" [ref=e151]
+            - cell "● Yes" [ref=e152]
+            - 'cell "Fee: taker net-neg (est.)" [ref=e153]'
+          - 'row "Cloud9 New York vs Miami Heretics Call of Duty · 26 Esports 1¢ 1% 500 $5.00 -$0.01 $-3.69 $8.69 ● Yes Advisory Per-game settlement risk: if the game is postponed, delayed past its scheduled start window, abandoned, ruled no-contest, or not played as originally scheduled (some leagues then resolve to a fair market price), the legs may not settle together and the gross gap need not hold — review the settlement rules before trading." [ref=e154] [cursor=pointer]':
+            - cell "Cloud9 New York vs Miami Heretics Call of Duty · 26" [ref=e155]
+            - cell "Esports" [ref=e156]
+            - cell "1¢" [ref=e157]
+            - cell "1%" [ref=e158]
+            - cell "500" [ref=e159]
+            - cell "$5.00" [ref=e160]
+            - cell "-$0.01" [ref=e161]
+            - cell "$-3.69" [ref=e162]
+            - cell "$8.69" [ref=e163]
+            - cell "● Yes" [ref=e164]
+            - 'cell "Advisory Per-game settlement risk: if the game is postponed, delayed past its scheduled start window, abandoned, ruled no-contest, or not played as originally scheduled (some leagues then resolve to a fair market price), the legs may not settle together and the gross gap need not hold — review the settlement rules before trading." [ref=e165]'
+      - generic [ref=e166]: Showing 11 of 11 in scope· 11 cols · engine order
+  - generic [ref=e167]:
+    - generic [ref=e168]:
+      - generic [ref=e169]: "2"
+      - heading "INSPECTOR" [level=3] [ref=e170]
+      - generic [ref=e171]: read-only · buy-only · gross
+    - generic [ref=e172]:
+      - generic [ref=e173] [cursor=pointer]: TRADE CARD
+      - generic [ref=e174] [cursor=pointer]: PARTICIPANT DETAIL
+      - generic [ref=e175] [cursor=pointer]: FORMULAS
+    - generic [ref=e177]:
+      - generic [ref=e185]:
+        - generic [ref=e186]: EXECUTABLE
+        - generic [ref=e187]: Pro Basketball (M) · 27 winner field
+        - generic [ref=e188]:
+          - button "$1" [ref=e189] [cursor=pointer]
+          - button "$100" [ref=e190] [cursor=pointer]
+      - generic [ref=e191]: Pro Basketball (M) · 27 · NBA · calendar
+      - generic [ref=e192]: BUY-ONLY PLAN — 18 LEGS
+      - generic [ref=e193]:
+        - generic [ref=e194]: "NO"
+        - generic [ref=e195]: Atlanta
+        - generic "market ticker" [ref=e196]: KXNBA-27-ATL
+        - generic [ref=e197]: 99¢
+        - generic [ref=e198]: ×872.46
+        - link "↗" [ref=e199] [cursor=pointer]:
+          - /url: https://kalshi.com/markets/kxnba/pro-basketball-champion/kxnba-27?op_market_ticker=KXNBA-27-ATL&op_order_side=no
+      - generic [ref=e200]:
+        - generic [ref=e201]: "NO"
+        - generic [ref=e202]: Boston
+        - generic "market ticker" [ref=e203]: KXNBA-27-BOS
+        - generic [ref=e204]: 87¢
+        - generic [ref=e205]: ×12054.7
+        - link "↗" [ref=e206] [cursor=pointer]:
+          - /url: https://kalshi.com/markets/kxnba/pro-basketball-champion/kxnba-27?op_market_ticker=KXNBA-27-BOS&op_order_side=no
+      - generic [ref=e207]:
+        - generic [ref=e208]: "NO"
+        - generic [ref=e209]: Charlotte
+        - generic "market ticker" [ref=e210]: KXNBA-27-CHA
+        - generic [ref=e211]: 99¢
+        - generic [ref=e212]: ×35187.09
+        - link "↗" [ref=e213] [cursor=pointer]:
+          - /url: https://kalshi.com/markets/kxnba/pro-basketball-champion/kxnba-27?op_market_ticker=KXNBA-27-CHA&op_order_side=no
+      - generic [ref=e214]:
+        - generic [ref=e215]: "NO"
+        - generic [ref=e216]: Cleveland
+        - generic "market ticker" [ref=e217]: KXNBA-27-CLE
+        - generic [ref=e218]: 98¢
+        - generic [ref=e219]: ×4989.48
+        - link "↗" [ref=e220] [cursor=pointer]:
+          - /url: https://kalshi.com/markets/kxnba/pro-basketball-champion/kxnba-27?op_market_ticker=KXNBA-27-CLE&op_order_side=no
+      - generic [ref=e221]:
+        - generic [ref=e222]: "NO"
+        - generic [ref=e223]: Denver
+        - generic "market ticker" [ref=e224]: KXNBA-27-DEN
+        - generic [ref=e225]: 96¢
+        - generic [ref=e226]: ×54932.81
+        - link "↗" [ref=e227] [cursor=pointer]:
+          - /url: https://kalshi.com/markets/kxnba/pro-basketball-champion/kxnba-27?op_market_ticker=KXNBA-27-DEN&op_order_side=no
+      - generic [ref=e228]:
+        - generic [ref=e229]: "NO"
+        - generic [ref=e230]: Detroit
+        - generic "market ticker" [ref=e231]: KXNBA-27-DET
+        - generic [ref=e232]: 97¢
+        - generic [ref=e233]: ×803.37
+        - link "↗" [ref=e234] [cursor=pointer]:
+          - /url: https://kalshi.com/markets/kxnba/pro-basketball-champion/kxnba-27?op_market_ticker=KXNBA-27-DET&op_order_side=no
+      - generic [ref=e235]:
+        - generic [ref=e236]: "NO"
+        - generic [ref=e237]: Golden State
+        - generic "market ticker" [ref=e238]: KXNBA-27-GSW
+        - generic [ref=e239]: 99¢
+        - generic [ref=e240]: ×8789.44
+        - link "↗" [ref=e241] [cursor=pointer]:
+          - /url: https://kalshi.com/markets/kxnba/pro-basketball-champion/kxnba-27?op_market_ticker=KXNBA-27-GSW&op_order_side=no
+      - generic [ref=e242]:
+        - generic [ref=e243]: "NO"
+        - generic [ref=e244]: Houston
+        - generic "market ticker" [ref=e245]: KXNBA-27-HOU
+        - generic [ref=e246]: 98¢
+        - generic [ref=e247]: ×7165.4
+        - link "↗" [ref=e248] [cursor=pointer]:
+          - /url: https://kalshi.com/markets/kxnba/pro-basketball-champion/kxnba-27?op_market_ticker=KXNBA-27-HOU&op_order_side=no
+      - generic [ref=e249]:
+        - generic [ref=e250]: "NO"
+        - generic [ref=e251]: Indiana
+        - generic "market ticker" [ref=e252]: KXNBA-27-IND
+        - generic [ref=e253]: 97¢
+        - generic [ref=e254]: ×625.48
+        - link "↗" [ref=e255] [cursor=pointer]:
+          - /url: https://kalshi.com/markets/kxnba/pro-basketball-champion/kxnba-27?op_market_ticker=KXNBA-27-IND&op_order_side=no
+      - generic [ref=e256]:
+        - generic [ref=e257]: "NO"
+        - generic [ref=e258]: Los Angeles L
+        - generic "market ticker" [ref=e259]: KXNBA-27-LAL
+        - generic [ref=e260]: 97¢
+        - generic [ref=e261]: ×13964.58
+        - link "↗" [ref=e262] [cursor=pointer]:
+          - /url: https://kalshi.com/markets/kxnba/pro-basketball-champion/kxnba-27?op_market_ticker=KXNBA-27-LAL&op_order_side=no
+      - generic [ref=e263]:
+        - generic [ref=e264]: "NO"
+        - generic [ref=e265]: Miami
+        - generic "market ticker" [ref=e266]: KXNBA-27-MIA
+        - generic [ref=e267]: 98¢
+        - generic [ref=e268]: ×60671.94
+        - link "↗" [ref=e269] [cursor=pointer]:
+          - /url: https://kalshi.com/markets/kxnba/pro-basketball-champion/kxnba-27?op_market_ticker=KXNBA-27-MIA&op_order_side=no
+      - generic [ref=e270]:
+        - generic [ref=e271]: "NO"
+        - generic [ref=e272]: Minnesota
+        - generic "market ticker" [ref=e273]: KXNBA-27-MIN
+        - generic [ref=e274]: 97¢
+        - generic [ref=e275]: ×1500.03
+        - link "↗" [ref=e276] [cursor=pointer]:
+          - /url: https://kalshi.com/markets/kxnba/pro-basketball-champion/kxnba-27?op_market_ticker=KXNBA-27-MIN&op_order_side=no
+      - generic [ref=e277]:
+        - generic [ref=e278]: "NO"
+        - generic [ref=e279]: New York
+        - generic "market ticker" [ref=e280]: KXNBA-27-NYK
+        - generic [ref=e281]: 87¢
+        - generic [ref=e282]: ×13003.11
+        - link "↗" [ref=e283] [cursor=pointer]:
+          - /url: https://kalshi.com/markets/kxnba/pro-basketball-champion/kxnba-27?op_market_ticker=KXNBA-27-NYK&op_order_side=no
+      - generic [ref=e284]:
+        - generic [ref=e285]: "NO"
+        - generic [ref=e286]: Oklahoma City
+        - generic "market ticker" [ref=e287]: KXNBA-27-OKC
+        - generic [ref=e288]: 74¢
+        - generic [ref=e289]: ×5682.74
+        - link "↗" [ref=e290] [cursor=pointer]:
+          - /url: https://kalshi.com/markets/kxnba/pro-basketball-champion/kxnba-27?op_market_ticker=KXNBA-27-OKC&op_order_side=no
+      - generic [ref=e291]:
+        - generic [ref=e292]: "NO"
+        - generic [ref=e293]: Orlando
+        - generic "market ticker" [ref=e294]: KXNBA-27-ORL
+        - generic [ref=e295]: 99¢
+        - generic [ref=e296]: ×6208.53
+        - link "↗" [ref=e297] [cursor=pointer]:
+          - /url: https://kalshi.com/markets/kxnba/pro-basketball-champion/kxnba-27?op_market_ticker=KXNBA-27-ORL&op_order_side=no
+      - generic [ref=e298]:
+        - generic [ref=e299]: "NO"
+        - generic [ref=e300]: Philadelphia
+        - generic "market ticker" [ref=e301]: KXNBA-27-PHI
+        - generic [ref=e302]: 99¢
+        - generic [ref=e303]: ×56277.8
+        - link "↗" [ref=e304] [cursor=pointer]:
+          - /url: https://kalshi.com/markets/kxnba/pro-basketball-champion/kxnba-27?op_market_ticker=KXNBA-27-PHI&op_order_side=no
+      - generic [ref=e305]:
+        - generic [ref=e306]: "NO"
+        - generic [ref=e307]: Portland
+        - generic "market ticker" [ref=e308]: KXNBA-27-POR
+        - generic [ref=e309]: 99¢
+        - generic [ref=e310]: ×415
+        - link "↗" [ref=e311] [cursor=pointer]:
+          - /url: https://kalshi.com/markets/kxnba/pro-basketball-champion/kxnba-27?op_market_ticker=KXNBA-27-POR&op_order_side=no
+      - generic [ref=e312]:
+        - generic [ref=e313]: "NO"
+        - generic [ref=e314]: San Antonio
+        - generic "market ticker" [ref=e315]: KXNBA-27-SAS
+        - generic [ref=e316]: 75¢
+        - generic [ref=e317]: ×21.19
+        - link "↗" [ref=e318] [cursor=pointer]:
+          - /url: https://kalshi.com/markets/kxnba/pro-basketball-champion/kxnba-27?op_market_ticker=KXNBA-27-SAS&op_order_side=no
+      - generic [ref=e319]: ECONOMICS (PER UNIT)
+      - generic [ref=e320]:
+        - generic [ref=e321]: Cost
+        - generic [ref=e322]: 1695¢
+        - generic [ref=e323]: Worst case
+        - generic [ref=e324]: —
+        - generic [ref=e325]: Best case
+        - generic [ref=e326]: 1¢
+        - generic [ref=e327]: ROI
+        - generic [ref=e328]: 0.3%
+        - generic [ref=e329]: Max units
+        - generic [ref=e330]: "21.19"
+        - generic [ref=e331]: Quote
+        - generic [ref=e332]: —
+        - generic [ref=e333]: Tradable
+        - generic [ref=e334]: "Yes"
+      - generic [ref=e335]: FEES — IMMEDIATE-FILL (TAKER)
+      - generic [ref=e336]:
+        - generic [ref=e337]: Est. fees
+        - generic [ref=e338]: $1.38
+        - generic [ref=e339]: Est. net edge / unit
+        - generic [ref=e340]: "-$0.02"
+        - generic [ref=e341]: Breakeven gross gap
+        - generic [ref=e342]: 7¢ (approx)
+      - generic [ref=e343]: Immediate-fill estimate — cross visible top-of-book now.
+      - generic [ref=e344]: FEES — RESTING-ORDER (MAKER)
+      - generic [ref=e345]:
+        - generic [ref=e346]: Est. fees
+        - generic [ref=e347]: $0.44
+        - generic [ref=e348]: Est. net edge / unit
+        - generic [ref=e349]: $0.03
+      - generic [ref=e350]: "Resting-order scenario: assumes posted orders later fill; queue position, fill probability, and edge decay are not modeled. All-maker assumes every leg rests and fills before prices move. Mixed execution (some legs taker, some maker) is not modeled."
+      - generic [ref=e351]: PER-LEG FEES
+      - generic [ref=e352]:
+        - generic [ref=e353]: "NO"
+        - generic [ref=e354]: KXNBA
+        - generic [ref=e355]: 99¢
+        - generic [ref=e356]: quadratic_with_maker_fees×1
+        - generic [ref=e357]: t 2¢ · m 1¢
+        - generic [ref=e358]: series
+      - generic [ref=e359]:
+        - generic [ref=e360]: "NO"
+        - generic [ref=e361]: KXNBA
+        - generic [ref=e362]: 87¢
+        - generic [ref=e363]: quadratic_with_maker_fees×1
+        - generic [ref=e364]: t 17¢ · m 5¢
+        - generic [ref=e365]: series
+      - generic [ref=e366]:
+        - generic [ref=e367]: "NO"
+        - generic [ref=e368]: KXNBA
+        - generic [ref=e369]: 99¢
+        - generic [ref=e370]: quadratic_with_maker_fees×1
+        - generic [ref=e371]: t 2¢ · m 1¢
+        - generic [ref=e372]: series
+      - generic [ref=e373]:
+        - generic [ref=e374]: "NO"
+        - generic [ref=e375]: KXNBA
+        - generic [ref=e376]: 98¢
+        - generic [ref=e377]: quadratic_with_maker_fees×1
+        - generic [ref=e378]: t 3¢ · m 1¢
+        - generic [ref=e379]: series
+      - generic [ref=e380]:
+        - generic [ref=e381]: "NO"
+        - generic [ref=e382]: KXNBA
+        - generic [ref=e383]: 96¢
+        - generic [ref=e384]: quadratic_with_maker_fees×1
+        - generic [ref=e385]: t 6¢ · m 2¢
+        - generic [ref=e386]: series
+      - generic [ref=e387]:
+        - generic [ref=e388]: "NO"
+        - generic [ref=e389]: KXNBA
+        - generic [ref=e390]: 97¢
+        - generic [ref=e391]: quadratic_with_maker_fees×1
+        - generic [ref=e392]: t 5¢ · m 2¢
+        - generic [ref=e393]: series
+      - generic [ref=e394]:
+        - generic [ref=e395]: "NO"
+        - generic [ref=e396]: KXNBA
+        - generic [ref=e397]: 99¢
+        - generic [ref=e398]: quadratic_with_maker_fees×1
+        - generic [ref=e399]: t 2¢ · m 1¢
+        - generic [ref=e400]: series
+      - generic [ref=e401]:
+        - generic [ref=e402]: "NO"
+        - generic [ref=e403]: KXNBA
+        - generic [ref=e404]: 98¢
+        - generic [ref=e405]: quadratic_with_maker_fees×1
+        - generic [ref=e406]: t 3¢ · m 1¢
+        - generic [ref=e407]: series
+      - generic [ref=e408]:
+        - generic [ref=e409]: "NO"
+        - generic [ref=e410]: KXNBA
+        - generic [ref=e411]: 97¢
+        - generic [ref=e412]: quadratic_with_maker_fees×1
+        - generic [ref=e413]: t 5¢ · m 2¢
+        - generic [ref=e414]: series
+      - generic [ref=e415]:
+        - generic [ref=e416]: "NO"
+        - generic [ref=e417]: KXNBA
+        - generic [ref=e418]: 97¢
+        - generic [ref=e419]: quadratic_with_maker_fees×1
+        - generic [ref=e420]: t 5¢ · m 2¢
+        - generic [ref=e421]: series
+      - generic [ref=e422]:
+        - generic [ref=e423]: "NO"
+        - generic [ref=e424]: KXNBA
+        - generic [ref=e425]: 98¢
+        - generic [ref=e426]: quadratic_with_maker_fees×1
+        - generic [ref=e427]: t 3¢ · m 1¢
+        - generic [ref=e428]: series
+      - generic [ref=e429]:
+        - generic [ref=e430]: "NO"
+        - generic [ref=e431]: KXNBA
+        - generic [ref=e432]: 97¢
+        - generic [ref=e433]: quadratic_with_maker_fees×1
+        - generic [ref=e434]: t 5¢ · m 2¢
+        - generic [ref=e435]: series
+      - generic [ref=e436]:
+        - generic [ref=e437]: "NO"
+        - generic [ref=e438]: KXNBA
+        - generic [ref=e439]: 87¢
+        - generic [ref=e440]: quadratic_with_maker_fees×1
+        - generic [ref=e441]: t 17¢ · m 5¢
+        - generic [ref=e442]: series
+      - generic [ref=e443]:
+        - generic [ref=e444]: "NO"
+        - generic [ref=e445]: KXNBA
+        - generic [ref=e446]: 74¢
+        - generic [ref=e447]: quadratic_with_maker_fees×1
+        - generic [ref=e448]: t 29¢ · m 8¢
+        - generic [ref=e449]: series
+      - generic [ref=e450]:
+        - generic [ref=e451]: "NO"
+        - generic [ref=e452]: KXNBA
+        - generic [ref=e453]: 99¢
+        - generic [ref=e454]: quadratic_with_maker_fees×1
+        - generic [ref=e455]: t 2¢ · m 1¢
+        - generic [ref=e456]: series
+      - generic [ref=e457]:
+        - generic [ref=e458]: "NO"
+        - generic [ref=e459]: KXNBA
+        - generic [ref=e460]: 99¢
+        - generic [ref=e461]: quadratic_with_maker_fees×1
+        - generic [ref=e462]: t 2¢ · m 1¢
+        - generic [ref=e463]: series
+      - generic [ref=e464]:
+        - generic [ref=e465]: "NO"
+        - generic [ref=e466]: KXNBA
+        - generic [ref=e467]: 99¢
+        - generic [ref=e468]: quadratic_with_maker_fees×1
+        - generic [ref=e469]: t 2¢ · m 1¢
+        - generic [ref=e470]: series
+      - generic [ref=e471]:
+        - generic [ref=e472]: "NO"
+        - generic [ref=e473]: KXNBA
+        - generic [ref=e474]: 75¢
+        - generic [ref=e475]: quadratic_with_maker_fees×1
+        - generic [ref=e476]: t 28¢ · m 7¢
+        - generic [ref=e477]: series
+      - generic [ref=e478]:
+        - generic [ref=e479]: "Source: series-level."
+        - text: Conservative pre-trade estimate; realized fee depends on fill path, price precision, quantity, rounding fee, rebate, and the fee accumulator. Still gross of order-book depth.
+        - generic [ref=e480]: never ranks
+      - generic [ref=e481]: WHY RANKED HERE · ENGINE ORDER
+      - generic [ref=e482]:
+        - generic [ref=e483]: "Promotes:"
+        - generic [ref=e484]: edge 5¢
+      - generic [ref=e485]:
+        - generic [ref=e486]: "Demotes:"
+        - generic [ref=e487]: none
+      - generic [ref=e488]: SETTLEMENT / RULES
+      - generic [ref=e489]: "One-winner-field overround: this buys NO on the priceable subset of a mutually-exclusive field (exactly one winner), not every entrant — safe because an untraded or unlisted winner only pays more. Gross, top-of-book; many legs are illiquid so the position is often only partly fillable."
+      - generic [ref=e490]: EVIDENCEPACK
+      - generic [ref=e491]:
+        - generic [ref=e492]: Snapshot
+        - generic [ref=e493]: "#786"
+        - generic [ref=e494]: Status
+        - generic [ref=e495]: EXECUTABLE_DUTCH_BOOK
+        - generic [ref=e496]: Opp id
+        - generic [ref=e497]: 52ee01e0194a0d93
+        - generic [ref=e498]: Market
+        - link "open ↗" [ref=e500] [cursor=pointer]:
+          - /url: https://kalshi.com/markets/kxnba/pro-basketball-champion/kxnba-27
+  - generic [ref=e178]:
+    - generic [ref=e179]:
+      - generic [ref=e180]: "3"
+      - heading "DEPTH LADDER" [level=3] [ref=e181]
+      - generic [ref=e182]: live order book · top-of-book
+    - generic [ref=e183]: READ-ONLY · LIVE KALSHI ORDER BOOK · TOP-OF-BOOK · POLL-REFRESHED
+    - generic [ref=e184]:
+      - generic [ref=e501]:
+        - text: Pro Basketball (M) · 27 winner field
+        - generic [ref=e502]: · 18 contracts
+      - combobox [ref=e503]:
+        - option "NO · Atlanta @ 99¢" [selected]
+        - option "NO · Boston @ 87¢"
+        - option "NO · Charlotte @ 99¢"
+        - option "NO · Cleveland @ 98¢"
+        - option "NO · Denver @ 96¢"
+        - option "NO · Detroit @ 97¢"
+        - option "NO · Golden State @ 99¢"
+        - option "NO · Houston @ 98¢"
+        - option "NO · Indiana @ 97¢"
+        - option "NO · Los Angeles L @ 97¢"
+        - option "NO · Miami @ 98¢"
+        - option "NO · Minnesota @ 97¢"
+        - option "NO · New York @ 87¢"
+        - option "NO · Oklahoma City @ 74¢"
+        - option "NO · Orlando @ 99¢"
+        - option "NO · Philadelphia @ 99¢"
+        - option "NO · Portland @ 99¢"
+        - option "NO · San Antonio @ 75¢"
+    - generic [ref=e505]: loading live order book…

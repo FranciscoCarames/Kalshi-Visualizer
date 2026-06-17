@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kalshi Workstation — Option 6 · RADAR</title>
+<style>
+/* ===== SPATIAL RADAR: interactive scatter/quadrant canvas as primary navigation ===== */
+:root{
+  --bg:#070b12; --bg1:#0c121c; --bg2:#111a27; --bg3:#16202f; --line:#1b2636; --line2:#27374d;
+  --tx:#dbe7f2; --tx2:#8aa0ba; --tx3:#52677f;
+  --phos:#5eead4; --phos-d:#0f766e; --cyan:#38bdf8; --amber:#fbbf24; --rose:#fb7185; --violet:#a78bfa;
+  --pos:#34d399; --neg:#fb7185; --warn:#fbbf24;
+  --sans:'Segoe UI',system-ui,sans-serif; --mono:'SF Mono','Consolas',monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--tx);font-family:var(--sans);font-size:13px;height:100vh;overflow:hidden;display:flex;flex-direction:column;
+  background-image:radial-gradient(900px 700px at 30% 20%,rgba(94,234,212,.05),transparent)}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+::-webkit-scrollbar{width:8px}::-webkit-scrollbar-thumb{background:var(--line2);border-radius:5px}
+.pos{color:var(--pos)}.neg{color:var(--neg)}.warn{color:var(--warn)}.dim{color:var(--tx3)}
+
+.head{display:flex;align-items:center;gap:14px;padding:11px 18px;border-bottom:1px solid var(--line);flex:0 0 auto}
+.brand{font-weight:700;font-size:14px;letter-spacing:.5px}.brand b{color:var(--phos)}
+.surf{display:flex;gap:3px;margin-left:6px}
+.surf button{padding:6px 11px;border-radius:7px;border:1px solid var(--line);background:var(--bg1);color:var(--tx3);cursor:pointer;font-size:12px}
+.surf button.on{color:var(--phos);border-color:var(--phos-d);background:rgba(94,234,212,.07)}
+.spacer{flex:1}
+.axsel{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--tx3)}
+.axsel select{background:var(--bg1);border:1px solid var(--line2);color:var(--tx);border-radius:6px;padding:4px 7px;font-size:11.5px}
+.lens{display:flex;background:var(--bg1);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.lens button{padding:5px 10px;font-size:11px;background:transparent;border:none;color:var(--tx2);cursor:pointer}
+.lens button.on{background:var(--phos);color:#062c26;font-weight:700}
+.ministat{font-size:11px;color:var(--tx3);display:flex;align-items:center;gap:6px}
+.led{width:7px;height:7px;border-radius:50%;background:var(--pos);box-shadow:0 0 6px var(--pos)}
+
+.main{flex:1;min-height:0;display:grid;grid-template-columns:1fr 340px;gap:0}
+.canvaswrap{position:relative;overflow:hidden;border-right:1px solid var(--line)}
+svg.plot{width:100%;height:100%;display:block}
+.tooltip{position:absolute;pointer-events:none;background:var(--bg2);border:1px solid var(--line2);border-radius:8px;padding:7px 10px;font-size:11.5px;opacity:0;transition:opacity .1s;z-index:5;box-shadow:0 6px 20px rgba(0,0,0,.5);max-width:230px}
+.tooltip b{color:var(--phos)}
+.quadlabel{font-size:10px;fill:var(--tx3);text-transform:uppercase;letter-spacing:1px}
+.axlabel{font-size:11px;fill:var(--tx2)}
+.gridline{stroke:var(--line);stroke-width:1}
+.midline{stroke:var(--line2);stroke-width:1;stroke-dasharray:4 4}
+.bubble{cursor:pointer;transition:.12s}
+.bubble:hover{stroke:#fff;stroke-width:2}
+.bubble.sel{stroke:#fff;stroke-width:2.5}
+.legendbox{position:absolute;left:14px;bottom:12px;background:rgba(12,18,28,.85);border:1px solid var(--line);border-radius:9px;padding:9px 11px;font-size:10.5px}
+.legendbox .r{display:flex;align-items:center;gap:7px;margin:3px 0;color:var(--tx2)}
+.dotc{width:10px;height:10px;border-radius:50%}
+
+/* right column: ranked list + card */
+.side{display:flex;flex-direction:column;min-height:0}
+.ranked{flex:0 0 auto;max-height:42%;overflow:auto;border-bottom:1px solid var(--line)}
+.rkhdr{padding:8px 12px;font-size:10.5px;text-transform:uppercase;letter-spacing:1px;color:var(--tx3);position:sticky;top:0;background:var(--bg1);border-bottom:1px solid var(--line)}
+.rkrow{display:flex;align-items:center;gap:9px;padding:7px 12px;border-bottom:1px solid var(--line);cursor:pointer}
+.rkrow:hover{background:var(--bg2)}.rkrow.sel{background:var(--bg3);box-shadow:inset 3px 0 0 var(--phos)}
+.rkrow .n{flex:1;min-width:0}.rkrow .n .t{font-weight:600;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.rkrow .n .s{font-size:10px;color:var(--tx3)}
+.rkrow .e{font-family:var(--mono);font-size:12px}
+.rkdot{width:9px;height:9px;border-radius:50%;flex:0 0 auto}
+.card{flex:1;overflow:auto;padding:14px}
+.c-h{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.c-t{font-size:15px;font-weight:700}.c-s{font-size:11.5px;color:var(--tx3);margin-bottom:10px}
+.bdg{font-size:9px;font-weight:800;padding:1px 6px;border-radius:5px}
+.b-act{background:rgba(52,211,153,.16);color:var(--pos)}.b-rev{background:rgba(251,191,36,.16);color:var(--warn)}.b-blk{background:rgba(251,113,133,.16);color:var(--neg)}
+.csec{font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--tx3);font-weight:700;margin:11px 0 5px}
+.leg{display:flex;gap:7px;font-size:11.5px;padding:2px 0;align-items:center}.leg .t{font-weight:700;font-size:9px;padding:1px 5px;border-radius:4px}.leg .t.y{background:rgba(52,211,153,.16);color:var(--pos)}.leg .t.n{background:rgba(251,113,133,.16);color:var(--neg)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font-size:11.5px}.kv .l{color:var(--tx2)}.kv .v{text-align:right;font-family:var(--mono)}
+.cf{display:grid;grid-template-columns:78px 1fr 26px;gap:6px;align-items:center;font-size:10.5px;margin:2px 0}
+.cf .tr{height:7px;border-radius:4px;background:var(--bg3);overflow:hidden}.cf .fi{height:100%;background:linear-gradient(90deg,var(--phos),var(--cyan))}
+.note{font-size:11.5px;color:var(--tx2);line-height:1.5}
+.bp{font-size:10px;color:var(--tx3);padding:8px 12px;border-top:1px solid var(--line)}
+.bp b{color:var(--tx2)}
+</style>
+</head>
+<body>
+<div class="head">
+  <div class="brand">KALSHI <b>RADAR</b></div>
+  <div class="surf"><button class="on">Opportunity</button><button>Research</button><button>Operations</button></div>
+  <div class="spacer"></div>
+  <div class="axsel">Y <select id="ySel"><option value="edge">Gross edge</option><option value="roi">ROI</option><option value="best">Max upside</option></select>
+    X <select id="xSel"><option value="conf">Confidence</option><option value="liq">Liquidity</option><option value="be">Break-even</option></select></div>
+  <div class="lens" id="lens"><button class="on" data-l="custom">Custom axes</button><button data-l="act">Act lens</button><button data-l="liquidity">Liquidity</button></div>
+  <div class="ministat"><span class="led"></span> scan 12s · 7 plotted</div>
+</div>
+
+<div class="main">
+  <div class="canvaswrap">
+    <svg class="plot" id="plot" viewBox="0 0 900 620" preserveAspectRatio="xMidYMid meet"></svg>
+    <div class="tooltip" id="tip"></div>
+    <div class="legendbox">
+      <div class="r"><span class="dotc" style="background:var(--pos)"></span> Actionable</div>
+      <div class="r"><span class="dotc" style="background:var(--warn)"></span> Review</div>
+      <div class="r"><span class="dotc" style="background:var(--neg)"></span> Blocked</div>
+      <div class="r dim" style="margin-top:5px">bubble size = liquidity / max size</div>
+    </div>
+  </div>
+  <div class="side">
+    <div class="ranked"><div class="rkhdr">Ranked (synced with plot)</div><div id="ranked"></div></div>
+    <div class="card" id="card"></div>
+    <div class="bp"><b>Blueprint:</b> axes/lens remap the space (§7) · bubbles = candidates, color = bucket, size = liquidity · click → TradeCard + 9-dim confidence + EvidencePack (§8/§3) · Research surface adds distribution/calibration plots (§5/§11) · Operations = system-health board (§13).</div>
+  </div>
+</div>
+
+<script>
+"use strict";
+const OPPS=[
+ {id:1,b:"act",sport:"Tennis",name:"J. Sinner",sub:"Reach Final ⊇ Win",setup:"Containment ladder",edge:7,roi:14.0,units:140,profit:9.80,trad:"Yes",cost:93,floor:100,worst:-7,best:7,be:93,fill:140,legs:[["YES","Reach Final · KXATPADVANCE","38¢",140],["NO","Win · KXFOMEN","55¢",140]],why:"Firm child bid exceeds parent ask by 7¢.",conf:{Data:95,Quote:92,Liquidity:78,Execution:80,Settlement:88,Strategy:96,Model:60,Comparability:84,Complexity:90}},
+ {id:2,b:"act",sport:"Soccer",name:"Brazil v Serbia",sub:"Home/Away/Tie 3-way",setup:"Dutch overround",edge:11,roi:5.5,units:90,profit:9.90,trad:"Yes",cost:211,floor:200,worst:-11,best:11,be:106,fill:90,legs:[["NO","Home","61¢",90],["NO","Away","78¢",90],["NO","Tie","72¢",90]],why:"Σ no-ask 11¢ below floor.",conf:{Data:94,Quote:80,Liquidity:70,Execution:74,Settlement:82,Strategy:95,Model:55,Comparability:80,Complexity:78}},
+ {id:3,b:"act",sport:"NHL",name:"Oilers @ Panthers",sub:"Head-to-head",setup:"Game dutch",edge:4,roi:4.0,units:200,profit:8.00,trad:"Yes",cost:96,floor:100,worst:-4,best:4,be:96,fill:200,legs:[["YES","Oilers","47¢",200],["YES","Panthers","49¢",200]],why:"Underround 96¢ < 100¢.",conf:{Data:96,Quote:94,Liquidity:88,Execution:86,Settlement:90,Strategy:96,Model:62,Comparability:85,Complexity:92}},
+ {id:4,b:"act",sport:"Esports",name:"FaZe v Vitality",sub:"Map-1 draw-free",setup:"Map dutch",edge:3,roi:3.0,units:60,profit:1.80,trad:"Yes",cost:97,floor:100,worst:-3,best:3,be:97,fill:60,legs:[["YES","FaZe","52¢",60],["YES","Vitality","45¢",60]],why:"Underround 97¢ < 100¢.",conf:{Data:90,Quote:78,Liquidity:60,Execution:66,Settlement:86,Strategy:94,Model:50,Comparability:70,Complexity:88}},
+ {id:5,b:"rev",sport:"NBA",name:"Boston Celtics",sub:"Reach SF ≡ Win Conf",setup:"Equivalence",edge:4,roi:6.0,units:50,profit:2.00,trad:"Rule-dependent",cost:104,floor:100,worst:-4,best:4,be:104,fill:50,legs:[["YES","Reach SF","71¢",50],["NO","Win Conf","33¢",50]],why:"Equivalence; settlement wording differs.",conf:{Data:88,Quote:76,Liquidity:64,Execution:60,Settlement:55,Strategy:80,Model:48,Comparability:72,Complexity:70}},
+ {id:6,b:"rev",sport:"Tennis",name:"C. Alcaraz",sub:"Score bundle ≡ Win",setup:"Synthetic",edge:5,roi:5.0,units:40,profit:2.00,trad:"Review",cost:95,floor:100,worst:-5,best:5,be:95,fill:40,legs:[["YES","3-0","12¢",40],["YES","3-1","18¢",40],["YES","3-2","21¢",40],["NO","Match","54¢",40]],why:"Scoreline bundle replicates Win; 5¢ under hedge.",conf:{Data:84,Quote:58,Liquidity:50,Execution:48,Settlement:45,Strategy:78,Model:42,Comparability:60,Complexity:55}},
+ {id:7,b:"blk",sport:"MLB",name:"LA Dodgers",sub:"Playoffs ⊇ Win WS",setup:"Containment",edge:6,roi:0,units:0,profit:0,trad:"No",cost:0,floor:100,worst:0,best:0,be:0,fill:0,legs:[["YES","Reach Playoffs","—",0],["NO","Win WS","—",0]],why:"Display cross, zero resting size.",conf:{Data:80,Quote:30,Liquidity:10,Execution:15,Settlement:78,Strategy:82,Model:40,Comparability:55,Complexity:75}},
+];
+const $=(s,r=document)=>r.querySelector(s);
+const NS="http://www.w3.org/2000/svg";
+const avg=o=>Math.round(Object.values(o.conf).reduce((a,b)=>a+b,0)/9);
+const COL={act:getCS('--pos'),rev:getCS('--warn'),blk:getCS('--neg')};
+function getCS(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim();}
+let xKey="conf",yKey="edge",sel=1;
+const xVal=o=>xKey==="conf"?avg(o):xKey==="liq"?o.conf.Liquidity:o.be;
+const yVal=o=>yKey==="edge"?o.edge:yKey==="roi"?o.roi:o.best;
+const PAD={l:64,r:30,t:30,b:50},W=900,H=620;
+function plot(){
+  const svg=$("#plot");svg.innerHTML="";
+  const xs=OPPS.map(xVal),ys=OPPS.map(yVal);
+  const xmin=0,xmax=Math.max(100,...xs),ymin=0,ymax=Math.max(...ys)*1.15||1;
+  const px=v=>PAD.l+(v-xmin)/(xmax-xmin)*(W-PAD.l-PAD.r);
+  const py=v=>H-PAD.b-(v-ymin)/(ymax-ymin)*(H-PAD.t-PAD.b);
+  const add=(t,a)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);svg.appendChild(e);return e;};
+  // gridlines
+  for(let i=0;i<=4;i++){const gx=PAD.l+i/4*(W-PAD.l-PAD.r);add("line",{x1:gx,y1:PAD.t,x2:gx,y2:H-PAD.b,class:"gridline"});
+    const gy=PAD.t+i/4*(H-PAD.t-PAD.b);add("line",{x1:PAD.l,y1:gy,x2:W-PAD.r,y2:gy,class:"gridline"});}
+  // mid quadrant lines
+  const mx=px((xmin+xmax)/2),my=py((ymin+ymax)/2);
+  add("line",{x1:mx,y1:PAD.t,x2:mx,y2:H-PAD.b,class:"midline"});
+  add("line",{x1:PAD.l,y1:my,x2:W-PAD.r,y2:my,class:"midline"});
+  // quadrant labels
+  const ql=(x,y,t,anchor)=>{const e=add("text",{x,y,class:"quadlabel","text-anchor":anchor});e.textContent=t;};
+  ql(W-PAD.r-6,PAD.t+14,"HIGH EDGE · HIGH CONFIDENCE → ACT","end");
+  ql(PAD.l+6,PAD.t+14,"HIGH EDGE · LOW CONFIDENCE → VERIFY","start");
+  ql(W-PAD.r-6,H-PAD.b-8,"LOW EDGE · HIGH CONFIDENCE → WATCH","end");
+  ql(PAD.l+6,H-PAD.b-8,"LOW EDGE · LOW CONFIDENCE → PARK","start");
+  // axis labels
+  const xl=add("text",{x:(PAD.l+W-PAD.r)/2,y:H-12,class:"axlabel","text-anchor":"middle"});xl.textContent=({conf:"Confidence (aggregate) →",liq:"Liquidity →",be:"Break-even % →"})[xKey];
+  const yl=add("text",{x:16,y:(PAD.t+H-PAD.b)/2,class:"axlabel","text-anchor":"middle",transform:`rotate(-90 16 ${(PAD.t+H-PAD.b)/2})`});yl.textContent=({edge:"Gross edge ¢ →",roi:"ROI % →",best:"Max upside ¢ →"})[yKey];
+  // bubbles
+  const maxsz=Math.max(...OPPS.map(o=>o.units))||1;
+  OPPS.forEach(o=>{
+    const r=8+Math.sqrt(o.units/maxsz)*22;
+    const cx=px(xVal(o)),cy=py(yVal(o));
+    const c=add("circle",{cx,cy,r,fill:COL[o.b]+"33",stroke:COL[o.b],"stroke-width":1.5,class:"bubble"+(o.id===sel?" sel":""),"data-id":o.id});
+    const tx=add("text",{x:cx,y:cy+3,"text-anchor":"middle","font-size":"9.5","fill":"#dbe7f2","pointer-events":"none","font-family":"var(--mono)"});
+    tx.textContent=o.sport.slice(0,3).toUpperCase();
+    c.addEventListener("mouseenter",ev=>showTip(ev,o));
+    c.addEventListener("mousemove",ev=>moveTip(ev));
+    c.addEventListener("mouseleave",()=>$("#tip").style.opacity=0);
+    c.addEventListener("click",()=>{sel=o.id;plot();ranked();card();});
+  });
+}
+function showTip(ev,o){const t=$("#tip");t.innerHTML=`<b>${o.name}</b> · ${o.sport}<br>${o.sub}<br>edge ${o.edge}¢ · conf ${avg(o)} · ${o.units} units`;t.style.opacity=1;moveTip(ev);}
+function moveTip(ev){const w=$("#tip");const wrap=$(".canvaswrap").getBoundingClientRect();w.style.left=(ev.clientX-wrap.left+14)+"px";w.style.top=(ev.clientY-wrap.top+12)+"px";}
+function ranked(){
+  const list=[...OPPS].sort((a,b)=>yVal(b)-yVal(a));
+  $("#ranked").innerHTML=list.map(o=>`<div class="rkrow ${o.id===sel?'sel':''}" data-id="${o.id}">
+    <span class="rkdot" style="background:${COL[o.b]}"></span>
+    <div class="n"><div class="t">${o.name}</div><div class="s">${o.sport} · ${o.setup}</div></div>
+    <span class="e ${o.edge?'pos':'dim'}">${o.edge?o.edge+'¢':'—'}</span></div>`).join("");
+  document.querySelectorAll('.rkrow').forEach(r=>r.onclick=()=>{sel=+r.dataset.id;plot();ranked();card();});
+}
+function card(){
+  const o=OPPS.find(x=>x.id===sel);
+  const legs=o.legs.map(l=>`<div class="leg"><span class="t ${l[0]==='YES'?'y':'n'}">${l[0]}</span><span style="flex:1">${l[1]}</span><span class="mono">${l[2]}</span></div>`).join("");
+  const cf=Object.entries(o.conf).map(([k,v])=>`<div class="cf"><span style="color:var(--tx2)">${k}</span><div class="tr"><div class="fi" style="width:${v}%"></div></div><span class="mono" style="text-align:right">${v}</span></div>`).join("");
+  $("#card").innerHTML=`<div class="c-h"><span class="bdg b-${o.b}">${o.b.toUpperCase()}</span><span class="c-t">${o.name}</span></div>
+    <div class="c-s">${o.sub} · ${o.setup} · conf ${avg(o)}</div>
+    <div class="csec">Buy-only plan</div>${legs}
+    <div class="kv" style="margin-top:5px"><span class="l">Cost / $1</span><span class="v">${o.cost}¢</span><span class="l">Worst / best</span><span class="v">${o.worst} / +${o.best}¢</span><span class="l">Break-even</span><span class="v">${o.be}%</span><span class="l">Fillable</span><span class="v">${o.fill}</span></div>
+    <div class="csec">Confidence — 9 dim</div>${cf}
+    <div class="csec">Why flagged</div><div class="note">${o.why}</div>
+    <div class="csec">EvidencePack</div><div class="kv"><span class="l">Scan</span><span class="v">scan_8841</span><span class="l">Quote ts</span><span class="v">12s</span><span class="l">Rules</span><span class="v">r3</span></div>`;
+}
+function init(){
+  plot();ranked();card();
+  $("#xSel").onchange=e=>{xKey=e.target.value;plot();};
+  $("#ySel").onchange=e=>{yKey=e.target.value;plot();ranked();};
+  document.querySelectorAll('#lens button').forEach(b=>b.onclick=()=>{
+    document.querySelectorAll('#lens button').forEach(x=>x.classList.toggle('on',x===b));
+    const l=b.dataset.l;
+    if(l==="act"){xKey="conf";yKey="edge";}if(l==="liquidity"){xKey="liq";yKey="best";}
+    if(l!=="custom"){$("#xSel").value=xKey;$("#ySel").value=yKey;}
+    plot();ranked();});
+  document.querySelectorAll('.surf button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.surf button').forEach(x=>x.classList.remove('on'));b.classList.add('on');});
+  window.addEventListener('resize',plot);
+}
+document.addEventListener('DOMContentLoaded',init);
+</script>
+</body>
+</html>

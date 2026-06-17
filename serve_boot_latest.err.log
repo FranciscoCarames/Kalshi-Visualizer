@@ -1,0 +1,31 @@
+INFO:     Started server process [38000]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+INFO:     127.0.0.1:62307 - "WebSocket /socket.io/?client_id=c4794c31-6427-47fa-9899-c05208d4b9df&next_message_id=2396&implicit_handshake=true&document_id=90444f7f-70e2-4d75-b37f-1af456c66a8e&tab_id=30e8b38a-fc6d-4a88-aa60-007ee9644605&old_tab_id=null&EIO=4&transport=websocket" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     127.0.0.1:58864 - "WebSocket /socket.io/?client_id=75c510ae-438f-4839-a045-c52ee2121715&next_message_id=0&implicit_handshake=true&document_id=126548b6-e094-4123-9aaf-f03ba9998b4e&tab_id=30e8b38a-fc6d-4a88-aa60-007ee9644605&old_tab_id=null&EIO=4&transport=websocket" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:50914 - "WebSocket /socket.io/?client_id=75c510ae-438f-4839-a045-c52ee2121715&next_message_id=5&implicit_handshake=true&document_id=126548b6-e094-4123-9aaf-f03ba9998b4e&tab_id=30e8b38a-fc6d-4a88-aa60-007ee9644605&old_tab_id=null&EIO=4&transport=websocket" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     connection closed
+INFO:     127.0.0.1:62039 - "WebSocket /socket.io/?client_id=19c8b2e5-758c-46b1-b477-2e8dbb0ac6cc&next_message_id=0&implicit_handshake=true&document_id=0148d685-e1a7-47de-aac4-d974dffd765d&tab_id=30e8b38a-fc6d-4a88-aa60-007ee9644605&old_tab_id=null&EIO=4&transport=websocket" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     127.0.0.1:59244 - "WebSocket /socket.io/?client_id=19c8b2e5-758c-46b1-b477-2e8dbb0ac6cc&next_message_id=40&implicit_handshake=true&document_id=0148d685-e1a7-47de-aac4-d974dffd765d&tab_id=30e8b38a-fc6d-4a88-aa60-007ee9644605&old_tab_id=null&EIO=4&transport=websocket" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     127.0.0.1:54615 - "WebSocket /socket.io/?client_id=6971f117-7dc0-4bdb-8d2e-3a2e10f601f2&next_message_id=0&implicit_handshake=true&document_id=805ee619-0075-4516-ad70-41f3a7e19220&tab_id=30e8b38a-fc6d-4a88-aa60-007ee9644605&old_tab_id=null&EIO=4&transport=websocket" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     127.0.0.1:56977 - "WebSocket /socket.io/?client_id=6971f117-7dc0-4bdb-8d2e-3a2e10f601f2&next_message_id=199&implicit_handshake=true&document_id=805ee619-0075-4516-ad70-41f3a7e19220&tab_id=30e8b38a-fc6d-4a88-aa60-007ee9644605&old_tab_id=null&EIO=4&transport=websocket" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:54586 - "WebSocket /socket.io/?client_id=6971f117-7dc0-4bdb-8d2e-3a2e10f601f2&next_message_id=277&implicit_handshake=true&document_id=805ee619-0075-4516-ad70-41f3a7e19220&tab_id=30e8b38a-fc6d-4a88-aa60-007ee9644605&old_tab_id=null&EIO=4&transport=websocket" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     connection closed
+INFO:     127.0.0.1:55844 - "WebSocket /socket.io/?client_id=6971f117-7dc0-4bdb-8d2e-3a2e10f601f2&next_message_id=354&implicit_handshake=true&document_id=805ee619-0075-4516-ad70-41f3a7e19220&tab_id=30e8b38a-fc6d-4a88-aa60-007ee9644605&old_tab_id=null&EIO=4&transport=websocket" [accepted]
+INFO:     connection open
+INFO:     connection closed

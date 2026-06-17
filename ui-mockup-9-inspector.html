@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="amber">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kalshi Workstation — Mockup 9 · LEG-PROOF INSPECTOR</title>
+<style>
+/* ===== Mockup 9: LEG-PROOF INSPECTOR — Trading Technologies leg-by-leg proof =====
+   The single-opportunity "why is this real & tradable" surface: exact buy plan, leg table, payoff
+   scenarios, quote/size evidence, gross-vs-net limits, 9-dim confidence, Kalshi links.
+   Reuses the Terminal Pro palette + shared OPPS data. Mockup only; running app untouched.
+   Every edge is GROSS / TOP-OF-BOOK — there is NO order entry here. */
+:root{
+  --bg:#000; --bg1:#070705; --bg2:#0d0c09; --panel:#0a0a08; --line:#1b1910; --line2:#2a2616; --hover:#14120a;
+  --amber:#ffb000; --amber-d:#7a5500; --orange:#ff7b00; --green:#33ff7a; --red:#ff453a; --cyan:#43d9ff; --violet:#b69bff;
+  --tx:#e8c878; --tx2:#b79a52; --tx3:#7a6a3a; --white:#f6efe0;
+  --mono:'Consolas','SF Mono','DejaVu Sans Mono',monospace; --sans:'Segoe UI',system-ui,sans-serif;
+}
+html[data-theme="hc"]{
+  --bg:#05070a; --bg1:#0b0e13; --bg2:#11151c; --panel:#0c1016; --line:#243042; --line2:#33425a; --hover:#161c26;
+  --tx:#e9eef5; --tx2:#aebccd; --tx3:#71839a; --white:#fff; --amber:#ffc233; --amber-d:#8a6a18;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--tx);font-family:var(--mono);font-size:12px;line-height:1.4;height:100vh;overflow:hidden;display:flex;flex-direction:column;
+  background-image:repeating-linear-gradient(0deg,rgba(255,176,0,.018) 0 1px,transparent 1px 3px)}
+html[data-theme="hc"] body{background-image:none}
+::-webkit-scrollbar{width:9px;height:9px}::-webkit-scrollbar-thumb{background:var(--line2)}
+.amber{color:var(--amber)}.green{color:var(--green)}.red{color:var(--red)}.cyan{color:var(--cyan)}.violet{color:var(--violet)}.white{color:var(--white)}.dim{color:var(--tx3)}
+.sans{font-family:var(--sans)}
+
+.cmdline{display:flex;align-items:center;background:var(--bg1);border-bottom:2px solid var(--amber-d);height:32px;flex:0 0 auto}
+.cmdline .badge{padding:0 11px;font-weight:800;font-size:11px;color:#000;background:var(--amber);height:100%;display:flex;align-items:center;letter-spacing:.5px}
+.cmdline .ttl{padding:0 12px;color:var(--white);font-weight:700;letter-spacing:.5px}
+.cmdline .sub{color:var(--tx3);font-size:10px}
+.cmdline .right{margin-left:auto;display:flex;gap:6px;padding:0 8px}
+.tbtn{background:var(--bg2);border:1px solid var(--line2);color:var(--tx2);font-size:10.5px;padding:3px 9px;cursor:pointer;font-family:var(--mono)}
+.tbtn:hover{color:var(--white);background:var(--hover)}
+.statline{display:flex;align-items:center;background:var(--bg2);border-bottom:1px solid var(--line);font-size:10.5px;min-height:22px;flex:0 0 auto}
+.statline .s{padding:0 9px;border-right:1px solid var(--line);height:22px;display:flex;align-items:center;gap:5px}
+.statline b{color:var(--white)}
+.statline .discl{border-right:none;color:var(--amber)!important;font-weight:600;margin-left:auto}
+
+.shell{flex:1;min-height:0;display:grid;grid-template-columns:236px 1fr;gap:4px;padding:4px}
+.panel{border:1px solid var(--line2);background:var(--panel);display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.ph{display:flex;align-items:center;gap:8px;padding:0 8px;height:24px;background:linear-gradient(180deg,#14120a,#0a0908);border-bottom:1px solid var(--line2);flex:0 0 auto}
+html[data-theme="hc"] .ph{background:var(--bg2)}
+.ph .n{color:#000;background:var(--amber);font-weight:800;font-size:9px;padding:0 4px}
+.ph h3{margin:0;font-size:10.5px;font-weight:700;letter-spacing:.8px;color:var(--amber)}
+.ph .meta{margin-left:auto;color:var(--tx3);font-size:9px}
+.pbody{flex:1;overflow:auto;min-height:0}
+
+/* picker */
+.pk{display:flex;flex-direction:column;gap:1px;padding:3px 0}
+.pkrow{padding:5px 9px;border-bottom:1px solid var(--line);cursor:pointer}
+.pkrow:hover{background:var(--hover)}
+.pkrow.on{background:#1e1a0c;box-shadow:inset 3px 0 0 var(--amber)}
+html[data-theme="hc"] .pkrow.on{background:#152033}
+.pkrow .top{display:flex;align-items:center;gap:6px}
+.pkrow .nm{color:var(--white);font-family:var(--sans);font-weight:600;font-size:11.5px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pkrow .sub{color:var(--tx3);font-size:9px;font-family:var(--sans)}
+.bk{font-weight:800;font-size:8px;padding:0 3px;border-radius:2px}
+.bk-act{background:rgba(51,255,122,.15);color:var(--green)}.bk-rev{background:rgba(255,176,0,.15);color:var(--amber)}.bk-blk{background:rgba(255,69,58,.15);color:var(--red)}.bk-res{background:rgba(182,155,255,.15);color:var(--violet)}
+
+/* inspector body */
+.insp{padding:0}
+.hero{padding:10px 14px;border-bottom:1px solid var(--line2);background:var(--bg2)}
+.hero .row1{display:flex;align-items:center;gap:10px}
+.hero h2{margin:0;font-size:18px;font-family:var(--sans);color:var(--white);font-weight:700}
+.hero .setup{color:var(--tx2);font-size:11px}
+.hero .plan{margin-top:7px;font-family:var(--mono);font-size:13px;color:var(--white);letter-spacing:.3px}
+.hero .plan .y{color:var(--green);font-weight:700}.hero .plan .n{color:var(--red);font-weight:700}
+.hero .tnow{margin-left:auto;text-align:right}
+.hero .tnow .v{font-size:15px;font-weight:800}
+.tnow .v.y{color:var(--green)}.tnow .v.n{color:var(--tx3)}.tnow .v.r{color:var(--amber)}
+.tnow .l{font-size:9px;color:var(--tx3);letter-spacing:.5px}
+
+.cols{display:grid;grid-template-columns:1.35fr 1fr;gap:0}
+.cols .c{padding:9px 14px}
+.cols .c:first-child{border-right:1px solid var(--line)}
+.sect{color:var(--amber);font-size:9.5px;letter-spacing:1px;margin:12px 0 5px;border-bottom:1px solid var(--line);padding-bottom:2px;display:flex;align-items:center;gap:8px}
+.sect:first-child{margin-top:0}
+.sect .rt{margin-left:auto;color:var(--tx3);font-size:8.5px;letter-spacing:.3px}
+
+/* TT leg table */
+table.legs{width:100%;border-collapse:collapse;font-size:11px}
+table.legs th{text-align:left;color:var(--tx3);font-weight:400;font-size:8.5px;letter-spacing:.4px;text-transform:uppercase;padding:3px 6px;border-bottom:1px solid var(--line2);white-space:nowrap}
+table.legs th.r,table.legs td.r{text-align:right}
+table.legs td{padding:3px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
+table.legs .side{font-weight:800;font-size:9px;padding:0 4px;border-radius:2px}
+table.legs .side.YES{background:rgba(51,255,122,.16);color:var(--green)}
+table.legs .side.NO{background:rgba(255,69,58,.16);color:var(--red)}
+table.legs .mk{color:var(--white);font-family:var(--sans)}
+table.legs tfoot td{border-top:1px solid var(--line2);font-weight:700;color:var(--white);padding-top:4px}
+.tag{font-size:8.5px;padding:0 4px;border-radius:2px;border:1px solid var(--line2);color:var(--tx3)}
+.tag.ok{border-color:var(--green);color:var(--green)}.tag.blk{border-color:var(--red);color:var(--red)}.tag.warn{border-color:var(--amber);color:var(--amber)}
+
+/* payoff scenarios */
+.scn{display:flex;flex-direction:column;gap:4px}
+.scnrow{display:grid;grid-template-columns:150px 1fr 64px;gap:8px;align-items:center;font-size:10.5px}
+.scnrow .lbl{color:var(--tx2);font-family:var(--sans)}
+.bar{height:14px;background:#161309;position:relative;border:1px solid var(--line)}
+html[data-theme="hc"] .bar{background:#0e1420}
+.bar .mid{position:absolute;left:50%;top:-2px;bottom:-2px;width:1px;background:var(--tx3)}
+.bar i{position:absolute;top:0;bottom:0;display:block}
+.bar i.pos{background:linear-gradient(90deg,rgba(51,255,122,.35),var(--green));left:50%}
+.bar i.neg{background:linear-gradient(90deg,var(--red),rgba(255,69,58,.35));right:50%}
+.scnrow .v{text-align:right;font-weight:700}
+
+.kv{display:grid;grid-template-columns:auto 1fr;gap:2px 12px;font-size:10.5px}.kv .l{color:var(--tx3)}.kv .v{text-align:right;color:var(--white)}
+.note{font-size:10.5px;color:var(--tx2);line-height:1.55;font-family:var(--sans)}.note b{color:var(--white)}
+.warn-box{border:1px solid var(--amber-d);background:rgba(255,176,0,.06);padding:7px 9px;font-size:10px;color:var(--tx2);font-family:var(--sans);line-height:1.5}
+.warn-box b{color:var(--amber)}
+
+/* confidence bars */
+.cf{display:grid;grid-template-columns:92px 1fr 28px;gap:7px;align-items:center;font-size:9.5px;margin:2px 0}
+.gz{height:8px;background:#1a1810;position:relative}html[data-theme="hc"] .gz{background:#16202e}
+.gz i{display:block;height:100%;background:linear-gradient(90deg,var(--red),var(--amber),var(--green))}
+
+.lnk{color:var(--cyan);font-size:10px;text-decoration:none}.lnk:hover{text-decoration:underline}
+.empty{display:flex;align-items:center;justify-content:center;height:100%;color:var(--tx3);text-align:center;padding:20px}
+
+.foot{flex:0 0 auto;display:flex;gap:14px;align-items:center;border-top:1px solid var(--line2);background:var(--bg1);padding:4px 10px;font-size:9.5px;color:var(--tx3)}
+.foot .help{margin-left:auto;display:flex;gap:10px}.foot .help b{color:var(--tx2)}
+</style>
+</head>
+<body>
+
+<div class="cmdline">
+  <div class="badge">DES</div>
+  <div class="ttl">LEG-PROOF INSPECTOR <span class="sub">— exact buy plan · leg-by-leg evidence · payoff · tradability</span></div>
+  <div class="right">
+    <span style="display:flex;align-items:center;gap:4px"><span class="dim" style="font-size:9px">BASIS</span>
+      <button class="tbtn" id="b1">$1</button><button class="tbtn" id="b100">$100</button></span>
+    <button class="tbtn" id="themeBtn">◐ Theme</button>
+  </div>
+</div>
+<div class="statline" id="statline"></div>
+
+<div class="shell">
+  <div class="panel">
+    <div class="ph"><span class="n">L</span><h3>OPPORTUNITIES</h3><span class="meta">pick one</span></div>
+    <div class="pbody"><div class="pk" id="picker"></div></div>
+  </div>
+  <div class="panel">
+    <div class="ph"><span class="n">2</span><h3>INSPECTOR</h3><span class="meta" id="imeta"></span></div>
+    <div class="pbody"><div id="insp"><div class="empty">Pick an opportunity on the left.</div></div></div>
+  </div>
+</div>
+
+<div class="foot">
+  <div><b class="amber">GROSS · TOP-OF-BOOK · READ-ONLY · NO ORDER ENTRY · NOT RISKLESS</b> — fees, position limits &amp; full-depth not modeled · mockup preview</div>
+  <div class="help"><span><b>J/K</b> next/prev</span><span><b>$1 / $100</b> basis</span></div>
+</div>
+
+<script>
+"use strict";
+const OPPS=[
+ {id:1,b:"act",tk:"SINNER",sport:"Tennis",name:"J. Sinner",sub:"Reach Final ⊇ Win Tournament",setup:"Containment",edge:7,roi:14.0,units:140,profit:9.80,trad:"Yes",cav:"—",sev:"",q:"Tight",cost:93,floor:100,worst:-7,best:7,be:93,fill:140,touch:38,legs:[["YES","Reach Final · KXATPADVANCE","38¢",140],["NO","Win · KXFOMEN","55¢",140]],why:"Firm child bid (Reach Final) exceeds the parent ask (Win) by 7¢ — a deeper outcome priced above the broader one that contains it.",rank:"Top under Blended: high ROI, tight quotes, size 140.",improve:"Already executable; more size as the Win ask deepens.",wrong:"A walkover advances without a match win — light rules check (RULE_CHECK).",conf:{Data:95,Quote:92,Liquidity:78,Execution:80,Settlement:88,Strategy:96,Model:60,Comparability:84,Complexity:90}},
+ {id:2,b:"act",tk:"BRAZIL",sport:"Soccer",name:"Brazil v Serbia",sub:"Home / Away / Tie 3-way",setup:"Dutch overround",edge:11,roi:5.5,units:90,profit:9.90,trad:"Yes",cav:"Game postpone",sev:"adv",q:"OK",cost:211,floor:200,worst:-11,best:11,be:106,fill:90,touch:61,legs:[["NO","Home · KXWCGAME","61¢",90],["NO","Away · KXWCGAME","78¢",90],["NO","Tie · KXWCGAME","72¢",90]],why:"Σ no-ask across the 3 mutually-exclusive outcomes is 11¢ below the (n−1)×100¢ floor.",rank:"Edge up +6¢ since last scan.",improve:"Tighter Away quote adds size.",wrong:"Postponement caveat advisory; does not change tradable.",conf:{Data:94,Quote:80,Liquidity:70,Execution:74,Settlement:82,Strategy:95,Model:55,Comparability:80,Complexity:78}},
+ {id:3,b:"act",tk:"OILERS",sport:"NHL",name:"Oilers @ Panthers",sub:"Head-to-head game book",setup:"Game dutch",edge:4,roi:4.0,units:200,profit:8.00,trad:"Yes",cav:"—",sev:"",q:"Tight",cost:96,floor:100,worst:-4,best:4,be:96,fill:200,touch:47,legs:[["YES","Oilers · KXNHLGAME","47¢",200],["YES","Panthers · KXNHLGAME","49¢",200]],why:"Underround: Σ yes-ask 96¢ < 100¢ on a draw-free 2-way game.",rank:"Strong on liquidity-first: size 200, tight.",improve:"Executable now.",wrong:"None material; draw-free.",conf:{Data:96,Quote:94,Liquidity:88,Execution:86,Settlement:90,Strategy:96,Model:62,Comparability:85,Complexity:92}},
+ {id:4,b:"act",tk:"FAZE",sport:"Esports",name:"FaZe v Vitality",sub:"Map-1 (draw-free)",setup:"Map dutch",edge:3,roi:3.0,units:60,profit:1.80,trad:"Yes",cav:"—",sev:"",q:"OK",cost:97,floor:100,worst:-3,best:3,be:97,fill:60,touch:52,legs:[["YES","FaZe · KXCS2MAP","52¢",60],["YES","Vitality · KXCS2MAP","45¢",60]],why:"Underround on a 2-way draw-free map (97¢ < 100¢).",rank:"Returned to Actionable this scan.",improve:"Thin size — more depth helps.",wrong:"Allow-list maintained; esports churn.",conf:{Data:90,Quote:78,Liquidity:60,Execution:66,Settlement:86,Strategy:94,Model:50,Comparability:70,Complexity:88}},
+ {id:5,b:"rev",tk:"CELTICS",sport:"NBA",name:"Boston Celtics",sub:"Reach SF ≡ Win Conference",setup:"Equivalence",edge:4,roi:6.0,units:50,profit:2.00,trad:"Rule-dependent",cav:"RULE_CHECK_REQ",sev:"rev",q:"OK",cost:104,floor:100,worst:-4,best:4,be:104,fill:50,touch:71,legs:[["YES","Reach SF · KXNBA","71¢",50],["NO","Win Conf · KXNBA","33¢",50]],why:"Equivalence (round maps to a rung) implies a cross, but settlement wording differs by a token.",rank:"Review: rule-dependent, never auto-tradable.",improve:"Confirm settlement rules align → could promote.",wrong:"RULE_MISMATCH on a light token diff.",conf:{Data:88,Quote:76,Liquidity:64,Execution:60,Settlement:55,Strategy:80,Model:48,Comparability:72,Complexity:70}},
+ {id:6,b:"rev",tk:"ALCARAZ",sport:"Tennis",name:"C. Alcaraz",sub:"Exact-score bundle ≡ Win",setup:"Synthetic",edge:5,roi:5.0,units:40,profit:2.00,trad:"Review rules",cav:"SETTLE_CHECK_REQ",sev:"rev",q:"Wide",cost:95,floor:100,worst:-5,best:5,be:95,fill:40,touch:54,legs:[["YES","3-0 · KXATPEXACT","12¢",40],["YES","3-1","18¢",40],["YES","3-2","21¢",40],["NO","Match winner","54¢",40]],why:"A bundle of MECE scorelines replicates 'they win' — priced 5¢ under the hedge.",rank:"Review-only by construction.",improve:"On a retirement the score legs settle to FMP — needs rule confirmation.",wrong:"Never Actionable; not a dutch book.",conf:{Data:84,Quote:58,Liquidity:50,Execution:48,Settlement:45,Strategy:78,Model:42,Comparability:60,Complexity:55}},
+ {id:7,b:"blk",tk:"DODGERS",sport:"MLB",name:"LA Dodgers",sub:"Reach Playoffs ⊇ Win WS",setup:"Containment",edge:6,roi:0,units:0,profit:0,trad:"No",cav:"Blocked: no size",sev:"blk",q:"One-sided",cost:0,floor:100,worst:0,best:0,be:0,fill:0,touch:60,legs:[["YES","Reach Playoffs · KXMLB","—",0],["NO","Win WS · KXMLB","—",0]],why:"Display cross exists but the firm side has zero resting size — QUOTE_SIZE_MISSING.",rank:"Blocked: not executable now.",improve:"Resting size on the NO leg unblocks it.",wrong:"No fill possible at top-of-book.",conf:{Data:80,Quote:30,Liquidity:10,Execution:15,Settlement:78,Strategy:82,Model:40,Comparability:55,Complexity:75}},
+ {id:8,b:"res",tk:"PAIRS",sport:"Tennis",name:"Alcaraz vs Sinner",sub:"Pairs divergence · z = −2.3",setup:"Research signal",edge:0,roi:0,units:0,profit:0,trad:"Research",cav:"not a trade",sev:"res",q:"—",cost:0,floor:0,worst:0,best:0,be:0,fill:0,touch:0,legs:[],why:"Co-movement baseline broke: Alcaraz Win richening vs Sinner — a relative-value hypothesis, not a trade.",rank:"Research surface only; may attach to a card as evidence.",improve:"Needs calibration before any promotion.",wrong:"Research only — never an actionability label.",conf:{Data:70,Quote:50,Liquidity:55,Execution:0,Settlement:0,Strategy:40,Model:62,Comparability:58,Complexity:50}},
+];
+const $=(s,r=document)=>r.querySelector(s);const $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const g=(o,k,d)=>{const v=o?o[k]:undefined;return (v===undefined||v===null)?d:v;};
+const STATUS={act:"Actionable",rev:"Review",blk:"Blocked",res:"Diagnostic"};
+let state={sel:1,basis:1};
+function cssv(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim();}
+const centsToText=(c)=>state.basis===100?('$'+(c).toFixed(2)):(c+'¢');
+
+function statline(){$("#statline").innerHTML=
+  '<span class="s green">● SCAN IDLE · last 12s</span><span class="s">Scan <b>scan_8841</b></span>'+
+  '<span class="s">Quote ts <b>12s</b></span><span class="s">Endpoints <b>/markets /events</b></span><span class="s">Rules ver <b>r3</b></span>'+
+  '<span class="s discl">Equivalence rows are rule-dependent · never auto-tradable</span>';}
+
+function picker(){
+  $("#picker").innerHTML=OPPS.map(o=>`<div class="pkrow ${state.sel===o.id?'on':''}" data-id="${o.id}">
+    <div class="top"><span class="bk bk-${o.b}">${STATUS[o.b][0]}</span><span class="nm">${o.name}</span><span class="${o.trad==='Yes'?'green':o.trad==='No'?'dim':'amber'}">${g(o,'edge',0)?g(o,'edge',0)+'¢':'—'}</span></div>
+    <div class="sub">${o.sport} · ${o.setup}</div></div>`).join("");
+  $$('#picker .pkrow').forEach(r=>r.onclick=()=>select(+r.dataset.id));
+}
+
+function tnowClass(t){return t==='Yes'?'y':t==='No'?'n':'r';}
+function payoffBar(val,scale){
+  const pct=Math.min(50,Math.abs(val)/scale*50);
+  const i = val>=0 ? `<i class="pos" style="width:${pct}%"></i>` : `<i class="neg" style="width:${pct}%"></i>`;
+  return `<div class="bar"><div class="mid"></div>${val?i:''}</div>`;
+}
+
+function insp(o){
+  if(!o){$("#insp").innerHTML='<div class="empty">No opportunity.</div>';return;}
+  $("#imeta").textContent=`${o.sport} · ${o.setup}`;
+  const isRes=o.b==="res";
+  const planTxt=isRes?'<span class="dim">research signal — no executable buy plan</span>':
+    g(o,'legs',[]).map(l=>`<span class="${l[0]==='YES'?'y':'n'}">${l[0]}</span> ${l[1].split(' · ')[0]}`).join('  +  ');
+
+  // leg table
+  const scale=Math.max(o.best||0,Math.abs(o.worst||0),5);
+  let legtbl;
+  if(isRes||!o.legs.length){legtbl='<div class="note">No legs — this is a research/relative-value signal, never an executable plan.</div>';}
+  else{
+    let body=o.legs.map(l=>{
+      const sized=l[3]>0;
+      const blk = sized?'<span class="tag ok">firm size '+l[3]+'</span>':'<span class="tag blk">NO RESTING SIZE</span>';
+      const cav = o.cav!=='—'&&o.sev!=='' ? `<span class="tag ${o.sev==='blk'?'blk':o.sev==='rev'?'warn':''}">${o.cav}</span>`:'';
+      const px = l[2]==='—'?'—':l[2];
+      return `<tr><td><span class="side ${l[0]}">${l[0]}</span></td><td class="mk">${l[1]}</td><td class="r">${px}</td><td class="r">${l[3]||'—'}</td><td class="r">${px==='—'?'—':px}</td><td>${blk} ${cav}</td></tr>`;
+    }).join("");
+    legtbl=`<table class="legs"><thead><tr><th>Side</th><th>Market / leg</th><th class="r">Price</th><th class="r">Size</th><th class="r">Cost/unit</th><th>Blockers / caveats</th></tr></thead>
+      <tbody>${body}</tbody>
+      <tfoot><tr><td colspan="2">TOTAL — buy-only plan</td><td class="r">${g(o,'cost',0)||'—'}¢</td><td class="r">${g(o,'fill',0)||'—'}</td><td class="r">${centsToText(g(o,'cost',0))}</td><td>floor ${g(o,'floor',0)}¢</td></tr></tfoot></table>`;
+  }
+
+  // payoff scenarios
+  const scn = isRes?'<div class="note">Not applicable to a research signal.</div>':`<div class="scn">
+    <div class="scnrow"><span class="lbl">Best — bands resolve in favor</span>${payoffBar(o.best,scale)}<span class="v green">+${o.best}¢</span></div>
+    <div class="scnrow"><span class="lbl">Worst — both settle same</span>${payoffBar(o.worst,scale)}<span class="v red">${o.worst}¢</span></div>
+    <div class="scnrow"><span class="lbl">Abnormal (retire / void)</span>${payoffBar(0,scale)}<span class="v amber">rule-dep</span></div>
+  </div>
+  <div class="kv" style="margin-top:7px"><span class="l">Break-even</span><span class="v">${o.be}%</span>
+    <span class="l">Max loss / gain</span><span class="v">${o.worst}¢ / +${o.best}¢</span>
+    <span class="l">ROI (gross)</span><span class="v">${o.roi?o.roi.toFixed(1)+'%':'—'}</span></div>`;
+
+  const conf=Object.entries(o.conf).map(([k,v])=>`<div class="cf"><span class="dim">${k}</span><div class="gz"><i style="width:${v}%"></i></div><span class="r white" style="text-align:right">${v||'—'}</span></div>`).join("");
+
+  const links=isRes?'':o.legs.map(l=>`<a class="lnk" href="https://kalshi.com/markets" target="_blank" rel="noopener">↗ ${l[1].split(' · ')[1]||l[1]}</a>`).join('<br>');
+
+  $("#insp").innerHTML=`<div class="insp">
+    <div class="hero">
+      <div class="row1"><span class="bk bk-${o.b}">${STATUS[o.b]}</span><h2>${o.name}</h2><span class="setup">${o.sub} · ${o.setup} · ${o.sport}</span>
+        <div class="tnow"><div class="v ${tnowClass(o.trad)}">${o.trad}</div><div class="l">TRADABLE NOW</div></div></div>
+      <div class="plan">${planTxt}</div>
+    </div>
+    <div class="cols">
+      <div class="c">
+        <div class="sect">EXACT BUY PLAN — LEGS <span class="rt">two BUYS · never sell/short</span></div>${legtbl}
+        <div class="sect">PAYOFF SCENARIOS <span class="rt">per unit · gross</span></div>${scn}
+        <div class="sect">QUOTE &amp; SIZE EVIDENCE</div>
+        <div class="kv"><span class="l">Quote quality</span><span class="v">${o.q}</span>
+          <span class="l">Top-of-book size</span><span class="v">${o.fill||0}</span>
+          <span class="l">Touch / implied</span><span class="v">${o.touch?o.touch+'¢':'—'}</span>
+          <span class="l">Quote ts</span><span class="v">12s</span></div>
+      </div>
+      <div class="c">
+        <div class="sect">WHY TRADABLE / NOT</div>
+        <div class="note"><b>Flagged:</b> ${o.why}<br><b>Ranked:</b> ${o.rank}<br><b>Improve:</b> ${o.improve}<br><b>Risk:</b> ${o.wrong}</div>
+        <div class="sect">GROSS vs NET — LIMITATIONS</div>
+        <div class="warn-box">Every edge here is <b>GROSS</b> and <b>TOP-OF-BOOK</b>. Three costs are documented but <b>NOT modeled</b>: <b>fees</b> (never netted), <b>position limits / collateral</b>, and <b>full-depth execution</b>. Treat the edge as an upper bound. No order entry — read-only.</div>
+        <div class="sect">DECOMPOSED CONFIDENCE — 9 DIM <span class="rt">uncalibrated</span></div>${conf}
+        <div class="sect">KALSHI MARKET PAGES</div>
+        <div class="note">${links||'<span class="dim">— no executable markets —</span>'}</div>
+      </div>
+    </div>
+  </div>`;
+}
+function select(id){state.sel=id;picker();insp(OPPS.find(o=>o.id===id));}
+
+function init(){
+  statline();picker();select(state.sel);
+  $("#b1").onclick=()=>{state.basis=1;insp(OPPS.find(o=>o.id===state.sel));};
+  $("#b100").onclick=()=>{state.basis=100;insp(OPPS.find(o=>o.id===state.sel));};
+  $("#themeBtn").onclick=()=>{const h=document.documentElement;h.dataset.theme=h.dataset.theme==='amber'?'hc':'amber';insp(OPPS.find(o=>o.id===state.sel));};
+  document.addEventListener('keydown',e=>{
+    const ids=OPPS.map(o=>o.id);let i=ids.indexOf(state.sel);
+    if(e.key==="j"){i=Math.min(i+1,ids.length-1);select(ids[i]);}
+    if(e.key==="k"){i=Math.max(i-1,0);select(ids[i]);}
+  });
+}
+document.addEventListener('DOMContentLoaded',init);
+</script>
+</body>
+</html>

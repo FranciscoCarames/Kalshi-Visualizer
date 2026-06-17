@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="amber">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kalshi Workstation — Option 7 · TERMINAL PRO</title>
+<style>
+/* ============ TERMINAL PRO: Bloomberg identity · TT docked workspace · Hybrid usability ============ */
+:root{
+  --bg:#000000; --bg1:#070705; --bg2:#0d0c09; --panel:#0a0a08; --line:#1b1910; --line2:#2a2616; --hover:#14120a;
+  --amber:#ffb000; --amber-d:#7a5500; --orange:#ff7b00; --green:#33ff7a; --red:#ff453a; --cyan:#43d9ff; --violet:#b69bff;
+  --tx:#e8c878; --tx2:#b79a52; --tx3:#7a6a3a; --white:#f6efe0;
+  --mono:'Consolas','SF Mono','DejaVu Sans Mono','Liberation Mono',monospace;
+  --sans:'Segoe UI',system-ui,sans-serif;
+  --bid:#0d2f4f; --ask:#4a1717;
+}
+html[data-theme="hc"]{ /* high-contrast readability variant — amber becomes accent, text goes near-white */
+  --bg:#05070a; --bg1:#0b0e13; --bg2:#11151c; --panel:#0c1016; --line:#243042; --line2:#33425a; --hover:#161c26;
+  --tx:#e9eef5; --tx2:#aebccd; --tx3:#71839a; --white:#ffffff; --amber:#ffc233; --amber-d:#8a6a18;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--tx);font-family:var(--mono);font-size:12px;line-height:1.35;height:100vh;overflow:hidden;display:flex;flex-direction:column;
+  background-image:repeating-linear-gradient(0deg,rgba(255,176,0,.018) 0 1px,transparent 1px 3px)}
+html[data-theme="hc"] body{background-image:none}
+::-webkit-scrollbar{width:9px;height:9px}::-webkit-scrollbar-thumb{background:var(--line2)}
+.amber{color:var(--amber)}.green{color:var(--green)}.red{color:var(--red)}.cyan{color:var(--cyan)}.violet{color:var(--violet)}.white{color:var(--white)}.dim{color:var(--tx3)}
+.sans{font-family:var(--sans)}
+
+/* command line */
+.cmdline{display:flex;align-items:center;background:var(--bg1);border-bottom:2px solid var(--amber-d);height:32px;flex:0 0 auto}
+.fkeys{display:flex;height:100%}
+.fkey{display:flex;align-items:center;padding:0 9px;font-weight:700;font-size:10.5px;border-right:1px solid var(--line);cursor:pointer;color:#04130a}
+.fkey.y{background:var(--amber)}.fkey.g{background:var(--green)}.fkey.c{background:var(--cyan)}.fkey.r{background:var(--red);color:#1a0000}
+.fkey:hover{filter:brightness(1.15)}
+.cmdinput{flex:1;display:flex;align-items:center;gap:8px;padding:0 10px}
+.cmdinput .pr{color:var(--amber);font-weight:700}
+.cmdinput input{flex:1;background:transparent;border:none;color:var(--white);font-family:var(--mono);font-size:12.5px;letter-spacing:.5px;text-transform:uppercase;outline:none}
+.go{background:var(--amber);color:#000;font-weight:800;padding:2px 11px;border:none;cursor:pointer;letter-spacing:1px}
+.clock{padding:0 11px;color:var(--green);font-size:10.5px;border-left:1px solid var(--line)}
+
+/* status / trust line */
+.statline{display:flex;align-items:center;flex-wrap:wrap;background:var(--bg2);border-bottom:1px solid var(--line);font-size:10.5px;min-height:22px;flex:0 0 auto}
+.statline .s{padding:0 9px;border-right:1px solid var(--line);height:22px;display:flex;align-items:center;gap:5px;white-space:nowrap}
+.statline .s.discl{border-right:none;color:var(--amber)!important;font-weight:600}
+.statline b{color:var(--white)}
+.scanbar{display:none;height:2px;background:linear-gradient(90deg,transparent,var(--amber),transparent);background-size:45% 100%;animation:slide 1.1s linear infinite;flex:0 0 auto}
+body.scanning .scanbar{display:block}
+@keyframes slide{0%{background-position:-50% 0}100%{background-position:150% 0}}
+.blink{animation:bk 1s steps(1) infinite}@keyframes bk{50%{opacity:.25}}
+
+/* surface + workspace bar */
+.bar2{display:flex;align-items:center;background:var(--bg1);border-bottom:1px solid var(--line2);height:28px;flex:0 0 auto}
+.stab{padding:0 12px;height:100%;display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;letter-spacing:.5px;cursor:pointer;color:var(--tx3);border-right:1px solid var(--line)}
+.stab.on{background:#000;color:var(--amber);box-shadow:inset 0 -2px 0 var(--amber)}
+html[data-theme="hc"] .stab.on{background:var(--bg2)}
+.stab .c{color:var(--green);font-size:9px}
+.bar2 .ws{display:flex;height:100%;margin-left:8px}
+.bar2 .ws .w{padding:0 11px;display:flex;align-items:center;font-size:10.5px;cursor:pointer;color:var(--tx3);border-right:1px solid var(--line)}
+.bar2 .ws .w.on{color:var(--white);background:#000}
+html[data-theme="hc"] .bar2 .ws .w.on{background:var(--bg2)}
+.bar2 .right{margin-left:auto;display:flex;align-items:center;gap:6px;padding:0 8px}
+.lens{display:flex;border:1px solid var(--line2)}
+.lens button{padding:3px 9px;font-size:10px;background:transparent;border:none;color:var(--tx2);cursor:pointer;font-family:var(--mono);letter-spacing:.3px}
+.lens button.on{background:var(--amber);color:#000;font-weight:700}
+.tbtn{background:var(--bg2);border:1px solid var(--line2);color:var(--tx2);font-size:10.5px;padding:3px 9px;cursor:pointer;font-family:var(--mono)}
+.tbtn:hover{color:var(--white);background:var(--hover)}
+
+/* tiles */
+.tiles{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--line);border-bottom:1px solid var(--line2);flex:0 0 auto}
+.tile{background:var(--bg1);padding:5px 10px;cursor:pointer;text-align:left}
+.tile:hover{background:var(--hover)}
+.tile.on{background:#14120a;box-shadow:inset 0 -2px 0 var(--amber)}
+.tile .k{font-size:9px;color:var(--tx3);letter-spacing:.6px}
+.tile .v{font-size:17px;font-weight:700;font-family:var(--mono);line-height:1.1}
+.tile .s{font-size:9px;color:var(--tx2)}
+.tile .v.g{color:var(--green)}.tile .v.a{color:var(--amber)}.tile .v.r{color:var(--red)}
+
+/* workspace */
+.workspace{flex:1;min-height:0;display:grid;grid-template-columns:1.55fr 312px 286px;grid-template-rows:1.45fr 1fr;gap:4px;padding:4px}
+.panel{border:1px solid var(--line2);background:var(--panel);display:flex;flex-direction:column;min-height:0;min-width:0;overflow:hidden}
+.p-blotter{grid-row:1/2;grid-column:1/2}
+.p-des{grid-row:2/3;grid-column:1/2}
+.p-ladder{grid-row:1/3;grid-column:2/3}
+.p-watch{grid-row:1/2;grid-column:3/4}
+.p-alerts{grid-row:2/3;grid-column:3/4}
+.ph{display:flex;align-items:center;gap:8px;padding:0 8px;height:24px;background:linear-gradient(180deg,#14120a,#0a0908);border-bottom:1px solid var(--line2);flex:0 0 auto}
+html[data-theme="hc"] .ph{background:var(--bg2)}
+.ph .n{color:#000;background:var(--amber);font-weight:800;font-size:9px;padding:0 4px}
+.ph h3{margin:0;font-size:10.5px;font-weight:700;letter-spacing:.8px;color:var(--amber)}
+.ph .dock{margin-left:auto;color:var(--tx3);font-size:10px;display:flex;gap:7px}
+.ph .dock span{cursor:pointer}.ph .dock span:hover{color:var(--white)}
+.pbody{flex:1;overflow:auto;min-height:0}
+
+/* blotter tabs + table */
+.btabs{display:flex;background:var(--bg2);border-bottom:1px solid var(--line);flex:0 0 auto}
+.btab{padding:3px 11px;font-size:10px;font-weight:700;letter-spacing:.5px;cursor:pointer;color:var(--tx3);border-right:1px solid var(--line)}
+.btab.on{color:var(--white);background:var(--panel);box-shadow:inset 0 -2px 0 currentColor}
+.btab.t-act.on{color:var(--green)}.btab.t-rev.on{color:var(--amber)}.btab.t-blk.on{color:var(--red)}.btab.t-res.on{color:var(--violet)}
+.btab .ct{color:var(--tx3);font-weight:400;margin-left:4px}
+table{width:100%;border-collapse:collapse;font-size:11px}
+th{text-align:left;color:var(--tx3);font-weight:400;font-size:9px;letter-spacing:.5px;padding:3px 7px;border-bottom:1px solid var(--line2);text-transform:uppercase;white-space:nowrap;position:sticky;top:0;background:var(--bg2);cursor:pointer}
+th.r,td.r{text-align:right}
+td{padding:1px 7px;border-bottom:1px solid var(--line);white-space:nowrap;height:21px}
+tbody tr{cursor:pointer}tbody tr:hover{background:var(--hover)}
+tbody tr.sel{background:#1e1a0c}tbody tr.sel td:first-child{box-shadow:inset 3px 0 0 var(--amber)}
+tbody tr.research{border-left:2px dashed var(--violet)}
+@keyframes flash{from{background:rgba(51,255,122,.5)}to{background:transparent}}
+tbody tr.flash td{animation:flash 1.8s ease-out 1}
+.bk{font-weight:800;font-size:9px;padding:0 4px;border-radius:2px}
+.bk-act{background:rgba(51,255,122,.15);color:var(--green)}.bk-rev{background:rgba(255,176,0,.15);color:var(--amber)}.bk-blk{background:rgba(255,69,58,.15);color:var(--red)}.bk-res{background:rgba(182,155,255,.15);color:var(--violet)}
+.spt{color:var(--tx2);font-size:10px}
+.nm{color:var(--white);font-weight:600;font-family:var(--sans)}
+.sub{color:var(--tx3);font-size:9.5px;font-family:var(--sans)}
+.up::before{content:"▲";color:var(--green);font-size:8px}.down::before{content:"▼";color:var(--red);font-size:8px}
+.newb{background:var(--green);color:#04130a;font-weight:800;font-size:8.5px;padding:0 3px}
+.ret{color:var(--orange)}
+.trad-y{color:var(--green)}.trad-n{color:var(--tx3)}.trad-r{color:var(--amber)}
+.notact{color:var(--violet);font-size:9px;font-style:italic}
+
+/* MD ladder */
+.ladwarn{background:rgba(255,69,58,.12);border-bottom:1px solid var(--red);color:var(--red);font-size:9.5px;font-weight:700;letter-spacing:1px;text-align:center;padding:2px 0;flex:0 0 auto}
+.ladhdr{padding:4px 9px;border-bottom:1px solid var(--line);flex:0 0 auto}
+.ladhdr .t{color:var(--white);font-weight:700;font-size:11.5px;font-family:var(--sans)}
+.ladhdr .s{color:var(--tx3);font-size:9.5px}
+.ladtbl{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:11px;text-align:center}
+.ladtbl th{position:sticky;top:0;background:var(--bg2);color:var(--tx3);font-size:8.5px;padding:2px 0}
+.ladtbl td{padding:0 4px;height:17px;border-bottom:1px solid #12110a;position:relative}
+.ladtbl .px{font-weight:700;color:var(--white);background:var(--bg2);width:42px}
+.ladtbl .px.touch{background:#243044;color:#fff}
+html[data-theme="amber"] .ladtbl .px.touch{background:#3a2f12}
+.bidc,.askc{width:96px;position:relative}
+.bidc .fill{position:absolute;right:0;top:1px;bottom:1px;background:var(--bid)}.askc .fill{position:absolute;left:0;top:1px;bottom:1px;background:var(--ask)}
+.bidc span,.askc span{position:relative;z-index:1}.bidc{color:#8fc2f3}.askc{color:#f3a0a0}
+.trig{position:absolute;left:2px;color:var(--amber);font-size:8px;z-index:2}
+.ladfoot{padding:4px 9px;border-top:1px solid var(--line);font-size:9px;color:var(--tx3);display:flex;justify-content:space-between;flex:0 0 auto}
+
+/* DES card */
+.des{display:grid;grid-template-columns:1fr 1fr;gap:0;height:100%}
+.des .col{padding:7px 11px;overflow:auto}
+.des .col:first-child{border-right:1px solid var(--line)}
+.dtitle{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.dtitle .t{color:var(--white);font-size:13px;font-weight:700;font-family:var(--sans)}
+.basis{margin-left:auto;display:flex;border:1px solid var(--line2)}
+.basis button{padding:1px 8px;font-size:9.5px;background:transparent;border:none;color:var(--tx2);cursor:pointer;font-family:var(--mono)}
+.basis button.on{background:var(--amber);color:#000;font-weight:700}
+.sect{color:var(--amber);font-size:9px;letter-spacing:1px;margin:7px 0 3px;border-bottom:1px solid var(--line);padding-bottom:1px}
+.leg{display:flex;gap:7px;font-size:10.5px;padding:1px 0;align-items:center}
+.leg .y{color:var(--green);font-weight:700}.leg .n{color:var(--red);font-weight:700}.leg .nm2{flex:1;color:var(--tx2);font-family:var(--sans)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:1px 12px;font-size:10.5px}.kv .l{color:var(--tx3)}.kv .v{text-align:right;color:var(--white)}
+.cf{display:grid;grid-template-columns:78px 1fr 26px;gap:6px;align-items:center;font-size:9.5px;margin:1.5px 0}
+.gz{height:7px;background:#1a1810;position:relative}html[data-theme="hc"] .gz{background:var(--bg3,#1a2230)}
+.gz i{display:block;height:100%;background:linear-gradient(90deg,var(--red),var(--amber),var(--green))}
+.note{font-size:10px;color:var(--tx2);line-height:1.5;font-family:var(--sans)}.note b{color:var(--white)}
+.empty{display:flex;align-items:center;justify-content:center;height:100%;color:var(--tx3);font-size:11px;text-align:center;padding:14px}
+
+/* watch / alerts */
+.wrow{display:flex;align-items:center;gap:7px;padding:4px 9px;border-bottom:1px solid var(--line);font-size:10.5px;cursor:pointer}
+.wrow:hover{background:var(--hover)}
+.wrow .nm3{flex:1;min-width:0;color:var(--white);font-family:var(--sans);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wrow .d{font-size:11px}
+.arow{display:flex;gap:8px;padding:5px 9px;border-bottom:1px solid var(--line);font-size:10px}
+.arow .ic{width:7px;height:7px;border-radius:50%;margin-top:3px;flex:0 0 auto}
+.arow .meta{color:var(--tx3);font-size:9px}
+
+/* footer */
+.foot{flex:0 0 auto;display:flex;gap:14px;align-items:center;border-top:1px solid var(--line2);background:var(--bg1);padding:4px 10px;font-size:9.5px;color:var(--tx3)}
+.foot .ck{display:flex;gap:10px;flex-wrap:wrap}
+.foot .ck b{color:var(--amber);font-weight:700}
+.foot .help{margin-left:auto;display:flex;gap:10px}.foot .help b{color:var(--tx2)}
+
+/* alerts flyout */
+.fly{position:fixed;top:32px;right:6px;width:320px;background:var(--bg1);border:1px solid var(--line2);box-shadow:0 10px 30px rgba(0,0,0,.6);z-index:30;display:none}
+.fly.on{display:block}
+.fly .h{padding:6px 10px;border-bottom:1px solid var(--line);color:var(--amber);font-weight:700;font-size:10.5px;letter-spacing:.5px}
+
+/* views */
+.view{display:none;height:100%}.view.on{display:flex;flex-direction:column}
+.gridfill{flex:1;min-height:0;overflow:auto;padding:8px;display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.rp{border:1px solid var(--line2);background:var(--panel)}
+.rp .h{padding:4px 9px;background:var(--bg2);border-bottom:1px solid var(--line);color:var(--amber);font-size:10px;letter-spacing:.5px;display:flex;align-items:center;gap:8px}
+.rp .resb{margin-left:auto;color:var(--violet);font-size:8.5px;border:1px solid var(--violet);padding:0 4px}
+.rp .c{padding:8px}
+</style>
+</head>
+<body>
+
+<div class="cmdline">
+  <div class="fkeys"><span class="fkey y" data-f="OPP">OPP</span><span class="fkey g" data-f="RES">RES</span><span class="fkey c" data-f="OPS">OPS</span><span class="fkey r" data-f="ALRT">ALRT</span></div>
+  <div class="cmdinput"><span class="pr">&gt;</span><input id="cmd" placeholder="TYPE A FUNCTION OR TICKER, THEN <GO> — OR JUST CLICK ANYTHING (e.g. OPP · RES · SINNER)" autocomplete="off"><button class="go" id="goBtn">&lt;GO&gt;</button></div>
+  <div class="clock">KALSHI&lt;WS&gt;</div>
+</div>
+<div class="scanbar"></div>
+
+<div class="statline" id="statline"></div>
+
+<div class="bar2">
+  <div class="stab on" data-v="opp"><span class="c">1)</span>OPP</div>
+  <div class="stab" data-v="res"><span class="c">2)</span>RES</div>
+  <div class="stab" data-v="ops"><span class="c">3)</span>OPS</div>
+  <div class="ws"><div class="w on">DEFAULT</div><div class="w">WC DESK</div><div class="w">TENNIS</div></div>
+  <div class="right">
+    <span class="dim" style="font-size:9.5px">LENS</span>
+    <div class="lens" id="lens"><button class="on" data-l="blended">BLENDED</button><button data-l="edge">EDGE</button><button data-l="spread">SPREAD</button><button data-l="ratio">OUTRIGHT+SPREAD</button><button data-l="ev">IMPLIED EV</button></div>
+    <button class="tbtn" id="simBtn">▷ SIMULATE SCAN</button>
+    <button class="tbtn" id="themeBtn">◐ THEME</button>
+  </div>
+</div>
+
+<div class="tiles" id="tiles"></div>
+
+<!-- OPP surface = the docked workspace -->
+<div class="view on" id="v-opp">
+  <div class="workspace">
+    <div class="panel p-blotter">
+      <div class="ph"><span class="n">1</span><h3>BLOTTER</h3><span class="dim" style="font-size:9px">click row → ladder + DES · J/K + ENTER</span><span class="dock"><span>⧉</span><span>▢</span><span>✕</span></span></div>
+      <div class="btabs" id="btabs"></div>
+      <div class="pbody"><div id="blotter"></div></div>
+    </div>
+    <div class="panel p-des">
+      <div class="ph"><span class="n">2</span><h3>DES — TRADE CARD</h3><span class="dock"><span>⧉</span><span>▢</span><span>✕</span></span></div>
+      <div class="pbody"><div id="des"><div class="empty">Click a blotter row to load the read-only trade card<br>(legs · 9-dim confidence · depth · tape · scenarios · evidence).</div></div></div>
+    </div>
+    <div class="panel p-ladder">
+      <div class="ph"><span class="n">3</span><h3>MD LADDER</h3><span class="dock"><span>⧉</span><span>▢</span><span>✕</span></span></div>
+      <div class="ladwarn">READ-ONLY DEPTH VIEW — NO ORDERS</div>
+      <div class="ladhdr" id="ladHdr"><div class="t">Select a row →</div><div class="s">market depth loads here</div></div>
+      <div class="pbody"><table class="ladtbl" id="ladTbl"></table></div>
+      <div class="ladfoot" id="ladFoot"><span>YES bids · NO asks (derived)</span><span>liquidity / fill realism</span></div>
+    </div>
+    <div class="panel p-watch">
+      <div class="ph"><span class="n">★</span><h3>WATCH · MOVERS</h3></div>
+      <div class="pbody"><div id="watch"></div></div>
+    </div>
+    <div class="panel p-alerts">
+      <div class="ph"><span class="n">!</span><h3>ALERTS</h3><span class="dim" style="font-size:9px">trusted-state</span></div>
+      <div class="pbody"><div id="alerts"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- RES surface -->
+<div class="view" id="v-res">
+  <div class="gridfill">
+    <div class="rp"><div class="h">IMPLIED DISTRIBUTION — NBA FIELD<span class="resb">RESEARCH</span></div><div class="c" id="rDist"></div></div>
+    <div class="rp"><div class="h">PROBABILITY TERM STRUCTURE — REACH SF → WIN<span class="resb">RESEARCH</span></div><div class="c" id="rTerm"></div></div>
+    <div class="rp"><div class="h">FAVORITE–LONGSHOT CALIBRATION<span class="resb">RESEARCH</span></div><div class="c" id="rCal"></div></div>
+    <div class="rp"><div class="h">PAIRS / DISPERSION WATCH<span class="resb">RESEARCH</span></div><div class="c">
+      <table><thead><tr><th>PAIR</th><th class="r">Z</th><th>SIGNAL</th></tr></thead><tbody>
+      <tr><td class="sans nm">Alcaraz vs Sinner (Win)</td><td class="r red">−2.3</td><td class="cyan">divergence</td></tr>
+      <tr><td class="sans nm">Celtics outright vs path</td><td class="r green">+1.8</td><td class="amber">rich path</td></tr>
+      </tbody></table>
+      <div class="note" style="margin-top:8px">Research signals — never trade instructions; attach to cards as evidence and may drive opt-in lenses only, never executable classification (§0.1).</div></div></div>
+  </div>
+</div>
+
+<!-- OPS surface -->
+<div class="view" id="v-ops">
+  <div class="gridfill">
+    <div class="rp"><div class="h">ENDPOINT / CAPABILITY HEALTH</div><div class="c">
+      <table><thead><tr><th>CAPABILITY</th><th>AUTH</th><th class="r">TOK</th><th>PROBE</th><th>STATUS</th></tr></thead><tbody>
+      <tr><td>/markets</td><td>public</td><td class="r">10</td><td>12s</td><td class="green">healthy</td></tr>
+      <tr><td>/events</td><td>public</td><td class="r">10</td><td>12s</td><td class="green">healthy</td></tr>
+      <tr><td>/orderbook</td><td>conflicted</td><td class="r">10</td><td>1h</td><td class="amber">probe-req</td></tr>
+      <tr><td>/candlesticks</td><td>public</td><td class="r">10</td><td>1h</td><td class="cyan">selective</td></tr>
+      </tbody></table></div></div>
+    <div class="rp"><div class="h">SCAN PROFILE (LAST RUN)</div><div class="c">
+      <table><tbody>
+      <tr><td>fetch</td><td class="r amber">1.9s</td></tr><tr><td>parse</td><td class="r">0.3s</td></tr>
+      <tr><td>detect (7 builders)</td><td class="r amber">1.4s</td></tr><tr><td>store write</td><td class="r">0.2s</td></tr>
+      <tr><td>render</td><td class="r">0.3s</td></tr><tr><td class="green">TOTAL</td><td class="r green">3.4s · 49 GET @ 15rps</td></tr>
+      </tbody></table></div></div>
+    <div class="rp"><div class="h">DATA-QUALITY EVENTS</div><div class="c">
+      <table><tbody>
+      <tr><td class="sans">YES/NO parity skew</td><td class="r dim">data-quality</td></tr>
+      <tr><td class="sans">Crossed book KXNHLGAME</td><td class="r amber">review</td></tr>
+      <tr><td class="sans">Series fetch failed KXMOTOGP</td><td class="r red">blocker</td></tr>
+      </tbody></table></div></div>
+    <div class="rp"><div class="h">MARKET-CLASS COVERAGE</div><div class="c">
+      <table><tbody>
+      <tr><td class="sans">Binary participant · containment</td><td class="r green">live</td></tr>
+      <tr><td class="sans">Categorical MECE · dutch-book</td><td class="r green">live</td></tr>
+      <tr><td class="sans">Scalar-range ladder</td><td class="r amber">planned</td></tr>
+      <tr><td class="sans">Multivariate combo</td><td class="r dim">probe</td></tr>
+      </tbody></table></div></div>
+  </div>
+</div>
+
+<div class="foot">
+  <div class="ck"><b>Can this UI answer:</b> 1) what deserves attention now? · 2) actionable vs review-only vs blocked? · 3) why flagged? · 4) fill/liquidity limit? · 5) what changed? · 6) is data fresh?</div>
+  <div class="help"><span><b>/</b> cmd</span><span><b>1/2/3</b> lens</span><span><b>J/K</b> rows</span><span><b>↵</b> open</span><span><b>G A/R/B</b> jump</span></div>
+</div>
+
+<!-- alerts flyout -->
+<div class="fly" id="fly"><div class="h">🔔 ALERTS — TRUSTED-STATE</div><div id="flyBody"></div></div>
+
+<script>
+"use strict";
+const OPPS=[
+ {id:1,b:"act",chg:"new",flash:true,tk:"SINNER",sport:"Tennis",name:"J. Sinner",sub:"Reach Final ⊇ Win Tournament",setup:"Containment",edge:7,roi:14.0,units:140,profit:9.80,trad:"Yes",cav:"—",sev:"",q:"Tight",spark:[34,35,33,36,38,37,38],cost:93,floor:100,worst:-7,best:7,be:93,fill:140,touch:38,legs:[["YES","Reach Final · KXATPADVANCE","38¢",140],["NO","Win · KXFOMEN","55¢",140]],why:"Firm child bid (Reach Final) exceeds the parent ask (Win) by 7¢ — a deeper outcome priced above the broader one that contains it.",rank:"Top under Blended: high ROI, tight quotes, size 140.",improve:"Already executable; more size as the Win ask deepens.",wrong:"A walkover advances without a match win — light rules check (RULE_CHECK).",conf:{Data:95,Quote:92,Liquidity:78,Execution:80,Settlement:88,Strategy:96,Model:60,Comparability:84,Complexity:90}},
+ {id:2,b:"act",chg:"up",flash:false,tk:"BRAZIL",sport:"Soccer",name:"Brazil v Serbia",sub:"Home / Away / Tie 3-way",setup:"Dutch overround",edge:11,roi:5.5,units:90,profit:9.90,trad:"Yes",cav:"Game postpone",sev:"adv",q:"OK",spark:[5,6,8,7,9,10,11],cost:211,floor:200,worst:-11,best:11,be:106,fill:90,touch:61,legs:[["NO","Home · KXWCGAME","61¢",90],["NO","Away · KXWCGAME","78¢",90],["NO","Tie · KXWCGAME","72¢",90]],why:"Σ no-ask across the 3 mutually-exclusive outcomes is 11¢ below the (n−1)×100¢ floor.",rank:"Edge up +6¢ since last scan.",improve:"Tighter Away quote adds size.",wrong:"Postponement caveat advisory; does not change tradable.",conf:{Data:94,Quote:80,Liquidity:70,Execution:74,Settlement:82,Strategy:95,Model:55,Comparability:80,Complexity:78}},
+ {id:3,b:"act",chg:"",flash:false,tk:"OILERS",sport:"NHL",name:"Oilers @ Panthers",sub:"Head-to-head game book",setup:"Game dutch",edge:4,roi:4.0,units:200,profit:8.00,trad:"Yes",cav:"—",sev:"",q:"Tight",spark:[2,3,3,4,4,3,4],cost:96,floor:100,worst:-4,best:4,be:96,fill:200,touch:47,legs:[["YES","Oilers · KXNHLGAME","47¢",200],["YES","Panthers · KXNHLGAME","49¢",200]],why:"Underround: Σ yes-ask 96¢ < 100¢ on a draw-free 2-way game.",rank:"Strong on liquidity-first: size 200, tight.",improve:"Executable now.",wrong:"None material; draw-free.",conf:{Data:96,Quote:94,Liquidity:88,Execution:86,Settlement:90,Strategy:96,Model:62,Comparability:85,Complexity:92}},
+ {id:4,b:"act",chg:"ret",flash:false,tk:"FAZE",sport:"Esports",name:"FaZe v Vitality",sub:"Map-1 (draw-free)",setup:"Map dutch",edge:3,roi:3.0,units:60,profit:1.80,trad:"Yes",cav:"—",sev:"",q:"OK",spark:[3,2,0,1,2,3,3],cost:97,floor:100,worst:-3,best:3,be:97,fill:60,touch:52,legs:[["YES","FaZe · KXCS2MAP","52¢",60],["YES","Vitality · KXCS2MAP","45¢",60]],why:"Underround on a 2-way draw-free map (97¢ < 100¢).",rank:"Returned to Actionable this scan.",improve:"Thin size — more depth helps.",wrong:"Allow-list maintained; esports churn.",conf:{Data:90,Quote:78,Liquidity:60,Execution:66,Settlement:86,Strategy:94,Model:50,Comparability:70,Complexity:88}},
+ {id:5,b:"rev",chg:"new",flash:true,tk:"CELTICS",sport:"NBA",name:"Boston Celtics",sub:"Reach SF ≡ Win Conference",setup:"Equivalence",edge:4,roi:6.0,units:50,profit:2.00,trad:"Rule-dependent",cav:"RULE_CHECK_REQ",sev:"rev",q:"OK",spark:[1,2,3,3,4,4,4],cost:104,floor:100,worst:-4,best:4,be:104,fill:50,touch:71,legs:[["YES","Reach SF · KXNBA","71¢",50],["NO","Win Conf · KXNBA","33¢",50]],why:"Equivalence (round maps to a rung) implies a cross, but settlement wording differs by a token.",rank:"Review: rule-dependent, never auto-tradable.",improve:"Confirm settlement rules align → could promote.",wrong:"RULE_MISMATCH on a light token diff.",conf:{Data:88,Quote:76,Liquidity:64,Execution:60,Settlement:55,Strategy:80,Model:48,Comparability:72,Complexity:70}},
+ {id:6,b:"rev",chg:"",flash:false,tk:"ALCARAZ",sport:"Tennis",name:"C. Alcaraz",sub:"Exact-score bundle ≡ Win",setup:"Synthetic",edge:5,roi:5.0,units:40,profit:2.00,trad:"Review rules",cav:"SETTLE_CHECK_REQ",sev:"rev",q:"Wide",spark:[4,5,5,4,5,5,5],cost:95,floor:100,worst:-5,best:5,be:95,fill:40,touch:54,legs:[["YES","3-0 · KXATPEXACT","12¢",40],["YES","3-1","18¢",40],["YES","3-2","21¢",40],["NO","Match winner","54¢",40]],why:"A bundle of MECE scorelines replicates 'they win' — priced 5¢ under the hedge.",rank:"Review-only by construction.",improve:"On a retirement the score legs settle to FMP — needs rule confirmation.",wrong:"Never Actionable; not a dutch book.",conf:{Data:84,Quote:58,Liquidity:50,Execution:48,Settlement:45,Strategy:78,Model:42,Comparability:60,Complexity:55}},
+ {id:7,b:"blk",chg:"",flash:false,tk:"DODGERS",sport:"MLB",name:"LA Dodgers",sub:"Reach Playoffs ⊇ Win WS",setup:"Containment",edge:6,roi:0,units:0,profit:0,trad:"No",cav:"Blocked: no size",sev:"blk",q:"One-sided",spark:[6,6,5,6,6,6,6],cost:0,floor:100,worst:0,best:0,be:0,fill:0,touch:60,legs:[["YES","Reach Playoffs · KXMLB","—",0],["NO","Win WS · KXMLB","—",0]],why:"Display cross exists but the firm side has zero resting size — QUOTE_SIZE_MISSING.",rank:"Blocked: not executable now.",improve:"Resting size on the NO leg unblocks it.",wrong:"No fill possible at top-of-book.",conf:{Data:80,Quote:30,Liquidity:10,Execution:15,Settlement:78,Strategy:82,Model:40,Comparability:55,Complexity:75}},
+ {id:8,b:"res",chg:"",flash:false,tk:"PAIRS",sport:"Tennis",name:"Alcaraz vs Sinner",sub:"Pairs divergence · z = −2.3",setup:"Research signal",edge:0,roi:0,units:0,profit:0,trad:"Research",cav:"not a trade",sev:"res",q:"—",spark:[0,-1,-1,-2,-2,-2,-2],cost:0,floor:0,worst:0,best:0,be:0,fill:0,touch:0,legs:[],why:"Co-movement baseline broke: Alcaraz Win richening vs Sinner — a relative-value hypothesis, not a trade.",rank:"Research surface only; may attach to a card as evidence (§5).",improve:"Needs calibration before any promotion (§0.4).",wrong:"Research only — never an actionability label.",conf:{Data:70,Quote:50,Liquidity:55,Execution:0,Settlement:0,Strategy:40,Model:62,Comparability:58,Complexity:50}},
+];
+const $=(s,r=document)=>r.querySelector(s);const $$=(s,r=document)=>[...r.querySelectorAll(s)];
+let state={lens:"blended",tab:"act",sel:null,basis:1};
+const lv=o=>state.lens==="edge"?o.edge:state.lens==="spread"?o.best-o.worst:state.lens==="ratio"?(o.cost?(o.best-o.worst)/o.cost*100:0):state.lens==="ev"?o.roi*.6+o.edge*.4:o.edge*.35+o.roi*.45+(o.best-o.worst)*.2;
+const cssv=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+function spark(pts,col){const w=54,h=14,mn=Math.min(...pts),mx=Math.max(...pts),rg=(mx-mn)||1,st=w/(pts.length-1);
+  const d=pts.map((p,i)=>`${i?'L':'M'}${(i*st).toFixed(1)},${(h-2-((p-mn)/rg)*(h-4)).toFixed(1)}`).join(' ');
+  return `<svg width="${w}" height="${h}" style="vertical-align:middle"><path d="${d}" fill="none" stroke="${col}" stroke-width="1.3"/></svg>`;}
+
+/* status line */
+function statline(){$("#statline").innerHTML=
+  '<span class="s green" id="scanS">● SCAN IDLE · last 12s</span>'+
+  '<span class="s">Contracts <b>1,204</b></span><span class="s">Checks <b>747</b></span><span class="s">Req <b>49</b></span>'+
+  '<span class="s green">● Exchange Open</span><span class="s">Auto-scan <b>on · 30s</b></span>'+
+  '<span class="s amber">● Failed series <b>1</b></span><span class="s">DB <b>42 MB</b></span>'+
+  '<span class="s red blink">● ALRT 4</span>'+
+  '<span class="s discl" style="margin-left:auto">Trading-paused ≠ data-stale · GROSS · TOP-OF-BOOK · $1 BASIS · READ-ONLY · NO ORDER ENTRY · NOT RISKLESS</span>';}
+
+/* tiles */
+function tiles(){
+  const act=OPPS.filter(o=>o.b==="act").length,rev=OPPS.filter(o=>o.b==="rev").length,nw=OPPS.filter(o=>o.chg==="new").length;
+  const T=[["ACT-NOW",act,"g","executable","act"],["REVIEW",rev,"a","settlement-dep","rev"],["NEW",nw,"","this scan","new"],["MOVERS",3,"","edge changed","mov"],["STALE",1,"r","one-sided","stale"],["FAILED",1,"a","KXMOTOGP","fail"],["TOP LENS","+7¢","g","Sinner","top"]];
+  $("#tiles").innerHTML=T.map(t=>`<button class="tile" data-tile="${t[4]}"><div class="k">${t[0]}</div><div class="v ${t[2]}">${t[1]}</div><div class="s">${t[3]}</div></button>`).join("");
+  $$('.tile').forEach(b=>b.onclick=()=>{const id=b.dataset.tile;
+    if(id==="act"){state.tab="act";}else if(id==="rev"){state.tab="rev";}else if(id==="fail"){setView("ops");return;}
+    blotterTabs();blotter();});
+}
+
+/* blotter */
+const TABS=[["act","ACTIONABLE","t-act"],["rev","REVIEW","t-rev"],["blk","BLOCKED","t-blk"],["res","RESEARCH","t-res"]];
+function blotterTabs(){
+  $("#btabs").innerHTML=TABS.map(t=>{const c=OPPS.filter(o=>o.b===t[0]).length;
+    return `<div class="btab ${t[2]} ${state.tab===t[0]?'on':''}" data-tab="${t[0]}">${t[1]}<span class="ct">${c}</span></div>`;}).join("");
+  $$('.btab').forEach(t=>t.onclick=()=>{state.tab=t.dataset.tab;blotterTabs();blotter();});
+}
+function chg(o){return o.chg==="new"?'<span class="newb">NEW</span>':o.chg==="up"?'<span class="up"></span>':o.chg==="ret"?'<span class="ret">↺</span>':'';}
+function blotter(){
+  const rows=OPPS.filter(o=>o.b===state.tab).sort((a,b)=>lv(b)-lv(a));
+  const isRes=state.tab==="res";
+  let h='<table><thead><tr><th></th><th>SPT</th><th>Participant / match</th><th>Setup</th>';
+  h+= isRes?'<th>Signal</th><th>Note</th>':'<th class="r">Edge¢</th><th class="r">ROI%</th><th class="r">Units</th><th class="r">Profit$</th><th>Tradable</th><th>Caveat</th>';
+  h+='</tr></thead><tbody>';
+  rows.forEach(o=>{
+    h+=`<tr data-id="${o.id}" class="${o.b==='res'?'research':''} ${state.sel===o.id?'sel':''} ${o.flash?'flash':''}"><td style="width:26px">${chg(o)}</td>`+
+      `<td class="spt">${o.sport}</td>`+
+      `<td><span class="nm">${o.name}</span> <span class="sub">${o.sub}</span> ${spark(o.spark,cssv('--amber'))}</td>`+
+      `<td class="sans" style="color:var(--tx2)">${o.setup}</td>`;
+    if(isRes){h+=`<td class="violet">z −2.3</td><td class="notact">research — not a trade</td>`;}
+    else{h+=`<td class="r ${o.chg==='up'?'green':''}">${o.edge||'—'}</td><td class="r">${o.roi?o.roi.toFixed(1):'—'}</td>`+
+      `<td class="r">${o.units||'—'}</td><td class="r">${o.profit?o.profit.toFixed(2):'—'}</td>`+
+      `<td class="${o.trad==='Yes'?'trad-y':o.trad==='No'?'trad-n':'trad-r'}">${o.trad==='Yes'?'● ':o.trad==='No'?'○ ':'◐ '}${o.trad}</td>`+
+      `<td class="${o.sev==='blk'?'red':o.sev==='rev'?'amber':o.sev==='adv'?'dim':'dim'}">${o.cav}</td>`;}
+    h+='</tr>';
+  });
+  if(!rows.length)h+=`<tr><td colspan="10" class="dim" style="text-align:center;height:34px">No rows in this bucket.</td></tr>`;
+  $("#blotter").innerHTML=h+'</tbody></table>';
+  $$('#blotter tr[data-id]').forEach(tr=>tr.onclick=()=>select(+tr.dataset.id));
+}
+
+/* MD ladder */
+function ladder(o){
+  if(o.b==="res"||!o.touch){$("#ladHdr").innerHTML=`<div class="t">${o.name}</div><div class="s">research signal — no executable book</div>`;$("#ladTbl").innerHTML="";$("#ladFoot").innerHTML="<span>—</span><span>research</span>";return;}
+  $("#ladHdr").innerHTML=`<div class="t">${o.name} <span class="dim">· ${o.sport}</span></div><div class="s">${o.legs[0][1]}</div>`;
+  const base=o.touch;let h='<thead><tr><th>Bid size</th><th>Px¢</th><th>Ask size</th></tr></thead><tbody>';
+  const maxsz=(o.fill*3.2)||120;
+  for(let p=base+5;p>=base-5;p--){
+    const bid=p<=base?Math.round(o.fill*(1+(base-p)*0.7)):0;
+    const ask=p>=base?Math.round(o.fill*(1+(p-base)*0.6)):0;
+    const trig=p===base+2?'<span class="trig">◀ watch trigger</span>':'';
+    h+=`<tr><td class="bidc">${bid?`<span class="fill" style="width:${Math.min(100,bid/maxsz*100)}%"></span><span>${bid}</span>`:''}</td>`+
+      `<td class="px ${p===base?'touch':''}">${p}${trig}</td>`+
+      `<td class="askc">${ask?`<span class="fill" style="width:${Math.min(100,ask/maxsz*100)}%"></span><span>${ask}</span>`:''}</td></tr>`;
+  }
+  $("#ladTbl").innerHTML=h+'</tbody>';
+  $("#ladFoot").innerHTML=`<span>Touch ${base}¢ · eff fill@50 ≈ ${o.cost+1}¢</span><span>max fill ${o.fill}</span>`;
+}
+
+/* DES trade-card */
+function des(o){
+  if(o.b==="res"){
+    $("#des").innerHTML=`<div class="des"><div class="col"><div class="dtitle"><span class="bk bk-res">RESEARCH</span><span class="t">${o.name}</span></div>
+      <div class="note" style="margin-top:4px"><b>${o.setup}.</b> ${o.why}</div>
+      <div class="sect">PROMOTION</div><div class="note">${o.rank}<br>${o.improve}</div></div>
+      <div class="col"><div class="sect">CONFIDENCE — 9 DIM</div>${confHTML(o)}
+      <div class="sect">NOTE</div><div class="note">${o.wrong}</div></div></div>`;return;}
+  const legs=o.legs.map(l=>`<div class="leg"><span class="${l[0]==='YES'?'y':'n'}">${l[0]}</span><span class="nm2">${l[1]}</span><span class="white">${l[2]}</span><span class="dim">×${l[3]}</span></div>`).join("");
+  const m=state.basis; const cv=c=>m===100?('$'+(c).toFixed(2)):(c+'¢'); // c per-$1 ¢; ×100 → dollars per 100
+  $("#des").innerHTML=`<div class="des">
+   <div class="col">
+     <div class="dtitle"><span class="bk bk-${o.b}">${o.b.toUpperCase()}</span><span class="t">${o.name}</span>
+       <div class="basis" id="basis"><button class="${m===1?'on':''}" data-b="1">$1</button><button class="${m===100?'on':''}" data-b="100">$100</button></div></div>
+     <div class="sub" style="margin-bottom:4px">${o.sub} · ${o.setup}</div>
+     <div class="sect">BUY-ONLY PLAN (LEGS)</div>${legs}
+     <div class="kv" style="margin-top:5px"><span class="l">Cost / unit</span><span class="v">${cv(o.cost)}</span>
+       <span class="l">Payout floor</span><span class="v">${cv(o.floor)}</span><span class="l">Worst / best</span><span class="v">${m===100?'$'+(o.worst).toFixed(2)+' / +$'+(o.best).toFixed(2):o.worst+'¢ / +'+o.best+'¢'}</span>
+       <span class="l">Break-even</span><span class="v">${o.be}%</span><span class="l">Fillable</span><span class="v">${o.fill}</span><span class="l">ROI</span><span class="v">${o.roi?o.roi.toFixed(1):'—'}%</span></div>
+     <div class="sect">SCENARIO PAYOFF (PER UNIT)</div>
+     <div class="kv"><span class="l">Broader YES / deeper NO</span><span class="v green">+${o.best}¢</span><span class="l">Both settle same</span><span class="v red">${o.worst}¢</span><span class="l">Abnormal (retire/void)</span><span class="v amber">rule-dependent</span></div>
+     <div class="sect">EVIDENCEPACK</div>
+     <div class="kv"><span class="l">Scan id</span><span class="v">scan_8841</span><span class="l">Quote ts</span><span class="v">12s</span><span class="l">Endpoints</span><span class="v">/markets /events</span><span class="l">Rules ver</span><span class="v">r3</span></div>
+   </div>
+   <div class="col">
+     <div class="sect">DECOMPOSED CONFIDENCE — 9 DIM</div>${confHTML(o)}
+     <div class="sect">DEPTH (TOP-OF-BOOK → DERIVED)</div>
+     <div class="kv"><span class="l green">YES bid ${o.legs[0][2]}</span><span class="v">${o.fill}</span><span class="l red">NO ask ${o.legs[o.legs.length-1][2]}</span><span class="v">${o.fill}</span></div>
+     <div class="note">Eff fill @50 ≈ ${o.cost+1}¢ · asks derived from opposing bids (parity = data-quality only). Fees & full-depth NOT modeled.</div>
+     <div class="sect">WHY FLAGGED · RANKED · IMPROVE · RISK</div>
+     <div class="note"><b>Flagged:</b> ${o.why}<br><b>Ranked:</b> ${o.rank}<br><b>Improve:</b> ${o.improve}<br><b>Risk:</b> ${o.wrong}</div>
+   </div></div>`;
+  $$('#basis button').forEach(b=>b.onclick=()=>{state.basis=+b.dataset.b;des(o);});
+}
+function confHTML(o){return Object.entries(o.conf).map(([k,v])=>`<div class="cf"><span class="dim">${k}</span><div class="gz"><i style="width:${v}%"></i></div><span class="r white">${v||'—'}</span></div>`).join("");}
+
+/* watch / movers / alerts */
+function watch(){
+  const W=[["Sinner — Reach Final ⊇ Win","Tennis · executable","live","green"],["Celtics — SF ≡ Win Conf","NBA · rule-check","+1¢","amber"],["CS2 Map 1 dutch","Esports · watching","+2¢","cyan"],["Dodgers — WS ladder","MLB · needs size","size 0","red"]];
+  let h=W.map(w=>`<div class="wrow"><span class="d ${w[3]}">●</span><div class="nm3">${w[0]}<div class="sub">${w[1]}</div></div><span class="${w[3]}">${w[2]}</span></div>`).join("");
+  h+='<div class="wrow" style="border-top:1px solid var(--line2)"><span class="dim" style="font-size:9px;letter-spacing:.5px">MOVERS</span></div>';
+  h+=OPPS.filter(o=>o.chg==="up"||o.chg==="down"||o.chg==="ret").map(o=>`<div class="wrow" data-id="${o.id}"><span class="d ${o.chg==='up'?'green':'amber'}">${o.chg==='up'?'▲':'↺'}</span><div class="nm3">${o.name}<div class="sub">${o.sport} · ${o.setup}</div></div><span>${o.edge}¢</span></div>`).join("");
+  $("#watch").innerHTML=h;
+  $$('#watch [data-id]').forEach(r=>r.onclick=()=>select(+r.dataset.id));
+}
+const ALERTS=[["became executable","Sinner Reach Final ⊇ Win","2m · firm both legs · size 140","green"],["bucket changed","Celtics ladder → Review","7m · rule-check required","amber"],["watched moved","CS2 Map 1 +3¢","9m","cyan"],["series failed","KXMOTOGP not fetched","12m · degraded","red"]];
+function alerts(){const h=ALERTS.map(a=>`<div class="arow"><span class="ic" style="background:var(--${a[3]})"></span><div><div><b class="white">${a[0]}</b> — ${a[1]}</div><div class="meta">${a[2]}</div></div></div>`).join("");
+  $("#alerts").innerHTML=h;$("#flyBody").innerHTML=h;}
+
+/* selection */
+function select(id){state.sel=id;const o=OPPS.find(x=>x.id===id);
+  // ensure the row's tab is active
+  if(o.b!==state.tab){state.tab=o.b;blotterTabs();}
+  blotter();ladder(o);des(o);}
+
+/* research charts */
+function bars(h,data){const max=Math.max(...data.map(d=>d[1]));let s='<svg width="100%" height="120" viewBox="0 0 300 120" preserveAspectRatio="none">';const bw=288/data.length;data.forEach((d,i)=>{const bh=d[1]/max*95;s+=`<rect x="${6+i*bw}" y="${102-bh}" width="${bw-3}" height="${bh}" fill="${i===0?cssv('--amber'):'#3a3320'}"/>`;});s+='</svg><div style="display:flex;justify-content:space-between;font-size:8.5px;color:var(--tx3)">'+data.map(d=>`<span>${d[0]}</span>`).join("")+'</div>';h.innerHTML=s;}
+function line(h,pts){const w=300,ht=110,mn=Math.min(...pts),mx=Math.max(...pts),rg=(mx-mn)||1,st=w/(pts.length-1);const d=pts.map((p,i)=>`${i?'L':'M'}${(i*st).toFixed(0)},${(ht-8-((p-mn)/rg)*(ht-22)).toFixed(0)}`).join(' ');h.innerHTML=`<svg width="100%" height="110" viewBox="0 0 ${w} ${ht}"><path d="${d}" fill="none" stroke="${cssv('--green')}" stroke-width="2"/></svg>`;}
+function cal(h){let s='<svg width="100%" height="110" viewBox="0 0 300 110"><line x1="15" y1="96" x2="285" y2="12" stroke="#3a3320" stroke-dasharray="4"/>';const p=[[15,94],[75,78],[135,52],[195,38],[255,20]];s+=`<path d="${p.map((q,i)=>`${i?'L':'M'}${q[0]},${q[1]}`).join(' ')}" fill="none" stroke="${cssv('--amber')}" stroke-width="2"/>`;p.forEach(q=>s+=`<circle cx="${q[0]}" cy="${q[1]}" r="2.5" fill="${cssv('--amber')}"/>`);h.innerHTML=s+'</svg>';}
+function renderRes(){bars($("#rDist"),[["Win",34],["SF",22],["QF",16],["R16",12],["R32",9],["Out",7]]);line($("#rTerm"),[31,38,46,52,57,61]);cal($("#rCal"));}
+
+/* nav */
+function setView(v){$$('.stab').forEach(t=>t.classList.toggle('on',t.dataset.v===v));$$('.view').forEach(x=>x.classList.toggle('on',x.id==='v-'+v));if(v==='res')renderRes();}
+function setLens(l){state.lens=l;$$('#lens button').forEach(b=>b.classList.toggle('on',b.dataset.l===l));blotter();}
+function runCmd(raw){const c=raw.trim().toUpperCase();if(!c)return;
+  if(c==="OPP")return setView('opp');if(c==="RES")return setView('res');if(c==="OPS")return setView('ops');
+  if(c==="ALRT"){$("#fly").classList.toggle('on');return;}
+  const o=OPPS.find(x=>x.tk===c||x.name.toUpperCase().includes(c));if(o){setView('opp');select(o.id);}else{$("#cmd").placeholder="?? '"+c+"' not a function — try OPP / RES / OPS / ALRT / <ticker>";}
+}
+function simulate(){document.body.classList.add('scanning');$("#scanS").innerHTML='● SCANNING · fetching markets…';$("#scanS").className='s amber';
+  setTimeout(()=>$("#scanS").innerHTML='● SCANNING · detecting (7 builders)…',900);
+  setTimeout(()=>{document.body.classList.remove('scanning');$("#scanS").innerHTML='● SCAN IDLE · last just now';$("#scanS").className='s green';
+    OPPS.forEach(o=>o.flash=false);OPPS[0].flash=true;OPPS[4].flash=true;blotter();setTimeout(()=>{OPPS.forEach(o=>o.flash=false);},2000);},1900);}
+
+function init(){
+  statline();tiles();blotterTabs();blotter();watch();alerts();
+  $("#goBtn").onclick=()=>{runCmd($("#cmd").value);$("#cmd").value="";};
+  $("#cmd").onkeydown=e=>{if(e.key==="Enter"){runCmd($("#cmd").value);$("#cmd").value="";}};
+  $$('.fkey').forEach(f=>f.onclick=()=>runCmd(f.dataset.f));
+  $$('.stab').forEach(t=>t.onclick=()=>setView(t.dataset.v));
+  $$('.ws .w').forEach(w=>w.onclick=()=>{$$('.ws .w').forEach(x=>x.classList.remove('on'));w.classList.add('on');});
+  $("#lens").onclick=e=>{if(e.target.dataset.l)setLens(e.target.dataset.l);};
+  $("#simBtn").onclick=simulate;
+  $("#themeBtn").onclick=()=>{const h=document.documentElement;h.dataset.theme=h.dataset.theme==='amber'?'hc':'amber';blotter();if($("#v-res").classList.contains('on'))renderRes();const o=OPPS.find(x=>x.id===state.sel);if(o){ladder(o);}};
+  let idx=0,g=false;
+  document.addEventListener('keydown',e=>{
+    if(document.activeElement===$("#cmd")){if(e.key==="Escape")$("#cmd").blur();return;}
+    if(e.key==="/"){e.preventDefault();$("#cmd").focus();return;}
+    if(e.key==="1")setLens("blended");if(e.key==="2")setLens("edge");if(e.key==="3")setLens("spread");
+    if(g){g=false;if(e.key==="a"){state.tab="act";}if(e.key==="r"){state.tab="rev";}if(e.key==="b"){state.tab="blk";}blotterTabs();blotter();return;}
+    if(e.key==="g"){g=true;setTimeout(()=>g=false,800);return;}
+    const rows=OPPS.filter(o=>o.b===state.tab).sort((a,b)=>lv(b)-lv(a));
+    if(e.key==="j"){idx=Math.min(idx+1,rows.length-1);if(rows[idx])select(rows[idx].id);}
+    if(e.key==="k"){idx=Math.max(idx-1,0);if(rows[idx])select(rows[idx].id);}
+    if(e.key==="Enter"&&rows[idx])select(rows[idx].id);
+  });
+  select(1);
+}
+document.addEventListener('DOMContentLoaded',init);
+</script>
+</body>
+</html>

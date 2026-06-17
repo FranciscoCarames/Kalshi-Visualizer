@@ -1,0 +1,6 @@
+[   20639ms] [WARNING] AG Grid: warning #29 tried to call sizeColumnsToFit() but the grid is coming back with zero width, maybe the grid is not visible yet on the screen? 
+See https://www.ag-grid.com/javascript-data-grid/errors/29?_version_=34.2.0 @ http://127.0.0.1:8000/_nicegui/3.12.1/esm/3bacee81d94ad4f90becff832b897bfb/index.js:0
+[  259258ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:8000/_nicegui_ws/socket.io/?client_id=23950934-b516-40cc-b53b-adefd4010a2f&next_message_id=238&implicit_handshake=true&document_id=ce33a487-2fdd-495f-8302-d1fdae0ffbcb&tab_id=48794ccf-31cc-4f37-a237-f0ec60acbbc2&old_tab_id=null&EIO=4&transport=websocket' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:8000/_nicegui/3.12.1/static/socket.io.min.js:5
+[  262073ms] [LOG] reloading because implicit handshake failed for clientId 23950934-b516-40cc-b53b-adefd4010a2f @ http://127.0.0.1:8000/_nicegui/3.12.1/static/nicegui.js:467
+[  277744ms] [WARNING] AG Grid: warning #29 tried to call sizeColumnsToFit() but the grid is coming back with zero width, maybe the grid is not visible yet on the screen? 
+See https://www.ag-grid.com/javascript-data-grid/errors/29?_version_=34.2.0 @ http://127.0.0.1:8000/_nicegui/3.12.1/esm/3bacee81d94ad4f90becff832b897bfb/index.js:0

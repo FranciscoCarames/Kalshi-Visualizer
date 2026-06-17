@@ -1,0 +1,459 @@
+- main [ref=e5]:
+  - generic [ref=e6]:
+    - generic [ref=e7]: Kalshi Opportunity Engine — Cross-Sport
+    - generic [ref=e8]: Opportunities across all sports, ranked best→worst. Core series, gross of fees — NOT all of Kalshi.
+    - generic [ref=e9]:
+      - generic [ref=e12] [cursor=pointer]:
+        - generic [ref=e13]:
+          - generic: Sport
+          - generic "Filter by sport" [ref=e14]:
+            - combobox "Sport" [ref=e15]
+        - generic [ref=e17]: arrow_drop_down
+      - generic [ref=e20] [cursor=pointer]:
+        - generic [ref=e21]:
+          - generic: Tournament
+          - generic "Filter by tournament" [ref=e22]:
+            - combobox "Tournament" [ref=e23]
+        - generic [ref=e25]: arrow_drop_down
+      - generic [ref=e28]:
+        - generic [ref=e29]:
+          - generic: Players / matches
+          - combobox "Filter by players or matches" [ref=e31]
+        - generic [ref=e33] [cursor=pointer]: arrow_drop_down
+      - generic [ref=e37]:
+        - generic: Min size
+        - spinbutton "Minimum tradable size" [ref=e38]
+      - button "Refresh snapshot" [ref=e39] [cursor=pointer]:
+        - generic [ref=e41]: Refresh snapshot
+      - button "Clear all filters" [ref=e42] [cursor=pointer]:
+        - generic [ref=e44]: Clear filters
+      - button "Open settings" [ref=e45] [cursor=pointer]:
+        - img [ref=e47]: settings
+    - generic [ref=e48]: Data 17:30:21 WEST · age 20644s ⚠ STALE · 1,234 opportunities · 89 series · 0 failed · 2,494 contracts scanned · 980 checks tested · 209 Kalshi requests
+    - generic [ref=e49]: "Actionable: 7 shown · Speculative: 248 shown · Near-miss: 195 shown · Qualifier setups: 52 shown"
+    - separator [ref=e50]
+    - generic [ref=e51]:
+      - generic [ref=e52]: Actionable — executable gross edges
+      - button [ref=e53] [cursor=pointer]:
+        - img [ref=e55]: view_column
+    - generic [ref=e56]: Firm, sized, currently-tradable gross pricing discrepancies. Gross of fees.
+    - generic "Actionable opportunities" [ref=e57]:
+      - table [ref=e59]:
+        - rowgroup [ref=e60]:
+          - row "Sport Participant / match Detail Action plan Gross edge ¢ ROI % Max units Max gross profit Tradable Caveat" [ref=e61]:
+            - columnheader [ref=e62]
+            - columnheader [ref=e63]
+            - columnheader "Sport" [ref=e64] [cursor=pointer]:
+              - text: Sport
+              - generic [ref=e65]: arrow_upward
+            - columnheader "Participant / match" [ref=e66] [cursor=pointer]:
+              - text: Participant / match
+              - generic [ref=e67]: arrow_upward
+            - columnheader "Detail" [ref=e68]
+            - columnheader "Action plan" [ref=e69]
+            - columnheader "Gross edge ¢" [ref=e70] [cursor=pointer]:
+              - text: Gross edge ¢
+              - generic [ref=e71]: arrow_upward
+            - columnheader "ROI %" [ref=e72] [cursor=pointer]:
+              - text: ROI %
+              - generic [ref=e73]: arrow_upward
+            - columnheader "Max units" [ref=e74] [cursor=pointer]:
+              - text: Max units
+              - generic [ref=e75]: arrow_upward
+            - columnheader "Max gross profit" [ref=e76] [cursor=pointer]:
+              - text: Max gross profit
+              - generic [ref=e77]: arrow_upward
+            - columnheader "Tradable" [ref=e78]
+            - columnheader "Caveat" [ref=e79]
+        - rowgroup [ref=e80]:
+          - row "MLB Chicago C vs Colorado overround Buy NO — Chicago C @ 42¢ + Buy NO — Colorado @ 55¢ 3 3.1 813 24.39 Yes" [ref=e81]:
+            - cell [ref=e82]:
+              - checkbox [ref=e83] [cursor=pointer]:
+                - img [ref=e86]
+            - cell [ref=e88]
+            - cell "MLB" [ref=e89]
+            - cell "Chicago C vs Colorado" [ref=e90]
+            - cell "overround" [ref=e91]
+            - cell "Buy NO — Chicago C @ 42¢ + Buy NO — Colorado @ 55¢" [ref=e92]
+            - cell "3" [ref=e93]:
+              - generic [ref=e94]: "3"
+            - cell "3.1" [ref=e95]
+            - cell "813" [ref=e96]
+            - cell "24.39" [ref=e97]
+            - cell "Yes" [ref=e98]
+            - cell [ref=e99]:
+              - status [ref=e100]: Settlement caveat
+          - row "MLB Washington vs San Francisco overround Buy NO — Washington @ 55¢ + Buy NO — San Francisco @ 44¢ 1 1 1 0.01 Yes" [ref=e101]:
+            - cell [ref=e102]:
+              - checkbox [ref=e103] [cursor=pointer]:
+                - img [ref=e106]
+            - cell [ref=e108]
+            - cell "MLB" [ref=e109]
+            - cell "Washington vs San Francisco" [ref=e110]
+            - cell "overround" [ref=e111]
+            - cell "Buy NO — Washington @ 55¢ + Buy NO — San Francisco @ 44¢" [ref=e112]
+            - cell "1" [ref=e113]:
+              - generic [ref=e114]: "1"
+            - cell "1" [ref=e115]
+            - cell "1" [ref=e116]
+            - cell "0.01" [ref=e117]
+            - cell "Yes" [ref=e118]
+            - cell [ref=e119]:
+              - status [ref=e120]: Settlement caveat
+          - row "MLB Atlanta vs Chicago WS overround Buy NO — Atlanta @ 38¢ + Buy NO — Chicago WS @ 61¢ 1 1 10 0.1 Yes" [ref=e121]:
+            - cell [ref=e122]:
+              - checkbox [ref=e123] [cursor=pointer]:
+                - img [ref=e126]
+            - cell [ref=e128]
+            - cell "MLB" [ref=e129]
+            - cell "Atlanta vs Chicago WS" [ref=e130]
+            - cell "overround" [ref=e131]
+            - cell "Buy NO — Atlanta @ 38¢ + Buy NO — Chicago WS @ 61¢" [ref=e132]
+            - cell "1" [ref=e133]:
+              - generic [ref=e134]: "1"
+            - cell "1" [ref=e135]
+            - cell "10" [ref=e136]
+            - cell "0.1" [ref=e137]
+            - cell "Yes" [ref=e138]
+            - cell [ref=e139]:
+              - status [ref=e140]: Settlement caveat
+          - row "MLB Milwaukee vs A's overround Buy NO — Milwaukee @ 45¢ + Buy NO — A's @ 54¢ 1 1 34 0.34 Yes" [ref=e141]:
+            - cell [ref=e142]:
+              - checkbox [ref=e143] [cursor=pointer]:
+                - img [ref=e146]
+            - cell [ref=e148]
+            - cell "MLB" [ref=e149]
+            - cell "Milwaukee vs A's" [ref=e150]
+            - cell "overround" [ref=e151]
+            - cell "Buy NO — Milwaukee @ 45¢ + Buy NO — A's @ 54¢" [ref=e152]
+            - cell "1" [ref=e153]:
+              - generic [ref=e154]: "1"
+            - cell "1" [ref=e155]
+            - cell "34" [ref=e156]
+            - cell "0.34" [ref=e157]
+            - cell "Yes" [ref=e158]
+            - cell [ref=e159]:
+              - status [ref=e160]: Settlement caveat
+          - row "MLB Washington vs San Francisco underround Buy YES — Washington @ 45¢ + Buy YES — San Francisco @ 54¢ 1 1 20 0.2 Yes" [ref=e161]:
+            - cell [ref=e162]:
+              - checkbox [ref=e163] [cursor=pointer]:
+                - img [ref=e166]
+            - cell [ref=e168]
+            - cell "MLB" [ref=e169]
+            - cell "Washington vs San Francisco" [ref=e170]
+            - cell "underround" [ref=e171]
+            - cell "Buy YES — Washington @ 45¢ + Buy YES — San Francisco @ 54¢" [ref=e172]
+            - cell "1" [ref=e173]:
+              - generic [ref=e174]: "1"
+            - cell "1" [ref=e175]
+            - cell "20" [ref=e176]
+            - cell "0.2" [ref=e177]
+            - cell "Yes" [ref=e178]
+            - cell [ref=e179]:
+              - status [ref=e180]: Settlement caveat
+          - row "Esports Legacy vs M80 underround Buy YES — Legacy @ 67¢ + Buy YES — M80 @ 32¢ 1 1 187 1.87 Yes" [ref=e181]:
+            - cell [ref=e182]:
+              - checkbox [ref=e183] [cursor=pointer]:
+                - img [ref=e186]
+            - cell [ref=e188]
+            - cell "Esports" [ref=e189]
+            - cell "Legacy vs M80" [ref=e190]
+            - cell "underround" [ref=e191]
+            - cell "Buy YES — Legacy @ 67¢ + Buy YES — M80 @ 32¢" [ref=e192]
+            - cell "1" [ref=e193]:
+              - generic [ref=e194]: "1"
+            - cell "1" [ref=e195]
+            - cell "187" [ref=e196]
+            - cell "1.87" [ref=e197]
+            - cell "Yes" [ref=e198]
+            - cell [ref=e199]:
+              - status [ref=e200]: Settlement caveat
+          - row "MLB Los Angeles D vs Pittsburgh overround Buy NO — Los Angeles D @ 48¢ + Buy NO — Pittsburgh @ 51¢ 1 1 320 3.2 Yes" [ref=e201]:
+            - cell [ref=e202]:
+              - checkbox [ref=e203] [cursor=pointer]:
+                - img [ref=e206]
+            - cell [ref=e208]
+            - cell "MLB" [ref=e209]
+            - cell "Los Angeles D vs Pittsburgh" [ref=e210]
+            - cell "overround" [ref=e211]
+            - cell "Buy NO — Los Angeles D @ 48¢ + Buy NO — Pittsburgh @ 51¢" [ref=e212]
+            - cell "1" [ref=e213]:
+              - generic [ref=e214]: "1"
+            - cell "1" [ref=e215]
+            - cell "320" [ref=e216]
+            - cell "3.2" [ref=e217]
+            - cell "Yes" [ref=e218]
+            - cell [ref=e219]:
+              - status [ref=e220]: Settlement caveat
+      - generic [ref=e221]:
+        - generic [ref=e222]:
+          - generic [ref=e223]: "Records per page:"
+          - generic [ref=e226] [cursor=pointer]:
+            - generic [ref=e228]:
+              - generic [ref=e229]: "15"
+              - combobox "15" [ref=e230]
+            - generic [ref=e232]: arrow_drop_down
+        - generic [ref=e234]: 1-7 of 7
+    - generic [ref=e235]:
+      - generic [ref=e236]: Review Required — settlement-dependent
+      - button [ref=e237] [cursor=pointer]:
+        - img [ref=e239]: view_column
+    - generic [ref=e240]: Real, executable-looking edges whose legs may not settle together (e.g. an exact-score bundle vs the match winner) — verify the settlement rules first; never auto-tradable.
+    - generic "Review-required opportunities" [ref=e241]:
+      - table [ref=e243]:
+        - rowgroup [ref=e244]:
+          - row "Sport Participant / match Detail Action plan Gross edge ¢ ROI % Max units Max gross profit Tradable Caveat" [ref=e245]:
+            - columnheader [ref=e246]
+            - columnheader [ref=e247]
+            - columnheader "Sport" [ref=e248] [cursor=pointer]:
+              - text: Sport
+              - generic [ref=e249]: arrow_upward
+            - columnheader "Participant / match" [ref=e250] [cursor=pointer]:
+              - text: Participant / match
+              - generic [ref=e251]: arrow_upward
+            - columnheader "Detail" [ref=e252]
+            - columnheader "Action plan" [ref=e253]
+            - columnheader "Gross edge ¢" [ref=e254] [cursor=pointer]:
+              - text: Gross edge ¢
+              - generic [ref=e255]: arrow_upward
+            - columnheader "ROI %" [ref=e256] [cursor=pointer]:
+              - text: ROI %
+              - generic [ref=e257]: arrow_upward
+            - columnheader "Max units" [ref=e258] [cursor=pointer]:
+              - text: Max units
+              - generic [ref=e259]: arrow_upward
+            - columnheader "Max gross profit" [ref=e260] [cursor=pointer]:
+              - text: Max gross profit
+              - generic [ref=e261]: arrow_upward
+            - columnheader "Tradable" [ref=e262]
+            - columnheader "Caveat" [ref=e263]
+        - rowgroup
+      - generic [ref=e264]:
+        - generic [ref=e265]: warning
+        - text: No review-required opportunities in the current filters.
+    - generic [ref=e266]: Discrepancies that exist but aren't tradable now (no firm size / an inactive leg).
+    - generic [ref=e267]:
+      - generic [ref=e268]: Qualifier setups — World Cup group-stage ideas & signals
+      - button [ref=e269] [cursor=pointer]:
+        - img [ref=e271]: view_column
+    - generic [ref=e272]: Speculative top-two ideas (review-only) + diagnostic reference bundles + game-support signals — gross, top-of-book, settlement-unverified; NOT arbitrage and never Actionable.
+    - generic "Qualifier setups" [ref=e273]:
+      - table [ref=e275]:
+        - rowgroup [ref=e276]:
+          - row "Sport Team Setup Qualify YES ¢ Qualifier − top-two cost ¢ Support score ¢ Legs Note" [ref=e277]:
+            - columnheader [ref=e278]
+            - columnheader [ref=e279]
+            - columnheader "Sport" [ref=e280] [cursor=pointer]:
+              - text: Sport
+              - generic [ref=e281]: arrow_upward
+            - columnheader "Team" [ref=e282] [cursor=pointer]:
+              - text: Team
+              - generic [ref=e283]: arrow_upward
+            - columnheader "Setup" [ref=e284] [cursor=pointer]:
+              - text: Setup
+              - generic [ref=e285]: arrow_upward
+            - columnheader "Qualify YES ¢" [ref=e286] [cursor=pointer]:
+              - text: Qualify YES ¢
+              - generic [ref=e287]: arrow_upward
+            - columnheader "Qualifier − top-two cost ¢" [ref=e288] [cursor=pointer]:
+              - text: Qualifier − top-two cost ¢
+              - generic [ref=e289]: arrow_upward
+            - columnheader "Support score ¢" [ref=e290] [cursor=pointer]:
+              - text: Support score ¢
+              - generic [ref=e291]: arrow_upward
+            - columnheader "Legs" [ref=e292] [cursor=pointer]:
+              - text: Legs
+              - generic [ref=e293]: arrow_upward
+            - columnheader "Note" [ref=e294]
+        - rowgroup [ref=e295]:
+          - 'row "Soccer (World Cup) IR Iran Speculative top-two bundle 62 +21¢ cheaper 12 top-two bundle: Buy YES on the 12 exact-order outcomes where the team finishes top two. The direct qualifier market is a comparator only, not a trade leg. This is not arbitrage and not a qualifier replication or a hedge — best-third-place qualification can make the direct qualifier pay while this top-two bundle pays zero. Gross and top-of-book; fees, full depth, collateral and position limits not modeled; 12-leg execution with thin / stale exact-order quotes; settlement review required" [ref=e296]':
+            - cell [ref=e297]:
+              - checkbox [ref=e298] [cursor=pointer]:
+                - img [ref=e301]
+            - cell [ref=e303]
+            - cell "Soccer (World Cup)" [ref=e304]
+            - cell "IR Iran" [ref=e305]
+            - cell "Speculative top-two bundle" [ref=e306]
+            - cell "62" [ref=e307]
+            - cell "+21¢ cheaper" [ref=e308]:
+              - generic [ref=e309]: +21¢ cheaper
+            - cell [ref=e310]
+            - cell "12" [ref=e311]
+            - 'cell "top-two bundle: Buy YES on the 12 exact-order outcomes where the team finishes top two. The direct qualifier market is a comparator only, not a trade leg. This is not arbitrage and not a qualifier replication or a hedge — best-third-place qualification can make the direct qualifier pay while this top-two bundle pays zero. Gross and top-of-book; fees, full depth, collateral and position limits not modeled; 12-leg execution with thin / stale exact-order quotes; settlement review required" [ref=e312]'
+          - 'row "Soccer (World Cup) Congo DR Speculative top-two bundle 42 +17¢ cheaper 12 top-two bundle: Buy YES on the 12 exact-order outcomes where the team finishes top two. The direct qualifier market is a comparator only, not a trade leg. This is not arbitrage and not a qualifier replication or a hedge — best-third-place qualification can make the direct qualifier pay while this top-two bundle pays zero. Gross and top-of-book; fees, full depth, collateral and position limits not modeled; 12-leg execution with thin / stale exact-order quotes; settlement review required" [ref=e313]':
+            - cell [ref=e314]:
+              - checkbox [ref=e315] [cursor=pointer]:
+                - img [ref=e318]
+            - cell [ref=e320]
+            - cell "Soccer (World Cup)" [ref=e321]
+            - cell "Congo DR" [ref=e322]
+            - cell "Speculative top-two bundle" [ref=e323]
+            - cell "42" [ref=e324]
+            - cell "+17¢ cheaper" [ref=e325]:
+              - generic [ref=e326]: +17¢ cheaper
+            - cell [ref=e327]
+            - cell "12" [ref=e328]
+            - 'cell "top-two bundle: Buy YES on the 12 exact-order outcomes where the team finishes top two. The direct qualifier market is a comparator only, not a trade leg. This is not arbitrage and not a qualifier replication or a hedge — best-third-place qualification can make the direct qualifier pay while this top-two bundle pays zero. Gross and top-of-book; fees, full depth, collateral and position limits not modeled; 12-leg execution with thin / stale exact-order quotes; settlement review required" [ref=e329]'
+          - 'row "Soccer (World Cup) Egypt Speculative top-two bundle 75 +16¢ cheaper 12 top-two bundle: Buy YES on the 12 exact-order outcomes where the team finishes top two. The direct qualifier market is a comparator only, not a trade leg. This is not arbitrage and not a qualifier replication or a hedge — best-third-place qualification can make the direct qualifier pay while this top-two bundle pays zero. Gross and top-of-book; fees, full depth, collateral and position limits not modeled; 12-leg execution with thin / stale exact-order quotes; settlement review required" [ref=e330]':
+            - cell [ref=e331]:
+              - checkbox [ref=e332] [cursor=pointer]:
+                - img [ref=e335]
+            - cell [ref=e337]
+            - cell "Soccer (World Cup)" [ref=e338]
+            - cell "Egypt" [ref=e339]
+            - cell "Speculative top-two bundle" [ref=e340]
+            - cell "75" [ref=e341]
+            - cell "+16¢ cheaper" [ref=e342]:
+              - generic [ref=e343]: +16¢ cheaper
+            - cell [ref=e344]
+            - cell "12" [ref=e345]
+            - 'cell "top-two bundle: Buy YES on the 12 exact-order outcomes where the team finishes top two. The direct qualifier market is a comparator only, not a trade leg. This is not arbitrage and not a qualifier replication or a hedge — best-third-place qualification can make the direct qualifier pay while this top-two bundle pays zero. Gross and top-of-book; fees, full depth, collateral and position limits not modeled; 12-leg execution with thin / stale exact-order quotes; settlement review required" [ref=e346]'
+          - 'row "Soccer (World Cup) Sweden Speculative top-two bundle 63 +16¢ cheaper 12 top-two bundle: Buy YES on the 12 exact-order outcomes where the team finishes top two. The direct qualifier market is a comparator only, not a trade leg. This is not arbitrage and not a qualifier replication or a hedge — best-third-place qualification can make the direct qualifier pay while this top-two bundle pays zero. Gross and top-of-book; fees, full depth, collateral and position limits not modeled; 12-leg execution with thin / stale exact-order quotes; settlement review required" [ref=e347]':
+            - cell [ref=e348]:
+              - checkbox [ref=e349] [cursor=pointer]:
+                - img [ref=e352]
+            - cell [ref=e354]
+            - cell "Soccer (World Cup)" [ref=e355]
+            - cell "Sweden" [ref=e356]
+            - cell "Speculative top-two bundle" [ref=e357]
+            - cell "63" [ref=e358]
+            - cell "+16¢ cheaper" [ref=e359]:
+              - generic [ref=e360]: +16¢ cheaper
+            - cell [ref=e361]
+            - cell "12" [ref=e362]
+            - 'cell "top-two bundle: Buy YES on the 12 exact-order outcomes where the team finishes top two. The direct qualifier market is a comparator only, not a trade leg. This is not arbitrage and not a qualifier replication or a hedge — best-third-place qualification can make the direct qualifier pay while this top-two bundle pays zero. Gross and top-of-book; fees, full depth, collateral and position limits not modeled; 12-leg execution with thin / stale exact-order quotes; settlement review required" [ref=e363]'
+          - 'row "Soccer (World Cup) Japan Speculative top-two bundle 79 +15¢ cheaper 12 top-two bundle: Buy YES on the 12 exact-order outcomes where the team finishes top two. The direct qualifier market is a comparator only, not a trade leg. This is not arbitrage and not a qualifier replication or a hedge — best-third-place qualification can make the direct qualifier pay while this top-two bundle pays zero. Gross and top-of-book; fees, full depth, collateral and position limits not modeled; 12-leg execution with thin / stale exact-order quotes; settlement review required" [ref=e364]':
+            - cell [ref=e365]:
+              - checkbox [ref=e366] [cursor=pointer]:
+                - img [ref=e369]
+            - cell [ref=e371]
+            - cell "Soccer (World Cup)" [ref=e372]
+            - cell "Japan" [ref=e373]
+            - cell "Speculative top-two bundle" [ref=e374]
+            - cell "79" [ref=e375]
+            - cell "+15¢ cheaper" [ref=e376]:
+              - generic [ref=e377]: +15¢ cheaper
+            - cell [ref=e378]
+            - cell "12" [ref=e379]
+            - 'cell "top-two bundle: Buy YES on the 12 exact-order outcomes where the team finishes top two. The direct qualifier market is a comparator only, not a trade leg. This is not arbitrage and not a qualifier replication or a hedge — best-third-place qualification can make the direct qualifier pay while this top-two bundle pays zero. Gross and top-of-book; fees, full depth, collateral and position limits not modeled; 12-leg execution with thin / stale exact-order quotes; settlement review required" [ref=e380]'
+          - 'row "Soccer (World Cup) Korea Republic Speculative top-two bundle 72 +14¢ cheaper 12 top-two bundle: Buy YES on the 12 exact-order outcomes where the team finishes top two. The direct qualifier market is a comparator only, not a trade leg. This is not arbitrage and not a qualifier replication or a hedge — best-third-place qualification can make the direct qualifier pay while this top-two bundle pays zero. Gross and top-of-book; fees, full depth, collateral and position limits not modeled; 12-leg execution with thin / stale exact-order quotes; settlement review required" [ref=e381]':
+            - cell [ref=e382]:
+              - checkbox [ref=e383] [cursor=pointer]:
+                - img [ref=e386]
+            - cell [ref=e388]
+            - cell "Soccer (World Cup)" [ref=e389]
+            - cell "Korea Republic" [ref=e390]
+            - cell "Speculative top-two bundle" [ref=e391]
+            - cell "72" [ref=e392]
+            - cell "+14¢ cheaper" [ref=e393]:
+              - generic [ref=e394]: +14¢ cheaper
+            - cell [ref=e395]
+            - cell "12" [ref=e396]
+            - 'cell "top-two bundle: Buy YES on the 12 exact-order outcomes where the team finishes top two. The direct qualifier market is a comparator only, not a trade leg. This is not arbitrage and not a qualifier replication or a hedge — best-third-place qualification can make the direct qualifier pay while this top-two bundle pays zero. Gross and top-of-book; fees, full depth, collateral and position limits not modeled; 12-leg execution with thin / stale exact-order quotes; settlement review required" [ref=e397]'
+          - 'row "Soccer (World Cup) Senegal Speculative top-two bundle 68 +14¢ cheaper 12 top-two bundle: Buy YES on the 12 exact-order outcomes where the team finishes top two. The direct qualifier market is a comparator only, not a trade leg. This is not arbitrage and not a qualifier replication or a hedge — best-third-place qualification can make the direct qualifier pay while this top-two bundle pays zero. Gross and top-of-book; fees, full depth, collateral and position limits not modeled; 12-leg execution with thin / stale exact-order quotes; settlement review required" [ref=e398]':
+            - cell [ref=e399]:
+              - checkbox [ref=e400] [cursor=pointer]:
+                - img [ref=e403]
+            - cell [ref=e405]
+            - cell "Soccer (World Cup)" [ref=e406]
+            - cell "Senegal" [ref=e407]
+            - cell "Speculative top-two bundle" [ref=e408]
+            - cell "68" [ref=e409]
+            - cell "+14¢ cheaper" [ref=e410]:
+              - generic [ref=e411]: +14¢ cheaper
+            - cell [ref=e412]
+            - cell "12" [ref=e413]
+            - 'cell "top-two bundle: Buy YES on the 12 exact-order outcomes where the team finishes top two. The direct qualifier market is a comparator only, not a trade leg. This is not arbitrage and not a qualifier replication or a hedge — best-third-place qualification can make the direct qualifier pay while this top-two bundle pays zero. Gross and top-of-book; fees, full depth, collateral and position limits not modeled; 12-leg execution with thin / stale exact-order quotes; settlement review required" [ref=e414]'
+          - 'row "Soccer (World Cup) Saudi Arabia Speculative top-two bundle 36 +13¢ cheaper 12 top-two bundle: Buy YES on the 12 exact-order outcomes where the team finishes top two. The direct qualifier market is a comparator only, not a trade leg. This is not arbitrage and not a qualifier replication or a hedge — best-third-place qualification can make the direct qualifier pay while this top-two bundle pays zero. Gross and top-of-book; fees, full depth, collateral and position limits not modeled; 12-leg execution with thin / stale exact-order quotes; settlement review required" [ref=e415]':
+            - cell [ref=e416]:
+              - checkbox [ref=e417] [cursor=pointer]:
+                - img [ref=e420]
+            - cell [ref=e422]
+            - cell "Soccer (World Cup)" [ref=e423]
+            - cell "Saudi Arabia" [ref=e424]
+            - cell "Speculative top-two bundle" [ref=e425]
+            - cell "36" [ref=e426]
+            - cell "+13¢ cheaper" [ref=e427]:
+              - generic [ref=e428]: +13¢ cheaper
+            - cell [ref=e429]
+            - cell "12" [ref=e430]
+            - 'cell "top-two bundle: Buy YES on the 12 exact-order outcomes where the team finishes top two. The direct qualifier market is a comparator only, not a trade leg. This is not arbitrage and not a qualifier replication or a hedge — best-third-place qualification can make the direct qualifier pay while this top-two bundle pays zero. Gross and top-of-book; fees, full depth, collateral and position limits not modeled; 12-leg execution with thin / stale exact-order quotes; settlement review required" [ref=e431]'
+          - 'row "Soccer (World Cup) Czechia Speculative top-two bundle 69 +12¢ cheaper 12 top-two bundle: Buy YES on the 12 exact-order outcomes where the team finishes top two. The direct qualifier market is a comparator only, not a trade leg. This is not arbitrage and not a qualifier replication or a hedge — best-third-place qualification can make the direct qualifier pay while this top-two bundle pays zero. Gross and top-of-book; fees, full depth, collateral and position limits not modeled; 12-leg execution with thin / stale exact-order quotes; settlement review required" [ref=e432]':
+            - cell [ref=e433]:
+              - checkbox [ref=e434] [cursor=pointer]:
+                - img [ref=e437]
+            - cell [ref=e439]
+            - cell "Soccer (World Cup)" [ref=e440]
+            - cell "Czechia" [ref=e441]
+            - cell "Speculative top-two bundle" [ref=e442]
+            - cell "69" [ref=e443]
+            - cell "+12¢ cheaper" [ref=e444]:
+              - generic [ref=e445]: +12¢ cheaper
+            - cell [ref=e446]
+            - cell "12" [ref=e447]
+            - 'cell "top-two bundle: Buy YES on the 12 exact-order outcomes where the team finishes top two. The direct qualifier market is a comparator only, not a trade leg. This is not arbitrage and not a qualifier replication or a hedge — best-third-place qualification can make the direct qualifier pay while this top-two bundle pays zero. Gross and top-of-book; fees, full depth, collateral and position limits not modeled; 12-leg execution with thin / stale exact-order quotes; settlement review required" [ref=e448]'
+          - 'row "Soccer (World Cup) Uzbekistan Speculative top-two bundle 33 +12¢ cheaper 12 top-two bundle: Buy YES on the 12 exact-order outcomes where the team finishes top two. The direct qualifier market is a comparator only, not a trade leg. This is not arbitrage and not a qualifier replication or a hedge — best-third-place qualification can make the direct qualifier pay while this top-two bundle pays zero. Gross and top-of-book; fees, full depth, collateral and position limits not modeled; 12-leg execution with thin / stale exact-order quotes; settlement review required" [ref=e449]':
+            - cell [ref=e450]:
+              - checkbox [ref=e451] [cursor=pointer]:
+                - img [ref=e454]
+            - cell [ref=e456]
+            - cell "Soccer (World Cup)" [ref=e457]
+            - cell "Uzbekistan" [ref=e458]
+            - cell "Speculative top-two bundle" [ref=e459]
+            - cell "33" [ref=e460]
+            - cell "+12¢ cheaper" [ref=e461]:
+              - generic [ref=e462]: +12¢ cheaper
+            - cell [ref=e463]
+            - cell "12" [ref=e464]
+            - 'cell "top-two bundle: Buy YES on the 12 exact-order outcomes where the team finishes top two. The direct qualifier market is a comparator only, not a trade leg. This is not arbitrage and not a qualifier replication or a hedge — best-third-place qualification can make the direct qualifier pay while this top-two bundle pays zero. Gross and top-of-book; fees, full depth, collateral and position limits not modeled; 12-leg execution with thin / stale exact-order quotes; settlement review required" [ref=e465]'
+      - generic [ref=e466]:
+        - generic [ref=e467]:
+          - generic [ref=e468]: "Records per page:"
+          - generic [ref=e471] [cursor=pointer]:
+            - generic [ref=e473]:
+              - generic [ref=e474]: "10"
+              - combobox "10" [ref=e475]
+            - generic [ref=e477]: arrow_drop_down
+        - generic [ref=e478]:
+          - generic [ref=e479]: 1-10 of 52
+          - button "First page" [disabled] [ref=e480]:
+            - img [ref=e482]: first_page
+          - button "Previous page" [disabled] [ref=e483]:
+            - img [ref=e485]: chevron_left
+          - button "Next page" [ref=e486] [cursor=pointer]:
+            - img [ref=e488]: chevron_right
+          - button "Last page" [ref=e489] [cursor=pointer]:
+            - img [ref=e491]: last_page
+    - generic "Bounded-loss bets section" [ref=e492]:
+      - button "Expand" [ref=e494] [cursor=pointer]:
+        - generic [ref=e495]:
+          - generic [ref=e496]: unfold_more
+          - generic [ref=e497]: Bounded-Loss Bets — capped downside, convex upside (22)
+          - button [ref=e499]:
+            - img [ref=e501]: view_column
+        - generic [ref=e503]: keyboard_arrow_down
+    - generic "Overpriced books section" [ref=e504]:
+      - button "Expand" [ref=e506] [cursor=pointer]:
+        - generic [ref=e507]:
+          - generic [ref=e508]: unfold_more
+          - generic [ref=e509]: Overpriced Books — flat guaranteed loss, watch-only (180)
+          - button [ref=e511]:
+            - img [ref=e513]: view_column
+        - generic [ref=e515]: keyboard_arrow_down
+    - button "Expand \"Recently Actionable — recently left the set\"" [ref=e518] [cursor=pointer]:
+      - generic [ref=e520]: Recently Actionable — recently left the set
+      - generic [ref=e522]: keyboard_arrow_down
+    - button "Expand \"Durable backlog (last 7 days) — survives restarts\"" [ref=e525] [cursor=pointer]:
+      - generic [ref=e527]: Durable backlog (last 7 days) — survives restarts
+      - generic [ref=e529]: keyboard_arrow_down
+    - button "Expand \"Market Telemetry — Liquidity & Volatility (context, not signals)\"" [ref=e532] [cursor=pointer]:
+      - generic [ref=e534]: Market Telemetry — Liquidity & Volatility (context, not signals)
+      - generic [ref=e536]: keyboard_arrow_down
+    - generic "Selected detail" [ref=e537]:
+      - button "Expand \"Selected Detail — click a row\"" [ref=e539] [cursor=pointer]:
+        - generic [ref=e541]: Selected Detail — click a row
+        - generic [ref=e543]: keyboard_arrow_down
+    - generic "Diagnostics and debug" [ref=e544]:
+      - button "Expand \"Diagnostics & Debug\"" [ref=e546] [cursor=pointer]:
+        - generic [ref=e548]: Diagnostics & Debug
+        - generic [ref=e550]: keyboard_arrow_down

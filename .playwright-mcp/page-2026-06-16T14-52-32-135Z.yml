@@ -1,0 +1,9 @@
+- generic [ref=e4]:
+  - generic [ref=e5]: KALSHI STRUCTURED SCANNER
+  - generic [ref=e6]: sign in to continue
+  - generic [ref=e7]: username
+  - textbox [active] [ref=e8]
+  - generic [ref=e9]: password
+  - textbox [ref=e10]
+  - button "SIGN IN" [ref=e12] [cursor=pointer]
+  - generic [ref=e13]: no account? create one

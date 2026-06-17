@@ -1,0 +1,11 @@
+[    4582ms] [WARNING] AG Grid: warning #29 tried to call sizeColumnsToFit() but the grid is coming back with zero width, maybe the grid is not visible yet on the screen? 
+See https://www.ag-grid.com/javascript-data-grid/errors/29?_version_=34.2.0 @ http://127.0.0.1:8000/_nicegui/3.12.1/esm/3bacee81d94ad4f90becff832b897bfb/index.js:0
+[  771858ms] [LOG] reloading because implicit handshake failed for clientId 82d0436e-851e-4298-b79a-dd581bc8f212 @ http://127.0.0.1:8000/_nicegui/3.12.1/static/nicegui.js:467
+[  776618ms] [WARNING] AG Grid: warning #29 tried to call sizeColumnsToFit() but the grid is coming back with zero width, maybe the grid is not visible yet on the screen? 
+See https://www.ag-grid.com/javascript-data-grid/errors/29?_version_=34.2.0 @ http://127.0.0.1:8000/_nicegui/3.12.1/esm/3bacee81d94ad4f90becff832b897bfb/index.js:0
+[ 6468486ms] [LOG] reloading because implicit handshake failed for clientId cae7c611-9418-49da-8907-4da864b8bc5e @ http://127.0.0.1:8000/_nicegui/3.12.1/static/nicegui.js:467
+[ 6472992ms] [WARNING] AG Grid: warning #29 tried to call sizeColumnsToFit() but the grid is coming back with zero width, maybe the grid is not visible yet on the screen? 
+See https://www.ag-grid.com/javascript-data-grid/errors/29?_version_=34.2.0 @ http://127.0.0.1:8000/_nicegui/3.12.1/esm/3bacee81d94ad4f90becff832b897bfb/index.js:0
+[ 8690785ms] [LOG] reloading because implicit handshake failed for clientId e7a5e9a7-9302-48f2-97c0-f51e052d3aa0 @ http://127.0.0.1:8000/_nicegui/3.12.1/static/nicegui.js:467
+[ 8695208ms] [WARNING] AG Grid: warning #29 tried to call sizeColumnsToFit() but the grid is coming back with zero width, maybe the grid is not visible yet on the screen? 
+See https://www.ag-grid.com/javascript-data-grid/errors/29?_version_=34.2.0 @ http://127.0.0.1:8000/_nicegui/3.12.1/esm/3bacee81d94ad4f90becff832b897bfb/index.js:0

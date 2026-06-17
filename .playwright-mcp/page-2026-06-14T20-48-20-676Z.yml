@@ -1,0 +1,200 @@
+- main [ref=e5]:
+  - generic [ref=e7]:
+    - generic [ref=e8]:
+      - generic [ref=e9]: KALSHI TERMINAL PRO
+      - generic [ref=e10]:
+        - generic [ref=e11] [cursor=pointer]: OPP
+        - generic [ref=e12] [cursor=pointer]: RES
+        - generic [ref=e13] [cursor=pointer]: OPS
+        - generic [ref=e14] [cursor=pointer]: ALRT
+      - textbox [ref=e19]:
+        - /placeholder: "> filter participant / match"
+      - generic [ref=e20]: 20:48:19 UTC
+    - generic [ref=e21]:
+      - generic [ref=e22]: Data 17:09:04 UTC · age 185955s ⚠ STALE · 2,471 opportunities · 93 series · 10 failed · 2,977 contracts scanned · 1,830 checks tested · 275 Kalshi requests
+      - generic [ref=e23]: GROSS · TOP-OF-BOOK · $1 BASIS · READ-ONLY · NO ORDER ENTRY · NOT RISKLESS
+    - generic [ref=e24]:
+      - generic [ref=e25]:
+        - generic [ref=e26] [cursor=pointer]:
+          - generic [ref=e27]: "8"
+          - generic [ref=e28]: ACT-NOW
+        - generic [ref=e29] [cursor=pointer]:
+          - generic [ref=e30]: "9"
+          - generic [ref=e31]: REVIEW
+        - generic [ref=e32] [cursor=pointer]:
+          - generic [ref=e33]: "1"
+          - generic [ref=e34]: BLOCKED
+        - generic [ref=e35] [cursor=pointer]:
+          - generic [ref=e36]: "131"
+          - generic [ref=e37]: SPEC
+        - generic [ref=e38] [cursor=pointer]:
+          - generic [ref=e39]: "340"
+          - generic [ref=e40]: CHEAP-NO
+      - generic [ref=e41]:
+        - generic [ref=e42]:
+          - generic [ref=e43]:
+            - generic [ref=e44]: BLOTTER
+            - generic [ref=e45]:
+              - button "Blended" [pressed] [ref=e46] [cursor=pointer]:
+                - generic [ref=e48]: Blended
+              - button "Per-unit edge ¢" [ref=e49] [cursor=pointer]:
+                - generic [ref=e51]: Per-unit edge ¢
+              - button "Spread upside" [ref=e52] [cursor=pointer]:
+                - generic [ref=e54]: Spread upside
+              - button "Outright + spread" [ref=e55] [cursor=pointer]:
+                - generic [ref=e57]: Outright + spread
+              - button "Implied EV" [ref=e58] [cursor=pointer]:
+                - generic [ref=e60]: Implied EV
+            - generic [ref=e61]: lens
+          - generic [ref=e62]:
+            - table [ref=e64]:
+              - rowgroup [ref=e65]:
+                - row "Sport Participant / match Detail Action plan Edge ¢ ROI % Units Max $ Tradable" [ref=e66]:
+                  - columnheader [ref=e67]
+                  - columnheader [ref=e68]
+                  - columnheader "Sport" [ref=e69] [cursor=pointer]:
+                    - text: Sport
+                    - generic [ref=e70]: arrow_upward
+                  - columnheader "Participant / match" [ref=e71] [cursor=pointer]:
+                    - text: Participant / match
+                    - generic [ref=e72]: arrow_upward
+                  - columnheader "Detail" [ref=e73]
+                  - columnheader "Action plan" [ref=e74]
+                  - columnheader "Edge ¢" [ref=e75] [cursor=pointer]:
+                    - generic [ref=e76]: arrow_upward
+                    - text: Edge ¢
+                  - columnheader "ROI %" [ref=e77] [cursor=pointer]:
+                    - generic [ref=e78]: arrow_upward
+                    - text: ROI %
+                  - columnheader "Units" [ref=e79] [cursor=pointer]:
+                    - generic [ref=e80]: arrow_upward
+                    - text: Units
+                  - columnheader "Max $" [ref=e81] [cursor=pointer]:
+                    - generic [ref=e82]: arrow_upward
+                    - text: Max $
+                  - columnheader "Tradable" [ref=e83]
+              - rowgroup [ref=e84]:
+                - row "Esports Eternal Fire Academy vs Bushido Wildcats underround Buy YES — Eternal Fire Academy @ 11¢ + Buy YES — Bushido Wildcats @ 88¢ 1 1 3 0.03 Yes" [ref=e85] [cursor=pointer]:
+                  - cell [ref=e86]:
+                    - checkbox [ref=e87]:
+                      - img [ref=e90]
+                  - cell [ref=e92]
+                  - cell "Esports" [ref=e93]
+                  - cell "Eternal Fire Academy vs Bushido Wildcats" [ref=e94]
+                  - cell "underround" [ref=e95]
+                  - cell "Buy YES — Eternal Fire Academy @ 11¢ + Buy YES — Bushido Wildcats @ 88¢" [ref=e96]
+                  - cell "1" [ref=e97]
+                  - cell "1" [ref=e98]
+                  - cell "3" [ref=e99]
+                  - cell "0.03" [ref=e100]
+                  - cell "Yes" [ref=e101]
+                - row "Esports TDK vs 1WIN underround Buy YES — TDK @ 62¢ + Buy YES — 1WIN @ 37¢ 1 1 112.18 1.12 Yes" [ref=e102] [cursor=pointer]:
+                  - cell [ref=e103]:
+                    - checkbox [ref=e104]:
+                      - img [ref=e107]
+                  - cell [ref=e109]
+                  - cell "Esports" [ref=e110]
+                  - cell "TDK vs 1WIN" [ref=e111]
+                  - cell "underround" [ref=e112]
+                  - cell "Buy YES — TDK @ 62¢ + Buy YES — 1WIN @ 37¢" [ref=e113]
+                  - cell "1" [ref=e114]
+                  - cell "1" [ref=e115]
+                  - cell "112.18" [ref=e116]
+                  - cell "1.12" [ref=e117]
+                  - cell "Yes" [ref=e118]
+                - row "Soccer (World Cup) Group Stage — stage of elimination underround 7-leg plan — open details for legs 1 1 0.68 0.01 Yes" [ref=e119] [cursor=pointer]:
+                  - cell [ref=e120]:
+                    - checkbox [ref=e121]:
+                      - img [ref=e124]
+                  - cell [ref=e126]
+                  - cell "Soccer (World Cup)" [ref=e127]
+                  - cell "Group Stage — stage of elimination" [ref=e128]
+                  - cell "underround" [ref=e129]
+                  - cell "7-leg plan — open details for legs" [ref=e130]
+                  - cell "1" [ref=e131]
+                  - cell "1" [ref=e132]
+                  - cell "0.68" [ref=e133]
+                  - cell "0.01" [ref=e134]
+                  - cell "Yes" [ref=e135]
+                - row "Esports KT Rolster Challengers vs Top Esports Challenger underround Buy YES — KT Rolster Challengers @ 88¢ + Buy YES — Top Esports Challenger @ 11¢ 1 1 26 0.26 Yes" [ref=e136] [cursor=pointer]:
+                  - cell [ref=e137]:
+                    - checkbox [ref=e138]:
+                      - img [ref=e141]
+                  - cell [ref=e143]
+                  - cell "Esports" [ref=e144]
+                  - cell "KT Rolster Challengers vs Top Esports Challenger" [ref=e145]
+                  - cell "underround" [ref=e146]
+                  - cell "Buy YES — KT Rolster Challengers @ 88¢ + Buy YES — Top Esports Challenger @ 11¢" [ref=e147]
+                  - cell "1" [ref=e148]
+                  - cell "1" [ref=e149]
+                  - cell "26" [ref=e150]
+                  - cell "0.26" [ref=e151]
+                  - cell "Yes" [ref=e152]
+                - row "Motorsport NASCAR Cup Series · main-race · GREAG4PB26 winner field overround 16-leg plan — open details for legs 2 0.1 5 0.1 Yes" [ref=e153] [cursor=pointer]:
+                  - cell [ref=e154]:
+                    - checkbox [ref=e155]:
+                      - img [ref=e158]
+                  - cell [ref=e160]
+                  - cell "Motorsport" [ref=e161]
+                  - cell "NASCAR Cup Series · main-race · GREAG4PB26 winner field" [ref=e162]
+                  - cell "overround" [ref=e163]
+                  - cell "16-leg plan — open details for legs" [ref=e164]
+                  - cell "2" [ref=e165]
+                  - cell "0.1" [ref=e166]
+                  - cell "5" [ref=e167]
+                  - cell "0.1" [ref=e168]
+                  - cell "Yes" [ref=e169]
+                - row "Soccer (World Cup) England vs Croatia overround 3-leg plan — open details for legs 1 0.5 262.65 2.63 Yes" [ref=e170] [cursor=pointer]:
+                  - cell [ref=e171]:
+                    - checkbox [ref=e172]:
+                      - img [ref=e175]
+                  - cell [ref=e177]
+                  - cell "Soccer (World Cup)" [ref=e178]
+                  - cell "England vs Croatia" [ref=e179]
+                  - cell "overround" [ref=e180]
+                  - cell "3-leg plan — open details for legs" [ref=e181]
+                  - cell "1" [ref=e182]
+                  - cell "0.5" [ref=e183]
+                  - cell "262.65" [ref=e184]
+                  - cell "2.63" [ref=e185]
+                  - cell "Yes" [ref=e186]
+                - row "Motorsport F1 · main-race · 26 winner field overround 7-leg plan — open details for legs 1 0.2 12 0.12 Yes" [ref=e187] [cursor=pointer]:
+                  - cell [ref=e188]:
+                    - checkbox [ref=e189]:
+                      - img [ref=e192]
+                  - cell [ref=e194]
+                  - cell "Motorsport" [ref=e195]
+                  - cell "F1 · main-race · 26 winner field" [ref=e196]
+                  - cell "overround" [ref=e197]
+                  - cell "7-leg plan — open details for legs" [ref=e198]
+                  - cell "1" [ref=e199]
+                  - cell "0.2" [ref=e200]
+                  - cell "12" [ref=e201]
+                  - cell "0.12" [ref=e202]
+                  - cell "Yes" [ref=e203]
+                - row "Motorsport F1 · main-race · BARGP26 winner field overround 7-leg plan — open details for legs 1 0.2 2 0.02 Yes" [ref=e204] [cursor=pointer]:
+                  - cell [ref=e205]:
+                    - checkbox [ref=e206]:
+                      - img [ref=e209]
+                  - cell [ref=e211]
+                  - cell "Motorsport" [ref=e212]
+                  - cell "F1 · main-race · BARGP26 winner field" [ref=e213]
+                  - cell "overround" [ref=e214]
+                  - cell "7-leg plan — open details for legs" [ref=e215]
+                  - cell "1" [ref=e216]
+                  - cell "0.2" [ref=e217]
+                  - cell "2" [ref=e218]
+                  - cell "0.02" [ref=e219]
+                  - cell "Yes" [ref=e220]
+            - generic [ref=e221]:
+              - generic [ref=e222]:
+                - generic [ref=e223]: "Records per page:"
+                - generic [ref=e226] [cursor=pointer]:
+                  - generic [ref=e228]:
+                    - generic [ref=e229]: "20"
+                    - combobox "20" [ref=e230]
+                  - generic [ref=e232]: arrow_drop_down
+              - generic [ref=e234]: 1-8 of 8
+        - generic [ref=e235]:
+          - generic [ref=e236]: DES — select a row
+          - generic [ref=e237]: "Trade card: legs · quote · confidence · evidence"

@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Terminal Pro — Decision Report</title>
+<style>
+:root{
+  --bg:#000;--bg1:#080806;--bg2:#0e0d0a;--panel:#0b0b08;--line:#1c1a12;--line2:#2a2616;--hover:#14120a;
+  --amber:#ffb000;--amber-d:#7a5500;--green:#33ff7a;--red:#ff453a;--warn:#ffb000;--cyan:#43d9ff;--violet:#b69bff;
+  --tx:#e8c878;--tx2:#b79a52;--tx3:#7a6a3a;--white:#f6efe0;
+  --mono:'Consolas','SF Mono','DejaVu Sans Mono',monospace;--sans:'Segoe UI',system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--tx);font-family:var(--mono);font-size:13px;line-height:1.5;
+  background-image:repeating-linear-gradient(0deg,rgba(255,176,0,.02) 0 1px,transparent 1px 3px)}
+.wrap{max-width:1080px;margin:0 auto;padding:22px 20px 60px}
+.amber{color:var(--amber)}.green{color:var(--green)}.red{color:var(--red)}.warn{color:var(--warn)}.cyan{color:var(--cyan)}.violet{color:var(--violet)}.white{color:var(--white)}.dim{color:var(--tx3)}
+a{color:var(--cyan)}
+::-webkit-scrollbar{width:9px;height:9px}::-webkit-scrollbar-thumb{background:var(--line2)}
+
+/* header */
+.head{border:1px solid var(--amber-d);background:linear-gradient(180deg,#14120a,#0a0908);padding:14px 16px;margin-bottom:14px}
+.kick{font-size:10px;letter-spacing:3px;color:var(--green)}
+h1{font-family:var(--sans);font-size:26px;margin:4px 0 2px;color:var(--white);font-weight:700;letter-spacing:.3px}
+.sub{color:var(--tx2);font-size:12px}
+.verdict{display:inline-flex;align-items:center;gap:8px;margin-top:10px;background:rgba(51,255,122,.12);border:1px solid var(--green);color:var(--green);font-weight:700;padding:5px 12px;letter-spacing:.5px}
+.verdict .b{background:var(--green);color:#04130a;padding:0 6px;font-size:11px}
+
+/* stat strip */
+.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--line);border:1px solid var(--line2);margin-bottom:18px}
+.stat{background:var(--bg1);padding:9px 12px}
+.stat .k{font-size:9px;letter-spacing:.8px;color:var(--tx3)}
+.stat .v{font-size:21px;font-weight:700;font-family:var(--mono);color:var(--white);line-height:1.2}
+.stat .v.g{color:var(--green)}.stat .v.a{color:var(--amber)}.stat .v.r{color:var(--red)}
+.stat .s{font-size:9.5px;color:var(--tx2)}
+
+/* sections */
+.sec{margin:22px 0 10px;display:flex;align-items:baseline;gap:10px;border-bottom:1px solid var(--line2);padding-bottom:4px}
+.sec .idx{color:var(--amber);font-weight:700;font-size:11px}
+.sec h2{font-family:var(--sans);font-size:15px;margin:0;color:var(--white);font-weight:700;letter-spacing:.3px}
+.sec .note{margin-left:auto;font-size:10.5px;color:var(--tx3)}
+
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;color:var(--tx3);font-weight:400;font-size:9.5px;letter-spacing:.5px;text-transform:uppercase;padding:5px 9px;border-bottom:1px solid var(--line2)}
+td{padding:5px 9px;border-bottom:1px solid var(--line);vertical-align:top}
+.q{color:var(--white);font-family:var(--sans)}
+.chip{display:inline-block;font-size:9.5px;font-weight:700;padding:1px 7px;border-radius:3px;white-space:nowrap}
+.c-pass{background:rgba(51,255,122,.14);color:var(--green)}
+.c-part{background:rgba(255,176,0,.14);color:var(--amber)}
+.c-gap{background:rgba(255,69,58,.14);color:var(--red)}
+.c-info{background:rgba(67,217,255,.12);color:var(--cyan)}
+
+/* two-col fidelity */
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:760px){.cols{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}.dec{grid-template-columns:1fr!important}}
+.box{border:1px solid var(--line2);background:var(--panel)}
+.box .h{padding:6px 10px;background:var(--bg2);border-bottom:1px solid var(--line);font-size:10px;letter-spacing:.8px;color:var(--amber)}
+.box ul{margin:0;padding:8px 10px 8px 24px;font-size:11.5px;color:var(--tx2);font-family:var(--sans)}
+.box li{margin:3px 0}
+
+/* risk cards */
+.risk{border:1px solid var(--line2);background:var(--panel);margin:8px 0;display:flex}
+.risk .sev{flex:0 0 64px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;letter-spacing:.5px;border-right:1px solid var(--line2)}
+.risk.high .sev{background:rgba(255,69,58,.12);color:var(--red)}
+.risk.med .sev{background:rgba(255,176,0,.12);color:var(--amber)}
+.risk.low .sev{background:rgba(67,217,255,.1);color:var(--cyan)}
+.risk .c{padding:8px 11px}
+.risk .t{color:var(--white);font-weight:700;font-family:var(--sans);font-size:12.5px}
+.risk .d{color:var(--tx2);font-size:11.5px;font-family:var(--sans);margin-top:2px}
+
+/* phased timeline */
+.phase{display:grid;grid-template-columns:90px 1fr;gap:10px;border-left:2px solid var(--amber-d);margin-left:8px;padding:6px 0 6px 14px;position:relative}
+.phase::before{content:"";position:absolute;left:-6px;top:10px;width:10px;height:10px;border-radius:50%;background:var(--amber)}
+.phase.gate::before{background:var(--red)}
+.phase .tag{font-weight:700;color:var(--amber);font-size:11px}
+.phase.gate .tag{color:var(--red)}
+.phase .d{color:var(--tx2);font-size:11.5px;font-family:var(--sans)}
+.phase .d b{color:var(--white)}
+
+/* decisions (interactive) */
+.dec{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.decard{border:1px solid var(--line2);background:var(--panel)}
+.decard .h{padding:7px 10px;background:var(--bg2);border-bottom:1px solid var(--line);color:var(--white);font-family:var(--sans);font-weight:700;font-size:12px}
+.decard .opts{padding:9px 10px;display:flex;flex-direction:column;gap:6px}
+.opt{border:1px solid var(--line2);background:var(--bg1);color:var(--tx2);padding:7px 9px;cursor:pointer;font-family:var(--sans);font-size:11.5px;text-align:left;border-radius:3px}
+.opt:hover{border-color:var(--amber-d);color:var(--white)}
+.opt.on{border-color:var(--amber);background:rgba(255,176,0,.1);color:var(--white)}
+.opt .rec{color:var(--green);font-size:9px;font-weight:700;margin-left:5px}
+.opt .why{display:block;color:var(--tx3);font-size:10px;margin-top:2px}
+.opt.on .why{color:var(--tx2)}
+.summary{margin-top:14px;border:1px solid var(--amber-d);background:#0a0a07}
+.summary .h{padding:7px 10px;background:#14120a;border-bottom:1px solid var(--amber-d);color:var(--amber);font-size:10px;letter-spacing:.8px;display:flex;align-items:center}
+.summary .h button{margin-left:auto;background:var(--amber);color:#000;border:none;font-weight:700;font-size:10.5px;padding:2px 10px;cursor:pointer;font-family:var(--mono)}
+.summary pre{margin:0;padding:11px;font-size:11.5px;color:var(--white);white-space:pre-wrap;font-family:var(--mono)}
+.foot{margin-top:26px;border-top:1px solid var(--line2);padding-top:10px;font-size:10px;color:var(--tx3)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="head">
+    <div class="kick">KSS SPIKE · 20260611-TERMINAL-PRO-MOCKUP · DECISION REPORT</div>
+    <h1>Terminal Pro — go/no-go for the NiceGUI rebuild</h1>
+    <div class="sub">Is the chosen UI direction (Bloomberg identity + Trading Technologies layout + Hybrid usability) a sound basis to build for real? Read top→bottom, then make the three calls at the bottom.</div>
+    <div class="verdict"><span class="b">VERDICT</span> YES — promote to a phased milestone · gated on two pre-steps</div>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="k">DECISION QUESTIONS</div><div class="v g">5 / 6</div><div class="s">1 partial (depth)</div></div>
+    <div class="stat"><div class="k">STRICT INVARIANTS</div><div class="v g">4 / 4</div><div class="s">all preserved</div></div>
+    <div class="stat"><div class="k">ROADMAP §9 SLOTS</div><div class="v a">8 / 8</div><div class="s">every region maps</div></div>
+    <div class="stat"><div class="k">OPEN RISKS</div><div class="v r">2 + 3</div><div class="s">2 gating · 3 refine</div></div>
+    <div class="stat"><div class="k">BUILD PHASES</div><div class="v">2 + 4</div><div class="s">2 gates → P1–P4</div></div>
+  </div>
+
+  <!-- 1. decision questions -->
+  <div class="sec"><span class="idx">01</span><h2>The 6 decision questions a trader UI must answer</h2><span class="note">5 pass · 1 partial</span></div>
+  <table>
+    <thead><tr><th style="width:34px">#</th><th>Question</th><th style="width:90px">Status</th><th>Where / gap</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td class="q">What deserves attention now?</td><td><span class="chip c-pass">PASS</span></td><td>Landing tiles + lens-ranked blotter + Watch/Movers</td></tr>
+      <tr><td>2</td><td class="q">Actionable vs review-only vs blocked?</td><td><span class="chip c-pass">PASS</span></td><td>Blotter tabs, per-bucket colour+label+icon; Research distinct</td></tr>
+      <tr><td>3</td><td class="q">Why was this row flagged?</td><td><span class="chip c-pass">PASS</span></td><td>DES card: why flagged / ranked / improve / risk</td></tr>
+      <tr><td>4</td><td class="q">What's the fill / liquidity limit?</td><td><span class="chip c-part">PARTIAL</span></td><td>MD ladder + fillable + eff-fill@50 — but depth is <span class="red">synthetic</span> &amp; real source unproven (R1)</td></tr>
+      <tr><td>5</td><td class="q">What changed since last scan?</td><td><span class="chip c-pass">PASS</span></td><td>NEW/▲/▼/↺ + flash + Movers + alerts; no replay yet (deferred)</td></tr>
+      <tr><td>6</td><td class="q">Is the data fresh &amp; trustworthy?</td><td><span class="chip c-pass">PASS</span></td><td>Always-on trust line: age/phase, failed-series, "paused ≠ stale", disclaimer</td></tr>
+    </tbody>
+  </table>
+
+  <!-- 2. invariants -->
+  <div class="sec"><span class="idx">02</span><h2>Strict invariants — all preserved</h2></div>
+  <table>
+    <tbody>
+      <tr><td style="width:90px"><span class="chip c-pass">OK</span></td><td class="q">Read-only / no order entry</td><td>MD ladder banner <span class="amber">READ-ONLY DEPTH VIEW — NO ORDERS</span>; zero buy/sell/qty/ticket controls</td></tr>
+      <tr><td><span class="chip c-pass">OK</span></td><td class="q">Label discipline</td><td><span class="dim">GROSS · TOP-OF-BOOK · $1 BASIS · READ-ONLY · NO ORDER ENTRY · NOT RISKLESS</span> — no "arbitrage/locked/riskless"</td></tr>
+      <tr><td><span class="chip c-pass">OK</span></td><td class="q">Bucket separation</td><td>Actionable/Review/Blocked tabs; Research = violet "not a trade", no edge/tradable framing</td></tr>
+      <tr><td><span class="chip c-pass">OK</span></td><td class="q">$1 canonical basis</td><td>$1 default; $100 a derived display toggle on the card</td></tr>
+    </tbody>
+  </table>
+
+  <!-- 3. roadmap mapping -->
+  <div class="sec"><span class="idx">03</span><h2>Roadmap §9 mapping — every region has a slot</h2></div>
+  <table>
+    <thead><tr><th>UI region</th><th>Backlog section</th></tr></thead>
+    <tbody>
+      <tr><td class="q">3 surfaces (OPP / RES / OPS)</td><td>§9.1 three surfaces</td></tr>
+      <tr><td class="q">Status / trust line</td><td>§14 data-quality states</td></tr>
+      <tr><td class="q">DES trade-card + EvidencePack + 9-dim confidence</td><td>§8 / §3 / §7</td></tr>
+      <tr><td class="q">Lens switcher (5 modes → lens library)</td><td>§7 ranking &amp; lenses</td></tr>
+      <tr><td class="q">Alerts flyout</td><td>§10 alerts</td></tr>
+      <tr><td class="q">Watchlist / movers</td><td>§9.3 workstation features</td></tr>
+      <tr><td class="q">Research surface</td><td>§5 / §11 research &amp; outcome loop</td></tr>
+      <tr><td class="q">Operations surface</td><td>§1 / §13 capability &amp; perf</td></tr>
+    </tbody>
+  </table>
+
+  <!-- 4. fidelity -->
+  <div class="sec"><span class="idx">04</span><h2>Real vs mock — what to reconcile in the rebuild</h2></div>
+  <div class="cols">
+    <div class="box"><div class="h">✓ EXISTS IN THE ENGINE TODAY</div><ul>
+      <li>Blotter rows — <span class="white">scanner.unified_opportunities</span></li>
+      <li>Columns — <span class="white">MAIN_COLUMNS</span></li>
+      <li>The 5 lenses — <span class="white">viewmodel.RANK_MODES</span></li>
+      <li>Buckets — Actionable / Review / Blocked</li>
+      <li>Buy-only legs, tradable, caveat, change signals</li>
+      <li>Status/trust facts (scan age, failed series, exchange)</li>
+    </ul></div>
+    <div class="box"><div class="h">◷ ROADMAP-FUTURE (phase it; keep §0.1 isolation)</div><ul>
+      <li>9-dim confidence, EvidencePack, tape, scenario table</li>
+      <li>Lens library beyond the 5 modes</li>
+      <li>RES + OPS surfaces, alerts</li>
+      <li>Real order-book depth for the MD ladder (R1)</li>
+      <li>The amber-CRT shell: docking + command line + ladder is <span class="amber">heavy custom front-end</span>, not a Quasar reskin (R2)</li>
+    </ul></div>
+  </div>
+
+  <!-- 5. risks -->
+  <div class="sec"><span class="idx">05</span><h2>Risks &amp; gaps</h2><span class="note">2 gating · 3 refinements</span></div>
+  <div class="risk high"><div class="sev">R1</div><div class="c"><div class="t">Order-book depth is unproven — and it's the ladder's whole point</div><div class="d">Kalshi orderbook auth is documentation-conflicted → <span class="amber">(probe)</span> in §1; the app is unauthenticated by default. Without proven access the MD ladder is top-of-book only, not a real DOM. <b>Gates the centrepiece.</b></div></div></div>
+  <div class="risk high"><div class="sev">R2</div><div class="c"><div class="t">NiceGUI feasibility of the dense terminal shell</div><div class="d">Today's UI is Quasar <span class="white">ui.table</span>. Docking + command-line parser + amber grid + ladder is a substantial custom build and may trip §13's "dedicated front-end if NiceGUI blocks core UX" trigger. <b>Validate one slice before full commit.</b></div></div></div>
+  <div class="risk med"><div class="sev">G3</div><div class="c"><div class="t">Research appears twice</div><div class="d">A blotter "Research" tab AND the RES surface. To honour §0.1 separation, keep research OFF the executable blotter — RES surface + card-attached evidence only.</div></div></div>
+  <div class="risk med"><div class="sev">G4</div><div class="c"><div class="t">Default theme</div><div class="d">Amber-on-black is the signature but can fatigue; the high-contrast toggle mitigates. Owner call below.</div></div></div>
+  <div class="risk low"><div class="sev">G5</div><div class="c"><div class="t">Accessibility</div><div class="d">Carry colourblind-safe, non-colour-only cues (icon+text) through to the rebuild (§9.3).</div></div></div>
+
+  <!-- 6. plan -->
+  <div class="sec"><span class="idx">06</span><h2>Recommended path</h2><span class="note">2 gates, then a 4-phase milestone</span></div>
+  <div class="phase gate"><div class="tag">GATE A</div><div class="d"><b>Probe order-book depth (R1).</b> Decide: real DOM vs labelled top-of-book preview. Gates the ladder.</div></div>
+  <div class="phase gate"><div class="tag">GATE B</div><div class="d"><b>NiceGUI shell feasibility spike (R2).</b> Build one real slice — amber theme + blotter grid + command line + one docked panel — or trigger the dedicated-front-end decision.</div></div>
+  <div class="phase"><div class="tag">P1 · SHELL</div><div class="d">Command line + status/trust strip + tiles + blotter from the <b>real engine</b>; full clickable nav (command line = accelerator, never required).</div></div>
+  <div class="phase"><div class="tag">P2 · CARD</div><div class="d">DES trade-card from <b>real fields</b> (legs/quote/EvidencePack); confidence only for dims that exist; $1⇄$100.</div></div>
+  <div class="phase"><div class="tag">P3 · LADDER</div><div class="d">MD ladder — <b>gated on Gate A</b>.</div></div>
+  <div class="phase"><div class="tag">P4 · SURFACES</div><div class="d">RES / OPS surfaces + alerts (roadmap-future; every metric behind §0.1 isolation tests).</div></div>
+
+  <!-- 7. decisions -->
+  <div class="sec"><span class="idx">07</span><h2>Your three calls</h2><span class="note">pick one each → copy as markdown</span></div>
+  <div class="dec" id="dec"></div>
+
+  <div class="summary">
+    <div class="h">DECISIONS — MARKDOWN <button id="copyBtn">COPY</button></div>
+    <pre id="out"></pre>
+  </div>
+
+  <div class="foot">Source: <span class="dim">.kss/spikes/20260611-terminal-pro-mockup/README.md</span> · mockup <span class="dim">ui-mockup-7-terminal-pro.html</span> · offline-safe, no network. Selections are local to this page; copy the markdown into the spike or a milestone plan. Next: <span class="cyan">plan-milestone --from-spike .kss/spikes/20260611-terminal-pro-mockup/README.md</span></div>
+</div>
+
+<script>
+"use strict";
+const DECISIONS=[
+ {id:"theme",q:"Default theme",opts:[
+   {k:"Balanced-dark default, amber opt-in",rec:true,why:"Readability for everyone; amber stays the signature 'terminal' theme."},
+   {k:"Amber-on-black default",why:"Maximal Bloomberg identity; rely on the high-contrast toggle for fatigue."}]},
+ {id:"ladder",q:"MD ladder data",opts:[
+   {k:"Top-of-book preview now; full DOM after probe",rec:true,why:"Ships honestly without unproven order-book auth; upgrade once Gate A passes."},
+   {k:"Hold the ladder until real depth is proven",why:"Cleaner, but loses the fill/liquidity answer (Q4) in the interim."}]},
+ {id:"sequence",q:"Sequencing",opts:[
+   {k:"Run Gate B (NiceGUI feasibility) first",rec:true,why:"Cheapest way to de-risk the whole aesthetic before committing the milestone."},
+   {k:"Start P1 shell directly",why:"Faster to something runnable; higher risk the wrapper fights the design."}]},
+];
+const picks={};
+function render(){
+  const host=document.getElementById("dec");host.innerHTML="";
+  DECISIONS.forEach(d=>{
+    const card=document.createElement("div");card.className="decard";
+    let h=`<div class="h">${d.q}</div><div class="opts">`;
+    d.opts.forEach((o,i)=>{h+=`<button class="opt ${picks[d.id]===i?'on':''}" data-d="${d.id}" data-i="${i}">${o.k}${o.rec?'<span class="rec">◆ REC</span>':''}<span class="why">${o.why}</span></button>`;});
+    card.innerHTML=h+"</div>";host.appendChild(card);
+  });
+  host.querySelectorAll(".opt").forEach(b=>b.onclick=()=>{picks[b.dataset.d]=+b.dataset.i;render();out();});
+  out();
+}
+function out(){
+  let s="## Terminal Pro — owner decisions\n\n";
+  DECISIONS.forEach(d=>{const i=picks[d.id];s+=`- **${d.q}:** ${i==null?'_(unselected)_':d.opts[i].k}\n`;});
+  s+="\nVerdict: yes → phased milestone. Gates: A) order-book depth probe · B) NiceGUI shell feasibility spike.";
+  document.getElementById("out").textContent=s;
+}
+document.getElementById("copyBtn").onclick=()=>{
+  const t=document.getElementById("out").textContent;
+  navigator.clipboard?.writeText(t).then(()=>{const b=document.getElementById("copyBtn");b.textContent="COPIED";setTimeout(()=>b.textContent="COPY",1200);},()=>{});
+};
+// preselect the recommended option in each
+DECISIONS.forEach(d=>{const ri=d.opts.findIndex(o=>o.rec);if(ri>=0)picks[d.id]=ri;});
+render();
+</script>
+</body>
+</html>

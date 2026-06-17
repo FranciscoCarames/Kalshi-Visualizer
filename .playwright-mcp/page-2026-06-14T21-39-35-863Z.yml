@@ -1,0 +1,571 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6] [cursor=pointer]: OPP
+      - generic [ref=e7] [cursor=pointer]: RES
+      - generic [ref=e8] [cursor=pointer]: OPS
+      - generic [ref=e9] [cursor=pointer]: ALRT
+    - generic [ref=e10]:
+      - generic [ref=e11]: ">"
+      - textbox "SEARCH — functions · participants · lenses · layouts (Ctrl-K)" [ref=e12]:
+        - /placeholder: SEARCH — functions · participants · lenses · layouts  (Ctrl-K)
+      - button "<GO>" [ref=e13] [cursor=pointer]
+    - generic [ref=e14]: 2135s · KALSHI
+  - generic [ref=e15]:
+    - generic [ref=e16]:
+      - generic [ref=e17]: ●
+      - text: "SNAPSHOT #2545 · 2135s ago"
+    - generic [ref=e18]:
+      - text: Opps
+      - generic [ref=e19]: 2,370
+    - generic [ref=e20]:
+      - text: Contracts
+      - generic [ref=e21]: 3,778
+    - generic [ref=e22]:
+      - text: Checks
+      - generic [ref=e23]: 1,574
+    - generic [ref=e24]:
+      - text: Requests
+      - generic [ref=e25]: "188"
+    - generic [ref=e26]:
+      - text: Sports
+      - generic [ref=e27]: "10"
+    - generic [ref=e28]:
+      - generic [ref=e29]: ●
+      - text: Failed
+      - generic [ref=e30]: "0"
+    - generic [ref=e31]: GROSS · TOP-OF-BOOK · $1 BASIS · READ-ONLY · NO ORDER ENTRY · NOT RISKLESS
+  - generic [ref=e32]:
+    - generic [ref=e33] [cursor=pointer]:
+      - generic [ref=e34]: 1)
+      - text: OPP
+    - generic [ref=e35] [cursor=pointer]:
+      - generic [ref=e36]: 2)
+      - text: RES
+    - generic [ref=e37] [cursor=pointer]:
+      - generic [ref=e38]: 3)
+      - text: OPS
+    - generic [ref=e40]: default order = engine rank · lenses in Phase B
+  - generic [ref=e41]:
+    - button "ACTIONABLE 12 executable now" [ref=e140] [cursor=pointer]:
+      - generic [ref=e43]: ACTIONABLE
+      - generic [ref=e44]: "12"
+      - generic [ref=e45]: executable now
+    - button "REVIEW 29 settlement-dep" [ref=e141] [cursor=pointer]:
+      - generic [ref=e47]: REVIEW
+      - generic [ref=e48]: "29"
+      - generic [ref=e49]: settlement-dep
+    - button "BLOCKED 13 not fillable" [ref=e142] [cursor=pointer]:
+      - generic [ref=e51]: BLOCKED
+      - generic [ref=e52]: "13"
+      - generic [ref=e53]: not fillable
+    - button "BOUNDED-LOSS 231 can lose money" [active] [ref=e143] [cursor=pointer]:
+      - generic [ref=e55]: BOUNDED-LOSS
+      - generic [ref=e56]: "231"
+      - generic [ref=e57]: can lose money
+    - button "NEAR-MISS 205 watchlist" [ref=e144] [cursor=pointer]:
+      - generic [ref=e59]: NEAR-MISS
+      - generic [ref=e60]: "205"
+      - generic [ref=e61]: watchlist
+    - button "QUALIFIER 50 WC setups" [ref=e145] [cursor=pointer]:
+      - generic [ref=e63]: QUALIFIER
+      - generic [ref=e64]: "50"
+      - generic [ref=e65]: WC setups
+    - button "CHEAP-NO 488 NO fades" [ref=e146] [cursor=pointer]:
+      - generic [ref=e67]: CHEAP-NO
+      - generic [ref=e68]: "488"
+      - generic [ref=e69]: NO fades
+    - button "DATA-QUALITY 1,342 diagnostic" [ref=e147] [cursor=pointer]:
+      - generic [ref=e71]: DATA-QUALITY
+      - generic [ref=e72]: 1,342
+      - generic [ref=e73]: diagnostic
+  - generic [ref=e74]:
+    - generic [ref=e75]: SPORT
+    - combobox [ref=e76]:
+      - option "All" [selected]
+      - option "Esports"
+      - option "Golf"
+      - option "MLB"
+      - option "Motorsport"
+      - option "NBA"
+      - option "NFL"
+      - option "NHL"
+      - option "Soccer (World Cup)"
+      - option "Tennis"
+      - option "WNBA"
+    - generic [ref=e77]: PARTICIPANT
+    - textbox "contains…" [ref=e78]
+    - generic [ref=e79] [cursor=pointer]: clear
+  - generic [ref=e81]:
+    - generic [ref=e82]:
+      - generic [ref=e83]: "1"
+      - heading "BLOTTER" [level=3] [ref=e84]
+      - generic [ref=e85]: read-only VIEW of the engine · bucket/status verbatim
+    - generic [ref=e86]:
+      - generic [ref=e87] [cursor=pointer]: EXECUTABLE 12 firm · gross edge
+      - generic [ref=e88] [cursor=pointer]: SPECULATIVE 231 bounded-loss · can lose money
+      - generic [ref=e89] [cursor=pointer]: DIAGNOSTIC 1,342 review-only · data quality
+    - generic [ref=e90]:
+      - generic [ref=e293] [cursor=pointer]: BOUNDED-LOSS231
+      - generic [ref=e294] [cursor=pointer]: NEAR-MISS205
+      - generic [ref=e295] [cursor=pointer]: QUALIFIER50
+      - generic [ref=e296] [cursor=pointer]: CHEAP-NO488
+      - generic [ref=e94]: Showing 231 · default = engine order
+    - generic [ref=e97]:
+      - grid [ref=e99]:
+        - rowgroup [ref=e101]:
+          - row "SPORT PARTICIPANT / MATCH BUCKET STATUS EDGE¢ ROI% UNITS MAX $ TRADABLE CAVEAT" [ref=e102]:
+            - columnheader "SPORT" [ref=e103]:
+              - text: 
+              - generic [ref=e105] [cursor=pointer]: SPORT
+              - text: 
+              - generic:    
+            - columnheader "PARTICIPANT / MATCH" [ref=e106]:
+              - text: 
+              - generic [ref=e108] [cursor=pointer]: PARTICIPANT / MATCH
+              - text: 
+              - generic:    
+            - columnheader "BUCKET" [ref=e109]:
+              - text: 
+              - generic [ref=e111] [cursor=pointer]: BUCKET
+              - text: 
+              - generic:    
+            - columnheader "STATUS" [ref=e112]:
+              - text: 
+              - generic [ref=e114] [cursor=pointer]: STATUS
+              - text: 
+              - generic:    
+            - columnheader "EDGE¢" [ref=e115]:
+              - text: 
+              - generic [ref=e117] [cursor=pointer]: EDGE¢
+              - text: 
+              - generic:    
+            - columnheader "ROI%" [ref=e118]:
+              - text: 
+              - generic [ref=e120] [cursor=pointer]: ROI%
+              - text: 
+              - generic:    
+            - columnheader "UNITS" [ref=e121]:
+              - text: 
+              - generic [ref=e123] [cursor=pointer]: UNITS
+              - text: 
+              - generic:    
+            - columnheader "MAX $" [ref=e124]:
+              - text: 
+              - generic [ref=e126] [cursor=pointer]: MAX $
+              - text: 
+              - generic:    
+            - columnheader "TRADABLE" [ref=e127]:
+              - text: 
+              - generic [ref=e129] [cursor=pointer]: TRADABLE
+              - text: 
+              - generic:    
+            - columnheader "CAVEAT" [ref=e130]:
+              - text: 
+              - generic [ref=e132] [cursor=pointer]: CAVEAT
+              - text: 
+              - generic:    
+        - rowgroup [ref=e133]:
+          - row "NFL Pittsburgh Pro Football · 27 risk_budget RISK_BUDGET_CANDIDATE — — — — Yes" [ref=e297]:
+            - gridcell "NFL" [ref=e298]
+            - gridcell "Pittsburgh Pro Football · 27" [ref=e299]:
+              - generic [ref=e300]: Pittsburgh Pro Football · 27
+            - gridcell "risk_budget" [ref=e301]
+            - gridcell "RISK_BUDGET_CANDIDATE" [ref=e302]
+            - gridcell "—" [ref=e303]
+            - gridcell "—" [ref=e304]
+            - gridcell "—" [ref=e305]
+            - gridcell "—" [ref=e306]
+            - gridcell "Yes" [ref=e307]
+            - gridcell [ref=e308]
+          - row "NFL Atlanta Pro Football · 27 risk_budget RISK_BUDGET_CANDIDATE — — — — Yes" [ref=e309]:
+            - gridcell "NFL" [ref=e310]
+            - gridcell "Atlanta Pro Football · 27" [ref=e311]:
+              - generic [ref=e312]: Atlanta Pro Football · 27
+            - gridcell "risk_budget" [ref=e313]
+            - gridcell "RISK_BUDGET_CANDIDATE" [ref=e314]
+            - gridcell "—" [ref=e315]
+            - gridcell "—" [ref=e316]
+            - gridcell "—" [ref=e317]
+            - gridcell "—" [ref=e318]
+            - gridcell "Yes" [ref=e319]
+            - gridcell [ref=e320]
+          - row "NFL Tampa Bay Pro Football · 27 risk_budget RISK_BUDGET_CANDIDATE — — — — Yes" [ref=e321]:
+            - gridcell "NFL" [ref=e322]
+            - gridcell "Tampa Bay Pro Football · 27" [ref=e323]:
+              - generic [ref=e324]: Tampa Bay Pro Football · 27
+            - gridcell "risk_budget" [ref=e325]
+            - gridcell "RISK_BUDGET_CANDIDATE" [ref=e326]
+            - gridcell "—" [ref=e327]
+            - gridcell "—" [ref=e328]
+            - gridcell "—" [ref=e329]
+            - gridcell "—" [ref=e330]
+            - gridcell "Yes" [ref=e331]
+            - gridcell [ref=e332]
+          - row "NFL Minnesota Pro Football · 27 risk_budget RISK_BUDGET_CANDIDATE — — — — Yes" [ref=e333]:
+            - gridcell "NFL" [ref=e334]
+            - gridcell "Minnesota Pro Football · 27" [ref=e335]:
+              - generic [ref=e336]: Minnesota Pro Football · 27
+            - gridcell "risk_budget" [ref=e337]
+            - gridcell "RISK_BUDGET_CANDIDATE" [ref=e338]
+            - gridcell "—" [ref=e339]
+            - gridcell "—" [ref=e340]
+            - gridcell "—" [ref=e341]
+            - gridcell "—" [ref=e342]
+            - gridcell "Yes" [ref=e343]
+            - gridcell [ref=e344]
+          - row "NFL Indianapolis Pro Football · 27 risk_budget RISK_BUDGET_CANDIDATE — — — — Yes" [ref=e345]:
+            - gridcell "NFL" [ref=e346]
+            - gridcell "Indianapolis Pro Football · 27" [ref=e347]:
+              - generic [ref=e348]: Indianapolis Pro Football · 27
+            - gridcell "risk_budget" [ref=e349]
+            - gridcell "RISK_BUDGET_CANDIDATE" [ref=e350]
+            - gridcell "—" [ref=e351]
+            - gridcell "—" [ref=e352]
+            - gridcell "—" [ref=e353]
+            - gridcell "—" [ref=e354]
+            - gridcell "Yes" [ref=e355]
+            - gridcell [ref=e356]
+          - row "NFL Washington Pro Football · 27 risk_budget RISK_BUDGET_CANDIDATE — — — — Yes" [ref=e357]:
+            - gridcell "NFL" [ref=e358]
+            - gridcell "Washington Pro Football · 27" [ref=e359]:
+              - generic [ref=e360]: Washington Pro Football · 27
+            - gridcell "risk_budget" [ref=e361]
+            - gridcell "RISK_BUDGET_CANDIDATE" [ref=e362]
+            - gridcell "—" [ref=e363]
+            - gridcell "—" [ref=e364]
+            - gridcell "—" [ref=e365]
+            - gridcell "—" [ref=e366]
+            - gridcell "Yes" [ref=e367]
+            - gridcell [ref=e368]
+          - row "Soccer (World Cup) Ghana FIFA World Cup · 26 risk_budget RISK_BUDGET_CANDIDATE — — — — Yes" [ref=e369]:
+            - gridcell "Soccer (World Cup)" [ref=e370]
+            - gridcell "Ghana FIFA World Cup · 26" [ref=e371]:
+              - generic [ref=e372]: Ghana FIFA World Cup · 26
+            - gridcell "risk_budget" [ref=e373]
+            - gridcell "RISK_BUDGET_CANDIDATE" [ref=e374]
+            - gridcell "—" [ref=e375]
+            - gridcell "—" [ref=e376]
+            - gridcell "—" [ref=e377]
+            - gridcell "—" [ref=e378]
+            - gridcell "Yes" [ref=e379]
+            - gridcell [ref=e380]
+          - row "NFL San Francisco Pro Football · 27 risk_budget RISK_BUDGET_CANDIDATE — — — — Yes" [ref=e381]:
+            - gridcell "NFL" [ref=e382]
+            - gridcell "San Francisco Pro Football · 27" [ref=e383]:
+              - generic [ref=e384]: San Francisco Pro Football · 27
+            - gridcell "risk_budget" [ref=e385]
+            - gridcell "RISK_BUDGET_CANDIDATE" [ref=e386]
+            - gridcell "—" [ref=e387]
+            - gridcell "—" [ref=e388]
+            - gridcell "—" [ref=e389]
+            - gridcell "—" [ref=e390]
+            - gridcell "Yes" [ref=e391]
+            - gridcell [ref=e392]
+          - row "NFL New York G Pro Football · 27 risk_budget RISK_BUDGET_CANDIDATE — — — — Yes" [ref=e393]:
+            - gridcell "NFL" [ref=e394]
+            - gridcell "New York G Pro Football · 27" [ref=e395]:
+              - generic [ref=e396]: New York G Pro Football · 27
+            - gridcell "risk_budget" [ref=e397]
+            - gridcell "RISK_BUDGET_CANDIDATE" [ref=e398]
+            - gridcell "—" [ref=e399]
+            - gridcell "—" [ref=e400]
+            - gridcell "—" [ref=e401]
+            - gridcell "—" [ref=e402]
+            - gridcell "Yes" [ref=e403]
+            - gridcell [ref=e404]
+          - row "Soccer (World Cup) Bosnia and Herzegovina FIFA World Cup · 26 risk_budget RISK_BUDGET_CANDIDATE — — — — Yes" [ref=e405]:
+            - gridcell "Soccer (World Cup)" [ref=e406]
+            - gridcell "Bosnia and Herzegovina FIFA World Cup · 26" [ref=e407]:
+              - generic [ref=e408]: Bosnia and Herzegovina FIFA World Cup · 26
+            - gridcell "risk_budget" [ref=e409]
+            - gridcell "RISK_BUDGET_CANDIDATE" [ref=e410]
+            - gridcell "—" [ref=e411]
+            - gridcell "—" [ref=e412]
+            - gridcell "—" [ref=e413]
+            - gridcell "—" [ref=e414]
+            - gridcell "Yes" [ref=e415]
+            - gridcell [ref=e416]
+          - row "NFL Philadelphia Pro Football · 27 risk_budget RISK_BUDGET_CANDIDATE — — — — Yes" [ref=e417]:
+            - gridcell "NFL" [ref=e418]
+            - gridcell "Philadelphia Pro Football · 27" [ref=e419]:
+              - generic [ref=e420]: Philadelphia Pro Football · 27
+            - gridcell "risk_budget" [ref=e421]
+            - gridcell "RISK_BUDGET_CANDIDATE" [ref=e422]
+            - gridcell "—" [ref=e423]
+            - gridcell "—" [ref=e424]
+            - gridcell "—" [ref=e425]
+            - gridcell "—" [ref=e426]
+            - gridcell "Yes" [ref=e427]
+            - gridcell [ref=e428]
+          - row "Soccer (World Cup) Czechia FIFA World Cup · 26 risk_budget RISK_BUDGET_CANDIDATE — — — — Yes" [ref=e429]:
+            - gridcell "Soccer (World Cup)" [ref=e430]
+            - gridcell "Czechia FIFA World Cup · 26" [ref=e431]:
+              - generic [ref=e432]: Czechia FIFA World Cup · 26
+            - gridcell "risk_budget" [ref=e433]
+            - gridcell "RISK_BUDGET_CANDIDATE" [ref=e434]
+            - gridcell "—" [ref=e435]
+            - gridcell "—" [ref=e436]
+            - gridcell "—" [ref=e437]
+            - gridcell "—" [ref=e438]
+            - gridcell "Yes" [ref=e439]
+            - gridcell [ref=e440]
+          - row "Soccer (World Cup) Ecuador FIFA World Cup · 26 risk_budget RISK_BUDGET_CANDIDATE — — — — Yes" [ref=e441]:
+            - gridcell "Soccer (World Cup)" [ref=e442]
+            - gridcell "Ecuador FIFA World Cup · 26" [ref=e443]:
+              - generic [ref=e444]: Ecuador FIFA World Cup · 26
+            - gridcell "risk_budget" [ref=e445]
+            - gridcell "RISK_BUDGET_CANDIDATE" [ref=e446]
+            - gridcell "—" [ref=e447]
+            - gridcell "—" [ref=e448]
+            - gridcell "—" [ref=e449]
+            - gridcell "—" [ref=e450]
+            - gridcell "Yes" [ref=e451]
+            - gridcell [ref=e452]
+          - row "NFL Houston Pro Football · 27 risk_budget RISK_BUDGET_CANDIDATE — — — — Yes" [ref=e453]:
+            - gridcell "NFL" [ref=e454]
+            - gridcell "Houston Pro Football · 27" [ref=e455]:
+              - generic [ref=e456]: Houston Pro Football · 27
+            - gridcell "risk_budget" [ref=e457]
+            - gridcell "RISK_BUDGET_CANDIDATE" [ref=e458]
+            - gridcell "—" [ref=e459]
+            - gridcell "—" [ref=e460]
+            - gridcell "—" [ref=e461]
+            - gridcell "—" [ref=e462]
+            - gridcell "Yes" [ref=e463]
+            - gridcell [ref=e464]
+          - row "Golf Akshay Bhatia U.S. Open risk_budget RISK_BUDGET_CANDIDATE — — — — Yes" [ref=e465]:
+            - gridcell "Golf" [ref=e466]
+            - gridcell "Akshay Bhatia U.S. Open" [ref=e467]:
+              - generic [ref=e468]: Akshay Bhatia U.S. Open
+            - gridcell "risk_budget" [ref=e469]
+            - gridcell "RISK_BUDGET_CANDIDATE" [ref=e470]
+            - gridcell "—" [ref=e471]
+            - gridcell "—" [ref=e472]
+            - gridcell "—" [ref=e473]
+            - gridcell "—" [ref=e474]
+            - gridcell "Yes" [ref=e475]
+            - gridcell [ref=e476]
+          - row "NFL Detroit Pro Football · 27 risk_budget RISK_BUDGET_CANDIDATE — — — — Yes" [ref=e477]:
+            - gridcell "NFL" [ref=e478]
+            - gridcell "Detroit Pro Football · 27" [ref=e479]:
+              - generic [ref=e480]: Detroit Pro Football · 27
+            - gridcell "risk_budget" [ref=e481]
+            - gridcell "RISK_BUDGET_CANDIDATE" [ref=e482]
+            - gridcell "—" [ref=e483]
+            - gridcell "—" [ref=e484]
+            - gridcell "—" [ref=e485]
+            - gridcell "—" [ref=e486]
+            - gridcell "Yes" [ref=e487]
+            - gridcell [ref=e488]
+          - row "NFL New England Pro Football · 27 risk_budget RISK_BUDGET_CANDIDATE — — — — Yes" [ref=e489]:
+            - gridcell "NFL" [ref=e490]
+            - gridcell "New England Pro Football · 27" [ref=e491]:
+              - generic [ref=e492]: New England Pro Football · 27
+            - gridcell "risk_budget" [ref=e493]
+            - gridcell "RISK_BUDGET_CANDIDATE" [ref=e494]
+            - gridcell "—" [ref=e495]
+            - gridcell "—" [ref=e496]
+            - gridcell "—" [ref=e497]
+            - gridcell "—" [ref=e498]
+            - gridcell "Yes" [ref=e499]
+            - gridcell [ref=e500]
+          - row "Soccer (World Cup) Turkiye FIFA World Cup · 26 risk_budget RISK_BUDGET_CANDIDATE — — — — Yes" [ref=e501]:
+            - gridcell "Soccer (World Cup)" [ref=e502]
+            - gridcell "Turkiye FIFA World Cup · 26" [ref=e503]:
+              - generic [ref=e504]: Turkiye FIFA World Cup · 26
+            - gridcell "risk_budget" [ref=e505]
+            - gridcell "RISK_BUDGET_CANDIDATE" [ref=e506]
+            - gridcell "—" [ref=e507]
+            - gridcell "—" [ref=e508]
+            - gridcell "—" [ref=e509]
+            - gridcell "—" [ref=e510]
+            - gridcell "Yes" [ref=e511]
+            - gridcell [ref=e512]
+          - row "NFL Seattle Pro Football · 27 risk_budget RISK_BUDGET_CANDIDATE — — — — Yes" [ref=e513]:
+            - gridcell "NFL" [ref=e514]
+            - gridcell "Seattle Pro Football · 27" [ref=e515]:
+              - generic [ref=e516]: Seattle Pro Football · 27
+            - gridcell "risk_budget" [ref=e517]
+            - gridcell "RISK_BUDGET_CANDIDATE" [ref=e518]
+            - gridcell "—" [ref=e519]
+            - gridcell "—" [ref=e520]
+            - gridcell "—" [ref=e521]
+            - gridcell "—" [ref=e522]
+            - gridcell "Yes" [ref=e523]
+            - gridcell [ref=e524]
+          - row "NFL Green Bay Pro Football · 27 risk_budget RISK_BUDGET_CANDIDATE — — — — Yes" [ref=e525]:
+            - gridcell "NFL" [ref=e526]
+            - gridcell "Green Bay Pro Football · 27" [ref=e527]:
+              - generic [ref=e528]: Green Bay Pro Football · 27
+            - gridcell "risk_budget" [ref=e529]
+            - gridcell "RISK_BUDGET_CANDIDATE" [ref=e530]
+            - gridcell "—" [ref=e531]
+            - gridcell "—" [ref=e532]
+            - gridcell "—" [ref=e533]
+            - gridcell "—" [ref=e534]
+            - gridcell "Yes" [ref=e535]
+            - gridcell [ref=e536]
+          - row "NFL Cincinnati Pro Football · 27 risk_budget RISK_BUDGET_CANDIDATE — — — — Yes" [ref=e537]:
+            - gridcell "NFL" [ref=e538]
+            - gridcell "Cincinnati Pro Football · 27" [ref=e539]:
+              - generic [ref=e540]: Cincinnati Pro Football · 27
+            - gridcell "risk_budget" [ref=e541]
+            - gridcell "RISK_BUDGET_CANDIDATE" [ref=e542]
+            - gridcell "—" [ref=e543]
+            - gridcell "—" [ref=e544]
+            - gridcell "—" [ref=e545]
+            - gridcell "—" [ref=e546]
+            - gridcell "Yes" [ref=e547]
+            - gridcell [ref=e548]
+          - row "NFL Denver Pro Football · 27 risk_budget RISK_BUDGET_CANDIDATE — — — — Yes" [ref=e549]:
+            - gridcell "NFL" [ref=e550]
+            - gridcell "Denver Pro Football · 27" [ref=e551]:
+              - generic [ref=e552]: Denver Pro Football · 27
+            - gridcell "risk_budget" [ref=e553]
+            - gridcell "RISK_BUDGET_CANDIDATE" [ref=e554]
+            - gridcell "—" [ref=e555]
+            - gridcell "—" [ref=e556]
+            - gridcell "—" [ref=e557]
+            - gridcell "—" [ref=e558]
+            - gridcell "Yes" [ref=e559]
+            - gridcell [ref=e560]
+          - row "Soccer (World Cup) Belgium FIFA World Cup · 26 risk_budget RISK_BUDGET_CANDIDATE — — — — Yes" [ref=e561]:
+            - gridcell "Soccer (World Cup)" [ref=e562]
+            - gridcell "Belgium FIFA World Cup · 26" [ref=e563]:
+              - generic [ref=e564]: Belgium FIFA World Cup · 26
+            - gridcell "risk_budget" [ref=e565]
+            - gridcell "RISK_BUDGET_CANDIDATE" [ref=e566]
+            - gridcell "—" [ref=e567]
+            - gridcell "—" [ref=e568]
+            - gridcell "—" [ref=e569]
+            - gridcell "—" [ref=e570]
+            - gridcell "Yes" [ref=e571]
+            - gridcell [ref=e572]
+          - row "NFL Dallas Pro Football · 27 risk_budget RISK_BUDGET_CANDIDATE — — — — Yes" [ref=e573]:
+            - gridcell "NFL" [ref=e574]
+            - gridcell "Dallas Pro Football · 27" [ref=e575]:
+              - generic [ref=e576]: Dallas Pro Football · 27
+            - gridcell "risk_budget" [ref=e577]
+            - gridcell "RISK_BUDGET_CANDIDATE" [ref=e578]
+            - gridcell "—" [ref=e579]
+            - gridcell "—" [ref=e580]
+            - gridcell "—" [ref=e581]
+            - gridcell "—" [ref=e582]
+            - gridcell "Yes" [ref=e583]
+            - gridcell [ref=e584]
+          - row "Soccer (World Cup) Japan FIFA World Cup · 26 risk_budget RISK_BUDGET_CANDIDATE — — — — Yes" [ref=e585]:
+            - gridcell "Soccer (World Cup)" [ref=e586]
+            - gridcell "Japan FIFA World Cup · 26" [ref=e587]:
+              - generic [ref=e588]: Japan FIFA World Cup · 26
+            - gridcell "risk_budget" [ref=e589]
+            - gridcell "RISK_BUDGET_CANDIDATE" [ref=e590]
+            - gridcell "—" [ref=e591]
+            - gridcell "—" [ref=e592]
+            - gridcell "—" [ref=e593]
+            - gridcell "—" [ref=e594]
+            - gridcell "Yes" [ref=e595]
+            - gridcell [ref=e596]
+          - row "NFL Chicago Pro Football · 27 risk_budget RISK_BUDGET_CANDIDATE — — — — Yes" [ref=e597]:
+            - gridcell "NFL" [ref=e598]
+            - gridcell "Chicago Pro Football · 27" [ref=e599]:
+              - generic [ref=e600]: Chicago Pro Football · 27
+            - gridcell "risk_budget" [ref=e601]
+            - gridcell "RISK_BUDGET_CANDIDATE" [ref=e602]
+            - gridcell "—" [ref=e603]
+            - gridcell "—" [ref=e604]
+            - gridcell "—" [ref=e605]
+            - gridcell "—" [ref=e606]
+            - gridcell "Yes" [ref=e607]
+            - gridcell [ref=e608]
+          - row "Soccer (World Cup) Algeria FIFA World Cup · 26 risk_budget RISK_BUDGET_CANDIDATE — — — — Yes" [ref=e609]:
+            - gridcell "Soccer (World Cup)" [ref=e610]
+            - gridcell "Algeria FIFA World Cup · 26" [ref=e611]:
+              - generic [ref=e612]: Algeria FIFA World Cup · 26
+            - gridcell "risk_budget" [ref=e613]
+            - gridcell "RISK_BUDGET_CANDIDATE" [ref=e614]
+            - gridcell "—" [ref=e615]
+            - gridcell "—" [ref=e616]
+            - gridcell "—" [ref=e617]
+            - gridcell "—" [ref=e618]
+            - gridcell "Yes" [ref=e619]
+            - gridcell [ref=e620]
+          - row "NFL Jacksonville Pro Football · 27 risk_budget RISK_BUDGET_CANDIDATE — — — — Yes" [ref=e621]:
+            - gridcell "NFL" [ref=e622]
+            - gridcell "Jacksonville Pro Football · 27" [ref=e623]:
+              - generic [ref=e624]: Jacksonville Pro Football · 27
+            - gridcell "risk_budget" [ref=e625]
+            - gridcell "RISK_BUDGET_CANDIDATE" [ref=e626]
+            - gridcell "—" [ref=e627]
+            - gridcell "—" [ref=e628]
+            - gridcell "—" [ref=e629]
+            - gridcell "—" [ref=e630]
+            - gridcell "Yes" [ref=e631]
+            - gridcell [ref=e632]
+          - row "Soccer (World Cup) Colombia FIFA World Cup · 26 risk_budget RISK_BUDGET_CANDIDATE — — — — Yes" [ref=e633]:
+            - gridcell "Soccer (World Cup)" [ref=e634]
+            - gridcell "Colombia FIFA World Cup · 26" [ref=e635]:
+              - generic [ref=e636]: Colombia FIFA World Cup · 26
+            - gridcell "risk_budget" [ref=e637]
+            - gridcell "RISK_BUDGET_CANDIDATE" [ref=e638]
+            - gridcell "—" [ref=e639]
+            - gridcell "—" [ref=e640]
+            - gridcell "—" [ref=e641]
+            - gridcell "—" [ref=e642]
+            - gridcell "Yes" [ref=e643]
+            - gridcell [ref=e644]
+          - row "Soccer (World Cup) Switzerland FIFA World Cup · 26 risk_budget RISK_BUDGET_CANDIDATE — — — — Yes" [ref=e645]:
+            - gridcell "Soccer (World Cup)" [ref=e646]
+            - gridcell "Switzerland FIFA World Cup · 26" [ref=e647]:
+              - generic [ref=e648]: Switzerland FIFA World Cup · 26
+            - gridcell "risk_budget" [ref=e649]
+            - gridcell "RISK_BUDGET_CANDIDATE" [ref=e650]
+            - gridcell "—" [ref=e651]
+            - gridcell "—" [ref=e652]
+            - gridcell "—" [ref=e653]
+            - gridcell "—" [ref=e654]
+            - gridcell "Yes" [ref=e655]
+            - gridcell [ref=e656]
+          - row "Soccer (World Cup) Morocco FIFA World Cup · 26 risk_budget RISK_BUDGET_CANDIDATE — — — — Yes" [ref=e657]:
+            - gridcell "Soccer (World Cup)" [ref=e658]
+            - gridcell "Morocco FIFA World Cup · 26" [ref=e659]:
+              - generic [ref=e660]: Morocco FIFA World Cup · 26
+            - gridcell "risk_budget" [ref=e661]
+            - gridcell "RISK_BUDGET_CANDIDATE" [ref=e662]
+            - gridcell "—" [ref=e663]
+            - gridcell "—" [ref=e664]
+            - gridcell "—" [ref=e665]
+            - gridcell "—" [ref=e666]
+            - gridcell "Yes" [ref=e667]
+            - gridcell [ref=e668]
+          - row "Soccer (World Cup) Senegal FIFA World Cup · 26 risk_budget RISK_BUDGET_CANDIDATE — — — — Yes" [ref=e669]:
+            - gridcell "Soccer (World Cup)" [ref=e670]
+            - gridcell "Senegal FIFA World Cup · 26" [ref=e671]:
+              - generic [ref=e672]: Senegal FIFA World Cup · 26
+            - gridcell "risk_budget" [ref=e673]
+            - gridcell "RISK_BUDGET_CANDIDATE" [ref=e674]
+            - gridcell "—" [ref=e675]
+            - gridcell "—" [ref=e676]
+            - gridcell "—" [ref=e677]
+            - gridcell "—" [ref=e678]
+            - gridcell "Yes" [ref=e679]
+            - gridcell [ref=e680]
+          - row "Soccer (World Cup) Ghana FIFA World Cup · 26 risk_budget RISK_BUDGET_CANDIDATE — — — — Yes" [ref=e681]:
+            - gridcell "Soccer (World Cup)" [ref=e682]
+            - gridcell "Ghana FIFA World Cup · 26" [ref=e683]:
+              - generic [ref=e684]: Ghana FIFA World Cup · 26
+            - gridcell "risk_budget" [ref=e685]
+            - gridcell "RISK_BUDGET_CANDIDATE" [ref=e686]
+            - gridcell "—" [ref=e687]
+            - gridcell "—" [ref=e688]
+            - gridcell "—" [ref=e689]
+            - gridcell "—" [ref=e690]
+            - gridcell "Yes" [ref=e691]
+            - gridcell [ref=e692]
+        - rowgroup
+        - rowgroup [ref=e134]
+        - rowgroup
+      - text:    
+  - generic [ref=e137]:
+    - generic [ref=e138]: TERMINAL PRO · Phase A
+    - generic [ref=e139]: read-only view of the live engine feed · parity blotter · Dockview / inspector / ladder / palette / lenses land in Phase B

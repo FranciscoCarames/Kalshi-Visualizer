@@ -1,0 +1,229 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6] [cursor=pointer]: OPP
+      - generic [ref=e7] [cursor=pointer]: RES
+      - generic [ref=e8] [cursor=pointer]: OPS
+      - generic [ref=e9] [cursor=pointer]: ALRT
+    - generic [ref=e10]:
+      - generic [ref=e11]: ">"
+      - textbox "SEARCH — functions · participants · lenses · layouts (Ctrl-K or /)" [ref=e12]:
+        - /placeholder: SEARCH — functions · participants · lenses · layouts   (Ctrl-K or /)
+      - generic [ref=e13]: Ctrl K
+      - button "<GO>" [ref=e14] [cursor=pointer]
+    - generic [ref=e15]: 5246s · KALSHI
+  - generic [ref=e16]:
+    - generic [ref=e17]:
+      - generic [ref=e18]: ●
+      - text: "SNAPSHOT #2545 · 5246s ago"
+    - generic [ref=e19]:
+      - text: Opps
+      - generic [ref=e20]: 2,370
+    - generic [ref=e21]:
+      - text: Contracts
+      - generic [ref=e22]: 3,778
+    - generic [ref=e23]:
+      - text: Checks
+      - generic [ref=e24]: 1,574
+    - generic [ref=e25]:
+      - text: Requests
+      - generic [ref=e26]: "188"
+    - generic [ref=e27]:
+      - text: Sports
+      - generic [ref=e28]: "10"
+    - generic [ref=e29]:
+      - generic [ref=e30]: ●
+      - text: Failed
+      - generic [ref=e31]: "0"
+    - generic [ref=e32]: GROSS · TOP-OF-BOOK · $1 BASIS · READ-ONLY · NO ORDER ENTRY · NOT RISKLESS
+  - generic [ref=e33]:
+    - generic [ref=e34] [cursor=pointer]:
+      - generic [ref=e35]: 1)
+      - text: OPP
+    - generic [ref=e36] [cursor=pointer]:
+      - generic [ref=e37]: 2)
+      - text: RES
+    - generic [ref=e38] [cursor=pointer]:
+      - generic [ref=e39]: 3)
+      - text: OPS
+    - generic [ref=e40]:
+      - generic [ref=e41]: LENS
+      - generic [ref=e42]:
+        - button "BLENDED" [ref=e43] [cursor=pointer]
+        - button "EDGE¢" [ref=e44] [cursor=pointer]
+        - button "SPREAD" [ref=e45] [cursor=pointer]
+        - button "OUTRIGHT+SPREAD" [ref=e46] [cursor=pointer]
+        - button "IMPLIED EV" [ref=e47] [cursor=pointer]
+        - button "RIPENESS" [ref=e48] [cursor=pointer]
+      - generic [ref=e49]: engine order
+      - button "◐" [ref=e50] [cursor=pointer]
+  - generic [ref=e51]:
+    - button "ACTIONABLE 12 executable now" [ref=e280] [cursor=pointer]:
+      - generic [ref=e53]: ACTIONABLE
+      - generic [ref=e54]: "12"
+      - generic [ref=e55]: executable now
+    - button "REVIEW 29 settlement-dep" [ref=e281] [cursor=pointer]:
+      - generic [ref=e57]: REVIEW
+      - generic [ref=e58]: "29"
+      - generic [ref=e59]: settlement-dep
+    - button "BLOCKED 13 not fillable" [ref=e282] [cursor=pointer]:
+      - generic [ref=e61]: BLOCKED
+      - generic [ref=e62]: "13"
+      - generic [ref=e63]: not fillable
+    - button "BOUNDED-LOSS 231 can lose money" [ref=e283] [cursor=pointer]:
+      - generic [ref=e65]: BOUNDED-LOSS
+      - generic [ref=e66]: "231"
+      - generic [ref=e67]: can lose money
+    - button "NEAR-MISS 205 watchlist" [ref=e284] [cursor=pointer]:
+      - generic [ref=e69]: NEAR-MISS
+      - generic [ref=e70]: "205"
+      - generic [ref=e71]: watchlist
+    - button "QUALIFIER 50 WC setups" [ref=e285] [cursor=pointer]:
+      - generic [ref=e73]: QUALIFIER
+      - generic [ref=e74]: "50"
+      - generic [ref=e75]: WC setups
+    - button "CHEAP-NO 488 NO fades" [ref=e286] [cursor=pointer]:
+      - generic [ref=e77]: CHEAP-NO
+      - generic [ref=e78]: "488"
+      - generic [ref=e79]: NO fades
+    - button "DATA-QUALITY 1,342 diagnostic" [ref=e287] [cursor=pointer]:
+      - generic [ref=e81]: DATA-QUALITY
+      - generic [ref=e82]: 1,342
+      - generic [ref=e83]: diagnostic
+  - generic [ref=e84]:
+    - generic [ref=e85]: SPORT
+    - combobox [ref=e86]:
+      - option "All" [selected]
+      - option "Esports"
+      - option "Golf"
+      - option "MLB"
+      - option "Motorsport"
+      - option "NBA"
+      - option "NFL"
+      - option "NHL"
+      - option "Soccer (World Cup)"
+      - option "Tennis"
+      - option "WNBA"
+    - generic [ref=e87]: PARTICIPANT
+    - textbox "contains…" [ref=e88]
+    - generic [ref=e89] [cursor=pointer]:
+      - checkbox "Net of fees (est.)" [ref=e90]
+      - text: Net of fees (est.)
+    - generic [ref=e91] [cursor=pointer]: clear
+  - text:                
+  - generic [ref=e288]:
+    - generic [ref=e289]:
+      - generic [ref=e290]: "SCAN COVERAGE — SNAPSHOT #2545"
+      - table [ref=e291]:
+        - rowgroup [ref=e292]:
+          - row "Opportunities 2,370" [ref=e293]:
+            - cell "Opportunities" [ref=e294]
+            - cell "2,370" [ref=e295]
+          - row "Contracts scanned 3,778" [ref=e296]:
+            - cell "Contracts scanned" [ref=e297]
+            - cell "3,778" [ref=e298]
+          - row "Checks tested 1,574" [ref=e299]:
+            - cell "Checks tested" [ref=e300]
+            - cell "1,574" [ref=e301]
+          - row "Kalshi requests 188" [ref=e302]:
+            - cell "Kalshi requests" [ref=e303]
+            - cell "188" [ref=e304]
+          - row "Series scanned 93" [ref=e305]:
+            - cell "Series scanned" [ref=e306]
+            - cell "93" [ref=e307]
+          - row "Failed series 0" [ref=e308]:
+            - cell "Failed series" [ref=e309]
+            - cell "0" [ref=e310]
+          - row "Retry count 95" [ref=e311]:
+            - cell "Retry count" [ref=e312]
+            - cell "95" [ref=e313]
+          - row "Fetched at 2026-06-14 21:04:00 UTC" [ref=e314]:
+            - cell "Fetched at" [ref=e315]
+            - cell "2026-06-14 21:04:00 UTC" [ref=e316]
+    - generic [ref=e317]:
+      - generic [ref=e318]: PER-SPORT COVERAGE
+      - table [ref=e319]:
+        - rowgroup [ref=e320]:
+          - row "Sport Opps" [ref=e321]:
+            - columnheader "Sport" [ref=e322]
+            - columnheader "Opps" [ref=e323]
+        - rowgroup [ref=e324]:
+          - row "Golf 1,074" [ref=e325]:
+            - cell "Golf" [ref=e326]
+            - cell "1,074" [ref=e327]
+          - row "Soccer (World Cup) 628" [ref=e328]:
+            - cell "Soccer (World Cup)" [ref=e329]
+            - cell "628" [ref=e330]
+          - row "NFL 118" [ref=e331]:
+            - cell "NFL" [ref=e332]
+            - cell "118" [ref=e333]
+          - row "MLB 106" [ref=e334]:
+            - cell "MLB" [ref=e335]
+            - cell "106" [ref=e336]
+          - row "Motorsport 85" [ref=e337]:
+            - cell "Motorsport" [ref=e338]
+            - cell "85" [ref=e339]
+          - row "Esports 83" [ref=e340]:
+            - cell "Esports" [ref=e341]
+            - cell "83" [ref=e342]
+          - row "Tennis 83" [ref=e343]:
+            - cell "Tennis" [ref=e344]
+            - cell "83" [ref=e345]
+          - row "WNBA 66" [ref=e346]:
+            - cell "WNBA" [ref=e347]
+            - cell "66" [ref=e348]
+          - row "NHL 66" [ref=e349]:
+            - cell "NHL" [ref=e350]
+            - cell "66" [ref=e351]
+          - row "NBA 61" [ref=e352]:
+            - cell "NBA" [ref=e353]
+            - cell "61" [ref=e354]
+    - generic [ref=e355]:
+      - generic [ref=e356]: BUCKET DISTRIBUTION
+      - table [ref=e357]:
+        - rowgroup [ref=e358]:
+          - row "data_quality 802" [ref=e359]:
+            - cell "data_quality" [ref=e360]
+            - cell "802" [ref=e361]
+          - row "no_structure 488" [ref=e362]:
+            - cell "no_structure" [ref=e363]
+            - cell "488" [ref=e364]
+          - row "risk_budget 231" [ref=e365]:
+            - cell "risk_budget" [ref=e366]
+            - cell "231" [ref=e367]
+          - row "clean 227" [ref=e368]:
+            - cell "clean" [ref=e369]
+            - cell "227" [ref=e370]
+          - row "near_miss 205" [ref=e371]:
+            - cell "near_miss" [ref=e372]
+            - cell "205" [ref=e373]
+          - row "near_edge 164" [ref=e374]:
+            - cell "near_edge" [ref=e375]
+            - cell "164" [ref=e376]
+          - row "wide_signal 109" [ref=e377]:
+            - cell "wide_signal" [ref=e378]
+            - cell "109" [ref=e379]
+          - row "qualifier_setup 50" [ref=e380]:
+            - cell "qualifier_setup" [ref=e381]
+            - cell "50" [ref=e382]
+          - row "display_signal 40" [ref=e383]:
+            - cell "display_signal" [ref=e384]
+            - cell "40" [ref=e385]
+          - row "review_signal 29" [ref=e386]:
+            - cell "review_signal" [ref=e387]
+            - cell "29" [ref=e388]
+          - row "blocked 13" [ref=e389]:
+            - cell "blocked" [ref=e390]
+            - cell "13" [ref=e391]
+          - row "actionable 12" [ref=e392]:
+            - cell "actionable" [ref=e393]
+            - cell "12" [ref=e394]
+    - generic [ref=e395]:
+      - generic [ref=e396]: SERIES ERRORS / DATA-QUALITY
+      - table [ref=e397]:
+        - rowgroup [ref=e398]:
+          - row "no series errors this scan" [ref=e399]:
+            - cell "no series errors this scan" [ref=e400]
+  - generic [ref=e277]:
+    - generic [ref=e278]: TERMINAL PRO · Phase C
+    - generic [ref=e279]: OPP / RES / OPS surfaces · inspector tabs (trade card · participant detail · formulas) · net-of-fees toggle (display-only)

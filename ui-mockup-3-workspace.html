@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kalshi Workstation — Option 3 · WORKSPACE</title>
+<style>
+/* ===== TRADING-TECHNOLOGIES DOCKED WORKSPACE: panels, splitters, MD-Trader price ladder ===== */
+:root{
+  --bg:#0c1018; --bg1:#11161f; --bg2:#161d28; --bg3:#1d2632; --panel:#0f141c; --hdr:#1a222e;
+  --line:#222c3a; --line2:#2e3a4a; --tx:#cdd7e3; --tx2:#8595a8; --tx3:#5a6b80;
+  --acc:#2f81f7; --pos:#3fb950; --neg:#f85149; --warn:#d29922; --cyan:#39c5cf; --bid:#0d3b66; --ask:#5a1d1d;
+  --sans:'Segoe UI Variable','Segoe UI',system-ui,sans-serif; --mono:'Consolas','SF Mono',monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--tx);font-family:var(--sans);font-size:12.5px;height:100vh;overflow:hidden;display:flex;flex-direction:column}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+::-webkit-scrollbar{width:9px;height:9px}::-webkit-scrollbar-thumb{background:var(--line2);border-radius:5px}
+.pos{color:var(--pos)}.neg{color:var(--neg)}.warn{color:var(--warn)}.dim{color:var(--tx3)}.cyan{color:var(--cyan)}
+
+/* top bar: workspace tabs + status */
+.topbar{display:flex;align-items:center;gap:0;background:linear-gradient(180deg,#141b25,#0e131b);border-bottom:1px solid var(--line2);height:36px;flex:0 0 auto}
+.logo{padding:0 14px;font-weight:700;letter-spacing:.5px;font-size:13px;color:var(--tx)}
+.logo b{color:var(--acc)}
+.wstabs{display:flex;height:100%}
+.wstab{display:flex;align-items:center;padding:0 16px;font-size:12px;color:var(--tx2);cursor:pointer;border-right:1px solid var(--line);position:relative}
+.wstab.on{color:var(--tx);background:var(--bg)}.wstab.on::after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--acc)}
+.wstab .x{margin-left:8px;color:var(--tx3);font-size:11px}
+.wsadd{padding:0 12px;color:var(--tx3);cursor:pointer;font-size:15px}
+.spacer{flex:1}
+.topbtn{padding:5px 10px;margin-right:6px;background:var(--bg2);border:1px solid var(--line2);border-radius:6px;color:var(--tx2);font-size:11.5px;cursor:pointer}
+.topbtn:hover{color:var(--tx);background:var(--bg3)}
+
+/* status strip */
+.status{display:flex;gap:7px;align-items:center;background:var(--bg1);border-bottom:1px solid var(--line);padding:4px 12px;font-size:11px;color:var(--tx2);flex:0 0 auto}
+.st{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;background:var(--bg2);border:1px solid var(--line);border-radius:5px}
+.st b{color:var(--tx)}
+.led{width:7px;height:7px;border-radius:50%;background:var(--pos);box-shadow:0 0 6px var(--pos)}.led.w{background:var(--warn);box-shadow:0 0 6px var(--warn)}
+
+/* body: rail + dock grid */
+.body{flex:1;min-height:0;display:flex}
+.rail{width:48px;background:#0a0e15;border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;padding-top:8px;gap:4px;flex:0 0 auto}
+.railbtn{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--tx3);cursor:pointer;font-size:16px;border:1px solid transparent}
+.railbtn.on{color:var(--acc);background:var(--bg2);border-color:var(--line2)}
+.railbtn:hover{color:var(--tx)}
+.dock{flex:1;display:grid;grid-template-columns:1.55fr 320px;grid-template-rows:1.4fr 1fr;gap:5px;padding:5px;min-width:0}
+.panel{background:var(--panel);border:1px solid var(--line2);border-radius:6px;display:flex;flex-direction:column;min-height:0;min-width:0;overflow:hidden}
+.panel.blotter{grid-row:1/2;grid-column:1/2}
+.panel.ladder{grid-row:1/3;grid-column:2/3}
+.panel.ticket{grid-row:2/3;grid-column:1/2}
+.ptabs{display:flex;align-items:center;background:var(--hdr);border-bottom:1px solid var(--line2);height:26px;flex:0 0 auto}
+.ptab{padding:0 12px;height:100%;display:flex;align-items:center;font-size:11px;font-weight:600;color:var(--tx2);border-right:1px solid var(--line);cursor:pointer}
+.ptab.on{color:var(--tx);background:var(--panel);box-shadow:inset 0 -2px 0 var(--acc)}
+.pdock{margin-left:auto;display:flex;gap:8px;padding:0 8px;color:var(--tx3);font-size:11px}
+.pdock span{cursor:pointer}.pdock span:hover{color:var(--tx)}
+.pbody{flex:1;overflow:auto;min-height:0}
+
+/* blotter table */
+table{width:100%;border-collapse:collapse;font-size:11.5px}
+th{position:sticky;top:0;background:var(--bg2);text-align:left;color:var(--tx3);font-weight:600;font-size:10px;letter-spacing:.4px;text-transform:uppercase;padding:5px 9px;border-bottom:1px solid var(--line2);white-space:nowrap}
+th.r,td.r{text-align:right}
+td{padding:3px 9px;border-bottom:1px solid var(--line);white-space:nowrap;height:25px}
+.mono td{font-family:var(--mono)}
+tbody tr{cursor:pointer}tbody tr:hover{background:var(--bg2)}
+tbody tr.sel{background:#13243c;box-shadow:inset 3px 0 0 var(--acc)}
+.bdg{font-size:9.5px;font-weight:700;padding:1px 6px;border-radius:4px}
+.b-act{background:rgba(63,185,80,.16);color:var(--pos)}.b-rev{background:rgba(210,153,34,.16);color:var(--warn)}.b-blk{background:rgba(248,81,73,.16);color:var(--neg)}
+.sport{font-size:10px;color:var(--tx2);background:var(--bg3);padding:1px 6px;border-radius:4px}
+.up::before{content:"▲";color:var(--pos);font-size:9px;margin-right:3px}.down::before{content:"▼";color:var(--neg);font-size:9px;margin-right:3px}
+.new{font-size:9px;font-weight:800;background:var(--pos);color:#06140a;padding:0 4px;border-radius:3px}
+
+/* MD-Trader price ladder */
+.ladderhdr{padding:6px 10px;border-bottom:1px solid var(--line);background:var(--bg1)}
+.ladderhdr .nm{font-weight:700;font-size:12.5px}.ladderhdr .sub{font-size:10.5px;color:var(--tx3)}
+.ladtbl{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:11.5px;text-align:center}
+.ladtbl th{position:sticky;top:0;background:var(--bg2);color:var(--tx3);font-size:9px;padding:3px 0;border-bottom:1px solid var(--line2)}
+.ladtbl td{padding:1px 4px;border-bottom:1px solid #161d28;height:18px;position:relative}
+.ladtbl .px{font-weight:700;color:var(--tx);background:var(--bg2);width:46px}
+.ladtbl .px.touch{color:#fff;background:#243044}
+.bidc,.askc{position:relative;width:90px}
+.bidc .fill{position:absolute;right:0;top:1px;bottom:1px;background:var(--bid)}
+.askc .fill{position:absolute;left:0;top:1px;bottom:1px;background:var(--ask)}
+.bidc span,.askc span{position:relative;z-index:1}
+.bidc{color:#7fb2e8}.askc{color:#e89090}
+.trig{position:absolute;left:2px;color:var(--warn);font-size:9px;z-index:2}
+.ladfoot{padding:6px 10px;border-top:1px solid var(--line);font-size:10px;color:var(--tx3);display:flex;justify-content:space-between}
+
+/* analysis ticket (trade-card) */
+.ticket{padding:10px;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tk-h{grid-column:1/3;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--line);padding-bottom:7px}
+.tk-h .nm{font-weight:700;font-size:13px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font-size:11.5px}
+.kv .l{color:var(--tx2)}.kv .v{text-align:right;font-family:var(--mono)}
+.tsec{font-size:9.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--tx3);margin:2px 0 4px;font-weight:700}
+.leg{display:flex;gap:7px;font-size:11px;padding:2px 0;align-items:center}
+.leg .t{font-weight:700;font-size:9.5px;padding:1px 5px;border-radius:4px}
+.leg .t.y{background:rgba(63,185,80,.16);color:var(--pos)}.leg .t.n{background:rgba(248,81,73,.16);color:var(--neg)}
+.cf{display:grid;grid-template-columns:64px 1fr 26px;gap:5px;align-items:center;font-size:10px;margin:2px 0}
+.cf .tr{height:6px;background:var(--bg3);border-radius:3px;overflow:hidden}.cf .fi{height:100%;background:linear-gradient(90deg,var(--acc),var(--cyan))}
+.note{font-size:11px;color:var(--tx2);line-height:1.5}
+.bp{padding:6px 12px;font-size:10px;color:var(--tx3);border-top:1px solid var(--line);background:var(--bg1)}
+.bp b{color:var(--tx2)}
+.empty{padding:20px;text-align:center;color:var(--tx3);font-size:12px}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="logo">KALSHI<b>·</b>WS</div>
+  <div class="wstabs">
+    <div class="wstab on">Default <span class="x">✕</span></div>
+    <div class="wstab">WC Desk <span class="x">✕</span></div>
+    <div class="wstab">Tennis <span class="x">✕</span></div>
+  </div>
+  <span class="wsadd">+</span>
+  <div class="spacer"></div>
+  <button class="topbtn" id="lensBtn">Lens: Blended ▾</button>
+  <button class="topbtn">Save layout</button>
+  <button class="topbtn">◐ Theme</button>
+</div>
+
+<div class="status">
+  <span class="st"><span class="led"></span> Scan <b>idle · 12s</b></span>
+  <span class="st">Contracts <b class="mono">1,204</b></span>
+  <span class="st">Checks <b class="mono">747</b></span>
+  <span class="st">Req <b class="mono">49</b></span>
+  <span class="st"><span class="led"></span> Exchange <b>Open</b></span>
+  <span class="st">Auto-scan <b>on · 30s</b></span>
+  <span class="st"><span class="led w"></span> Failed <b>1</b></span>
+  <span class="st">DB <b class="mono">42 MB</b></span>
+  <span class="dim" style="margin-left:auto">Gross · top-of-book · $1 basis · read-only (ladder is analysis, never orders)</span>
+</div>
+
+<div class="body">
+  <div class="rail">
+    <div class="railbtn on" title="Opportunity">▤</div>
+    <div class="railbtn" title="Research Lab">📈</div>
+    <div class="railbtn" title="Operations">⚙</div>
+    <div class="railbtn" title="Watchlist" style="margin-top:auto">★</div>
+    <div class="railbtn" title="Alerts">🔔</div>
+  </div>
+
+  <div class="dock">
+    <!-- Blotter -->
+    <div class="panel blotter">
+      <div class="ptabs"><div class="ptab on">Opportunity Blotter</div><div class="ptab">Review</div><div class="ptab">Blocked</div>
+        <div class="pdock"><span title="float">⧉</span><span title="maximize">▢</span><span title="close">✕</span></div></div>
+      <div class="pbody"><div id="blotter"></div></div>
+    </div>
+    <!-- Price ladder -->
+    <div class="panel ladder">
+      <div class="ptabs"><div class="ptab on">MD Ladder</div><div class="ptab">Chart</div>
+        <div class="pdock"><span>⧉</span><span>▢</span><span>✕</span></div></div>
+      <div class="ladderhdr" id="ladHdr"><div class="nm">Select a row →</div><div class="sub">depth ladder loads here</div></div>
+      <div class="pbody"><table class="ladtbl" id="ladTbl"></table></div>
+      <div class="ladfoot" id="ladFoot"><span>YES bids / NO asks</span><span>read-only</span></div>
+    </div>
+    <!-- Analysis ticket -->
+    <div class="panel ticket-panel">
+      <div class="ptabs"><div class="ptab on">Analysis Ticket</div><div class="ptab">Rules</div><div class="ptab">Evidence</div>
+        <div class="pdock"><span>⧉</span><span>▢</span><span>✕</span></div></div>
+      <div class="pbody"><div id="ticket"><div class="empty">Click an opportunity to load the analysis ticket (read-only trade card).</div></div></div>
+      <div class="bp"><b>Blueprint:</b> dockable panels host the roadmap — blotter §9 · MD ladder = depth §8 · ticket = TradeCard+EvidencePack+9-dim confidence §8/§3/§7 · rail surfaces §9.1 · alerts §10 · workspaces = saved views §9.3.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+const OPPS=[
+ {id:1,b:"act",chg:"new",sport:"Tennis",name:"J. Sinner",sub:"Reach Final ⊇ Win",setup:"Containment",edge:7,roi:14.0,units:140,profit:9.80,trad:"Yes",cav:"",q:"Tight",cost:93,floor:100,worst:-7,best:7,be:93,fill:140,touch:38,side:"yes",legs:[["YES","Reach Final · KXATPADVANCE","38¢",140],["NO","Win · KXFOMEN","55¢",140]],why:"Firm child bid (Reach Final) exceeds parent ask (Win) by 7¢.",conf:{Data:95,Quote:92,Liq:78,Exec:80,Settle:88,Strat:96,Model:60,Compar:84,Cplx:90}},
+ {id:2,b:"act",chg:"up",sport:"Soccer",name:"Brazil v Serbia",sub:"Home/Away/Tie 3-way",setup:"Dutch overround",edge:11,roi:5.5,units:90,profit:9.90,trad:"Yes",cav:"Game postpone",q:"OK",cost:211,floor:200,worst:-11,best:11,be:106,fill:90,touch:61,side:"no",legs:[["NO","Home · KXWCGAME","61¢",90],["NO","Away · KXWCGAME","78¢",90],["NO","Tie · KXWCGAME","72¢",90]],why:"Σ no-ask 11¢ below (n-1)·100 floor.",conf:{Data:94,Quote:80,Liq:70,Exec:74,Settle:82,Strat:95,Model:55,Compar:80,Cplx:78}},
+ {id:3,b:"act",chg:"",sport:"NHL",name:"Oilers @ Panthers",sub:"Head-to-head",setup:"Game dutch",edge:4,roi:4.0,units:200,profit:8.00,trad:"Yes",cav:"",q:"Tight",cost:96,floor:100,worst:-4,best:4,be:96,fill:200,touch:47,side:"yes",legs:[["YES","Oilers · KXNHLGAME","47¢",200],["YES","Panthers · KXNHLGAME","49¢",200]],why:"Underround Σ yes-ask 96¢ < 100¢ draw-free.",conf:{Data:96,Quote:94,Liq:88,Exec:86,Settle:90,Strat:96,Model:62,Compar:85,Cplx:92}},
+ {id:4,b:"act",chg:"ret",sport:"Esports",name:"FaZe v Vitality",sub:"Map-1 draw-free",setup:"Map dutch",edge:3,roi:3.0,units:60,profit:1.80,trad:"Yes",cav:"",q:"OK",cost:97,floor:100,worst:-3,best:3,be:97,fill:60,touch:52,side:"yes",legs:[["YES","FaZe · KXCS2MAP","52¢",60],["YES","Vitality · KXCS2MAP","45¢",60]],why:"Underround 2-way map 97¢ < 100¢.",conf:{Data:90,Quote:78,Liq:60,Exec:66,Settle:86,Strat:94,Model:50,Compar:70,Cplx:88}},
+ {id:5,b:"rev",chg:"new",sport:"NBA",name:"Boston Celtics",sub:"Reach SF ≡ Win Conf",setup:"Equivalence",edge:4,roi:6.0,units:50,profit:2.00,trad:"Rule",cav:"Rule-check req",q:"OK",cost:104,floor:100,worst:-4,best:4,be:104,fill:50,touch:71,side:"yes",legs:[["YES","Reach SF","71¢",50],["NO","Win Conf","33¢",50]],why:"Equivalence cross — settlement wording differs by a token.",conf:{Data:88,Quote:76,Liq:64,Exec:60,Settle:55,Strat:80,Model:48,Compar:72,Cplx:70}},
+ {id:6,b:"rev",chg:"",sport:"Tennis",name:"C. Alcaraz",sub:"Score bundle ≡ Win",setup:"Synthetic",edge:5,roi:5.0,units:40,profit:2.00,trad:"Review",cav:"Settle-check req",q:"Wide",cost:95,floor:100,worst:-5,best:5,be:95,fill:40,touch:54,side:"no",legs:[["YES","3-0","12¢",40],["YES","3-1","18¢",40],["YES","3-2","21¢",40],["NO","Match","54¢",40]],why:"MECE scoreline bundle replicates Win; 5¢ under hedge.",conf:{Data:84,Quote:58,Liq:50,Exec:48,Settle:45,Strat:78,Model:42,Compar:60,Cplx:55}},
+ {id:7,b:"blk",chg:"",sport:"MLB",name:"LA Dodgers",sub:"Playoffs ⊇ Win WS",setup:"Containment",edge:6,roi:0,units:0,profit:0,trad:"No",cav:"Blocked: no size",q:"1-sided",cost:0,floor:100,worst:0,best:0,be:0,fill:0,touch:60,side:"yes",legs:[["YES","Reach Playoffs","—",0],["NO","Win WS","—",0]],why:"Display cross but zero resting size — QUOTE_SIZE_MISSING.",conf:{Data:80,Quote:30,Liq:10,Exec:15,Settle:78,Strat:82,Model:40,Compar:55,Cplx:75}},
+];
+const $=(s,r=document)=>r.querySelector(s);
+let lens="blended",sel=null;
+const lv=o=>lens==="edge"?o.edge:lens==="spread"?o.best-o.worst:o.edge*.35+o.roi*.45+(o.best-o.worst)*.2;
+function chg(o){return o.chg==="new"?'<span class="new">NEW</span>':o.chg==="up"?'<span class="up"></span>':o.chg==="ret"?'<span class="warn">↺</span>':'';}
+function blotter(){
+  const list=[...OPPS].sort((a,b)=>(a.b==="act"?0:1)-(b.b==="act"?0:1)||lv(b)-lv(a));
+  let h='<table class="mono"><thead><tr><th></th><th>Bkt</th><th>Sport</th><th>Participant / match</th><th>Setup</th><th class="r">Edge¢</th><th class="r">ROI%</th><th class="r">Units</th><th class="r">P$</th><th>Trad</th></tr></thead><tbody>';
+  list.forEach(o=>{h+=`<tr data-id="${o.id}" class="${sel===o.id?'sel':''}"><td>${chg(o)}</td>`+
+    `<td><span class="bdg b-${o.b}">${o.b.toUpperCase()}</span></td><td><span class="sport">${o.sport}</span></td>`+
+    `<td style="font-family:var(--sans)"><b>${o.name}</b> <span class="dim">${o.sub}</span></td><td style="font-family:var(--sans)">${o.setup}</td>`+
+    `<td class="r ${o.chg==='up'?'pos':''}">${o.edge||'—'}</td><td class="r">${o.roi?o.roi.toFixed(1):'—'}</td><td class="r">${o.units||'—'}</td>`+
+    `<td class="r">${o.profit?o.profit.toFixed(2):'—'}</td><td class="${o.trad==='Yes'?'pos':o.trad==='No'?'dim':'warn'}">${o.trad}</td></tr>`;});
+  $("#blotter").innerHTML=h+'</tbody></table>';
+  document.querySelectorAll('#blotter tr[data-id]').forEach(tr=>tr.onclick=()=>select(+tr.dataset.id));
+}
+function ladder(o){
+  $("#ladHdr").innerHTML=`<div class="nm">${o.name} <span class="dim">· ${o.sport}</span></div><div class="sub">${o.legs[0][1]}</div>`;
+  const base=o.touch;const levels=[];for(let p=base+5;p>=base-5;p--)levels.push(p);
+  let h='<thead><tr><th>Bid size</th><th>Px ¢</th><th>Ask size</th></tr></thead><tbody>';
+  const maxsz=o.fill*3.2||120;
+  levels.forEach(p=>{
+    const dist=Math.abs(p-base);
+    const bidsz=p<=base?Math.round(o.fill*(1+(base-p)*0.7)):0;
+    const asksz=p>=base?Math.round(o.fill*(1+(p-base)*0.6)):0;
+    const trig=(p===base+2)?'<span class="trig">◀ watch trigger</span>':'';
+    h+=`<tr><td class="bidc">${bidsz?`<span class="fill" style="width:${Math.min(100,bidsz/maxsz*100)}%"></span><span>${bidsz}</span>`:''}</td>`+
+      `<td class="px ${p===base?'touch':''}">${p}${trig}</td>`+
+      `<td class="askc">${asksz?`<span class="fill" style="width:${Math.min(100,asksz/maxsz*100)}%"></span><span>${asksz}</span>`:''}</td></tr>`;
+  });
+  $("#ladTbl").innerHTML=h+'</tbody>';
+  $("#ladFoot").innerHTML=`<span>Touch ${base}¢ · eff fill@50 ≈ ${o.cost+1}¢</span><span>max fill ${o.fill}</span>`;
+}
+function ticket(o){
+  const legs=o.legs.map(l=>`<div class="leg"><span class="t ${l[0]==='YES'?'y':'n'}">${l[0]}</span><span style="flex:1">${l[1]}</span><span class="mono">${l[2]}</span><span class="dim mono">×${l[3]}</span></div>`).join("");
+  const cf=Object.entries(o.conf).map(([k,v])=>`<div class="cf"><span class="dim">${k}</span><div class="tr"><div class="fi" style="width:${v}%"></div></div><span class="mono r">${v}</span></div>`).join("");
+  $("#ticket").innerHTML=`<div class="ticket">
+    <div class="tk-h"><span class="bdg b-${o.b}">${o.b.toUpperCase()}</span><span class="nm">${o.name}</span><span class="dim">${o.sub}</span><span class="sport" style="margin-left:auto">${o.setup}</span></div>
+    <div><div class="tsec">Buy-only plan</div>${legs}
+      <div class="kv" style="margin-top:6px"><span class="l">Cost / $1</span><span class="v">${o.cost}¢</span>
+        <span class="l">Floor</span><span class="v">${o.floor}¢</span><span class="l">Worst / best</span><span class="v">${o.worst} / +${o.best}¢</span>
+        <span class="l">Break-even</span><span class="v">${o.be}%</span><span class="l">Fillable</span><span class="v">${o.fill}</span></div>
+      <div class="tsec" style="margin-top:8px">Evidence</div>
+      <div class="kv"><span class="l">Scan</span><span class="v">scan_8841</span><span class="l">Quote ts</span><span class="v">12s</span><span class="l">Rules</span><span class="v">r3</span></div>
+    </div>
+    <div><div class="tsec">Decomposed confidence — 9 dim</div>${cf}
+      <div class="tsec" style="margin-top:8px">Why flagged</div><div class="note">${o.why}</div></div>
+  </div>`;
+}
+function select(id){sel=id;const o=OPPS.find(x=>x.id===id);blotter();ladder(o);ticket(o);}
+function init(){blotter();
+  $("#lensBtn").onclick=()=>{lens=lens==="blended"?"edge":lens==="edge"?"spread":"blended";$("#lensBtn").textContent="Lens: "+(lens[0].toUpperCase()+lens.slice(1))+" ▾";blotter();};
+  document.querySelectorAll('.railbtn').forEach(b=>b.onclick=()=>{document.querySelectorAll('.railbtn').forEach(x=>x.classList.remove('on'));b.classList.add('on');});
+  document.querySelectorAll('.ptab').forEach(t=>t.onclick=()=>{[...t.parentElement.children].forEach(x=>x.classList&&x.classList.remove('on'));t.classList.add('on');});
+  select(1);
+}
+document.addEventListener('DOMContentLoaded',init);
+</script>
+</body>
+</html>

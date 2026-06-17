@@ -1,0 +1,162 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e3]: 📗 Kalshi_Opportunities.xlsx
+    - generic [ref=e4]:
+      - generic [ref=e5] [cursor=pointer]: File
+      - generic [ref=e6] [cursor=pointer]: Home
+      - generic [ref=e7] [cursor=pointer]: Data
+      - generic [ref=e8] [cursor=pointer]: Formulas
+      - generic [ref=e9] [cursor=pointer]: View
+    - generic [ref=e10]:
+      - button "▦ Trade card" [ref=e11] [cursor=pointer]
+      - 'button "Lens: Blended ▾" [ref=e12] [cursor=pointer]'
+      - button "◐ Theme" [ref=e13] [cursor=pointer]
+  - generic [ref=e14]:
+    - button "▼ Export CSV" [ref=e15] [cursor=pointer]
+    - button "▼ Export XLSX" [ref=e16] [cursor=pointer]
+    - button "Σ AutoSum" [ref=e18] [cursor=pointer]
+    - button "⏷ Filter" [ref=e19] [cursor=pointer]
+    - button "⇅ Sort" [ref=e20] [cursor=pointer]
+    - button "▦ PivotTable" [ref=e21] [cursor=pointer]
+    - button "🎨 Conditional formatting" [ref=e23] [cursor=pointer]
+    - button "❄ Freeze panes" [ref=e24] [cursor=pointer]
+    - generic [ref=e25]: Gross · top-of-book · $1 basis · read-only
+  - generic [ref=e26]:
+    - generic [ref=e27]: A1
+    - generic [ref=e28]: fx
+    - generic [ref=e30]: Select a cell — the formula bar shows the value and its provenance/basis.
+  - generic [ref=e31]:
+    - generic [ref=e32]:
+      - text: Scan
+      - generic [ref=e34]: idle · 12s
+    - generic [ref=e35]:
+      - text: Contracts
+      - generic [ref=e36]: 1,204
+    - generic [ref=e37]:
+      - text: Checks
+      - generic [ref=e38]: "747"
+    - generic [ref=e39]:
+      - text: Req
+      - generic [ref=e40]: "49"
+    - generic [ref=e41]:
+      - text: Exchange
+      - generic [ref=e43]: Open
+    - generic [ref=e44]:
+      - text: Auto-scan
+      - generic [ref=e45]: on · 30s
+    - generic [ref=e46]:
+      - text: Failed
+      - generic [ref=e48]: "1"
+    - generic [ref=e49]:
+      - text: DB
+      - generic [ref=e50]: 42 MB
+  - table [ref=e53]:
+    - rowgroup [ref=e54]:
+      - row "A B C D E F G H I J" [ref=e55]:
+        - columnheader [ref=e56]
+        - columnheader "A" [ref=e57]
+        - columnheader "B" [ref=e58]
+        - columnheader "C" [ref=e59]
+        - columnheader "D" [ref=e60]
+        - columnheader "E" [ref=e61]
+        - columnheader "F" [ref=e62]
+        - columnheader "G" [ref=e63]
+        - columnheader "H" [ref=e64]
+        - columnheader "I" [ref=e65]
+        - columnheader "J" [ref=e66]
+      - row "1 Sport ▼ Participant / match ▼ Setup ▼ Gross edge ¢ ▼ ROI % ▼ Max units ▼ Max profit $ ▼ Tradable ▼ Caveat ▼ Bucket ▼" [ref=e67]:
+        - columnheader "1" [ref=e68]
+        - columnheader "Sport ▼" [ref=e69]:
+          - text: Sport
+          - generic [ref=e70] [cursor=pointer]: ▼
+        - columnheader "Participant / match ▼" [ref=e71]:
+          - text: Participant / match
+          - generic [ref=e72] [cursor=pointer]: ▼
+        - columnheader "Setup ▼" [ref=e73]:
+          - text: Setup
+          - generic [ref=e74] [cursor=pointer]: ▼
+        - columnheader "Gross edge ¢ ▼" [ref=e75]:
+          - text: Gross edge ¢
+          - generic [ref=e76] [cursor=pointer]: ▼
+        - columnheader "ROI % ▼" [ref=e77]:
+          - text: ROI %
+          - generic [ref=e78] [cursor=pointer]: ▼
+        - columnheader "Max units ▼" [ref=e79]:
+          - text: Max units
+          - generic [ref=e80] [cursor=pointer]: ▼
+        - columnheader "Max profit $ ▼" [ref=e81]:
+          - text: Max profit $
+          - generic [ref=e82] [cursor=pointer]: ▼
+        - columnheader "Tradable ▼" [ref=e83]:
+          - text: Tradable
+          - generic [ref=e84] [cursor=pointer]: ▼
+        - columnheader "Caveat ▼" [ref=e85]:
+          - text: Caveat
+          - generic [ref=e86] [cursor=pointer]: ▼
+        - columnheader "Bucket ▼" [ref=e87]:
+          - text: Bucket
+          - generic [ref=e88] [cursor=pointer]: ▼
+    - rowgroup [ref=e89]:
+      - row "2 Tennis J. Sinner Containment 7 14.0 140 9.80 Yes — ACT" [ref=e90]:
+        - cell "2" [ref=e91]
+        - cell "Tennis" [ref=e92]
+        - cell "J. Sinner" [ref=e93]
+        - cell "Containment" [ref=e94]
+        - cell "7" [ref=e95]
+        - cell "14.0" [ref=e96]
+        - cell "140" [ref=e97]
+        - cell "9.80" [ref=e98]
+        - cell "Yes" [ref=e99]
+        - cell "—" [ref=e100]
+        - cell "ACT" [ref=e101]
+      - row "3 Soccer Brazil v Serbia Dutch overround 11 5.5 90 9.90 Yes Game postpone ACT" [ref=e102]:
+        - cell "3" [ref=e103]
+        - cell "Soccer" [ref=e104]
+        - cell "Brazil v Serbia" [ref=e105]
+        - cell "Dutch overround" [ref=e106]
+        - cell "11" [ref=e107]
+        - cell "5.5" [ref=e108]
+        - cell "90" [ref=e109]
+        - cell "9.90" [ref=e110]
+        - cell "Yes" [ref=e111]
+        - cell "Game postpone" [ref=e112]
+        - cell "ACT" [ref=e113]
+      - row "4 NHL Oilers @ Panthers Game dutch 4 4.0 200 8.00 Yes — ACT" [ref=e114]:
+        - cell "4" [ref=e115]
+        - cell "NHL" [ref=e116]
+        - cell "Oilers @ Panthers" [ref=e117]
+        - cell "Game dutch" [ref=e118]
+        - cell "4" [ref=e119]
+        - cell "4.0" [ref=e120]
+        - cell "200" [ref=e121]
+        - cell "8.00" [ref=e122]
+        - cell "Yes" [ref=e123]
+        - cell "—" [ref=e124]
+        - cell "ACT" [ref=e125]
+      - row "5 Esports FaZe v Vitality Map dutch 3 3.0 60 1.80 Yes — ACT" [ref=e126]:
+        - cell "5" [ref=e127]
+        - cell "Esports" [ref=e128]
+        - cell "FaZe v Vitality" [ref=e129]
+        - cell "Map dutch" [ref=e130]
+        - cell "3" [ref=e131]
+        - cell "3.0" [ref=e132]
+        - cell "60" [ref=e133]
+        - cell "1.80" [ref=e134]
+        - cell "Yes" [ref=e135]
+        - cell "—" [ref=e136]
+        - cell "ACT" [ref=e137]
+  - generic [ref=e138]:
+    - generic [ref=e139] [cursor=pointer]: Opportunities
+    - generic [ref=e140] [cursor=pointer]: Review
+    - generic [ref=e141] [cursor=pointer]: Blocked
+    - generic [ref=e142] [cursor=pointer]: Research
+    - generic [ref=e143] [cursor=pointer]: Operations
+    - generic [ref=e144] [cursor=pointer]: Watchlist
+    - generic [ref=e145] [cursor=pointer]: Journal
+    - generic [ref=e146] [cursor=pointer]: +
+    - generic [ref=e147]: "Count: 4 Avg edge: 6.3¢ Sum profit: $29.50"
+  - generic [ref=e148]:
+    - generic [ref=e149]:
+      - text: Trade card
+      - generic [ref=e150] [cursor=pointer]: ✕
+    - generic [ref=e152]: "Blueprint: sheets = surfaces (§9.1) · formula bar = basis/provenance (§6) · heatmaps = at-a-glance ranking · this pane = TradeCard + 9-dim confidence + EvidencePack (§8/§7/§3) · Journal sheet = §15."

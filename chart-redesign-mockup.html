@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Participant-Detail charts — redesign options</title>
+<style>
+:root{
+  --bg:#000;--bg1:#070705;--bg2:#0d0c09;--panel:#0a0a08;--line:#1b1910;--line2:#2a2616;--hover:#14120a;
+  --amber:#ffb000;--amber-d:#7a5500;--orange:#ff7b00;--green:#33ff7a;--red:#ff453a;--cyan:#43d9ff;--violet:#b69bff;
+  --tx:#e8c878;--tx2:#b79a52;--tx3:#7a6a3a;--white:#f6efe0;
+  --mono:'Consolas','SF Mono','DejaVu Sans Mono',monospace;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--tx);font-family:var(--mono);font-size:12px;line-height:1.4;margin:0;padding:22px;
+  background-image:repeating-linear-gradient(0deg,rgba(255,176,0,.018) 0 1px,transparent 1px 3px)}
+h1{color:var(--white);font-size:16px;margin:0 0 4px}
+.lead{color:var(--tx3);font-size:11px;margin:0 0 20px;max-width:980px}
+.lead b{color:var(--amber)}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:30px}
+.card{background:var(--bg1);border:1px solid var(--line);padding:12px}
+.card.cur{border-color:#3a1414}.card.a{border-color:var(--amber-d)}.card.b{border-color:#1f3a4a}
+.tag{display:inline-block;font-size:9px;letter-spacing:1px;font-weight:700;padding:1px 6px;margin-bottom:9px}
+.tag.cur{background:#2a0f0f;color:var(--red)}.tag.a{background:#2a2105;color:var(--amber)}.tag.b{background:#0c2330;color:var(--cyan)}
+.sect{color:var(--amber);font-size:9px;letter-spacing:1px;margin:14px 0 6px;border-bottom:1px solid var(--line);padding-bottom:3px}
+.note{color:var(--tx3);font-size:10px;margin-top:8px}
+.cap{color:var(--tx2);font-size:10px;margin:2px 0 10px}
+/* current SVG charts (replicated at their real, cramped size) */
+.chart{width:100%;max-width:300px;height:auto;display:block;margin:4px auto 6px;background:var(--bg1);border:1px solid var(--line)}
+.chart .cl{fill:var(--tx3);font-size:7px;font-family:var(--mono)}
+/* proposed tables */
+table{border-collapse:collapse;width:100%;font-size:11px}
+th{color:var(--tx3);font-weight:600;text-align:right;padding:3px 6px;border-bottom:1px solid var(--line2);font-size:9.5px;letter-spacing:.3px}
+th.l,td.l{text-align:left}
+td{padding:3px 6px;border-bottom:1px solid var(--line);text-align:right;color:var(--tx)}
+td.v{color:var(--white);font-weight:600}
+tr:hover td{background:var(--hover)}
+.mb{position:relative;height:11px;background:#0e0d0a;border:1px solid var(--line);min-width:60px}
+.mb>i{position:absolute;left:0;top:0;bottom:0;background:var(--cyan);opacity:.55}
+.mb.inv>i{background:var(--red)}
+/* diverging profit bar */
+.pb{position:relative;height:12px;background:#0e0d0a;border:1px solid var(--line);min-width:90px}
+.pb>.z{position:absolute;top:0;bottom:0;width:1px;background:var(--tx3)}
+.pb>i{position:absolute;top:1px;bottom:1px}
+.pb>i.g{background:var(--green);opacity:.6}.pb>i.r{background:var(--red);opacity:.6}
+.hdrline{color:var(--tx2);font-size:10px;margin:0 0 6px}.hdrline b{color:var(--white)}
+.badge{font-size:8.5px;padding:0 4px;border:1px solid var(--line2);color:var(--tx3)}
+.flr{color:var(--tx3)}.bon{color:var(--cyan)}
+.delta-ok{color:var(--green)}.delta-bad{color:var(--red);font-weight:700}
+.foot{color:var(--tx3);font-size:10px;border-top:1px solid var(--line);padding-top:10px;margin-top:8px}
+</style></head>
+<body>
+
+<h1>Participant-Detail charts — redesign options</h1>
+<p class="lead">You disliked the two inline SVG bar charts: <b>too small/cramped, bars imprecise/ugly, and you'd rather read real numbers</b>.
+Below, each chart shows the <b>current</b> version next to two redesigns — <b>Option A</b> (numbers-first table with a thin micro-bar as a
+secondary cue) and <b>Option B</b> (pure numeric table, no bars at all). Real live data: golf ladder = <b>Patrick Rodgers · U.S. Open</b>;
+payoff = <b>Pittsburgh · Win Super Bowl band</b> (cost 102¢).</p>
+
+<!-- ============================ LADDER ============================ -->
+<div class="sect">1 · CONTAINMENT LADDER (broad → deep; deeper must price ≤ broader)</div>
+<div class="grid">
+
+  <!-- CURRENT -->
+  <div class="card cur">
+    <span class="tag cur">CURRENT</span>
+    <div class="cap">Tiny horizontal bars; % squished at the end; labels truncated to 15 chars; redundant with the table above it.</div>
+    <svg viewBox="0 0 240 64" class="chart" preserveAspectRatio="xMidYMid meet">
+      <!-- 4 rows, rowH 14, barMax ~ (240-100-8-24)=108, scaled to max 9% -->
+      <g><text x="4" y="10" class="cl">Top 20</text><rect x="100" y="2" width="108" height="9" fill="#43d9ff" opacity="0.85"/><text x="211" y="10" class="cl">9%</text></g>
+      <g><text x="4" y="24" class="cl">Top 10</text><rect x="100" y="16" width="36" height="9" fill="#43d9ff" opacity="0.85"/><text x="139" y="24" class="cl">3%</text></g>
+      <g><text x="4" y="38" class="cl">Top 5</text><rect x="100" y="30" width="30" height="9" fill="#43d9ff" opacity="0.85"/><text x="133" y="38" class="cl">2%</text></g>
+      <g><text x="4" y="52" class="cl">Win Tournament</text><rect x="100" y="44" width="2" height="9" fill="#43d9ff" opacity="0.85"/><text x="105" y="52" class="cl">0%</text></g>
+    </svg>
+    <div class="note">Hard to compare 3% vs 2.5%; "0.1%" renders as "0%"; no sense of the gap between rungs.</div>
+  </div>
+
+  <!-- OPTION A -->
+  <div class="card a">
+    <span class="tag a">OPTION A — table + micro-bar</span>
+    <div class="cap">Exact % is primary; thin bar is a secondary shape cue; explicit Δ-vs-parent; inversions turn the bar + Δ red.</div>
+    <table><thead><tr>
+      <th class="l">Layer</th><th>Disp&nbsp;%</th><th>Δ&nbsp;vs&nbsp;parent</th><th class="l" style="width:34%">shape</th>
+    </tr></thead><tbody>
+      <tr><td class="l">Top 20</td><td class="v">9.0%</td><td class="dim">—</td><td><div class="mb"><i style="width:100%"></i></div></td></tr>
+      <tr><td class="l">Top 10</td><td class="v">3.0%</td><td class="delta-ok">−6.0</td><td><div class="mb"><i style="width:33%"></i></div></td></tr>
+      <tr><td class="l">Top 5</td><td class="v">2.5%</td><td class="delta-ok">−0.5</td><td><div class="mb"><i style="width:28%"></i></div></td></tr>
+      <tr><td class="l">Win Tournament</td><td class="v">0.1%</td><td class="delta-ok">−2.4</td><td><div class="mb"><i style="width:1.1%"></i></div></td></tr>
+    </tbody></table>
+    <div class="note">Δ negative = consistent step-down. A positive Δ (deeper priced ABOVE broader) = <span class="delta-bad">red ▲ inversion</span>, the violation signature.</div>
+  </div>
+
+  <!-- OPTION B -->
+  <div class="card b">
+    <span class="tag b">OPTION B — pure table</span>
+    <div class="cap">No bars at all. Just the numbers, with bid/ask and the gap to the parent. Densest + most precise.</div>
+    <table><thead><tr>
+      <th class="l">Layer</th><th>Disp&nbsp;%</th><th>Δ&nbsp;parent</th><th>Step</th>
+    </tr></thead><tbody>
+      <tr><td class="l">Top 20</td><td class="v">9.0%</td><td class="dim">—</td><td class="dim">broadest</td></tr>
+      <tr><td class="l">Top 10</td><td class="v">3.0%</td><td class="delta-ok">−6.0</td><td class="delta-ok">↓ ok</td></tr>
+      <tr><td class="l">Top 5</td><td class="v">2.5%</td><td class="delta-ok">−0.5</td><td class="delta-ok">↓ ok</td></tr>
+      <tr><td class="l">Win Tournament</td><td class="v">0.1%</td><td class="delta-ok">−2.4</td><td class="delta-ok">↓ ok</td></tr>
+    </tbody></table>
+    <div class="note">An inverted rung would read <span class="delta-bad">↑ INVERTED</span> in red — impossible to miss, no chart needed.</div>
+  </div>
+</div>
+
+<!-- ============================ PAYOFF ============================ -->
+<div class="sect">2 · PER-UNIT PAYOFF BY SCENARIO (gross; cost 102¢)</div>
+<div class="grid">
+
+  <!-- CURRENT -->
+  <div class="card cur">
+    <span class="tag cur">CURRENT</span>
+    <div class="cap">Vertical bars; scenario labels truncated to 7 chars; you read profit by eyeballing bar-vs-dashed-cost-line.</div>
+    <svg viewBox="0 0 240 96" class="chart" preserveAspectRatio="xMidYMid meet">
+      <!-- max 200; cost line 102 -->
+      <line x1="16" x2="224" y1="40.96" y2="40.96" stroke="#ff453a" stroke-dasharray="3 3"/>
+      <text x="224" y="38" text-anchor="end" class="cl">cost 102¢</text>
+      <!-- bars: y = 96-16 - v/200*(96-32); base 80 -->
+      <g><rect x="18" y="48" width="64" height="32" fill="#33ff7a" opacity="0.85"/><text x="50" y="90" text-anchor="middle" class="cl">Win Sup</text></g>
+      <g><rect x="90" y="16" width="64" height="64" fill="#43d9ff" opacity="0.85"/><text x="122" y="90" text-anchor="middle" class="cl">Win Con</text></g>
+      <g><rect x="162" y="48" width="64" height="32" fill="#33ff7a" opacity="0.85"/><text x="194" y="90" text-anchor="middle" class="cl">Not Win</text></g>
+    </svg>
+    <div class="note">"Win Sup" / "Win Con" / "Not Win" are ambiguous; profit (−2 / +98 / −2) isn't shown at all — you infer it.</div>
+  </div>
+
+  <!-- OPTION A -->
+  <div class="card a">
+    <span class="tag a">OPTION A — table + profit bar</span>
+    <div class="hdrline">Cost <b>102¢</b> · per unit · gross · max loss <b class="red">2¢</b> · max profit <b class="green">98¢</b></div>
+    <table><thead><tr>
+      <th class="l">Scenario</th><th>Payout</th><th>Profit</th><th class="l" style="width:34%">−&nbsp;0&nbsp;+</th>
+    </tr></thead><tbody>
+      <tr><td class="l">Win Super Bowl <span class="badge">floor</span></td><td class="v">100¢</td><td class="red">−2¢</td>
+        <td><div class="pb"><div class="z" style="left:50%"></div><i class="r" style="right:50%;width:1%"></i></div></td></tr>
+      <tr><td class="l">Win Conf, not SB <span class="badge">bonus</span></td><td class="v">200¢</td><td class="green">+98¢</td>
+        <td><div class="pb"><div class="z" style="left:50%"></div><i class="g" style="left:50%;width:49%"></i></div></td></tr>
+      <tr><td class="l">Not Win Conf <span class="badge">floor</span></td><td class="v">100¢</td><td class="red">−2¢</td>
+        <td><div class="pb"><div class="z" style="left:50%"></div><i class="r" style="right:50%;width:1%"></i></div></td></tr>
+    </tbody></table>
+    <div class="note">Profit (= payout − cost) is explicit + colored; the diverging bar shows the convex "bonus" window at a glance.</div>
+  </div>
+
+  <!-- OPTION B -->
+  <div class="card b">
+    <span class="tag b">OPTION B — pure table</span>
+    <div class="hdrline">Cost <b>102¢</b> · per unit · gross</div>
+    <table><thead><tr>
+      <th class="l">Scenario</th><th>Settles</th><th>Payout</th><th>Profit</th>
+    </tr></thead><tbody>
+      <tr><td class="l">Win Super Bowl</td><td class="flr">floor</td><td class="v">100¢</td><td class="red">−2¢</td></tr>
+      <tr><td class="l">Win Conf, not SB</td><td class="bon">bonus</td><td class="v">200¢</td><td class="green">+98¢</td></tr>
+      <tr><td class="l">Not Win Conf</td><td class="flr">floor</td><td class="v">100¢</td><td class="red">−2¢</td></tr>
+    </tbody></table>
+    <div class="note">Every number exact; no bar to misread. "Settles" names the role (floor / bonus) instead of a color you decode.</div>
+  </div>
+</div>
+
+<div class="foot">
+  <b style="color:var(--white)">My recommendation: Option A for both</b> — numbers-first (fixes "hard to read" + "imprecise"), compact (fixes "cramped"),
+  but keeps one thin honest cue so you still get shape at a glance. Option B if you want zero bars. Either drops the separate SVG entirely and
+  folds the visual into the data table. Tell me A or B (you can mix — e.g. A for payoff, B for ladder) and I'll wire it into <code>Inspector.tsx</code> / <code>Charts.tsx</code>.
+</div>
+
+</body></html>

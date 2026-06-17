@@ -1,0 +1,2046 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6] [cursor=pointer]: OPP
+      - generic [ref=e7] [cursor=pointer]: RES
+      - generic [ref=e8] [cursor=pointer]: OPS
+      - generic [ref=e9] [cursor=pointer]: ALRT
+    - generic [ref=e10]:
+      - generic [ref=e11]: ">"
+      - textbox "SEARCH — functions · participants · lenses · layouts (Ctrl-K or /)" [ref=e12]:
+        - /placeholder: SEARCH — functions · participants · lenses · layouts   (Ctrl-K or /)
+      - generic [ref=e13]: Ctrl K
+      - button "<GO>" [ref=e14] [cursor=pointer]
+    - generic [ref=e15]: 4287s · KALSHI
+  - generic [ref=e16]:
+    - generic [ref=e17]:
+      - generic [ref=e18]: ●
+      - text: "SNAPSHOT #2545 · 4287s ago"
+    - generic [ref=e19]:
+      - text: Opps
+      - generic [ref=e20]: 2,370
+    - generic [ref=e21]:
+      - text: Contracts
+      - generic [ref=e22]: 3,778
+    - generic [ref=e23]:
+      - text: Checks
+      - generic [ref=e24]: 1,574
+    - generic [ref=e25]:
+      - text: Requests
+      - generic [ref=e26]: "188"
+    - generic [ref=e27]:
+      - text: Sports
+      - generic [ref=e28]: "10"
+    - generic [ref=e29]:
+      - generic [ref=e30]: ●
+      - text: Failed
+      - generic [ref=e31]: "0"
+    - generic [ref=e32]: GROSS · TOP-OF-BOOK · $1 BASIS · READ-ONLY · NO ORDER ENTRY · NOT RISKLESS
+  - generic [ref=e33]:
+    - generic [ref=e34] [cursor=pointer]:
+      - generic [ref=e35]: 1)
+      - text: OPP
+    - generic [ref=e36] [cursor=pointer]:
+      - generic [ref=e37]: 2)
+      - text: RES
+    - generic [ref=e38] [cursor=pointer]:
+      - generic [ref=e39]: 3)
+      - text: OPS
+    - generic [ref=e40]:
+      - generic [ref=e41]: LENS
+      - generic [ref=e42]:
+        - button "BLENDED" [ref=e43] [cursor=pointer]
+        - button "EDGE¢" [ref=e44] [cursor=pointer]
+        - button "SPREAD" [ref=e45] [cursor=pointer]
+        - button "OUTRIGHT+SPREAD" [ref=e46] [cursor=pointer]
+        - button "IMPLIED EV" [ref=e47] [cursor=pointer]
+        - button "RIPENESS" [ref=e48] [cursor=pointer]
+      - generic [ref=e49]: engine order
+      - button "◐" [ref=e50] [cursor=pointer]
+  - generic [ref=e51]:
+    - button "ACTIONABLE 12 executable now" [ref=e272] [cursor=pointer]:
+      - generic [ref=e53]: ACTIONABLE
+      - generic [ref=e54]: "12"
+      - generic [ref=e55]: executable now
+    - button "REVIEW 29 settlement-dep" [ref=e273] [cursor=pointer]:
+      - generic [ref=e57]: REVIEW
+      - generic [ref=e58]: "29"
+      - generic [ref=e59]: settlement-dep
+    - button "BLOCKED 13 not fillable" [ref=e274] [cursor=pointer]:
+      - generic [ref=e61]: BLOCKED
+      - generic [ref=e62]: "13"
+      - generic [ref=e63]: not fillable
+    - button "BOUNDED-LOSS 231 can lose money" [ref=e275] [cursor=pointer]:
+      - generic [ref=e65]: BOUNDED-LOSS
+      - generic [ref=e66]: "231"
+      - generic [ref=e67]: can lose money
+    - button "NEAR-MISS 205 watchlist" [ref=e276] [cursor=pointer]:
+      - generic [ref=e69]: NEAR-MISS
+      - generic [ref=e70]: "205"
+      - generic [ref=e71]: watchlist
+    - button "QUALIFIER 50 WC setups" [ref=e277] [cursor=pointer]:
+      - generic [ref=e73]: QUALIFIER
+      - generic [ref=e74]: "50"
+      - generic [ref=e75]: WC setups
+    - button "CHEAP-NO 488 NO fades" [ref=e278] [cursor=pointer]:
+      - generic [ref=e77]: CHEAP-NO
+      - generic [ref=e78]: "488"
+      - generic [ref=e79]: NO fades
+    - button "DATA-QUALITY 1,342 diagnostic" [ref=e279] [cursor=pointer]:
+      - generic [ref=e81]: DATA-QUALITY
+      - generic [ref=e82]: 1,342
+      - generic [ref=e83]: diagnostic
+  - generic [ref=e84]:
+    - generic [ref=e85]: SPORT
+    - combobox [ref=e86]:
+      - option "All" [selected]
+      - option "Esports"
+      - option "Golf"
+      - option "MLB"
+      - option "Motorsport"
+      - option "NBA"
+      - option "NFL"
+      - option "NHL"
+      - option "Soccer (World Cup)"
+      - option "Tennis"
+      - option "WNBA"
+    - generic [ref=e87]: PARTICIPANT
+    - textbox "contains…" [ref=e88]
+    - generic [ref=e89] [cursor=pointer]: clear
+  - generic [ref=e90]:
+    - generic [ref=e91]:
+      - generic [ref=e92]: LAYOUT
+      - combobox [ref=e93]:
+        - option "Default" [selected]
+        - option "Inspect"
+        - option "Research"
+        - option "Triage"
+        - option "Blotter full"
+      - button "⧉ POP" [ref=e94] [cursor=pointer]
+      - button "↺" [ref=e95] [cursor=pointer]
+      - generic [ref=e96]: drag tabs to rearrange · drag splitters to resize · ⧉ to pop out
+    - generic [ref=e120]:
+      - generic [ref=e127]:
+        - generic [ref=e129]:
+          - generic [ref=e134] [cursor=pointer]:
+            - generic [ref=e135]: BLOTTER
+            - img [ref=e137]
+          - generic [ref=e142]:
+            - generic [ref=e143]:
+              - generic [ref=e144] [cursor=pointer]: EXECUTABLE 12 firm · gross edge
+              - generic [ref=e145] [cursor=pointer]: SPECULATIVE 231 bounded-loss · can lose money
+              - generic [ref=e146] [cursor=pointer]: DIAGNOSTIC 1,342 review-only · data quality
+            - generic [ref=e147]:
+              - generic [ref=e148] [cursor=pointer]: ACTIONABLE12
+              - generic [ref=e149] [cursor=pointer]: REVIEW29
+              - generic [ref=e150] [cursor=pointer]: BLOCKED13
+              - generic [ref=e151]: Showing 12 · 8 cols · ⚙ columns ▾
+            - generic [ref=e154]:
+              - grid [ref=e156]:
+                - rowgroup [ref=e158]:
+                  - row "Participant / match Sport Gross edge ¢ ROI %" [ref=e159]:
+                    - columnheader "Participant / match" [ref=e160]:
+                      - text: 
+                      - generic [ref=e162] [cursor=pointer]: Participant / match
+                      - text: 
+                      - generic:    
+                    - columnheader "Sport" [ref=e163]:
+                      - text: 
+                      - generic [ref=e165] [cursor=pointer]: Sport
+                      - text: 
+                      - generic:    
+                    - columnheader "Gross edge ¢" [ref=e166]:
+                      - text: 
+                      - generic [ref=e168] [cursor=pointer]: Gross edge ¢
+                      - text: 
+                      - generic:    
+                    - columnheader "ROI %" [ref=e169]:
+                      - text: 
+                      - generic [ref=e171] [cursor=pointer]: ROI %
+                      - text: 
+                      - generic:    
+                - rowgroup [ref=e172]:
+                  - row "Pro Basketball (M) · 27 winner field Pro Basketball (M) · 27 NBA 4¢ 0.2%" [ref=e280]:
+                    - gridcell "Pro Basketball (M) · 27 winner field Pro Basketball (M) · 27" [ref=e281]:
+                      - generic [ref=e282]: Pro Basketball (M) · 27 winner field Pro Basketball (M) · 27
+                    - gridcell "NBA" [ref=e283]
+                    - gridcell "4¢" [ref=e284]
+                    - gridcell "0.2%" [ref=e285]
+                  - row "Group Stage — stage of elimination FIFA World Cup · 26 Soccer (World Cup) 4¢ 0.7%" [ref=e286]:
+                    - gridcell "Group Stage — stage of elimination FIFA World Cup · 26" [ref=e287]:
+                      - generic [ref=e288]: Group Stage — stage of elimination FIFA World Cup · 26
+                    - gridcell "Soccer (World Cup)" [ref=e289]
+                    - gridcell "4¢" [ref=e290]
+                    - gridcell "0.7%" [ref=e291]
+                  - row "Group Stage — stage of elimination FIFA World Cup · 26 Soccer (World Cup) 3¢ 0.5%" [ref=e292]:
+                    - gridcell "Group Stage — stage of elimination FIFA World Cup · 26" [ref=e293]:
+                      - generic [ref=e294]: Group Stage — stage of elimination FIFA World Cup · 26
+                    - gridcell "Soccer (World Cup)" [ref=e295]
+                    - gridcell "3¢" [ref=e296]
+                    - gridcell "0.5%" [ref=e297]
+                  - row "Carolina Royal Ravens vs Riyadh Falcons Call of Duty · 26 Esports 2¢ 2%" [ref=e298]:
+                    - gridcell "Carolina Royal Ravens vs Riyadh Falcons Call of Duty · 26" [ref=e299]:
+                      - generic [ref=e300]: Carolina Royal Ravens vs Riyadh Falcons Call of Duty · 26
+                    - gridcell "Esports" [ref=e301]
+                    - gridcell "2¢" [ref=e302]
+                    - gridcell "2%" [ref=e303]
+                  - row "ODDIK vs paiN Academy CS2 · 26 Esports 2¢ 2%" [ref=e304]:
+                    - gridcell "ODDIK vs paiN Academy CS2 · 26" [ref=e305]:
+                      - generic [ref=e306]: ODDIK vs paiN Academy CS2 · 26
+                    - gridcell "Esports" [ref=e307]
+                    - gridcell "2¢" [ref=e308]
+                    - gridcell "2%" [ref=e309]
+                  - row "Scotland vs Morocco FIFA World Cup · 26 Soccer (World Cup) 2¢ 1%" [ref=e310]:
+                    - gridcell "Scotland vs Morocco FIFA World Cup · 26" [ref=e311]:
+                      - generic [ref=e312]: Scotland vs Morocco FIFA World Cup · 26
+                    - gridcell "Soccer (World Cup)" [ref=e313]
+                    - gridcell "2¢" [ref=e314]
+                    - gridcell "1%" [ref=e315]
+                  - row "Cape Verde FIFA World Cup · 26 Soccer (World Cup) 1¢ 1%" [ref=e316]:
+                    - gridcell "Cape Verde FIFA World Cup · 26" [ref=e317]:
+                      - generic [ref=e318]: Cape Verde FIFA World Cup · 26
+                    - gridcell "Soccer (World Cup)" [ref=e319]
+                    - gridcell "1¢" [ref=e320]
+                    - gridcell "1%" [ref=e321]
+                  - row "Cape Verde vs Saudi Arabia FIFA World Cup · 26 Soccer (World Cup) 1¢ 1%" [ref=e322]:
+                    - gridcell "Cape Verde vs Saudi Arabia FIFA World Cup · 26" [ref=e323]:
+                      - generic [ref=e324]: Cape Verde vs Saudi Arabia FIFA World Cup · 26
+                    - gridcell "Soccer (World Cup)" [ref=e325]
+                    - gridcell "1¢" [ref=e326]
+                    - gridcell "1%" [ref=e327]
+                  - row "F1 · main-race · 26 winner field F1 · main-race · 26 Motorsport 1¢ 0.3%" [ref=e328]:
+                    - gridcell "F1 · main-race · 26 winner field F1 · main-race · 26" [ref=e329]:
+                      - generic [ref=e330]: F1 · main-race · 26 winner field F1 · main-race · 26
+                    - gridcell "Motorsport" [ref=e331]
+                    - gridcell "1¢" [ref=e332]
+                    - gridcell "0.3%" [ref=e333]
+                  - row "Tessa Johanna Brockmann vs Alycia Parks Berlin Tennis 1¢ 1%" [ref=e334]:
+                    - gridcell "Tessa Johanna Brockmann vs Alycia Parks Berlin" [ref=e335]:
+                      - generic [ref=e336]: Tessa Johanna Brockmann vs Alycia Parks Berlin
+                    - gridcell "Tennis" [ref=e337]
+                    - gridcell "1¢" [ref=e338]
+                    - gridcell "1%" [ref=e339]
+                  - row "Tommy Paul vs Zachary Svajda ATP London Tennis 1¢ 1%" [ref=e340]:
+                    - gridcell "Tommy Paul vs Zachary Svajda ATP London" [ref=e341]:
+                      - generic [ref=e342]: Tommy Paul vs Zachary Svajda ATP London
+                    - gridcell "Tennis" [ref=e343]
+                    - gridcell "1¢" [ref=e344]
+                    - gridcell "1%" [ref=e345]
+                  - row "Croatia vs Ghana FIFA World Cup · 26 Soccer (World Cup) 1¢ 0.5%" [ref=e346]:
+                    - gridcell "Croatia vs Ghana FIFA World Cup · 26" [ref=e347]:
+                      - generic [ref=e348]: Croatia vs Ghana FIFA World Cup · 26
+                    - gridcell "Soccer (World Cup)" [ref=e349]
+                    - gridcell "1¢" [ref=e350]
+                    - gridcell "0.5%" [ref=e351]
+                - rowgroup
+                - rowgroup [ref=e175]
+                - rowgroup
+              - text:    
+        - generic [ref=e179]:
+          - generic [ref=e184] [cursor=pointer]:
+            - generic [ref=e185]: MD LADDER
+            - img [ref=e187]
+          - generic [ref=e192]:
+            - generic [ref=e193]: READ-ONLY DEPTH VIEW — NO ORDERS · TOP-OF-BOOK + DERIVED
+            - generic [ref=e194]: —
+        - generic [ref=e200]:
+          - generic [ref=e202]:
+            - generic [ref=e207] [cursor=pointer]:
+              - generic [ref=e208]: RECENTLY ACTIONABLE
+              - img [ref=e210]
+            - generic [ref=e215]:
+              - generic [ref=e355] [cursor=pointer]:
+                - generic [ref=e356]: ●
+                - generic [ref=e357]:
+                  - text: Pro Basketball (M) · 27 winner field
+                  - generic [ref=e358]: NBA · overround
+                - generic [ref=e359]: 4¢
+              - generic [ref=e360] [cursor=pointer]:
+                - generic [ref=e361]: ●
+                - generic [ref=e362]:
+                  - text: Group Stage — stage of elimination
+                  - generic [ref=e363]: Soccer (World Cup) · overround
+                - generic [ref=e364]: 4¢
+              - generic [ref=e365] [cursor=pointer]:
+                - generic [ref=e366]: ●
+                - generic [ref=e367]:
+                  - text: Group Stage — stage of elimination
+                  - generic [ref=e368]: Soccer (World Cup) · overround
+                - generic [ref=e369]: 3¢
+              - generic [ref=e370] [cursor=pointer]:
+                - generic [ref=e371]: ●
+                - generic [ref=e372]:
+                  - text: Carolina Royal Ravens vs Riyadh Falcons
+                  - generic [ref=e373]: Esports · underround
+                - generic [ref=e374]: 2¢
+              - generic [ref=e375] [cursor=pointer]:
+                - generic [ref=e376]: ●
+                - generic [ref=e377]:
+                  - text: ODDIK vs paiN Academy
+                  - generic [ref=e378]: Esports · overround
+                - generic [ref=e379]: 2¢
+              - generic [ref=e380] [cursor=pointer]:
+                - generic [ref=e381]: ●
+                - generic [ref=e382]:
+                  - text: Scotland vs Morocco
+                  - generic [ref=e383]: Soccer (World Cup) · overround
+                - generic [ref=e384]: 2¢
+              - generic [ref=e385] [cursor=pointer]:
+                - generic [ref=e386]: ●
+                - generic [ref=e387]:
+                  - text: Cape Verde
+                  - generic [ref=e388]: Soccer (World Cup) · Reach Semifinals ≤ Reach Quarterfinals
+                - generic [ref=e389]: 1¢
+              - generic [ref=e217] [cursor=pointer]: REVIEW MOVERS
+              - generic [ref=e390] [cursor=pointer]:
+                - generic [ref=e391]: ◐
+                - generic [ref=e392]:
+                  - text: Round of 32 — Reach Round of 32 (synthetic vs advance)
+                  - generic [ref=e393]: Soccer (World Cup) · rule-dep
+              - generic [ref=e394] [cursor=pointer]:
+                - generic [ref=e395]: ◐
+                - generic [ref=e396]:
+                  - text: Quarterfinals — Reach Quarterfinals (synthetic vs advance)
+                  - generic [ref=e397]: Soccer (World Cup) · rule-dep
+              - generic [ref=e398] [cursor=pointer]:
+                - generic [ref=e399]: ◐
+                - generic [ref=e400]:
+                  - text: Round of 16 — Reach Round of 16 (synthetic vs advance)
+                  - generic [ref=e401]: Soccer (World Cup) · rule-dep
+              - generic [ref=e402] [cursor=pointer]:
+                - generic [ref=e403]: ◐
+                - generic [ref=e404]:
+                  - text: Round of 16 — Reach Round of 16 (synthetic vs advance)
+                  - generic [ref=e405]: Soccer (World Cup) · rule-dep
+          - generic [ref=e219]:
+            - generic [ref=e224] [cursor=pointer]:
+              - generic [ref=e225]: ALERTS
+              - img [ref=e227]
+            - generic [ref=e232]:
+              - generic [ref=e233]:
+                - generic [ref=e234]: ●
+                - generic [ref=e235]:
+                  - generic [ref=e236]: became executable — Pro Basketball (M) · 27 winner field
+                  - generic [ref=e237]: firm both legs
+              - generic [ref=e238]:
+                - generic [ref=e239]: ●
+                - generic [ref=e240]:
+                  - generic [ref=e241]: bucket changed — → Review · rule-check
+                  - generic [ref=e242]: settlement check
+              - generic [ref=e243]:
+                - generic [ref=e244]: ●
+                - generic [ref=e245]:
+                  - generic [ref=e246]: series failed — 0 series
+                  - generic [ref=e247]: coverage partial
+              - generic [ref=e248]:
+                - generic [ref=e249]: ●
+                - generic [ref=e250]:
+                  - generic [ref=e251]: new bounded-loss — Pittsburgh
+                  - generic [ref=e252]: watchlist
+      - generic [ref=e254]:
+        - generic [ref=e259] [cursor=pointer]:
+          - generic [ref=e260]: INSPECTOR
+          - img [ref=e262]
+        - generic [ref=e268]: Click a blotter row to load the trade card — legs · economics · evidence.
+  - generic [ref=e269]:
+    - generic [ref=e270]: TERMINAL PRO · Phase B3
+    - generic [ref=e271]: docked workspace · Ctrl-K palette · keyboard (1-6 lens · J/K rows · /) · amber / high-contrast themes · multi-select lands in B4
+  - generic [ref=e407]:
+    - generic [ref=e408]: Command palette
+    - generic [ref=e409]:
+      - generic [ref=e410]: ⌘
+      - combobox "Command palette" [expanded] [active] [ref=e411]
+    - listbox "Suggestions" [ref=e412]:
+      - generic [ref=e413]:
+        - generic [ref=e414]: Lens
+        - group "Lens" [ref=e415]:
+          - option "BLENDED Weighted mix of edge + ROI + payoff geometry — the all-rounder. lens" [selected] [ref=e416] [cursor=pointer]:
+            - generic [ref=e417]: BLENDED
+            - generic [ref=e418]: Weighted mix of edge + ROI + payoff geometry — the all-rounder.
+            - generic [ref=e419]: lens
+          - option "EDGE¢ Pure per-unit gross edge ¢ — biggest mispricing first. lens" [ref=e420] [cursor=pointer]:
+            - generic [ref=e421]: EDGE¢
+            - generic [ref=e422]: Pure per-unit gross edge ¢ — biggest mispricing first.
+            - generic [ref=e423]: lens
+          - option "SPREAD Best-case payoff spread (how much you can win). lens" [ref=e424] [cursor=pointer]:
+            - generic [ref=e425]: SPREAD
+            - generic [ref=e426]: Best-case payoff spread (how much you can win).
+            - generic [ref=e427]: lens
+          - option "OUTRIGHT+SPREAD Child outright magnitude, then spread÷outright — cheap longshots with room. lens" [ref=e428] [cursor=pointer]:
+            - generic [ref=e429]: OUTRIGHT+SPREAD
+            - generic [ref=e430]: Child outright magnitude, then spread÷outright — cheap longshots with room.
+            - generic [ref=e431]: lens
+          - option "IMPLIED EV Display-spread minus overpay — a ranking aid, NOT a real edge. lens" [ref=e432] [cursor=pointer]:
+            - generic [ref=e433]: IMPLIED EV
+            - generic [ref=e434]: Display-spread minus overpay — a ranking aid, NOT a real edge.
+            - generic [ref=e435]: lens
+          - option "RIPENESS Parent ÷ max loss — in-the-money chance per ¢ at risk (bounded-loss). Higher = riper. lens" [ref=e436] [cursor=pointer]:
+            - generic [ref=e437]: RIPENESS
+            - generic [ref=e438]: Parent ÷ max loss — in-the-money chance per ¢ at risk (bounded-loss). Higher = riper.
+            - generic [ref=e439]: lens
+        - generic [ref=e440]: Section
+        - group "Section" [ref=e441]:
+          - option "ACTIONABLE exec go" [ref=e442] [cursor=pointer]:
+            - generic [ref=e443]: ACTIONABLE
+            - generic [ref=e444]: exec
+            - generic [ref=e445]: go
+          - option "REVIEW exec go" [ref=e446] [cursor=pointer]:
+            - generic [ref=e447]: REVIEW
+            - generic [ref=e448]: exec
+            - generic [ref=e449]: go
+          - option "BLOCKED exec go" [ref=e450] [cursor=pointer]:
+            - generic [ref=e451]: BLOCKED
+            - generic [ref=e452]: exec
+            - generic [ref=e453]: go
+          - option "BOUNDED-LOSS spec go" [ref=e454] [cursor=pointer]:
+            - generic [ref=e455]: BOUNDED-LOSS
+            - generic [ref=e456]: spec
+            - generic [ref=e457]: go
+          - option "NEAR-MISS spec go" [ref=e458] [cursor=pointer]:
+            - generic [ref=e459]: NEAR-MISS
+            - generic [ref=e460]: spec
+            - generic [ref=e461]: go
+          - option "QUALIFIER spec go" [ref=e462] [cursor=pointer]:
+            - generic [ref=e463]: QUALIFIER
+            - generic [ref=e464]: spec
+            - generic [ref=e465]: go
+          - option "CHEAP-NO spec go" [ref=e466] [cursor=pointer]:
+            - generic [ref=e467]: CHEAP-NO
+            - generic [ref=e468]: spec
+            - generic [ref=e469]: go
+          - option "DIAGNOSTIC diag go" [ref=e470] [cursor=pointer]:
+            - generic [ref=e471]: DIAGNOSTIC
+            - generic [ref=e472]: diag
+            - generic [ref=e473]: go
+        - generic [ref=e474]: Layout
+        - group "Layout" [ref=e475]:
+          - option "Default layout" [ref=e476] [cursor=pointer]:
+            - generic [ref=e477]: Default
+            - generic [ref=e478]: layout
+          - option "Inspect layout" [ref=e479] [cursor=pointer]:
+            - generic [ref=e480]: Inspect
+            - generic [ref=e481]: layout
+          - option "Research layout" [ref=e482] [cursor=pointer]:
+            - generic [ref=e483]: Research
+            - generic [ref=e484]: layout
+          - option "Triage layout" [ref=e485] [cursor=pointer]:
+            - generic [ref=e486]: Triage
+            - generic [ref=e487]: layout
+          - option "Blotter full layout" [ref=e488] [cursor=pointer]:
+            - generic [ref=e489]: Blotter full
+            - generic [ref=e490]: layout
+        - generic [ref=e491]: Theme
+        - group "Theme" [ref=e492]:
+          - option "Amber theme" [ref=e493] [cursor=pointer]:
+            - generic [ref=e494]: Amber
+            - generic [ref=e495]: theme
+          - option "High contrast theme" [ref=e496] [cursor=pointer]:
+            - generic [ref=e497]: High contrast
+            - generic [ref=e498]: theme
+        - generic [ref=e499]: Participant
+        - group "Participant" [ref=e500]:
+          - option "Pro Basketball (M) · 27 winner field NBA · actionable row" [ref=e501] [cursor=pointer]:
+            - generic [ref=e502]: Pro Basketball (M) · 27 winner field
+            - generic [ref=e503]: NBA · actionable
+            - generic [ref=e504]: row
+          - option "Group Stage — stage of elimination Soccer (World Cup) · actionable row" [ref=e505] [cursor=pointer]:
+            - generic [ref=e506]: Group Stage — stage of elimination
+            - generic [ref=e507]: Soccer (World Cup) · actionable
+            - generic [ref=e508]: row
+          - option "Group Stage — stage of elimination Soccer (World Cup) · actionable row" [ref=e509] [cursor=pointer]:
+            - generic [ref=e510]: Group Stage — stage of elimination
+            - generic [ref=e511]: Soccer (World Cup) · actionable
+            - generic [ref=e512]: row
+          - option "Carolina Royal Ravens vs Riyadh Falcons Esports · actionable row" [ref=e513] [cursor=pointer]:
+            - generic [ref=e514]: Carolina Royal Ravens vs Riyadh Falcons
+            - generic [ref=e515]: Esports · actionable
+            - generic [ref=e516]: row
+          - option "ODDIK vs paiN Academy Esports · actionable row" [ref=e517] [cursor=pointer]:
+            - generic [ref=e518]: ODDIK vs paiN Academy
+            - generic [ref=e519]: Esports · actionable
+            - generic [ref=e520]: row
+          - option "Scotland vs Morocco Soccer (World Cup) · actionable row" [ref=e521] [cursor=pointer]:
+            - generic [ref=e522]: Scotland vs Morocco
+            - generic [ref=e523]: Soccer (World Cup) · actionable
+            - generic [ref=e524]: row
+          - option "Cape Verde Soccer (World Cup) · actionable row" [ref=e525] [cursor=pointer]:
+            - generic [ref=e526]: Cape Verde
+            - generic [ref=e527]: Soccer (World Cup) · actionable
+            - generic [ref=e528]: row
+          - option "Cape Verde vs Saudi Arabia Soccer (World Cup) · actionable row" [ref=e529] [cursor=pointer]:
+            - generic [ref=e530]: Cape Verde vs Saudi Arabia
+            - generic [ref=e531]: Soccer (World Cup) · actionable
+            - generic [ref=e532]: row
+          - option "F1 · main-race · 26 winner field Motorsport · actionable row" [ref=e533] [cursor=pointer]:
+            - generic [ref=e534]: F1 · main-race · 26 winner field
+            - generic [ref=e535]: Motorsport · actionable
+            - generic [ref=e536]: row
+          - option "Tessa Johanna Brockmann vs Alycia Parks Tennis · actionable row" [ref=e537] [cursor=pointer]:
+            - generic [ref=e538]: Tessa Johanna Brockmann vs Alycia Parks
+            - generic [ref=e539]: Tennis · actionable
+            - generic [ref=e540]: row
+          - option "Tommy Paul vs Zachary Svajda Tennis · actionable row" [ref=e541] [cursor=pointer]:
+            - generic [ref=e542]: Tommy Paul vs Zachary Svajda
+            - generic [ref=e543]: Tennis · actionable
+            - generic [ref=e544]: row
+          - option "Croatia vs Ghana Soccer (World Cup) · actionable row" [ref=e545] [cursor=pointer]:
+            - generic [ref=e546]: Croatia vs Ghana
+            - generic [ref=e547]: Soccer (World Cup) · actionable
+            - generic [ref=e548]: row
+          - option "Round of 32 — Reach Round of 32 (synthetic vs advance) Soccer (World Cup) · review_signal row" [ref=e549] [cursor=pointer]:
+            - generic [ref=e550]: Round of 32 — Reach Round of 32 (synthetic vs advance)
+            - generic [ref=e551]: Soccer (World Cup) · review_signal
+            - generic [ref=e552]: row
+          - option "Quarterfinals — Reach Quarterfinals (synthetic vs advance) Soccer (World Cup) · review_signal row" [ref=e553] [cursor=pointer]:
+            - generic [ref=e554]: Quarterfinals — Reach Quarterfinals (synthetic vs advance)
+            - generic [ref=e555]: Soccer (World Cup) · review_signal
+            - generic [ref=e556]: row
+          - option "Round of 16 — Reach Round of 16 (synthetic vs advance) Soccer (World Cup) · review_signal row" [ref=e557] [cursor=pointer]:
+            - generic [ref=e558]: Round of 16 — Reach Round of 16 (synthetic vs advance)
+            - generic [ref=e559]: Soccer (World Cup) · review_signal
+            - generic [ref=e560]: row
+          - option "Round of 16 — Reach Round of 16 (synthetic vs advance) Soccer (World Cup) · review_signal row" [ref=e561] [cursor=pointer]:
+            - generic [ref=e562]: Round of 16 — Reach Round of 16 (synthetic vs advance)
+            - generic [ref=e563]: Soccer (World Cup) · review_signal
+            - generic [ref=e564]: row
+          - option "Round of 16 — Reach Round of 16 (synthetic vs advance) Soccer (World Cup) · review_signal row" [ref=e565] [cursor=pointer]:
+            - generic [ref=e566]: Round of 16 — Reach Round of 16 (synthetic vs advance)
+            - generic [ref=e567]: Soccer (World Cup) · review_signal
+            - generic [ref=e568]: row
+          - option "Quarterfinals — Reach Quarterfinals (synthetic vs advance) Soccer (World Cup) · review_signal row" [ref=e569] [cursor=pointer]:
+            - generic [ref=e570]: Quarterfinals — Reach Quarterfinals (synthetic vs advance)
+            - generic [ref=e571]: Soccer (World Cup) · review_signal
+            - generic [ref=e572]: row
+          - option "Round of 16 — Reach Round of 16 (synthetic vs advance) Soccer (World Cup) · review_signal row" [ref=e573] [cursor=pointer]:
+            - generic [ref=e574]: Round of 16 — Reach Round of 16 (synthetic vs advance)
+            - generic [ref=e575]: Soccer (World Cup) · review_signal
+            - generic [ref=e576]: row
+          - option "Semifinals — Reach Semifinals (synthetic vs advance) Soccer (World Cup) · review_signal row" [ref=e577] [cursor=pointer]:
+            - generic [ref=e578]: Semifinals — Reach Semifinals (synthetic vs advance)
+            - generic [ref=e579]: Soccer (World Cup) · review_signal
+            - generic [ref=e580]: row
+          - option "Round of 32 — Reach Round of 32 (synthetic vs advance) Soccer (World Cup) · review_signal row" [ref=e581] [cursor=pointer]:
+            - generic [ref=e582]: Round of 32 — Reach Round of 32 (synthetic vs advance)
+            - generic [ref=e583]: Soccer (World Cup) · review_signal
+            - generic [ref=e584]: row
+          - option "Round of 32 — Reach Round of 32 (synthetic vs advance) Soccer (World Cup) · review_signal row" [ref=e585] [cursor=pointer]:
+            - generic [ref=e586]: Round of 32 — Reach Round of 32 (synthetic vs advance)
+            - generic [ref=e587]: Soccer (World Cup) · review_signal
+            - generic [ref=e588]: row
+          - option "Quarterfinals — Reach Quarterfinals (synthetic vs advance) Soccer (World Cup) · review_signal row" [ref=e589] [cursor=pointer]:
+            - generic [ref=e590]: Quarterfinals — Reach Quarterfinals (synthetic vs advance)
+            - generic [ref=e591]: Soccer (World Cup) · review_signal
+            - generic [ref=e592]: row
+          - option "Round of 32 — Reach Round of 32 (synthetic vs advance) Soccer (World Cup) · review_signal row" [ref=e593] [cursor=pointer]:
+            - generic [ref=e594]: Round of 32 — Reach Round of 32 (synthetic vs advance)
+            - generic [ref=e595]: Soccer (World Cup) · review_signal
+            - generic [ref=e596]: row
+          - option "Semifinals — Reach Semifinals (synthetic vs advance) Soccer (World Cup) · review_signal row" [ref=e597] [cursor=pointer]:
+            - generic [ref=e598]: Semifinals — Reach Semifinals (synthetic vs advance)
+            - generic [ref=e599]: Soccer (World Cup) · review_signal
+            - generic [ref=e600]: row
+          - option "Round of 16 — Reach Round of 16 (synthetic vs advance) Soccer (World Cup) · review_signal row" [ref=e601] [cursor=pointer]:
+            - generic [ref=e602]: Round of 16 — Reach Round of 16 (synthetic vs advance)
+            - generic [ref=e603]: Soccer (World Cup) · review_signal
+            - generic [ref=e604]: row
+          - option "Outright Winner — Win the World Cup (synthetic vs advance) Soccer (World Cup) · review_signal row" [ref=e605] [cursor=pointer]:
+            - generic [ref=e606]: Outright Winner — Win the World Cup (synthetic vs advance)
+            - generic [ref=e607]: Soccer (World Cup) · review_signal
+            - generic [ref=e608]: row
+          - option "Outright Winner — Win the World Cup (synthetic vs advance) Soccer (World Cup) · review_signal row" [ref=e609] [cursor=pointer]:
+            - generic [ref=e610]: Outright Winner — Win the World Cup (synthetic vs advance)
+            - generic [ref=e611]: Soccer (World Cup) · review_signal
+            - generic [ref=e612]: row
+          - option "Semifinals — Reach Semifinals (synthetic vs advance) Soccer (World Cup) · review_signal row" [ref=e613] [cursor=pointer]:
+            - generic [ref=e614]: Semifinals — Reach Semifinals (synthetic vs advance)
+            - generic [ref=e615]: Soccer (World Cup) · review_signal
+            - generic [ref=e616]: row
+          - option "Quarterfinals — Reach Quarterfinals (synthetic vs advance) Soccer (World Cup) · review_signal row" [ref=e617] [cursor=pointer]:
+            - generic [ref=e618]: Quarterfinals — Reach Quarterfinals (synthetic vs advance)
+            - generic [ref=e619]: Soccer (World Cup) · review_signal
+            - generic [ref=e620]: row
+          - option "Semifinals — Reach Semifinals (synthetic vs advance) Soccer (World Cup) · review_signal row" [ref=e621] [cursor=pointer]:
+            - generic [ref=e622]: Semifinals — Reach Semifinals (synthetic vs advance)
+            - generic [ref=e623]: Soccer (World Cup) · review_signal
+            - generic [ref=e624]: row
+          - option "Quarterfinals — Reach Quarterfinals (synthetic vs advance) Soccer (World Cup) · review_signal row" [ref=e625] [cursor=pointer]:
+            - generic [ref=e626]: Quarterfinals — Reach Quarterfinals (synthetic vs advance)
+            - generic [ref=e627]: Soccer (World Cup) · review_signal
+            - generic [ref=e628]: row
+          - option "Semifinals — Reach Semifinals (synthetic vs advance) Soccer (World Cup) · review_signal row" [ref=e629] [cursor=pointer]:
+            - generic [ref=e630]: Semifinals — Reach Semifinals (synthetic vs advance)
+            - generic [ref=e631]: Soccer (World Cup) · review_signal
+            - generic [ref=e632]: row
+          - option "Outright Winner — Win the World Cup (synthetic vs advance) Soccer (World Cup) · review_signal row" [ref=e633] [cursor=pointer]:
+            - generic [ref=e634]: Outright Winner — Win the World Cup (synthetic vs advance)
+            - generic [ref=e635]: Soccer (World Cup) · review_signal
+            - generic [ref=e636]: row
+          - option "Outright Winner — Win the World Cup (synthetic vs advance) Soccer (World Cup) · review_signal row" [ref=e637] [cursor=pointer]:
+            - generic [ref=e638]: Outright Winner — Win the World Cup (synthetic vs advance)
+            - generic [ref=e639]: Soccer (World Cup) · review_signal
+            - generic [ref=e640]: row
+          - option "Outright Winner — Win the World Cup (synthetic vs advance) Soccer (World Cup) · review_signal row" [ref=e641] [cursor=pointer]:
+            - generic [ref=e642]: Outright Winner — Win the World Cup (synthetic vs advance)
+            - generic [ref=e643]: Soccer (World Cup) · review_signal
+            - generic [ref=e644]: row
+          - option "Quarterfinals — Reach Quarterfinals (synthetic vs advance) Soccer (World Cup) · review_signal row" [ref=e645] [cursor=pointer]:
+            - generic [ref=e646]: Quarterfinals — Reach Quarterfinals (synthetic vs advance)
+            - generic [ref=e647]: Soccer (World Cup) · review_signal
+            - generic [ref=e648]: row
+          - option "Semifinals — Reach Semifinals (synthetic vs advance) Soccer (World Cup) · review_signal row" [ref=e649] [cursor=pointer]:
+            - generic [ref=e650]: Semifinals — Reach Semifinals (synthetic vs advance)
+            - generic [ref=e651]: Soccer (World Cup) · review_signal
+            - generic [ref=e652]: row
+          - option "Outright Winner — Win the World Cup (synthetic vs advance) Soccer (World Cup) · review_signal row" [ref=e653] [cursor=pointer]:
+            - generic [ref=e654]: Outright Winner — Win the World Cup (synthetic vs advance)
+            - generic [ref=e655]: Soccer (World Cup) · review_signal
+            - generic [ref=e656]: row
+          - option "Outright Winner — Win the World Cup (synthetic vs advance) Soccer (World Cup) · review_signal row" [ref=e657] [cursor=pointer]:
+            - generic [ref=e658]: Outright Winner — Win the World Cup (synthetic vs advance)
+            - generic [ref=e659]: Soccer (World Cup) · review_signal
+            - generic [ref=e660]: row
+          - option "Quarterfinals — Reach Quarterfinals (synthetic vs advance) Soccer (World Cup) · review_signal row" [ref=e661] [cursor=pointer]:
+            - generic [ref=e662]: Quarterfinals — Reach Quarterfinals (synthetic vs advance)
+            - generic [ref=e663]: Soccer (World Cup) · review_signal
+            - generic [ref=e664]: row
+          - option "Group Stage — stage of elimination Soccer (World Cup) · blocked row" [ref=e665] [cursor=pointer]:
+            - generic [ref=e666]: Group Stage — stage of elimination
+            - generic [ref=e667]: Soccer (World Cup) · blocked
+            - generic [ref=e668]: row
+          - option "Round of 16 — Reach Round of 16 (synthetic vs advance) Soccer (World Cup) · blocked row" [ref=e669] [cursor=pointer]:
+            - generic [ref=e670]: Round of 16 — Reach Round of 16 (synthetic vs advance)
+            - generic [ref=e671]: Soccer (World Cup) · blocked
+            - generic [ref=e672]: row
+          - option "Round of 16 — Reach Round of 16 (synthetic vs advance) Soccer (World Cup) · blocked row" [ref=e673] [cursor=pointer]:
+            - generic [ref=e674]: Round of 16 — Reach Round of 16 (synthetic vs advance)
+            - generic [ref=e675]: Soccer (World Cup) · blocked
+            - generic [ref=e676]: row
+          - option "Round of 32 — Reach Round of 32 (synthetic vs advance) Soccer (World Cup) · blocked row" [ref=e677] [cursor=pointer]:
+            - generic [ref=e678]: Round of 32 — Reach Round of 32 (synthetic vs advance)
+            - generic [ref=e679]: Soccer (World Cup) · blocked
+            - generic [ref=e680]: row
+          - option "Round of 16 — Reach Round of 16 (synthetic vs advance) Soccer (World Cup) · blocked row" [ref=e681] [cursor=pointer]:
+            - generic [ref=e682]: Round of 16 — Reach Round of 16 (synthetic vs advance)
+            - generic [ref=e683]: Soccer (World Cup) · blocked
+            - generic [ref=e684]: row
+          - option "Quarterfinals — Reach Quarterfinals (synthetic vs advance) Soccer (World Cup) · blocked row" [ref=e685] [cursor=pointer]:
+            - generic [ref=e686]: Quarterfinals — Reach Quarterfinals (synthetic vs advance)
+            - generic [ref=e687]: Soccer (World Cup) · blocked
+            - generic [ref=e688]: row
+          - option "Round of 16 — Reach Round of 16 (synthetic vs advance) Soccer (World Cup) · blocked row" [ref=e689] [cursor=pointer]:
+            - generic [ref=e690]: Round of 16 — Reach Round of 16 (synthetic vs advance)
+            - generic [ref=e691]: Soccer (World Cup) · blocked
+            - generic [ref=e692]: row
+          - option "Group Stage — stage of elimination Soccer (World Cup) · blocked row" [ref=e693] [cursor=pointer]:
+            - generic [ref=e694]: Group Stage — stage of elimination
+            - generic [ref=e695]: Soccer (World Cup) · blocked
+            - generic [ref=e696]: row
+          - option "Round of 16 — Reach Round of 16 (synthetic vs advance) Soccer (World Cup) · blocked row" [ref=e697] [cursor=pointer]:
+            - generic [ref=e698]: Round of 16 — Reach Round of 16 (synthetic vs advance)
+            - generic [ref=e699]: Soccer (World Cup) · blocked
+            - generic [ref=e700]: row
+          - option "Semifinals — Reach Semifinals (synthetic vs advance) Soccer (World Cup) · blocked row" [ref=e701] [cursor=pointer]:
+            - generic [ref=e702]: Semifinals — Reach Semifinals (synthetic vs advance)
+            - generic [ref=e703]: Soccer (World Cup) · blocked
+            - generic [ref=e704]: row
+          - option "Quarterfinals — Reach Quarterfinals (synthetic vs advance) Soccer (World Cup) · blocked row" [ref=e705] [cursor=pointer]:
+            - generic [ref=e706]: Quarterfinals — Reach Quarterfinals (synthetic vs advance)
+            - generic [ref=e707]: Soccer (World Cup) · blocked
+            - generic [ref=e708]: row
+          - option "Quarterfinals — Reach Quarterfinals (synthetic vs advance) Soccer (World Cup) · blocked row" [ref=e709] [cursor=pointer]:
+            - generic [ref=e710]: Quarterfinals — Reach Quarterfinals (synthetic vs advance)
+            - generic [ref=e711]: Soccer (World Cup) · blocked
+            - generic [ref=e712]: row
+          - option "Semifinals — Reach Semifinals (synthetic vs advance) Soccer (World Cup) · blocked row" [ref=e713] [cursor=pointer]:
+            - generic [ref=e714]: Semifinals — Reach Semifinals (synthetic vs advance)
+            - generic [ref=e715]: Soccer (World Cup) · blocked
+            - generic [ref=e716]: row
+          - option "Pittsburgh NFL · risk_budget row" [ref=e717] [cursor=pointer]:
+            - generic [ref=e718]: Pittsburgh
+            - generic [ref=e719]: NFL · risk_budget
+            - generic [ref=e720]: row
+          - option "Atlanta NFL · risk_budget row" [ref=e721] [cursor=pointer]:
+            - generic [ref=e722]: Atlanta
+            - generic [ref=e723]: NFL · risk_budget
+            - generic [ref=e724]: row
+          - option "Tampa Bay NFL · risk_budget row" [ref=e725] [cursor=pointer]:
+            - generic [ref=e726]: Tampa Bay
+            - generic [ref=e727]: NFL · risk_budget
+            - generic [ref=e728]: row
+          - option "Minnesota NFL · risk_budget row" [ref=e729] [cursor=pointer]:
+            - generic [ref=e730]: Minnesota
+            - generic [ref=e731]: NFL · risk_budget
+            - generic [ref=e732]: row
+          - option "Indianapolis NFL · risk_budget row" [ref=e733] [cursor=pointer]:
+            - generic [ref=e734]: Indianapolis
+            - generic [ref=e735]: NFL · risk_budget
+            - generic [ref=e736]: row
+          - option "Washington NFL · risk_budget row" [ref=e737] [cursor=pointer]:
+            - generic [ref=e738]: Washington
+            - generic [ref=e739]: NFL · risk_budget
+            - generic [ref=e740]: row
+          - option "Ghana Soccer (World Cup) · risk_budget row" [ref=e741] [cursor=pointer]:
+            - generic [ref=e742]: Ghana
+            - generic [ref=e743]: Soccer (World Cup) · risk_budget
+            - generic [ref=e744]: row
+          - option "San Francisco NFL · risk_budget row" [ref=e745] [cursor=pointer]:
+            - generic [ref=e746]: San Francisco
+            - generic [ref=e747]: NFL · risk_budget
+            - generic [ref=e748]: row
+          - option "New York G NFL · risk_budget row" [ref=e749] [cursor=pointer]:
+            - generic [ref=e750]: New York G
+            - generic [ref=e751]: NFL · risk_budget
+            - generic [ref=e752]: row
+          - option "Bosnia and Herzegovina Soccer (World Cup) · risk_budget row" [ref=e753] [cursor=pointer]:
+            - generic [ref=e754]: Bosnia and Herzegovina
+            - generic [ref=e755]: Soccer (World Cup) · risk_budget
+            - generic [ref=e756]: row
+          - option "Philadelphia NFL · risk_budget row" [ref=e757] [cursor=pointer]:
+            - generic [ref=e758]: Philadelphia
+            - generic [ref=e759]: NFL · risk_budget
+            - generic [ref=e760]: row
+          - option "Czechia Soccer (World Cup) · risk_budget row" [ref=e761] [cursor=pointer]:
+            - generic [ref=e762]: Czechia
+            - generic [ref=e763]: Soccer (World Cup) · risk_budget
+            - generic [ref=e764]: row
+          - option "Ecuador Soccer (World Cup) · risk_budget row" [ref=e765] [cursor=pointer]:
+            - generic [ref=e766]: Ecuador
+            - generic [ref=e767]: Soccer (World Cup) · risk_budget
+            - generic [ref=e768]: row
+          - option "Houston NFL · risk_budget row" [ref=e769] [cursor=pointer]:
+            - generic [ref=e770]: Houston
+            - generic [ref=e771]: NFL · risk_budget
+            - generic [ref=e772]: row
+          - option "Akshay Bhatia Golf · risk_budget row" [ref=e773] [cursor=pointer]:
+            - generic [ref=e774]: Akshay Bhatia
+            - generic [ref=e775]: Golf · risk_budget
+            - generic [ref=e776]: row
+          - option "Detroit NFL · risk_budget row" [ref=e777] [cursor=pointer]:
+            - generic [ref=e778]: Detroit
+            - generic [ref=e779]: NFL · risk_budget
+            - generic [ref=e780]: row
+          - option "New England NFL · risk_budget row" [ref=e781] [cursor=pointer]:
+            - generic [ref=e782]: New England
+            - generic [ref=e783]: NFL · risk_budget
+            - generic [ref=e784]: row
+          - option "Turkiye Soccer (World Cup) · risk_budget row" [ref=e785] [cursor=pointer]:
+            - generic [ref=e786]: Turkiye
+            - generic [ref=e787]: Soccer (World Cup) · risk_budget
+            - generic [ref=e788]: row
+          - option "Seattle NFL · risk_budget row" [ref=e789] [cursor=pointer]:
+            - generic [ref=e790]: Seattle
+            - generic [ref=e791]: NFL · risk_budget
+            - generic [ref=e792]: row
+          - option "Green Bay NFL · risk_budget row" [ref=e793] [cursor=pointer]:
+            - generic [ref=e794]: Green Bay
+            - generic [ref=e795]: NFL · risk_budget
+            - generic [ref=e796]: row
+          - option "Cincinnati NFL · risk_budget row" [ref=e797] [cursor=pointer]:
+            - generic [ref=e798]: Cincinnati
+            - generic [ref=e799]: NFL · risk_budget
+            - generic [ref=e800]: row
+          - option "Denver NFL · risk_budget row" [ref=e801] [cursor=pointer]:
+            - generic [ref=e802]: Denver
+            - generic [ref=e803]: NFL · risk_budget
+            - generic [ref=e804]: row
+          - option "Belgium Soccer (World Cup) · risk_budget row" [ref=e805] [cursor=pointer]:
+            - generic [ref=e806]: Belgium
+            - generic [ref=e807]: Soccer (World Cup) · risk_budget
+            - generic [ref=e808]: row
+          - option "Dallas NFL · risk_budget row" [ref=e809] [cursor=pointer]:
+            - generic [ref=e810]: Dallas
+            - generic [ref=e811]: NFL · risk_budget
+            - generic [ref=e812]: row
+          - option "Japan Soccer (World Cup) · risk_budget row" [ref=e813] [cursor=pointer]:
+            - generic [ref=e814]: Japan
+            - generic [ref=e815]: Soccer (World Cup) · risk_budget
+            - generic [ref=e816]: row
+          - option "Chicago NFL · risk_budget row" [ref=e817] [cursor=pointer]:
+            - generic [ref=e818]: Chicago
+            - generic [ref=e819]: NFL · risk_budget
+            - generic [ref=e820]: row
+          - option "Algeria Soccer (World Cup) · risk_budget row" [ref=e821] [cursor=pointer]:
+            - generic [ref=e822]: Algeria
+            - generic [ref=e823]: Soccer (World Cup) · risk_budget
+            - generic [ref=e824]: row
+          - option "Jacksonville NFL · risk_budget row" [ref=e825] [cursor=pointer]:
+            - generic [ref=e826]: Jacksonville
+            - generic [ref=e827]: NFL · risk_budget
+            - generic [ref=e828]: row
+          - option "Colombia Soccer (World Cup) · risk_budget row" [ref=e829] [cursor=pointer]:
+            - generic [ref=e830]: Colombia
+            - generic [ref=e831]: Soccer (World Cup) · risk_budget
+            - generic [ref=e832]: row
+          - option "Switzerland Soccer (World Cup) · risk_budget row" [ref=e833] [cursor=pointer]:
+            - generic [ref=e834]: Switzerland
+            - generic [ref=e835]: Soccer (World Cup) · risk_budget
+            - generic [ref=e836]: row
+          - option "Morocco Soccer (World Cup) · risk_budget row" [ref=e837] [cursor=pointer]:
+            - generic [ref=e838]: Morocco
+            - generic [ref=e839]: Soccer (World Cup) · risk_budget
+            - generic [ref=e840]: row
+          - option "Senegal Soccer (World Cup) · risk_budget row" [ref=e841] [cursor=pointer]:
+            - generic [ref=e842]: Senegal
+            - generic [ref=e843]: Soccer (World Cup) · risk_budget
+            - generic [ref=e844]: row
+          - option "Ghana Soccer (World Cup) · risk_budget row" [ref=e845] [cursor=pointer]:
+            - generic [ref=e846]: Ghana
+            - generic [ref=e847]: Soccer (World Cup) · risk_budget
+            - generic [ref=e848]: row
+          - option "Ivory Coast Soccer (World Cup) · risk_budget row" [ref=e849] [cursor=pointer]:
+            - generic [ref=e850]: Ivory Coast
+            - generic [ref=e851]: Soccer (World Cup) · risk_budget
+            - generic [ref=e852]: row
+          - option "Ethan Fang Golf · risk_budget row" [ref=e853] [cursor=pointer]:
+            - generic [ref=e854]: Ethan Fang
+            - generic [ref=e855]: Golf · risk_budget
+            - generic [ref=e856]: row
+          - option "Austria Soccer (World Cup) · risk_budget row" [ref=e857] [cursor=pointer]:
+            - generic [ref=e858]: Austria
+            - generic [ref=e859]: Soccer (World Cup) · risk_budget
+            - generic [ref=e860]: row
+          - option "Switzerland Soccer (World Cup) · risk_budget row" [ref=e861] [cursor=pointer]:
+            - generic [ref=e862]: Switzerland
+            - generic [ref=e863]: Soccer (World Cup) · risk_budget
+            - generic [ref=e864]: row
+          - option "Los Angeles C NFL · risk_budget row" [ref=e865] [cursor=pointer]:
+            - generic [ref=e866]: Los Angeles C
+            - generic [ref=e867]: NFL · risk_budget
+            - generic [ref=e868]: row
+          - option "Mason Howell Golf · risk_budget row" [ref=e869] [cursor=pointer]:
+            - generic [ref=e870]: Mason Howell
+            - generic [ref=e871]: Golf · risk_budget
+            - generic [ref=e872]: row
+          - option "Patrick Rodgers Golf · risk_budget row" [ref=e873] [cursor=pointer]:
+            - generic [ref=e874]: Patrick Rodgers
+            - generic [ref=e875]: Golf · risk_budget
+            - generic [ref=e876]: row
+          - option "Mexico Soccer (World Cup) · risk_budget row" [ref=e877] [cursor=pointer]:
+            - generic [ref=e878]: Mexico
+            - generic [ref=e879]: Soccer (World Cup) · risk_budget
+            - generic [ref=e880]: row
+          - option "Ryuichi Oiwa Golf · risk_budget row" [ref=e881] [cursor=pointer]:
+            - generic [ref=e882]: Ryuichi Oiwa
+            - generic [ref=e883]: Golf · risk_budget
+            - generic [ref=e884]: row
+          - option "Cameron Smith Golf · risk_budget row" [ref=e885] [cursor=pointer]:
+            - generic [ref=e886]: Cameron Smith
+            - generic [ref=e887]: Golf · risk_budget
+            - generic [ref=e888]: row
+          - option "Tom Kim Golf · risk_budget row" [ref=e889] [cursor=pointer]:
+            - generic [ref=e890]: Tom Kim
+            - generic [ref=e891]: Golf · risk_budget
+            - generic [ref=e892]: row
+          - option "Jackson Herrington Golf · risk_budget row" [ref=e893] [cursor=pointer]:
+            - generic [ref=e894]: Jackson Herrington
+            - generic [ref=e895]: Golf · risk_budget
+            - generic [ref=e896]: row
+          - option "Brandon Holtz Golf · risk_budget row" [ref=e897] [cursor=pointer]:
+            - generic [ref=e898]: Brandon Holtz
+            - generic [ref=e899]: Golf · risk_budget
+            - generic [ref=e900]: row
+          - option "T.K. Kim Golf · risk_budget row" [ref=e901] [cursor=pointer]:
+            - generic [ref=e902]: T.K. Kim
+            - generic [ref=e903]: Golf · risk_budget
+            - generic [ref=e904]: row
+          - option "USA Soccer (World Cup) · risk_budget row" [ref=e905] [cursor=pointer]:
+            - generic [ref=e906]: USA
+            - generic [ref=e907]: Soccer (World Cup) · risk_budget
+            - generic [ref=e908]: row
+          - option "Baltimore NFL · risk_budget row" [ref=e909] [cursor=pointer]:
+            - generic [ref=e910]: Baltimore
+            - generic [ref=e911]: NFL · risk_budget
+            - generic [ref=e912]: row
+          - option "Panama Soccer (World Cup) · risk_budget row" [ref=e913] [cursor=pointer]:
+            - generic [ref=e914]: Panama
+            - generic [ref=e915]: Soccer (World Cup) · risk_budget
+            - generic [ref=e916]: row
+          - option "Kansas City NFL · risk_budget row" [ref=e917] [cursor=pointer]:
+            - generic [ref=e918]: Kansas City
+            - generic [ref=e919]: NFL · risk_budget
+            - generic [ref=e920]: row
+          - option "Scotland Soccer (World Cup) · risk_budget row" [ref=e921] [cursor=pointer]:
+            - generic [ref=e922]: Scotland
+            - generic [ref=e923]: Soccer (World Cup) · risk_budget
+            - generic [ref=e924]: row
+          - option "Mateo Pulcini Golf · risk_budget row" [ref=e925] [cursor=pointer]:
+            - generic [ref=e926]: Mateo Pulcini
+            - generic [ref=e927]: Golf · risk_budget
+            - generic [ref=e928]: row
+          - option "Corey Conners Golf · risk_budget row" [ref=e929] [cursor=pointer]:
+            - generic [ref=e930]: Corey Conners
+            - generic [ref=e931]: Golf · risk_budget
+            - generic [ref=e932]: row
+          - option "Kaito Onishi Golf · risk_budget row" [ref=e933] [cursor=pointer]:
+            - generic [ref=e934]: Kaito Onishi
+            - generic [ref=e935]: Golf · risk_budget
+            - generic [ref=e936]: row
+          - option "Senegal Soccer (World Cup) · risk_budget row" [ref=e937] [cursor=pointer]:
+            - generic [ref=e938]: Senegal
+            - generic [ref=e939]: Soccer (World Cup) · risk_budget
+            - generic [ref=e940]: row
+          - option "Sahith Theegala Golf · risk_budget row" [ref=e941] [cursor=pointer]:
+            - generic [ref=e942]: Sahith Theegala
+            - generic [ref=e943]: Golf · risk_budget
+            - generic [ref=e944]: row
+          - option "Filippo Celli Golf · risk_budget row" [ref=e945] [cursor=pointer]:
+            - generic [ref=e946]: Filippo Celli
+            - generic [ref=e947]: Golf · risk_budget
+            - generic [ref=e948]: row
+          - option "Brazil Soccer (World Cup) · risk_budget row" [ref=e949] [cursor=pointer]:
+            - generic [ref=e950]: Brazil
+            - generic [ref=e951]: Soccer (World Cup) · risk_budget
+            - generic [ref=e952]: row
+          - option "Paraguay Soccer (World Cup) · risk_budget row" [ref=e953] [cursor=pointer]:
+            - generic [ref=e954]: Paraguay
+            - generic [ref=e955]: Soccer (World Cup) · risk_budget
+            - generic [ref=e956]: row
+          - option "Wyndham Clark Golf · risk_budget row" [ref=e957] [cursor=pointer]:
+            - generic [ref=e958]: Wyndham Clark
+            - generic [ref=e959]: Golf · risk_budget
+            - generic [ref=e960]: row
+          - option "Angel Hidalgo Golf · risk_budget row" [ref=e961] [cursor=pointer]:
+            - generic [ref=e962]: Angel Hidalgo
+            - generic [ref=e963]: Golf · risk_budget
+            - generic [ref=e964]: row
+          - option "Buffalo NFL · risk_budget row" [ref=e965] [cursor=pointer]:
+            - generic [ref=e966]: Buffalo
+            - generic [ref=e967]: NFL · risk_budget
+            - generic [ref=e968]: row
+          - option "Taihei Sato Golf · risk_budget row" [ref=e969] [cursor=pointer]:
+            - generic [ref=e970]: Taihei Sato
+            - generic [ref=e971]: Golf · risk_budget
+            - generic [ref=e972]: row
+          - option "Sweden Soccer (World Cup) · risk_budget row" [ref=e973] [cursor=pointer]:
+            - generic [ref=e974]: Sweden
+            - generic [ref=e975]: Soccer (World Cup) · risk_budget
+            - generic [ref=e976]: row
+          - option "Norway Soccer (World Cup) · risk_budget row" [ref=e977] [cursor=pointer]:
+            - generic [ref=e978]: Norway
+            - generic [ref=e979]: Soccer (World Cup) · risk_budget
+            - generic [ref=e980]: row
+          - option "Congo DR Soccer (World Cup) · risk_budget row" [ref=e981] [cursor=pointer]:
+            - generic [ref=e982]: Congo DR
+            - generic [ref=e983]: Soccer (World Cup) · risk_budget
+            - generic [ref=e984]: row
+          - option "Los Angeles R NFL · risk_budget row" [ref=e985] [cursor=pointer]:
+            - generic [ref=e986]: Los Angeles R
+            - generic [ref=e987]: NFL · risk_budget
+            - generic [ref=e988]: row
+          - option "Rickie Fowler Golf · risk_budget row" [ref=e989] [cursor=pointer]:
+            - generic [ref=e990]: Rickie Fowler
+            - generic [ref=e991]: Golf · risk_budget
+            - generic [ref=e992]: row
+          - option "Jason Day Golf · risk_budget row" [ref=e993] [cursor=pointer]:
+            - generic [ref=e994]: Jason Day
+            - generic [ref=e995]: Golf · risk_budget
+            - generic [ref=e996]: row
+          - option "Sepp Straka Golf · risk_budget row" [ref=e997] [cursor=pointer]:
+            - generic [ref=e998]: Sepp Straka
+            - generic [ref=e999]: Golf · risk_budget
+            - generic [ref=e1000]: row
+          - option "Uruguay Soccer (World Cup) · risk_budget row" [ref=e1001] [cursor=pointer]:
+            - generic [ref=e1002]: Uruguay
+            - generic [ref=e1003]: Soccer (World Cup) · risk_budget
+            - generic [ref=e1004]: row
+          - option "Daniel Berger Golf · risk_budget row" [ref=e1005] [cursor=pointer]:
+            - generic [ref=e1006]: Daniel Berger
+            - generic [ref=e1007]: Golf · risk_budget
+            - generic [ref=e1008]: row
+          - option "Matti Schmid Golf · risk_budget row" [ref=e1009] [cursor=pointer]:
+            - generic [ref=e1010]: Matti Schmid
+            - generic [ref=e1011]: Golf · risk_budget
+            - generic [ref=e1012]: row
+          - option "Uruguay Soccer (World Cup) · risk_budget row" [ref=e1013] [cursor=pointer]:
+            - generic [ref=e1014]: Uruguay
+            - generic [ref=e1015]: Soccer (World Cup) · risk_budget
+            - generic [ref=e1016]: row
+          - option "Sungjae Im Golf · risk_budget row" [ref=e1017] [cursor=pointer]:
+            - generic [ref=e1018]: Sungjae Im
+            - generic [ref=e1019]: Golf · risk_budget
+            - generic [ref=e1020]: row
+          - option "Peter Uihlein Golf · risk_budget row" [ref=e1021] [cursor=pointer]:
+            - generic [ref=e1022]: Peter Uihlein
+            - generic [ref=e1023]: Golf · risk_budget
+            - generic [ref=e1024]: row
+          - option "Graeme McDowell Golf · risk_budget row" [ref=e1025] [cursor=pointer]:
+            - generic [ref=e1026]: Graeme McDowell
+            - generic [ref=e1027]: Golf · risk_budget
+            - generic [ref=e1028]: row
+          - option "Shane Lowry Golf · risk_budget row" [ref=e1029] [cursor=pointer]:
+            - generic [ref=e1030]: Shane Lowry
+            - generic [ref=e1031]: Golf · risk_budget
+            - generic [ref=e1032]: row
+          - option "Niklas Norgaard Moller Golf · risk_budget row" [ref=e1033] [cursor=pointer]:
+            - generic [ref=e1034]: Niklas Norgaard Moller
+            - generic [ref=e1035]: Golf · risk_budget
+            - generic [ref=e1036]: row
+          - option "Netherlands Soccer (World Cup) · risk_budget row" [ref=e1037] [cursor=pointer]:
+            - generic [ref=e1038]: Netherlands
+            - generic [ref=e1039]: Soccer (World Cup) · risk_budget
+            - generic [ref=e1040]: row
+          - option "Jordan Spieth Golf · risk_budget row" [ref=e1041] [cursor=pointer]:
+            - generic [ref=e1042]: Jordan Spieth
+            - generic [ref=e1043]: Golf · risk_budget
+            - generic [ref=e1044]: row
+          - option "Korea Republic Soccer (World Cup) · risk_budget row" [ref=e1045] [cursor=pointer]:
+            - generic [ref=e1046]: Korea Republic
+            - generic [ref=e1047]: Soccer (World Cup) · risk_budget
+            - generic [ref=e1048]: row
+          - option "Japan Soccer (World Cup) · risk_budget row" [ref=e1049] [cursor=pointer]:
+            - generic [ref=e1050]: Japan
+            - generic [ref=e1051]: Soccer (World Cup) · risk_budget
+            - generic [ref=e1052]: row
+          - option "Padraig Harrington Golf · risk_budget row" [ref=e1053] [cursor=pointer]:
+            - generic [ref=e1054]: Padraig Harrington
+            - generic [ref=e1055]: Golf · risk_budget
+            - generic [ref=e1056]: row
+          - option "Iraq Soccer (World Cup) · risk_budget row" [ref=e1057] [cursor=pointer]:
+            - generic [ref=e1058]: Iraq
+            - generic [ref=e1059]: Soccer (World Cup) · risk_budget
+            - generic [ref=e1060]: row
+          - option "Alex Fitzpatrick Golf · risk_budget row" [ref=e1061] [cursor=pointer]:
+            - generic [ref=e1062]: Alex Fitzpatrick
+            - generic [ref=e1063]: Golf · risk_budget
+            - generic [ref=e1064]: row
+          - option "Croatia Soccer (World Cup) · risk_budget row" [ref=e1065] [cursor=pointer]:
+            - generic [ref=e1066]: Croatia
+            - generic [ref=e1067]: Soccer (World Cup) · risk_budget
+            - generic [ref=e1068]: row
+          - option "Ecuador Soccer (World Cup) · risk_budget row" [ref=e1069] [cursor=pointer]:
+            - generic [ref=e1070]: Ecuador
+            - generic [ref=e1071]: Soccer (World Cup) · risk_budget
+            - generic [ref=e1072]: row
+          - option "Jacob Bridgeman Golf · risk_budget row" [ref=e1073] [cursor=pointer]:
+            - generic [ref=e1074]: Jacob Bridgeman
+            - generic [ref=e1075]: Golf · risk_budget
+            - generic [ref=e1076]: row
+          - option "Andrew Novak Golf · risk_budget row" [ref=e1077] [cursor=pointer]:
+            - generic [ref=e1078]: Andrew Novak
+            - generic [ref=e1079]: Golf · risk_budget
+            - generic [ref=e1080]: row
+          - option "Rocco Repetto Taylor Golf · risk_budget row" [ref=e1081] [cursor=pointer]:
+            - generic [ref=e1082]: Rocco Repetto Taylor
+            - generic [ref=e1083]: Golf · risk_budget
+            - generic [ref=e1084]: row
+          - option "Sweden Soccer (World Cup) · risk_budget row" [ref=e1085] [cursor=pointer]:
+            - generic [ref=e1086]: Sweden
+            - generic [ref=e1087]: Soccer (World Cup) · risk_budget
+            - generic [ref=e1088]: row
+          - option "Ludvig Aberg Golf · risk_budget row" [ref=e1089] [cursor=pointer]:
+            - generic [ref=e1090]: Ludvig Aberg
+            - generic [ref=e1091]: Golf · risk_budget
+            - generic [ref=e1092]: row
+          - option "Ryan Gerard Golf · risk_budget row" [ref=e1093] [cursor=pointer]:
+            - generic [ref=e1094]: Ryan Gerard
+            - generic [ref=e1095]: Golf · risk_budget
+            - generic [ref=e1096]: row
+          - option "South Africa Soccer (World Cup) · risk_budget row" [ref=e1097] [cursor=pointer]:
+            - generic [ref=e1098]: South Africa
+            - generic [ref=e1099]: Soccer (World Cup) · risk_budget
+            - generic [ref=e1100]: row
+          - option "Nicolas Echavarria Golf · risk_budget row" [ref=e1101] [cursor=pointer]:
+            - generic [ref=e1102]: Nicolas Echavarria
+            - generic [ref=e1103]: Golf · risk_budget
+            - generic [ref=e1104]: row
+          - option "Argentina Soccer (World Cup) · risk_budget row" [ref=e1105] [cursor=pointer]:
+            - generic [ref=e1106]: Argentina
+            - generic [ref=e1107]: Soccer (World Cup) · risk_budget
+            - generic [ref=e1108]: row
+          - option "England Soccer (World Cup) · risk_budget row" [ref=e1109] [cursor=pointer]:
+            - generic [ref=e1110]: England
+            - generic [ref=e1111]: Soccer (World Cup) · risk_budget
+            - generic [ref=e1112]: row
+          - option "Minnesota MLB · risk_budget row" [ref=e1113] [cursor=pointer]:
+            - generic [ref=e1114]: Minnesota
+            - generic [ref=e1115]: MLB · risk_budget
+            - generic [ref=e1116]: row
+          - option "Min Woo Lee Golf · risk_budget row" [ref=e1117] [cursor=pointer]:
+            - generic [ref=e1118]: Min Woo Lee
+            - generic [ref=e1119]: Golf · risk_budget
+            - generic [ref=e1120]: row
+          - option "Robert MacIntyre Golf · risk_budget row" [ref=e1121] [cursor=pointer]:
+            - generic [ref=e1122]: Robert MacIntyre
+            - generic [ref=e1123]: Golf · risk_budget
+            - generic [ref=e1124]: row
+          - option "Cincinnati MLB · risk_budget row" [ref=e1125] [cursor=pointer]:
+            - generic [ref=e1126]: Cincinnati
+            - generic [ref=e1127]: MLB · risk_budget
+            - generic [ref=e1128]: row
+          - option "Turkiye Soccer (World Cup) · risk_budget row" [ref=e1129] [cursor=pointer]:
+            - generic [ref=e1130]: Turkiye
+            - generic [ref=e1131]: Soccer (World Cup) · risk_budget
+            - generic [ref=e1132]: row
+          - option "Harry Hall Golf · risk_budget row" [ref=e1133] [cursor=pointer]:
+            - generic [ref=e1134]: Harry Hall
+            - generic [ref=e1135]: Golf · risk_budget
+            - generic [ref=e1136]: row
+          - option "Maverick McNealy Golf · risk_budget row" [ref=e1137] [cursor=pointer]:
+            - generic [ref=e1138]: Maverick McNealy
+            - generic [ref=e1139]: Golf · risk_budget
+            - generic [ref=e1140]: row
+          - option "Matthew Jordan Golf · risk_budget row" [ref=e1141] [cursor=pointer]:
+            - generic [ref=e1142]: Matthew Jordan
+            - generic [ref=e1143]: Golf · risk_budget
+            - generic [ref=e1144]: row
+          - option "Adrien Saddier Golf · risk_budget row" [ref=e1145] [cursor=pointer]:
+            - generic [ref=e1146]: Adrien Saddier
+            - generic [ref=e1147]: Golf · risk_budget
+            - generic [ref=e1148]: row
+          - option "Justin Rose Golf · risk_budget row" [ref=e1149] [cursor=pointer]:
+            - generic [ref=e1150]: Justin Rose
+            - generic [ref=e1151]: Golf · risk_budget
+            - generic [ref=e1152]: row
+          - option "IR Iran Soccer (World Cup) · risk_budget row" [ref=e1153] [cursor=pointer]:
+            - generic [ref=e1154]: IR Iran
+            - generic [ref=e1155]: Soccer (World Cup) · risk_budget
+            - generic [ref=e1156]: row
+          - option "Chris Gotterup Golf · risk_budget row" [ref=e1157] [cursor=pointer]:
+            - generic [ref=e1158]: Chris Gotterup
+            - generic [ref=e1159]: Golf · risk_budget
+            - generic [ref=e1160]: row
+          - option "Jordan Soccer (World Cup) · risk_budget row" [ref=e1161] [cursor=pointer]:
+            - generic [ref=e1162]: Jordan
+            - generic [ref=e1163]: Soccer (World Cup) · risk_budget
+            - generic [ref=e1164]: row
+          - option "Russell Henley Golf · risk_budget row" [ref=e1165] [cursor=pointer]:
+            - generic [ref=e1166]: Russell Henley
+            - generic [ref=e1167]: Golf · risk_budget
+            - generic [ref=e1168]: row
+          - option "Patrick Rodgers Golf · risk_budget row" [ref=e1169] [cursor=pointer]:
+            - generic [ref=e1170]: Patrick Rodgers
+            - generic [ref=e1171]: Golf · risk_budget
+            - generic [ref=e1172]: row
+          - option "Spain Soccer (World Cup) · risk_budget row" [ref=e1173] [cursor=pointer]:
+            - generic [ref=e1174]: Spain
+            - generic [ref=e1175]: Soccer (World Cup) · risk_budget
+            - generic [ref=e1176]: row
+          - option "Ben Griffin Golf · risk_budget row" [ref=e1177] [cursor=pointer]:
+            - generic [ref=e1178]: Ben Griffin
+            - generic [ref=e1179]: Golf · risk_budget
+            - generic [ref=e1180]: row
+          - option "Alex Smalley Golf · risk_budget row" [ref=e1181] [cursor=pointer]:
+            - generic [ref=e1182]: Alex Smalley
+            - generic [ref=e1183]: Golf · risk_budget
+            - generic [ref=e1184]: row
+          - option "Xander Schauffele Golf · risk_budget row" [ref=e1185] [cursor=pointer]:
+            - generic [ref=e1186]: Xander Schauffele
+            - generic [ref=e1187]: Golf · risk_budget
+            - generic [ref=e1188]: row
+          - option "Hideki Matsuyama Golf · risk_budget row" [ref=e1189] [cursor=pointer]:
+            - generic [ref=e1190]: Hideki Matsuyama
+            - generic [ref=e1191]: Golf · risk_budget
+            - generic [ref=e1192]: row
+          - option "Sahith Theegala Golf · risk_budget row" [ref=e1193] [cursor=pointer]:
+            - generic [ref=e1194]: Sahith Theegala
+            - generic [ref=e1195]: Golf · risk_budget
+            - generic [ref=e1196]: row
+          - option "Algeria Soccer (World Cup) · risk_budget row" [ref=e1197] [cursor=pointer]:
+            - generic [ref=e1198]: Algeria
+            - generic [ref=e1199]: Soccer (World Cup) · risk_budget
+            - generic [ref=e1200]: row
+          - option "Patrick Cantlay Golf · risk_budget row" [ref=e1201] [cursor=pointer]:
+            - generic [ref=e1202]: Patrick Cantlay
+            - generic [ref=e1203]: Golf · risk_budget
+            - generic [ref=e1204]: row
+          - option "Argentina Soccer (World Cup) · risk_budget row" [ref=e1205] [cursor=pointer]:
+            - generic [ref=e1206]: Argentina
+            - generic [ref=e1207]: Soccer (World Cup) · risk_budget
+            - generic [ref=e1208]: row
+          - option "Gary Woodland Golf · risk_budget row" [ref=e1209] [cursor=pointer]:
+            - generic [ref=e1210]: Gary Woodland
+            - generic [ref=e1211]: Golf · risk_budget
+            - generic [ref=e1212]: row
+          - option "Portugal Soccer (World Cup) · risk_budget row" [ref=e1213] [cursor=pointer]:
+            - generic [ref=e1214]: Portugal
+            - generic [ref=e1215]: Soccer (World Cup) · risk_budget
+            - generic [ref=e1216]: row
+          - option "Jordan Spieth Golf · risk_budget row" [ref=e1217] [cursor=pointer]:
+            - generic [ref=e1218]: Jordan Spieth
+            - generic [ref=e1219]: Golf · risk_budget
+            - generic [ref=e1220]: row
+          - option "Si Woo Kim Golf · risk_budget row" [ref=e1221] [cursor=pointer]:
+            - generic [ref=e1222]: Si Woo Kim
+            - generic [ref=e1223]: Golf · risk_budget
+            - generic [ref=e1224]: row
+          - option "Sudarshan Yellamaraju Golf · risk_budget row" [ref=e1225] [cursor=pointer]:
+            - generic [ref=e1226]: Sudarshan Yellamaraju
+            - generic [ref=e1227]: Golf · risk_budget
+            - generic [ref=e1228]: row
+          - option "Germany Soccer (World Cup) · risk_budget row" [ref=e1229] [cursor=pointer]:
+            - generic [ref=e1230]: Germany
+            - generic [ref=e1231]: Soccer (World Cup) · risk_budget
+            - generic [ref=e1232]: row
+          - option "Sam Burns Golf · risk_budget row" [ref=e1233] [cursor=pointer]:
+            - generic [ref=e1234]: Sam Burns
+            - generic [ref=e1235]: Golf · risk_budget
+            - generic [ref=e1236]: row
+          - option "Colombia Soccer (World Cup) · risk_budget row" [ref=e1237] [cursor=pointer]:
+            - generic [ref=e1238]: Colombia
+            - generic [ref=e1239]: Soccer (World Cup) · risk_budget
+            - generic [ref=e1240]: row
+          - option "Nathan Kimsey Golf · risk_budget row" [ref=e1241] [cursor=pointer]:
+            - generic [ref=e1242]: Nathan Kimsey
+            - generic [ref=e1243]: Golf · risk_budget
+            - generic [ref=e1244]: row
+          - option "Laurie Canter Golf · risk_budget row" [ref=e1245] [cursor=pointer]:
+            - generic [ref=e1246]: Laurie Canter
+            - generic [ref=e1247]: Golf · risk_budget
+            - generic [ref=e1248]: row
+          - option "Jordan Soccer (World Cup) · risk_budget row" [ref=e1249] [cursor=pointer]:
+            - generic [ref=e1250]: Jordan
+            - generic [ref=e1251]: Soccer (World Cup) · risk_budget
+            - generic [ref=e1252]: row
+          - option "Keegan Bradley Golf · risk_budget row" [ref=e1253] [cursor=pointer]:
+            - generic [ref=e1254]: Keegan Bradley
+            - generic [ref=e1255]: Golf · risk_budget
+            - generic [ref=e1256]: row
+          - option "Germany Soccer (World Cup) · risk_budget row" [ref=e1257] [cursor=pointer]:
+            - generic [ref=e1258]: Germany
+            - generic [ref=e1259]: Soccer (World Cup) · risk_budget
+            - generic [ref=e1260]: row
+          - option "John Keefer Golf · risk_budget row" [ref=e1261] [cursor=pointer]:
+            - generic [ref=e1262]: John Keefer
+            - generic [ref=e1263]: Golf · risk_budget
+            - generic [ref=e1264]: row
+          - option "Japan Soccer (World Cup) · risk_budget row" [ref=e1265] [cursor=pointer]:
+            - generic [ref=e1266]: Japan
+            - generic [ref=e1267]: Soccer (World Cup) · risk_budget
+            - generic [ref=e1268]: row
+          - option "Nicolai Hojgaard Golf · risk_budget row" [ref=e1269] [cursor=pointer]:
+            - generic [ref=e1270]: Nicolai Hojgaard
+            - generic [ref=e1271]: Golf · risk_budget
+            - generic [ref=e1272]: row
+          - option "Spain Soccer (World Cup) · risk_budget row" [ref=e1273] [cursor=pointer]:
+            - generic [ref=e1274]: Spain
+            - generic [ref=e1275]: Soccer (World Cup) · risk_budget
+            - generic [ref=e1276]: row
+          - option "Jake Knapp Golf · risk_budget row" [ref=e1277] [cursor=pointer]:
+            - generic [ref=e1278]: Jake Knapp
+            - generic [ref=e1279]: Golf · risk_budget
+            - generic [ref=e1280]: row
+          - option "Jackson Koivun Golf · risk_budget row" [ref=e1281] [cursor=pointer]:
+            - generic [ref=e1282]: Jackson Koivun
+            - generic [ref=e1283]: Golf · risk_budget
+            - generic [ref=e1284]: row
+          - option "Adrien Dumont De Chassart Golf · risk_budget row" [ref=e1285] [cursor=pointer]:
+            - generic [ref=e1286]: Adrien Dumont De Chassart
+            - generic [ref=e1287]: Golf · risk_budget
+            - generic [ref=e1288]: row
+          - option "Morocco Soccer (World Cup) · risk_budget row" [ref=e1289] [cursor=pointer]:
+            - generic [ref=e1290]: Morocco
+            - generic [ref=e1291]: Soccer (World Cup) · risk_budget
+            - generic [ref=e1292]: row
+          - option "Marco Penge Golf · risk_budget row" [ref=e1293] [cursor=pointer]:
+            - generic [ref=e1294]: Marco Penge
+            - generic [ref=e1295]: Golf · risk_budget
+            - generic [ref=e1296]: row
+          - option "J.J. Spaun Golf · risk_budget row" [ref=e1297] [cursor=pointer]:
+            - generic [ref=e1298]: J.J. Spaun
+            - generic [ref=e1299]: Golf · risk_budget
+            - generic [ref=e1300]: row
+          - option "Aaron Rai Golf · risk_budget row" [ref=e1301] [cursor=pointer]:
+            - generic [ref=e1302]: Aaron Rai
+            - generic [ref=e1303]: Golf · risk_budget
+            - generic [ref=e1304]: row
+          - option "Cameron Young Golf · risk_budget row" [ref=e1305] [cursor=pointer]:
+            - generic [ref=e1306]: Cameron Young
+            - generic [ref=e1307]: Golf · risk_budget
+            - generic [ref=e1308]: row
+          - option "Las Vegas NFL · risk_budget row" [ref=e1309] [cursor=pointer]:
+            - generic [ref=e1310]: Las Vegas
+            - generic [ref=e1311]: NFL · risk_budget
+            - generic [ref=e1312]: row
+          - option "Ryo Hisatsune Golf · risk_budget row" [ref=e1313] [cursor=pointer]:
+            - generic [ref=e1314]: Ryo Hisatsune
+            - generic [ref=e1315]: Golf · risk_budget
+            - generic [ref=e1316]: row
+          - option "Scotland Soccer (World Cup) · risk_budget row" [ref=e1317] [cursor=pointer]:
+            - generic [ref=e1318]: Scotland
+            - generic [ref=e1319]: Soccer (World Cup) · risk_budget
+            - generic [ref=e1320]: row
+          - option "France Soccer (World Cup) · risk_budget row" [ref=e1321] [cursor=pointer]:
+            - generic [ref=e1322]: France
+            - generic [ref=e1323]: Soccer (World Cup) · risk_budget
+            - generic [ref=e1324]: row
+          - option "Czechia Soccer (World Cup) · risk_budget row" [ref=e1325] [cursor=pointer]:
+            - generic [ref=e1326]: Czechia
+            - generic [ref=e1327]: Soccer (World Cup) · risk_budget
+            - generic [ref=e1328]: row
+          - option "Viktor Hovland Golf · risk_budget row" [ref=e1329] [cursor=pointer]:
+            - generic [ref=e1330]: Viktor Hovland
+            - generic [ref=e1331]: Golf · risk_budget
+            - generic [ref=e1332]: row
+          - option "Mexico Soccer (World Cup) · risk_budget row" [ref=e1333] [cursor=pointer]:
+            - generic [ref=e1334]: Mexico
+            - generic [ref=e1335]: Soccer (World Cup) · risk_budget
+            - generic [ref=e1336]: row
+          - option "Rickie Fowler Golf · risk_budget row" [ref=e1337] [cursor=pointer]:
+            - generic [ref=e1338]: Rickie Fowler
+            - generic [ref=e1339]: Golf · risk_budget
+            - generic [ref=e1340]: row
+          - option "Netherlands Soccer (World Cup) · risk_budget row" [ref=e1341] [cursor=pointer]:
+            - generic [ref=e1342]: Netherlands
+            - generic [ref=e1343]: Soccer (World Cup) · risk_budget
+            - generic [ref=e1344]: row
+          - option "Harris English Golf · risk_budget row" [ref=e1345] [cursor=pointer]:
+            - generic [ref=e1346]: Harris English
+            - generic [ref=e1347]: Golf · risk_budget
+            - generic [ref=e1348]: row
+          - option "Norway Soccer (World Cup) · risk_budget row" [ref=e1349] [cursor=pointer]:
+            - generic [ref=e1350]: Norway
+            - generic [ref=e1351]: Soccer (World Cup) · risk_budget
+            - generic [ref=e1352]: row
+          - option "Spain Soccer (World Cup) · risk_budget row" [ref=e1353] [cursor=pointer]:
+            - generic [ref=e1354]: Spain
+            - generic [ref=e1355]: Soccer (World Cup) · risk_budget
+            - generic [ref=e1356]: row
+          - option "Scottie Scheffler Golf · risk_budget row" [ref=e1357] [cursor=pointer]:
+            - generic [ref=e1358]: Scottie Scheffler
+            - generic [ref=e1359]: Golf · risk_budget
+            - generic [ref=e1360]: row
+          - option "Portugal Soccer (World Cup) · risk_budget row" [ref=e1361] [cursor=pointer]:
+            - generic [ref=e1362]: Portugal
+            - generic [ref=e1363]: Soccer (World Cup) · risk_budget
+            - generic [ref=e1364]: row
+          - option "Collin Morikawa Golf · risk_budget row" [ref=e1365] [cursor=pointer]:
+            - generic [ref=e1366]: Collin Morikawa
+            - generic [ref=e1367]: Golf · risk_budget
+            - generic [ref=e1368]: row
+          - option "Rory McIlroy Golf · risk_budget row" [ref=e1369] [cursor=pointer]:
+            - generic [ref=e1370]: Rory McIlroy
+            - generic [ref=e1371]: Golf · risk_budget
+            - generic [ref=e1372]: row
+          - option "Senegal Soccer (World Cup) · risk_budget row" [ref=e1373] [cursor=pointer]:
+            - generic [ref=e1374]: Senegal
+            - generic [ref=e1375]: Soccer (World Cup) · risk_budget
+            - generic [ref=e1376]: row
+          - option "Chris Gotterup Golf · risk_budget row" [ref=e1377] [cursor=pointer]:
+            - generic [ref=e1378]: Chris Gotterup
+            - generic [ref=e1379]: Golf · risk_budget
+            - generic [ref=e1380]: row
+          - option "Tommy Fleetwood Golf · risk_budget row" [ref=e1381] [cursor=pointer]:
+            - generic [ref=e1382]: Tommy Fleetwood
+            - generic [ref=e1383]: Golf · risk_budget
+            - generic [ref=e1384]: row
+          - option "Austria Soccer (World Cup) · risk_budget row" [ref=e1385] [cursor=pointer]:
+            - generic [ref=e1386]: Austria
+            - generic [ref=e1387]: Soccer (World Cup) · risk_budget
+            - generic [ref=e1388]: row
+          - option "France Soccer (World Cup) · risk_budget row" [ref=e1389] [cursor=pointer]:
+            - generic [ref=e1390]: France
+            - generic [ref=e1391]: Soccer (World Cup) · risk_budget
+            - generic [ref=e1392]: row
+          - option "Kurt Kitayama Golf · risk_budget row" [ref=e1393] [cursor=pointer]:
+            - generic [ref=e1394]: Kurt Kitayama
+            - generic [ref=e1395]: Golf · risk_budget
+            - generic [ref=e1396]: row
+          - option "Boston MLB · risk_budget row" [ref=e1397] [cursor=pointer]:
+            - generic [ref=e1398]: Boston
+            - generic [ref=e1399]: MLB · risk_budget
+            - generic [ref=e1400]: row
+          - option "Morocco Soccer (World Cup) · risk_budget row" [ref=e1401] [cursor=pointer]:
+            - generic [ref=e1402]: Morocco
+            - generic [ref=e1403]: Soccer (World Cup) · risk_budget
+            - generic [ref=e1404]: row
+          - option "Matti Schmid Golf · risk_budget row" [ref=e1405] [cursor=pointer]:
+            - generic [ref=e1406]: Matti Schmid
+            - generic [ref=e1407]: Golf · risk_budget
+            - generic [ref=e1408]: row
+          - option "Spain Soccer (World Cup) · risk_budget row" [ref=e1409] [cursor=pointer]:
+            - generic [ref=e1410]: Spain
+            - generic [ref=e1411]: Soccer (World Cup) · risk_budget
+            - generic [ref=e1412]: row
+          - option "Bosnia and Herzegovina Soccer (World Cup) · risk_budget row" [ref=e1413] [cursor=pointer]:
+            - generic [ref=e1414]: Bosnia and Herzegovina
+            - generic [ref=e1415]: Soccer (World Cup) · risk_budget
+            - generic [ref=e1416]: row
+          - option "Justin Thomas Golf · risk_budget row" [ref=e1417] [cursor=pointer]:
+            - generic [ref=e1418]: Justin Thomas
+            - generic [ref=e1419]: Golf · risk_budget
+            - generic [ref=e1420]: row
+          - option "Brooks Koepka Golf · risk_budget row" [ref=e1421] [cursor=pointer]:
+            - generic [ref=e1422]: Brooks Koepka
+            - generic [ref=e1423]: Golf · risk_budget
+            - generic [ref=e1424]: row
+          - option "Bryson DeChambeau Golf · risk_budget row" [ref=e1425] [cursor=pointer]:
+            - generic [ref=e1426]: Bryson DeChambeau
+            - generic [ref=e1427]: Golf · risk_budget
+            - generic [ref=e1428]: row
+          - option "Corey Conners Golf · risk_budget row" [ref=e1429] [cursor=pointer]:
+            - generic [ref=e1430]: Corey Conners
+            - generic [ref=e1431]: Golf · risk_budget
+            - generic [ref=e1432]: row
+          - option "Matt Fitzpatrick Golf · risk_budget row" [ref=e1433] [cursor=pointer]:
+            - generic [ref=e1434]: Matt Fitzpatrick
+            - generic [ref=e1435]: Golf · risk_budget
+            - generic [ref=e1436]: row
+          - option "Akshay Bhatia Golf · risk_budget row" [ref=e1437] [cursor=pointer]:
+            - generic [ref=e1438]: Akshay Bhatia
+            - generic [ref=e1439]: Golf · risk_budget
+            - generic [ref=e1440]: row
+          - option "Spain Soccer (World Cup) · risk_budget row" [ref=e1441] [cursor=pointer]:
+            - generic [ref=e1442]: Spain
+            - generic [ref=e1443]: Soccer (World Cup) · risk_budget
+            - generic [ref=e1444]: row
+          - option "Brooks Koepka Golf · risk_budget row" [ref=e1445] [cursor=pointer]:
+            - generic [ref=e1446]: Brooks Koepka
+            - generic [ref=e1447]: Golf · risk_budget
+            - generic [ref=e1448]: row
+          - option "Brazil Soccer (World Cup) · risk_budget row" [ref=e1449] [cursor=pointer]:
+            - generic [ref=e1450]: Brazil
+            - generic [ref=e1451]: Soccer (World Cup) · risk_budget
+            - generic [ref=e1452]: row
+          - option "Daniel Berger Golf · risk_budget row" [ref=e1453] [cursor=pointer]:
+            - generic [ref=e1454]: Daniel Berger
+            - generic [ref=e1455]: Golf · risk_budget
+            - generic [ref=e1456]: row
+          - option "Michael Kim Golf · risk_budget row" [ref=e1457] [cursor=pointer]:
+            - generic [ref=e1458]: Michael Kim
+            - generic [ref=e1459]: Golf · risk_budget
+            - generic [ref=e1460]: row
+          - option "Tommy Fleetwood Golf · risk_budget row" [ref=e1461] [cursor=pointer]:
+            - generic [ref=e1462]: Tommy Fleetwood
+            - generic [ref=e1463]: Golf · risk_budget
+            - generic [ref=e1464]: row
+          - option "Portugal Soccer (World Cup) · risk_budget row" [ref=e1465] [cursor=pointer]:
+            - generic [ref=e1466]: Portugal
+            - generic [ref=e1467]: Soccer (World Cup) · risk_budget
+            - generic [ref=e1468]: row
+          - option "Alex Smalley Golf · risk_budget row" [ref=e1469] [cursor=pointer]:
+            - generic [ref=e1470]: Alex Smalley
+            - generic [ref=e1471]: Golf · risk_budget
+            - generic [ref=e1472]: row
+          - option "Ivory Coast Soccer (World Cup) · risk_budget row" [ref=e1473] [cursor=pointer]:
+            - generic [ref=e1474]: Ivory Coast
+            - generic [ref=e1475]: Soccer (World Cup) · risk_budget
+            - generic [ref=e1476]: row
+          - option "Los Angeles WNBA · risk_budget row" [ref=e1477] [cursor=pointer]:
+            - generic [ref=e1478]: Los Angeles
+            - generic [ref=e1479]: WNBA · risk_budget
+            - generic [ref=e1480]: row
+          - option "Sungjae Im Golf · risk_budget row" [ref=e1481] [cursor=pointer]:
+            - generic [ref=e1482]: Sungjae Im
+            - generic [ref=e1483]: Golf · risk_budget
+            - generic [ref=e1484]: row
+          - option "Tennessee NFL · risk_budget row" [ref=e1485] [cursor=pointer]:
+            - generic [ref=e1486]: Tennessee
+            - generic [ref=e1487]: NFL · risk_budget
+            - generic [ref=e1488]: row
+          - option "Ryan Fox Golf · risk_budget row" [ref=e1489] [cursor=pointer]:
+            - generic [ref=e1490]: Ryan Fox
+            - generic [ref=e1491]: Golf · risk_budget
+            - generic [ref=e1492]: row
+          - option "England Soccer (World Cup) · risk_budget row" [ref=e1493] [cursor=pointer]:
+            - generic [ref=e1494]: England
+            - generic [ref=e1495]: Soccer (World Cup) · risk_budget
+            - generic [ref=e1496]: row
+          - option "Egypt Soccer (World Cup) · risk_budget row" [ref=e1497] [cursor=pointer]:
+            - generic [ref=e1498]: Egypt
+            - generic [ref=e1499]: Soccer (World Cup) · risk_budget
+            - generic [ref=e1500]: row
+          - option "Nick Taylor Golf · risk_budget row" [ref=e1501] [cursor=pointer]:
+            - generic [ref=e1502]: Nick Taylor
+            - generic [ref=e1503]: Golf · risk_budget
+            - generic [ref=e1504]: row
+          - option "France Soccer (World Cup) · risk_budget row" [ref=e1505] [cursor=pointer]:
+            - generic [ref=e1506]: France
+            - generic [ref=e1507]: Soccer (World Cup) · risk_budget
+            - generic [ref=e1508]: row
+          - option "Ecuador Soccer (World Cup) · risk_budget row" [ref=e1509] [cursor=pointer]:
+            - generic [ref=e1510]: Ecuador
+            - generic [ref=e1511]: Soccer (World Cup) · risk_budget
+            - generic [ref=e1512]: row
+          - option "Netherlands Soccer (World Cup) · risk_budget row" [ref=e1513] [cursor=pointer]:
+            - generic [ref=e1514]: Netherlands
+            - generic [ref=e1515]: Soccer (World Cup) · risk_budget
+            - generic [ref=e1516]: row
+          - option "France Soccer (World Cup) · risk_budget row" [ref=e1517] [cursor=pointer]:
+            - generic [ref=e1518]: France
+            - generic [ref=e1519]: Soccer (World Cup) · risk_budget
+            - generic [ref=e1520]: row
+          - option "USA Soccer (World Cup) · risk_budget row" [ref=e1521] [cursor=pointer]:
+            - generic [ref=e1522]: USA
+            - generic [ref=e1523]: Soccer (World Cup) · risk_budget
+            - generic [ref=e1524]: row
+          - option "Croatia Soccer (World Cup) · risk_budget row" [ref=e1525] [cursor=pointer]:
+            - generic [ref=e1526]: Croatia
+            - generic [ref=e1527]: Soccer (World Cup) · risk_budget
+            - generic [ref=e1528]: row
+          - option "England Soccer (World Cup) · risk_budget row" [ref=e1529] [cursor=pointer]:
+            - generic [ref=e1530]: England
+            - generic [ref=e1531]: Soccer (World Cup) · risk_budget
+            - generic [ref=e1532]: row
+          - option "Jacob Bridgeman Golf · risk_budget row" [ref=e1533] [cursor=pointer]:
+            - generic [ref=e1534]: Jacob Bridgeman
+            - generic [ref=e1535]: Golf · risk_budget
+            - generic [ref=e1536]: row
+          - option "Jon Rahm Golf · risk_budget row" [ref=e1537] [cursor=pointer]:
+            - generic [ref=e1538]: Jon Rahm
+            - generic [ref=e1539]: Golf · risk_budget
+            - generic [ref=e1540]: row
+          - option "Uruguay Soccer (World Cup) · risk_budget row" [ref=e1541] [cursor=pointer]:
+            - generic [ref=e1542]: Uruguay
+            - generic [ref=e1543]: Soccer (World Cup) · risk_budget
+            - generic [ref=e1544]: row
+          - option "Qatar Soccer (World Cup) · risk_budget row" [ref=e1545] [cursor=pointer]:
+            - generic [ref=e1546]: Qatar
+            - generic [ref=e1547]: Soccer (World Cup) · risk_budget
+            - generic [ref=e1548]: row
+          - option "Belgium Soccer (World Cup) · risk_budget row" [ref=e1549] [cursor=pointer]:
+            - generic [ref=e1550]: Belgium
+            - generic [ref=e1551]: Soccer (World Cup) · risk_budget
+            - generic [ref=e1552]: row
+          - option "Argentina Soccer (World Cup) · risk_budget row" [ref=e1553] [cursor=pointer]:
+            - generic [ref=e1554]: Argentina
+            - generic [ref=e1555]: Soccer (World Cup) · risk_budget
+            - generic [ref=e1556]: row
+          - option "Robert MacIntyre Golf · risk_budget row" [ref=e1557] [cursor=pointer]:
+            - generic [ref=e1558]: Robert MacIntyre
+            - generic [ref=e1559]: Golf · risk_budget
+            - generic [ref=e1560]: row
+          - option "Paraguay Soccer (World Cup) · risk_budget row" [ref=e1561] [cursor=pointer]:
+            - generic [ref=e1562]: Paraguay
+            - generic [ref=e1563]: Soccer (World Cup) · risk_budget
+            - generic [ref=e1564]: row
+          - option "England Soccer (World Cup) · risk_budget row" [ref=e1565] [cursor=pointer]:
+            - generic [ref=e1566]: England
+            - generic [ref=e1567]: Soccer (World Cup) · risk_budget
+            - generic [ref=e1568]: row
+          - option "Brazil Soccer (World Cup) · risk_budget row" [ref=e1569] [cursor=pointer]:
+            - generic [ref=e1570]: Brazil
+            - generic [ref=e1571]: Soccer (World Cup) · risk_budget
+            - generic [ref=e1572]: row
+          - option "Argentina Soccer (World Cup) · risk_budget row" [ref=e1573] [cursor=pointer]:
+            - generic [ref=e1574]: Argentina
+            - generic [ref=e1575]: Soccer (World Cup) · risk_budget
+            - generic [ref=e1576]: row
+          - option "Min Woo Lee Golf · risk_budget row" [ref=e1577] [cursor=pointer]:
+            - generic [ref=e1578]: Min Woo Lee
+            - generic [ref=e1579]: Golf · risk_budget
+            - generic [ref=e1580]: row
+          - option "Tyrrell Hatton Golf · risk_budget row" [ref=e1581] [cursor=pointer]:
+            - generic [ref=e1582]: Tyrrell Hatton
+            - generic [ref=e1583]: Golf · risk_budget
+            - generic [ref=e1584]: row
+          - option "Tom Kim Golf · risk_budget row" [ref=e1585] [cursor=pointer]:
+            - generic [ref=e1586]: Tom Kim
+            - generic [ref=e1587]: Golf · risk_budget
+            - generic [ref=e1588]: row
+          - option "Justin Thomas Golf · risk_budget row" [ref=e1589] [cursor=pointer]:
+            - generic [ref=e1590]: Justin Thomas
+            - generic [ref=e1591]: Golf · risk_budget
+            - generic [ref=e1592]: row
+          - option "Sam Stevens Golf · risk_budget row" [ref=e1593] [cursor=pointer]:
+            - generic [ref=e1594]: Sam Stevens
+            - generic [ref=e1595]: Golf · risk_budget
+            - generic [ref=e1596]: row
+          - option "Portugal Soccer (World Cup) · risk_budget row" [ref=e1597] [cursor=pointer]:
+            - generic [ref=e1598]: Portugal
+            - generic [ref=e1599]: Soccer (World Cup) · risk_budget
+            - generic [ref=e1600]: row
+          - option "Australia Soccer (World Cup) · risk_budget row" [ref=e1601] [cursor=pointer]:
+            - generic [ref=e1602]: Australia
+            - generic [ref=e1603]: Soccer (World Cup) · risk_budget
+            - generic [ref=e1604]: row
+          - option "New Zealand Soccer (World Cup) · risk_budget row" [ref=e1605] [cursor=pointer]:
+            - generic [ref=e1606]: New Zealand
+            - generic [ref=e1607]: Soccer (World Cup) · risk_budget
+            - generic [ref=e1608]: row
+          - option "Ludvig Aberg Golf · risk_budget row" [ref=e1609] [cursor=pointer]:
+            - generic [ref=e1610]: Ludvig Aberg
+            - generic [ref=e1611]: Golf · risk_budget
+            - generic [ref=e1612]: row
+          - option "Colombia Soccer (World Cup) · risk_budget row" [ref=e1613] [cursor=pointer]:
+            - generic [ref=e1614]: Colombia
+            - generic [ref=e1615]: Soccer (World Cup) · risk_budget
+            - generic [ref=e1616]: row
+          - option "Belgium Soccer (World Cup) · risk_budget row" [ref=e1617] [cursor=pointer]:
+            - generic [ref=e1618]: Belgium
+            - generic [ref=e1619]: Soccer (World Cup) · risk_budget
+            - generic [ref=e1620]: row
+          - option "Cape Verde Soccer (World Cup) · risk_budget row" [ref=e1621] [cursor=pointer]:
+            - generic [ref=e1622]: Cape Verde
+            - generic [ref=e1623]: Soccer (World Cup) · risk_budget
+            - generic [ref=e1624]: row
+          - option "Brian Harman Golf · risk_budget row" [ref=e1625] [cursor=pointer]:
+            - generic [ref=e1626]: Brian Harman
+            - generic [ref=e1627]: Golf · risk_budget
+            - generic [ref=e1628]: row
+          - option "Qatar Soccer (World Cup) · risk_budget row" [ref=e1629] [cursor=pointer]:
+            - generic [ref=e1630]: Qatar
+            - generic [ref=e1631]: Soccer (World Cup) · risk_budget
+            - generic [ref=e1632]: row
+          - option "Dallas WNBA · risk_budget row" [ref=e1633] [cursor=pointer]:
+            - generic [ref=e1634]: Dallas
+            - generic [ref=e1635]: WNBA · risk_budget
+            - generic [ref=e1636]: row
+          - option "Patrick Reed Golf · risk_budget row" [ref=e1637] [cursor=pointer]:
+            - generic [ref=e1638]: Patrick Reed
+            - generic [ref=e1639]: Golf · risk_budget
+            - generic [ref=e1640]: row
+          - option "DXA Esports vs Rooster Esports · near_miss row" [ref=e1641] [cursor=pointer]:
+            - generic [ref=e1642]: DXA Esports vs Rooster
+            - generic [ref=e1643]: Esports · near_miss
+            - generic [ref=e1644]: row
+          - option "Spain vs Saudi Arabia Soccer (World Cup) · near_miss row" [ref=e1645] [cursor=pointer]:
+            - generic [ref=e1646]: Spain vs Saudi Arabia
+            - generic [ref=e1647]: Soccer (World Cup) · near_miss
+            - generic [ref=e1648]: row
+          - option "Iraq vs Norway Soccer (World Cup) · near_miss row" [ref=e1649] [cursor=pointer]:
+            - generic [ref=e1650]: Iraq vs Norway
+            - generic [ref=e1651]: Soccer (World Cup) · near_miss
+            - generic [ref=e1652]: row
+          - option "Tomas Martin Etcheverry vs Daniil Medvedev Tennis · near_miss row" [ref=e1653] [cursor=pointer]:
+            - generic [ref=e1654]: Tomas Martin Etcheverry vs Daniil Medvedev
+            - generic [ref=e1655]: Tennis · near_miss
+            - generic [ref=e1656]: row
+          - option "Curacao vs Ivory Coast Soccer (World Cup) · near_miss row" [ref=e1657] [cursor=pointer]:
+            - generic [ref=e1658]: Curacao vs Ivory Coast
+            - generic [ref=e1659]: Soccer (World Cup) · near_miss
+            - generic [ref=e1660]: row
+          - option "Caty McNally vs Antonia Ruzic Tennis · near_miss row" [ref=e1661] [cursor=pointer]:
+            - generic [ref=e1662]: Caty McNally vs Antonia Ruzic
+            - generic [ref=e1663]: Tennis · near_miss
+            - generic [ref=e1664]: row
+          - option "Zeynep Sonmez vs Leylah Fernandez Tennis · near_miss row" [ref=e1665] [cursor=pointer]:
+            - generic [ref=e1666]: Zeynep Sonmez vs Leylah Fernandez
+            - generic [ref=e1667]: Tennis · near_miss
+            - generic [ref=e1668]: row
+          - option "Toronto vs Atlanta WNBA · near_miss row" [ref=e1669] [cursor=pointer]:
+            - generic [ref=e1670]: Toronto vs Atlanta
+            - generic [ref=e1671]: WNBA · near_miss
+            - generic [ref=e1672]: row
+          - option "Netherlands vs Japan Soccer (World Cup) · near_miss row" [ref=e1673] [cursor=pointer]:
+            - generic [ref=e1674]: Netherlands vs Japan
+            - generic [ref=e1675]: Soccer (World Cup) · near_miss
+            - generic [ref=e1676]: row
+          - option "Kansas City vs Washington MLB · near_miss row" [ref=e1677] [cursor=pointer]:
+            - generic [ref=e1678]: Kansas City vs Washington
+            - generic [ref=e1679]: MLB · near_miss
+            - generic [ref=e1680]: row
+          - option "Elise Mertens vs Liudmila Samsonova Tennis · near_miss row" [ref=e1681] [cursor=pointer]:
+            - generic [ref=e1682]: Elise Mertens vs Liudmila Samsonova
+            - generic [ref=e1683]: Tennis · near_miss
+            - generic [ref=e1684]: row
+          - option "Belgium vs Egypt Soccer (World Cup) · near_miss row" [ref=e1685] [cursor=pointer]:
+            - generic [ref=e1686]: Belgium vs Egypt
+            - generic [ref=e1687]: Soccer (World Cup) · near_miss
+            - generic [ref=e1688]: row
+          - option "Max Schoenhaus vs Learner Tien Tennis · near_miss row" [ref=e1689] [cursor=pointer]:
+            - generic [ref=e1690]: Max Schoenhaus vs Learner Tien
+            - generic [ref=e1691]: Tennis · near_miss
+            - generic [ref=e1692]: row
+          - option "Jordan vs Argentina Soccer (World Cup) · near_miss row" [ref=e1693] [cursor=pointer]:
+            - generic [ref=e1694]: Jordan vs Argentina
+            - generic [ref=e1695]: Soccer (World Cup) · near_miss
+            - generic [ref=e1696]: row
+          - option "VGK Golden Knights vs CAR Hurricanes NHL · near_miss row" [ref=e1697] [cursor=pointer]:
+            - generic [ref=e1698]: VGK Golden Knights vs CAR Hurricanes
+            - generic [ref=e1699]: NHL · near_miss
+            - generic [ref=e1700]: row
+          - option "Helena Bueno vs Sofia Magali Barreto Scholz Tennis · near_miss row" [ref=e1701] [cursor=pointer]:
+            - generic [ref=e1702]: Helena Bueno vs Sofia Magali Barreto Scholz
+            - generic [ref=e1703]: Tennis · near_miss
+            - generic [ref=e1704]: row
+          - option "Brandon Nakashima vs Marton Fucsovics Tennis · near_miss row" [ref=e1705] [cursor=pointer]:
+            - generic [ref=e1706]: Brandon Nakashima vs Marton Fucsovics
+            - generic [ref=e1707]: Tennis · near_miss
+            - generic [ref=e1708]: row
+          - option "Heretics vs Fnatic Esports · near_miss row" [ref=e1709] [cursor=pointer]:
+            - generic [ref=e1710]: Heretics vs Fnatic
+            - generic [ref=e1711]: Esports · near_miss
+            - generic [ref=e1712]: row
+          - option "Belgium vs IR Iran Soccer (World Cup) · near_miss row" [ref=e1713] [cursor=pointer]:
+            - generic [ref=e1714]: Belgium vs IR Iran
+            - generic [ref=e1715]: Soccer (World Cup) · near_miss
+            - generic [ref=e1716]: row
+          - option "Colorado vs A's MLB · near_miss row" [ref=e1717] [cursor=pointer]:
+            - generic [ref=e1718]: Colorado vs A's
+            - generic [ref=e1719]: MLB · near_miss
+            - generic [ref=e1720]: row
+          - option "New York vs Washington WNBA · near_miss row" [ref=e1721] [cursor=pointer]:
+            - generic [ref=e1722]: New York vs Washington
+            - generic [ref=e1723]: WNBA · near_miss
+            - generic [ref=e1724]: row
+          - option "HyperSpirit vs Sashi Esport Esports · near_miss row" [ref=e1725] [cursor=pointer]:
+            - generic [ref=e1726]: HyperSpirit vs Sashi Esport
+            - generic [ref=e1727]: Esports · near_miss
+            - generic [ref=e1728]: row
+          - option "Texas vs Boston MLB · near_miss row" [ref=e1729] [cursor=pointer]:
+            - generic [ref=e1730]: Texas vs Boston
+            - generic [ref=e1731]: MLB · near_miss
+            - generic [ref=e1732]: row
+          - option "Czechia vs Mexico Soccer (World Cup) · near_miss row" [ref=e1733] [cursor=pointer]:
+            - generic [ref=e1734]: Czechia vs Mexico
+            - generic [ref=e1735]: Soccer (World Cup) · near_miss
+            - generic [ref=e1736]: row
+          - option "Mexico vs Korea Republic Soccer (World Cup) · near_miss row" [ref=e1737] [cursor=pointer]:
+            - generic [ref=e1738]: Mexico vs Korea Republic
+            - generic [ref=e1739]: Soccer (World Cup) · near_miss
+            - generic [ref=e1740]: row
+          - option "Elina Svitolina vs Anna Kalinskaya Tennis · near_miss row" [ref=e1741] [cursor=pointer]:
+            - generic [ref=e1742]: Elina Svitolina vs Anna Kalinskaya
+            - generic [ref=e1743]: Tennis · near_miss
+            - generic [ref=e1744]: row
+          - option "New Zealand vs Egypt Soccer (World Cup) · near_miss row" [ref=e1745] [cursor=pointer]:
+            - generic [ref=e1746]: New Zealand vs Egypt
+            - generic [ref=e1747]: Soccer (World Cup) · near_miss
+            - generic [ref=e1748]: row
+          - option "Harriet Dart vs Katie Boulter Tennis · near_miss row" [ref=e1749] [cursor=pointer]:
+            - generic [ref=e1750]: Harriet Dart vs Katie Boulter
+            - generic [ref=e1751]: Tennis · near_miss
+            - generic [ref=e1752]: row
+          - option "Tunisia vs Netherlands Soccer (World Cup) · near_miss row" [ref=e1753] [cursor=pointer]:
+            - generic [ref=e1754]: Tunisia vs Netherlands
+            - generic [ref=e1755]: Soccer (World Cup) · near_miss
+            - generic [ref=e1756]: row
+          - option "Miami vs Philadelphia MLB · near_miss row" [ref=e1757] [cursor=pointer]:
+            - generic [ref=e1758]: Miami vs Philadelphia
+            - generic [ref=e1759]: MLB · near_miss
+            - generic [ref=e1760]: row
+          - option "XLG Gaming vs EDward Gaming Esports · near_miss row" [ref=e1761] [cursor=pointer]:
+            - generic [ref=e1762]: XLG Gaming vs EDward Gaming
+            - generic [ref=e1763]: Esports · near_miss
+            - generic [ref=e1764]: row
+          - option "Qinwen Zheng vs Maria Sakkari Tennis · near_miss row" [ref=e1765] [cursor=pointer]:
+            - generic [ref=e1766]: Qinwen Zheng vs Maria Sakkari
+            - generic [ref=e1767]: Tennis · near_miss
+            - generic [ref=e1768]: row
+          - option "Pittsburgh vs A's MLB · near_miss row" [ref=e1769] [cursor=pointer]:
+            - generic [ref=e1770]: Pittsburgh vs A's
+            - generic [ref=e1771]: MLB · near_miss
+            - generic [ref=e1772]: row
+          - option "Brazil vs Haiti Soccer (World Cup) · near_miss row" [ref=e1773] [cursor=pointer]:
+            - generic [ref=e1774]: Brazil vs Haiti
+            - generic [ref=e1775]: Soccer (World Cup) · near_miss
+            - generic [ref=e1776]: row
+          - option "Tallon Griekspoor vs Sho Shimabukuro Tennis · near_miss row" [ref=e1777] [cursor=pointer]:
+            - generic [ref=e1778]: Tallon Griekspoor vs Sho Shimabukuro
+            - generic [ref=e1779]: Tennis · near_miss
+            - generic [ref=e1780]: row
+          - option "Noir Verse vs Aimclub Esports · near_miss row" [ref=e1781] [cursor=pointer]:
+            - generic [ref=e1782]: Noir Verse vs Aimclub
+            - generic [ref=e1783]: Esports · near_miss
+            - generic [ref=e1784]: row
+          - option "Senegal vs Iraq Soccer (World Cup) · near_miss row" [ref=e1785] [cursor=pointer]:
+            - generic [ref=e1786]: Senegal vs Iraq
+            - generic [ref=e1787]: Soccer (World Cup) · near_miss
+            - generic [ref=e1788]: row
+          - option "Ghana vs Panama Soccer (World Cup) · near_miss row" [ref=e1789] [cursor=pointer]:
+            - generic [ref=e1790]: Ghana vs Panama
+            - generic [ref=e1791]: Soccer (World Cup) · near_miss
+            - generic [ref=e1792]: row
+          - option "Team Refuser vs Roar Gaming Esports · near_miss row" [ref=e1793] [cursor=pointer]:
+            - generic [ref=e1794]: Team Refuser vs Roar Gaming
+            - generic [ref=e1795]: Esports · near_miss
+            - generic [ref=e1796]: row
+          - option "Miami vs Philadelphia MLB · near_miss row" [ref=e1797] [cursor=pointer]:
+            - generic [ref=e1798]: Miami vs Philadelphia
+            - generic [ref=e1799]: MLB · near_miss
+            - generic [ref=e1800]: row
+          - option "Jacksonville vs Cleveland NFL · near_miss row" [ref=e1801] [cursor=pointer]:
+            - generic [ref=e1802]: Jacksonville vs Cleveland
+            - generic [ref=e1803]: NFL · near_miss
+            - generic [ref=e1804]: row
+          - option "Canada vs Qatar Soccer (World Cup) · near_miss row" [ref=e1805] [cursor=pointer]:
+            - generic [ref=e1806]: Canada vs Qatar
+            - generic [ref=e1807]: Soccer (World Cup) · near_miss
+            - generic [ref=e1808]: row
+          - option "Miami vs Philadelphia MLB · near_miss row" [ref=e1809] [cursor=pointer]:
+            - generic [ref=e1810]: Miami vs Philadelphia
+            - generic [ref=e1811]: MLB · near_miss
+            - generic [ref=e1812]: row
+          - option "Norway vs Senegal Soccer (World Cup) · near_miss row" [ref=e1813] [cursor=pointer]:
+            - generic [ref=e1814]: Norway vs Senegal
+            - generic [ref=e1815]: Soccer (World Cup) · near_miss
+            - generic [ref=e1816]: row
+          - option "Detroit vs Houston MLB · near_miss row" [ref=e1817] [cursor=pointer]:
+            - generic [ref=e1818]: Detroit vs Houston
+            - generic [ref=e1819]: MLB · near_miss
+            - generic [ref=e1820]: row
+          - option "Pittsburgh vs A's MLB · near_miss row" [ref=e1821] [cursor=pointer]:
+            - generic [ref=e1822]: Pittsburgh vs A's
+            - generic [ref=e1823]: MLB · near_miss
+            - generic [ref=e1824]: row
+          - option "Andrey Rublev vs Hubert Hurkacz Tennis · near_miss row" [ref=e1825] [cursor=pointer]:
+            - generic [ref=e1826]: Andrey Rublev vs Hubert Hurkacz
+            - generic [ref=e1827]: Tennis · near_miss
+            - generic [ref=e1828]: row
+          - option "Team Vitality vs Paper Rex Esports · near_miss row" [ref=e1829] [cursor=pointer]:
+            - generic [ref=e1830]: Team Vitality vs Paper Rex
+            - generic [ref=e1831]: Esports · near_miss
+            - generic [ref=e1832]: row
+          - option "Nuno Borges vs Felix Auger-Aliassime Tennis · near_miss row" [ref=e1833] [cursor=pointer]:
+            - generic [ref=e1834]: Nuno Borges vs Felix Auger-Aliassime
+            - generic [ref=e1835]: Tennis · near_miss
+            - generic [ref=e1836]: row
+          - option "Magdalena Frech vs Shuai Zhang Tennis · near_miss row" [ref=e1837] [cursor=pointer]:
+            - generic [ref=e1838]: Magdalena Frech vs Shuai Zhang
+            - generic [ref=e1839]: Tennis · near_miss
+            - generic [ref=e1840]: row
+          - option "Austria vs Jordan Soccer (World Cup) · near_miss row" [ref=e1841] [cursor=pointer]:
+            - generic [ref=e1842]: Austria vs Jordan
+            - generic [ref=e1843]: Soccer (World Cup) · near_miss
+            - generic [ref=e1844]: row
+          - option "Portugal vs Uzbekistan Soccer (World Cup) · near_miss row" [ref=e1845] [cursor=pointer]:
+            - generic [ref=e1846]: Portugal vs Uzbekistan
+            - generic [ref=e1847]: Soccer (World Cup) · near_miss
+            - generic [ref=e1848]: row
+          - option "Terence Atmane vs Martin Landaluce Tennis · near_miss row" [ref=e1849] [cursor=pointer]:
+            - generic [ref=e1850]: Terence Atmane vs Martin Landaluce
+            - generic [ref=e1851]: Tennis · near_miss
+            - generic [ref=e1852]: row
+          - option "Ugo Humbert vs Marin Cilic Tennis · near_miss row" [ref=e1853] [cursor=pointer]:
+            - generic [ref=e1854]: Ugo Humbert vs Marin Cilic
+            - generic [ref=e1855]: Tennis · near_miss
+            - generic [ref=e1856]: row
+          - option "IR Iran vs New Zealand Soccer (World Cup) · near_miss row" [ref=e1857] [cursor=pointer]:
+            - generic [ref=e1858]: IR Iran vs New Zealand
+            - generic [ref=e1859]: Soccer (World Cup) · near_miss
+            - generic [ref=e1860]: row
+          - option "Flavio Cobolli vs Frances Tiafoe Tennis · near_miss row" [ref=e1861] [cursor=pointer]:
+            - generic [ref=e1862]: Flavio Cobolli vs Frances Tiafoe
+            - generic [ref=e1863]: Tennis · near_miss
+            - generic [ref=e1864]: row
+          - option "Egypt vs IR Iran Soccer (World Cup) · near_miss row" [ref=e1865] [cursor=pointer]:
+            - generic [ref=e1866]: Egypt vs IR Iran
+            - generic [ref=e1867]: Soccer (World Cup) · near_miss
+            - generic [ref=e1868]: row
+          - option "England vs Ghana Soccer (World Cup) · near_miss row" [ref=e1869] [cursor=pointer]:
+            - generic [ref=e1870]: England vs Ghana
+            - generic [ref=e1871]: Soccer (World Cup) · near_miss
+            - generic [ref=e1872]: row
+          - option "Minnesota vs Portland WNBA · near_miss row" [ref=e1873] [cursor=pointer]:
+            - generic [ref=e1874]: Minnesota vs Portland
+            - generic [ref=e1875]: WNBA · near_miss
+            - generic [ref=e1876]: row
+          - option "Panama vs England Soccer (World Cup) · near_miss row" [ref=e1877] [cursor=pointer]:
+            - generic [ref=e1878]: Panama vs England
+            - generic [ref=e1879]: Soccer (World Cup) · near_miss
+            - generic [ref=e1880]: row
+          - option "KT Rolster Challengers vs Top Esports Challenger Esports · near_miss row" [ref=e1881] [cursor=pointer]:
+            - generic [ref=e1882]: KT Rolster Challengers vs Top Esports Challenger
+            - generic [ref=e1883]: Esports · near_miss
+            - generic [ref=e1884]: row
+          - option "Algeria vs Austria Soccer (World Cup) · near_miss row" [ref=e1885] [cursor=pointer]:
+            - generic [ref=e1886]: Algeria vs Austria
+            - generic [ref=e1887]: Soccer (World Cup) · near_miss
+            - generic [ref=e1888]: row
+          - option "Spain vs Cape Verde Soccer (World Cup) · near_miss row" [ref=e1889] [cursor=pointer]:
+            - generic [ref=e1890]: Spain vs Cape Verde
+            - generic [ref=e1891]: Soccer (World Cup) · near_miss
+            - generic [ref=e1892]: row
+          - option "Chicago C vs San Francisco MLB · near_miss row" [ref=e1893] [cursor=pointer]:
+            - generic [ref=e1894]: Chicago C vs San Francisco
+            - generic [ref=e1895]: MLB · near_miss
+            - generic [ref=e1896]: row
+          - option "Bosnia and Herzegovina vs Qatar Soccer (World Cup) · near_miss row" [ref=e1897] [cursor=pointer]:
+            - generic [ref=e1898]: Bosnia and Herzegovina vs Qatar
+            - generic [ref=e1899]: Soccer (World Cup) · near_miss
+            - generic [ref=e1900]: row
+          - option "New York M vs Cincinnati MLB · near_miss row" [ref=e1901] [cursor=pointer]:
+            - generic [ref=e1902]: New York M vs Cincinnati
+            - generic [ref=e1903]: MLB · near_miss
+            - generic [ref=e1904]: row
+          - option "Julieta Marcos Cattoni vs Florencia Massardo Brain Tennis · near_miss row" [ref=e1905] [cursor=pointer]:
+            - generic [ref=e1906]: Julieta Marcos Cattoni vs Florencia Massardo Brain
+            - generic [ref=e1907]: Tennis · near_miss
+            - generic [ref=e1908]: row
+          - option "Scotland vs Brazil Soccer (World Cup) · near_miss row" [ref=e1909] [cursor=pointer]:
+            - generic [ref=e1910]: Scotland vs Brazil
+            - generic [ref=e1911]: Soccer (World Cup) · near_miss
+            - generic [ref=e1912]: row
+          - option "Switzerland vs Bosnia and Herzegovina Soccer (World Cup) · near_miss row" [ref=e1913] [cursor=pointer]:
+            - generic [ref=e1914]: Switzerland vs Bosnia and Herzegovina
+            - generic [ref=e1915]: Soccer (World Cup) · near_miss
+            - generic [ref=e1916]: row
+          - option "Maria Paula Manrique vs Livia Santo Tennis · near_miss row" [ref=e1917] [cursor=pointer]:
+            - generic [ref=e1918]: Maria Paula Manrique vs Livia Santo
+            - generic [ref=e1919]: Tennis · near_miss
+            - generic [ref=e1920]: row
+          - option "Uruguay vs Spain Soccer (World Cup) · near_miss row" [ref=e1921] [cursor=pointer]:
+            - generic [ref=e1922]: Uruguay vs Spain
+            - generic [ref=e1923]: Soccer (World Cup) · near_miss
+            - generic [ref=e1924]: row
+          - option "Ben Shelton vs Nick Kyrgios Tennis · near_miss row" [ref=e1925] [cursor=pointer]:
+            - generic [ref=e1926]: Ben Shelton vs Nick Kyrgios
+            - generic [ref=e1927]: Tennis · near_miss
+            - generic [ref=e1928]: row
+          - option "Kansas City vs Washington MLB · near_miss row" [ref=e1929] [cursor=pointer]:
+            - generic [ref=e1930]: Kansas City vs Washington
+            - generic [ref=e1931]: MLB · near_miss
+            - generic [ref=e1932]: row
+          - option "Morocco vs Haiti Soccer (World Cup) · near_miss row" [ref=e1933] [cursor=pointer]:
+            - generic [ref=e1934]: Morocco vs Haiti
+            - generic [ref=e1935]: Soccer (World Cup) · near_miss
+            - generic [ref=e1936]: row
+          - option "USA vs Australia Soccer (World Cup) · near_miss row" [ref=e1937] [cursor=pointer]:
+            - generic [ref=e1938]: USA vs Australia
+            - generic [ref=e1939]: Soccer (World Cup) · near_miss
+            - generic [ref=e1940]: row
+          - option "Ecuador vs Curacao Soccer (World Cup) · near_miss row" [ref=e1941] [cursor=pointer]:
+            - generic [ref=e1942]: Ecuador vs Curacao
+            - generic [ref=e1943]: Soccer (World Cup) · near_miss
+            - generic [ref=e1944]: row
+          - option "Los Angeles A vs Arizona MLB · near_miss row" [ref=e1945] [cursor=pointer]:
+            - generic [ref=e1946]: Los Angeles A vs Arizona
+            - generic [ref=e1947]: MLB · near_miss
+            - generic [ref=e1948]: row
+          - option "Sweden vs Tunisia Soccer (World Cup) · near_miss row" [ref=e1949] [cursor=pointer]:
+            - generic [ref=e1950]: Sweden vs Tunisia
+            - generic [ref=e1951]: Soccer (World Cup) · near_miss
+            - generic [ref=e1952]: row
+          - option "Dallas vs Las Vegas WNBA · near_miss row" [ref=e1953] [cursor=pointer]:
+            - generic [ref=e1954]: Dallas vs Las Vegas
+            - generic [ref=e1955]: WNBA · near_miss
+            - generic [ref=e1956]: row
+          - option "Uruguay vs Cape Verde Soccer (World Cup) · near_miss row" [ref=e1957] [cursor=pointer]:
+            - generic [ref=e1958]: Uruguay vs Cape Verde
+            - generic [ref=e1959]: Soccer (World Cup) · near_miss
+            - generic [ref=e1960]: row
+          - option "Nikoloz Basilashvili vs Daniel Altmaier Tennis · near_miss row" [ref=e1961] [cursor=pointer]:
+            - generic [ref=e1962]: Nikoloz Basilashvili vs Daniel Altmaier
+            - generic [ref=e1963]: Tennis · near_miss
+            - generic [ref=e1964]: row
+          - option "Kamil Majchrzak vs Jiri Lehecka Tennis · near_miss row" [ref=e1965] [cursor=pointer]:
+            - generic [ref=e1966]: Kamil Majchrzak vs Jiri Lehecka
+            - generic [ref=e1967]: Tennis · near_miss
+            - generic [ref=e1968]: row
+          - option "Alexander Zverev vs Vit Kopriva Tennis · near_miss row" [ref=e1969] [cursor=pointer]:
+            - generic [ref=e1970]: Alexander Zverev vs Vit Kopriva
+            - generic [ref=e1971]: Tennis · near_miss
+            - generic [ref=e1972]: row
+          - option "Seattle vs New England NFL · near_miss row" [ref=e1973] [cursor=pointer]:
+            - generic [ref=e1974]: Seattle vs New England
+            - generic [ref=e1975]: NFL · near_miss
+            - generic [ref=e1976]: row
+          - option "Tampa Bay vs Los Angeles D MLB · near_miss row" [ref=e1977] [cursor=pointer]:
+            - generic [ref=e1978]: Tampa Bay vs Los Angeles D
+            - generic [ref=e1979]: MLB · near_miss
+            - generic [ref=e1980]: row
+          - option "Colombia vs Congo DR Soccer (World Cup) · near_miss row" [ref=e1981] [cursor=pointer]:
+            - generic [ref=e1982]: Colombia vs Congo DR
+            - generic [ref=e1983]: Soccer (World Cup) · near_miss
+            - generic [ref=e1984]: row
+          - option "Lara Quaglia vs Gabriella Mikaul Tennis · near_miss row" [ref=e1985] [cursor=pointer]:
+            - generic [ref=e1986]: Lara Quaglia vs Gabriella Mikaul
+            - generic [ref=e1987]: Tennis · near_miss
+            - generic [ref=e1988]: row
+          - option "Noir Verse vs Aimclub Esports · near_miss row" [ref=e1989] [cursor=pointer]:
+            - generic [ref=e1990]: Noir Verse vs Aimclub
+            - generic [ref=e1991]: Esports · near_miss
+            - generic [ref=e1992]: row
+          - option "Anna Blinkova vs Taylah Preston Tennis · near_miss row" [ref=e1993] [cursor=pointer]:
+            - generic [ref=e1994]: Anna Blinkova vs Taylah Preston
+            - generic [ref=e1995]: Tennis · near_miss
+            - generic [ref=e1996]: row
+          - option "KT Rolster Challengers vs Top Esports Challenger Esports · near_miss row" [ref=e1997] [cursor=pointer]:
+            - generic [ref=e1998]: KT Rolster Challengers vs Top Esports Challenger
+            - generic [ref=e1999]: Esports · near_miss
+            - generic [ref=e2000]: row
+          - option "Iowa Stormboar vs Festina Lente Esports · near_miss row" [ref=e2001] [cursor=pointer]:
+            - generic [ref=e2002]: Iowa Stormboar vs Festina Lente
+            - generic [ref=e2003]: Esports · near_miss
+            - generic [ref=e2004]: row
+          - option "Uzbekistan vs Colombia Soccer (World Cup) · near_miss row" [ref=e2005] [cursor=pointer]:
+            - generic [ref=e2006]: Uzbekistan vs Colombia
+            - generic [ref=e2007]: Soccer (World Cup) · near_miss
+            - generic [ref=e2008]: row
+          - option "Chicago WS vs New York Y MLB · near_miss row" [ref=e2009] [cursor=pointer]:
+            - generic [ref=e2010]: Chicago WS vs New York Y
+            - generic [ref=e2011]: MLB · near_miss
+            - generic [ref=e2012]: row
+          - option "Lois Boisson vs Dayana Yastremska Tennis · near_miss row" [ref=e2013] [cursor=pointer]:
+            - generic [ref=e2014]: Lois Boisson vs Dayana Yastremska
+            - generic [ref=e2015]: Tennis · near_miss
+            - generic [ref=e2016]: row
+          - option "Shifters vs G2 Esports Esports · near_miss row" [ref=e2017] [cursor=pointer]:
+            - generic [ref=e2018]: Shifters vs G2 Esports
+            - generic [ref=e2019]: Esports · near_miss
+            - generic [ref=e2020]: row
+          - option "Switzerland vs Canada Soccer (World Cup) · near_miss row" [ref=e2021] [cursor=pointer]:
+            - generic [ref=e2022]: Switzerland vs Canada
+            - generic [ref=e2023]: Soccer (World Cup) · near_miss
+            - generic [ref=e2024]: row
+          - option "Colombia vs Portugal Soccer (World Cup) · near_miss row" [ref=e2025] [cursor=pointer]:
+            - generic [ref=e2026]: Colombia vs Portugal
+            - generic [ref=e2027]: Soccer (World Cup) · near_miss
+            - generic [ref=e2028]: row
+          - option "Czechia vs South Africa Soccer (World Cup) · near_miss row" [ref=e2029] [cursor=pointer]:
+            - generic [ref=e2030]: Czechia vs South Africa
+            - generic [ref=e2031]: Soccer (World Cup) · near_miss
+            - generic [ref=e2032]: row
+          - option "KT Rolster Challengers vs Top Esports Challenger Esports · near_miss row" [ref=e2033] [cursor=pointer]:
+            - generic [ref=e2034]: KT Rolster Challengers vs Top Esports Challenger
+            - generic [ref=e2035]: Esports · near_miss
+            - generic [ref=e2036]: row
+          - option "Minnesota vs Texas MLB · near_miss row" [ref=e2037] [cursor=pointer]:
+            - generic [ref=e2038]: Minnesota vs Texas
+            - generic [ref=e2039]: MLB · near_miss
+            - generic [ref=e2040]: row
+          - option "Nikola Bartunkova vs Diana Shnaider Tennis · near_miss row" [ref=e2041] [cursor=pointer]:
+            - generic [ref=e2042]: Nikola Bartunkova vs Diana Shnaider
+            - generic [ref=e2043]: Tennis · near_miss
+            - generic [ref=e2044]: row
+          - option "Donna Vekic vs Alexandra Eala Tennis · near_miss row" [ref=e2045] [cursor=pointer]:
+            - generic [ref=e2046]: Donna Vekic vs Alexandra Eala
+            - generic [ref=e2047]: Tennis · near_miss
+            - generic [ref=e2048]: row
+          - option "New Zealand vs Belgium Soccer (World Cup) · near_miss row" [ref=e2049] [cursor=pointer]:
+            - generic [ref=e2050]: New Zealand vs Belgium
+            - generic [ref=e2051]: Soccer (World Cup) · near_miss
+            - generic [ref=e2052]: row
+          - option "Arthur Fery vs Toby Samuel Tennis · near_miss row" [ref=e2053] [cursor=pointer]:
+            - generic [ref=e2054]: Arthur Fery vs Toby Samuel
+            - generic [ref=e2055]: Tennis · near_miss
+            - generic [ref=e2056]: row
+          - option "Jakub Mensik vs Adrian Mannarino Tennis · near_miss row" [ref=e2057] [cursor=pointer]:
+            - generic [ref=e2058]: Jakub Mensik vs Adrian Mannarino
+            - generic [ref=e2059]: Tennis · near_miss
+            - generic [ref=e2060]: row
+          - option "Geekay Esports vs Virtus.pro Esports · near_miss row" [ref=e2061] [cursor=pointer]:
+            - generic [ref=e2062]: Geekay Esports vs Virtus.pro
+            - generic [ref=e2063]: Esports · near_miss
+            - generic [ref=e2064]: row
+          - option "South Africa vs Korea Republic Soccer (World Cup) · near_miss row" [ref=e2065] [cursor=pointer]:
+            - generic [ref=e2066]: South Africa vs Korea Republic
+            - generic [ref=e2067]: Soccer (World Cup) · near_miss
+            - generic [ref=e2068]: row
+          - option "Twisted Minds vs Rebels Gaming Esports · near_miss row" [ref=e2069] [cursor=pointer]:
+            - generic [ref=e2070]: Twisted Minds vs Rebels Gaming
+            - generic [ref=e2071]: Esports · near_miss
+            - generic [ref=e2072]: row
+          - option "Diane Parry vs Ella Seidel Tennis · near_miss row" [ref=e2073] [cursor=pointer]:
+            - generic [ref=e2074]: Diane Parry vs Ella Seidel
+            - generic [ref=e2075]: Tennis · near_miss
+            - generic [ref=e2076]: row
+          - option "Lulu Sun vs Anhelina Kalinina Tennis · near_miss row" [ref=e2077] [cursor=pointer]:
+            - generic [ref=e2078]: Lulu Sun vs Anhelina Kalinina
+            - generic [ref=e2079]: Tennis · near_miss
+            - generic [ref=e2080]: row
+          - option "Argentina vs Austria Soccer (World Cup) · near_miss row" [ref=e2081] [cursor=pointer]:
+            - generic [ref=e2082]: Argentina vs Austria
+            - generic [ref=e2083]: Soccer (World Cup) · near_miss
+            - generic [ref=e2084]: row
+          - option "Saudi Arabia vs Uruguay Soccer (World Cup) · near_miss row" [ref=e2085] [cursor=pointer]:
+            - generic [ref=e2086]: Saudi Arabia vs Uruguay
+            - generic [ref=e2087]: Soccer (World Cup) · near_miss
+            - generic [ref=e2088]: row
+          - option "Madison Keys vs Xinyu Wang Tennis · near_miss row" [ref=e2089] [cursor=pointer]:
+            - generic [ref=e2090]: Madison Keys vs Xinyu Wang
+            - generic [ref=e2091]: Tennis · near_miss
+            - generic [ref=e2092]: row
+          - option "Turkiye vs USA Soccer (World Cup) · near_miss row" [ref=e2093] [cursor=pointer]:
+            - generic [ref=e2094]: Turkiye vs USA
+            - generic [ref=e2095]: Soccer (World Cup) · near_miss
+            - generic [ref=e2096]: row
+          - option "Colorado vs Chicago C MLB · near_miss row" [ref=e2097] [cursor=pointer]:
+            - generic [ref=e2098]: Colorado vs Chicago C
+            - generic [ref=e2099]: MLB · near_miss
+            - generic [ref=e2100]: row
+    - generic [ref=e2101]:
+      - generic [ref=e2102]: ↑↓ move
+      - generic [ref=e2103]: ↵ run
+      - generic [ref=e2104]: esc close
+      - generic [ref=e2105]: discoverable — start typing

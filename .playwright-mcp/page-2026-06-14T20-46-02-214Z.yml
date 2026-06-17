@@ -1,0 +1,98 @@
+- main [ref=e5]:
+  - generic [ref=e7]:
+    - generic [ref=e8]:
+      - generic [ref=e9]: KALSHI TERMINAL PRO
+      - generic [ref=e10]:
+        - generic [ref=e11] [cursor=pointer]: OPP
+        - generic [ref=e12] [cursor=pointer]: RES
+        - generic [ref=e13] [cursor=pointer]: OPS
+        - generic [ref=e14] [cursor=pointer]: ALRT
+      - textbox [ref=e19]:
+        - /placeholder: "> filter participant / match"
+      - generic [ref=e20]: 20:46:01 UTC
+    - generic [ref=e21]:
+      - generic [ref=e22]: Data 17:09:04 UTC · age 185817s ⚠ STALE · 2,471 opportunities · 93 series · 10 failed · 2,977 contracts scanned · 1,830 checks tested · 275 Kalshi requests
+      - generic [ref=e23]: GROSS · TOP-OF-BOOK · $1 BASIS · READ-ONLY · NO ORDER ENTRY · NOT RISKLESS
+    - generic [ref=e239]:
+      - generic [ref=e240]: OPS — operations & data health
+      - generic [ref=e241]:
+        - generic [ref=e242]:
+          - generic [ref=e243]: SCAN HEALTH
+          - generic [ref=e244]:
+            - generic [ref=e245]: Snapshot id
+            - generic [ref=e246]: "2534"
+          - generic [ref=e247]:
+            - generic [ref=e248]: Data age (s)
+            - generic [ref=e249]: "185817.691988"
+          - generic [ref=e250]:
+            - generic [ref=e251]: Stale
+            - generic [ref=e252]: "True"
+          - generic [ref=e253]:
+            - generic [ref=e254]: Scan status
+            - generic [ref=e255]: in_progress
+          - generic [ref=e256]:
+            - generic [ref=e257]: Last scan error
+            - generic [ref=e258]: —
+          - generic [ref=e259]:
+            - generic [ref=e260]: Live viewers
+            - generic [ref=e261]: "1"
+          - generic [ref=e262]:
+            - generic [ref=e263]: Evidence frames
+            - generic [ref=e264]: present
+        - generic [ref=e265]:
+          - generic [ref=e266]: COVERAGE
+          - generic [ref=e267]:
+            - generic [ref=e268]: Series scanned
+            - generic [ref=e269]: "93"
+          - generic [ref=e270]:
+            - generic [ref=e271]: Series loaded
+            - generic [ref=e272]: "83"
+          - generic [ref=e273]:
+            - generic [ref=e274]: Series failed
+            - generic [ref=e275]: "10"
+          - generic [ref=e276]:
+            - generic [ref=e277]: Excluded
+            - generic [ref=e278]: "0"
+          - generic [ref=e279]:
+            - generic [ref=e280]: Contracts scanned
+            - generic [ref=e281]: "2977"
+          - generic [ref=e282]:
+            - generic [ref=e283]: Checks tested
+            - generic [ref=e284]: "1830"
+          - generic [ref=e285]:
+            - generic [ref=e286]: Kalshi requests
+            - generic [ref=e287]: "275"
+          - generic [ref=e288]:
+            - generic [ref=e289]: Retry backoffs
+            - generic [ref=e290]: "124"
+          - generic [ref=e291]:
+            - generic [ref=e292]: Backoff seconds
+            - generic [ref=e293]: "230.0"
+        - generic [ref=e294]:
+          - generic [ref=e295]: CONTRACT UNIVERSE
+          - generic [ref=e296]:
+            - generic [ref=e297]: Contracts total
+            - generic [ref=e298]: "2977"
+          - generic [ref=e299]:
+            - generic [ref=e300]: Laddered
+            - generic [ref=e301]: "1311"
+          - generic [ref=e302]:
+            - generic [ref=e303]: Non-laddered
+            - generic [ref=e304]: "1666"
+          - generic [ref=e305]:
+            - generic [ref=e306]: Low-confidence id
+            - generic [ref=e307]: "311"
+          - generic [ref=e308]:
+            - generic [ref=e309]: Unsupported (UNKNOWN)
+            - generic [ref=e310]: "0"
+      - generic [ref=e311]: FAILURES
+      - generic [ref=e312]: "series: {'sport': 'tennis', 'series': 'KXWTAADVANCE', 'error': 'Failed to GET https://external-api.kalshi.com/trade-api/v2/events after retries: ConnectionError(MaxRetryError(\\'HTTPSConnectionPool(host=\\\\\\'external-api.kalshi.com\\\\\\', port=443): Max retries exceeded with url: /trade-api/v2/events?series_ticker=KXWTAADVANCE&with_nested_markets=true&status=open&limit=200 (Caused by NameResolutionError(\"HTTPSConnection(host=\\\\\\'external-api.kalshi.com\\\\\\', port=443): Failed to resolve \\\\\\'external-api.kalshi.com\\\\\\' ([Errno 11001] getaddrinfo failed)\"))\\'))'}"
+      - generic [ref=e313]: "series: {'sport': 'tennis', 'series': 'KXITFMATCH', 'error': 'Failed to GET https://external-api.kalshi.com/trade-api/v2/events after retries: ConnectionError(MaxRetryError(\\'HTTPSConnectionPool(host=\\\\\\'external-api.kalshi.com\\\\\\', port=443): Max retries exceeded with url: /trade-api/v2/events?series_ticker=KXITFMATCH&with_nested_markets=true&status=open&limit=200 (Caused by NameResolutionError(\"HTTPSConnection(host=\\\\\\'external-api.kalshi.com\\\\\\', port=443): Failed to resolve \\\\\\'external-api.kalshi.com\\\\\\' ([Errno 11001] getaddrinfo failed)\"))\\'))'}"
+      - generic [ref=e314]: "series: {'sport': 'nba', 'series': 'KXNBAEAST', 'error': 'Failed to GET https://external-api.kalshi.com/trade-api/v2/events after retries: ConnectionError(MaxRetryError(\\'HTTPSConnectionPool(host=\\\\\\'external-api.kalshi.com\\\\\\', port=443): Max retries exceeded with url: /trade-api/v2/events?series_ticker=KXNBAEAST&with_nested_markets=true&status=open&limit=200 (Caused by NameResolutionError(\"HTTPSConnection(host=\\\\\\'external-api.kalshi.com\\\\\\', port=443): Failed to resolve \\\\\\'external-api.kalshi.com\\\\\\' ([Errno 11001] getaddrinfo failed)\"))\\'))'}"
+      - generic [ref=e315]: "series: {'sport': 'nba', 'series': 'KXNBAGAME', 'error': 'Failed to GET https://external-api.kalshi.com/trade-api/v2/events after retries: ConnectionError(MaxRetryError(\\'HTTPSConnectionPool(host=\\\\\\'external-api.kalshi.com\\\\\\', port=443): Max retries exceeded with url: /trade-api/v2/events?series_ticker=KXNBAGAME&with_nested_markets=true&status=open&limit=200 (Caused by NameResolutionError(\"HTTPSConnection(host=\\\\\\'external-api.kalshi.com\\\\\\', port=443): Failed to resolve \\\\\\'external-api.kalshi.com\\\\\\' ([Errno 11001] getaddrinfo failed)\"))\\'))'}"
+      - generic [ref=e316]: "series: {'sport': 'nba', 'series': 'KXNBASERIES', 'error': 'Failed to GET https://external-api.kalshi.com/trade-api/v2/events after retries: ConnectionError(MaxRetryError(\\'HTTPSConnectionPool(host=\\\\\\'external-api.kalshi.com\\\\\\', port=443): Max retries exceeded with url: /trade-api/v2/events?series_ticker=KXNBASERIES&with_nested_markets=true&status=open&limit=200 (Caused by NameResolutionError(\"HTTPSConnection(host=\\\\\\'external-api.kalshi.com\\\\\\', port=443): Failed to resolve \\\\\\'external-api.kalshi.com\\\\\\' ([Errno 11001] getaddrinfo failed)\"))\\'))'}"
+      - generic [ref=e317]: "series: {'sport': 'wnba', 'series': 'KXWNBAFINAL', 'error': 'Failed to GET https://external-api.kalshi.com/trade-api/v2/events after retries: ConnectionError(MaxRetryError(\\'HTTPSConnectionPool(host=\\\\\\'external-api.kalshi.com\\\\\\', port=443): Max retries exceeded with url: /trade-api/v2/events?series_ticker=KXWNBAFINAL&with_nested_markets=true&status=open&limit=200 (Caused by NameResolutionError(\"HTTPSConnection(host=\\\\\\'external-api.kalshi.com\\\\\\', port=443): Failed to resolve \\\\\\'external-api.kalshi.com\\\\\\' ([Errno 11001] getaddrinfo failed)\"))\\'))'}"
+      - generic [ref=e318]: "series: {'sport': 'golf', 'series': 'KXPGATOP5', 'error': 'Failed to GET https://external-api.kalshi.com/trade-api/v2/events after retries: ConnectionError(MaxRetryError(\\'HTTPSConnectionPool(host=\\\\\\'external-api.kalshi.com\\\\\\', port=443): Max retries exceeded with url: /trade-api/v2/events?series_ticker=KXPGATOP5&with_nested_markets=true&status=open&limit=200 (Caused by NameResolutionError(\"HTTPSConnection(host=\\\\\\'external-api.kalshi.com\\\\\\', port=443): Failed to resolve \\\\\\'external-api.kalshi.com\\\\\\' ([Errno 11001] getaddrinfo failed)\"))\\'))'}"
+      - generic [ref=e319]: "series: {'sport': 'golf', 'series': 'KXPGATOP20', 'error': 'Failed to GET https://external-api.kalshi.com/trade-api/v2/events after retries: ConnectionError(MaxRetryError(\\'HTTPSConnectionPool(host=\\\\\\'external-api.kalshi.com\\\\\\', port=443): Max retries exceeded with url: /trade-api/v2/events?series_ticker=KXPGATOP20&with_nested_markets=true&status=open&limit=200 (Caused by NameResolutionError(\"HTTPSConnection(host=\\\\\\'external-api.kalshi.com\\\\\\', port=443): Failed to resolve \\\\\\'external-api.kalshi.com\\\\\\' ([Errno 11001] getaddrinfo failed)\"))\\'))'}"
+      - generic [ref=e320]: "series: {'sport': 'golf', 'series': 'KXPGATOUR', 'error': 'Failed to GET https://external-api.kalshi.com/trade-api/v2/events after retries: ConnectionError(MaxRetryError(\\'HTTPSConnectionPool(host=\\\\\\'external-api.kalshi.com\\\\\\', port=443): Max retries exceeded with url: /trade-api/v2/events?series_ticker=KXPGATOUR&with_nested_markets=true&status=open&limit=200 (Caused by NameResolutionError(\"HTTPSConnection(host=\\\\\\'external-api.kalshi.com\\\\\\', port=443): Failed to resolve \\\\\\'external-api.kalshi.com\\\\\\' ([Errno 11001] getaddrinfo failed)\"))\\'))'}"
+      - generic [ref=e321]: "series: {'sport': 'nhl', 'series': 'KXNHLWEST', 'error': 'Failed to GET https://external-api.kalshi.com/trade-api/v2/events after retries: ReadTimeout(ReadTimeoutError(\"HTTPSConnectionPool(host=\\'external-api.kalshi.com\\', port=443): Read timed out. (read timeout=15)\"))'}"

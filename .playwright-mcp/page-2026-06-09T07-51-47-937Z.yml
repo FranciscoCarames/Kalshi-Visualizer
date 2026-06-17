@@ -1,0 +1,516 @@
+- main [ref=e5]:
+  - generic [ref=e6]:
+    - generic [ref=e7]: Kalshi Opportunity Engine — Cross-Sport
+    - generic [ref=e8]: Opportunities across all sports, ranked best→worst. Core series, gross of fees — NOT all of Kalshi.
+    - generic [ref=e9]:
+      - generic [ref=e12] [cursor=pointer]:
+        - generic [ref=e13]:
+          - generic: Sport
+          - generic "Filter by sport" [ref=e14]:
+            - combobox "Sport" [ref=e15]
+        - generic [ref=e17]: arrow_drop_down
+      - generic [ref=e20] [cursor=pointer]:
+        - generic [ref=e21]:
+          - generic: Tournament
+          - generic "Filter by tournament" [ref=e22]:
+            - combobox "Tournament" [ref=e23]
+        - generic [ref=e25]: arrow_drop_down
+      - generic [ref=e28]:
+        - generic [ref=e29]:
+          - generic: Players / matches
+          - combobox "Filter by players or matches" [ref=e31]
+        - generic [ref=e33] [cursor=pointer]: arrow_drop_down
+      - generic [ref=e37]:
+        - generic: Min size
+        - spinbutton "Minimum tradable size" [ref=e38]
+      - button "Refresh snapshot" [ref=e39] [cursor=pointer]:
+        - generic [ref=e41]: Refresh snapshot
+      - button "Clear all filters" [ref=e42] [cursor=pointer]:
+        - generic [ref=e44]: Clear filters
+      - button "Open settings" [ref=e45] [cursor=pointer]:
+        - img [ref=e47]: settings
+    - generic [ref=e48]: Data 23:21:49 WEST · age 34197s ⚠ STALE · 1,803 opportunities · 89 series · 0 failed · 3,266 contracts scanned · 1,573 checks tested · 213 Kalshi requests
+    - generic [ref=e49]: "Actionable: 4 shown · Speculative: 369 shown · Near-miss: 173 shown · Qualifier setups: 53 shown"
+    - separator [ref=e50]
+    - generic [ref=e51]:
+      - generic [ref=e52]: Actionable — executable gross edges
+      - button [ref=e53] [cursor=pointer]:
+        - img [ref=e55]: view_column
+    - generic [ref=e56]: Firm, sized, currently-tradable gross pricing discrepancies. Gross of fees.
+    - generic "Actionable opportunities" [ref=e57]:
+      - table [ref=e59]:
+        - rowgroup [ref=e60]:
+          - row "Sport Participant / match Detail Action plan Gross edge ¢ ROI % Max units Max gross profit Tradable Caveat" [ref=e61]:
+            - columnheader [ref=e62]
+            - columnheader [ref=e63]
+            - columnheader "Sport" [ref=e64] [cursor=pointer]:
+              - text: Sport
+              - generic [ref=e65]: arrow_upward
+            - columnheader "Participant / match" [ref=e66] [cursor=pointer]:
+              - text: Participant / match
+              - generic [ref=e67]: arrow_upward
+            - columnheader "Detail" [ref=e68]
+            - columnheader "Action plan" [ref=e69]
+            - columnheader "Gross edge ¢" [ref=e70] [cursor=pointer]:
+              - text: Gross edge ¢
+              - generic [ref=e71]: arrow_upward
+            - columnheader "ROI %" [ref=e72] [cursor=pointer]:
+              - text: ROI %
+              - generic [ref=e73]: arrow_upward
+            - columnheader "Max units" [ref=e74] [cursor=pointer]:
+              - text: Max units
+              - generic [ref=e75]: arrow_upward
+            - columnheader "Max gross profit" [ref=e76] [cursor=pointer]:
+              - text: Max gross profit
+              - generic [ref=e77]: arrow_upward
+            - columnheader "Tradable" [ref=e78]
+            - columnheader "Caveat" [ref=e79]
+        - rowgroup [ref=e80]:
+          - row "Esports paiN vs Monte underround Buy YES — paiN @ 43¢ + Buy YES — Monte @ 56¢ 1 1 842.15 8.42 Yes" [ref=e81]:
+            - cell [ref=e82]:
+              - checkbox [ref=e83] [cursor=pointer]:
+                - img [ref=e86]
+            - cell [ref=e88]
+            - cell "Esports" [ref=e89]
+            - cell "paiN vs Monte" [ref=e90]
+            - cell "underround" [ref=e91]
+            - cell "Buy YES — paiN @ 43¢ + Buy YES — Monte @ 56¢" [ref=e92]
+            - cell "1" [ref=e93]:
+              - generic [ref=e94]: "1"
+            - cell "1" [ref=e95]
+            - cell "842.15" [ref=e96]
+            - cell "8.42" [ref=e97]
+            - cell "Yes" [ref=e98]
+            - cell [ref=e99]:
+              - status [ref=e100]: Settlement caveat
+          - row "Esports KT Rolster Challengers vs FENNEL overround Buy NO — KT Rolster Challengers @ 9¢ + Buy NO — FENNEL @ 90¢ 1 1 13.4 0.13 Yes" [ref=e101]:
+            - cell [ref=e102]:
+              - checkbox [ref=e103] [cursor=pointer]:
+                - img [ref=e106]
+            - cell [ref=e108]
+            - cell "Esports" [ref=e109]
+            - cell "KT Rolster Challengers vs FENNEL" [ref=e110]
+            - cell "overround" [ref=e111]
+            - cell "Buy NO — KT Rolster Challengers @ 9¢ + Buy NO — FENNEL @ 90¢" [ref=e112]
+            - cell "1" [ref=e113]:
+              - generic [ref=e114]: "1"
+            - cell "1" [ref=e115]
+            - cell "13.4" [ref=e116]
+            - cell "0.13" [ref=e117]
+            - cell "Yes" [ref=e118]
+            - cell [ref=e119]:
+              - status [ref=e120]: Settlement caveat
+          - row "Esports Top Esports Challenger vs Dplus KIA Challengers overround Buy NO — Top Esports Challenger @ 88¢ + Buy NO — Dplus KIA Challengers @ 11¢ 1 1 80 0.8 Yes" [ref=e121]:
+            - cell [ref=e122]:
+              - checkbox [ref=e123] [cursor=pointer]:
+                - img [ref=e126]
+            - cell [ref=e128]
+            - cell "Esports" [ref=e129]
+            - cell "Top Esports Challenger vs Dplus KIA Challengers" [ref=e130]
+            - cell "overround" [ref=e131]
+            - cell "Buy NO — Top Esports Challenger @ 88¢ + Buy NO — Dplus KIA Challengers @ 11¢" [ref=e132]
+            - cell "1" [ref=e133]:
+              - generic [ref=e134]: "1"
+            - cell "1" [ref=e135]
+            - cell "80" [ref=e136]
+            - cell "0.8" [ref=e137]
+            - cell "Yes" [ref=e138]
+            - cell [ref=e139]:
+              - status [ref=e140]: Settlement caveat
+          - row "Soccer (World Cup) USA vs Paraguay overround 3-leg plan — open details for legs 1 0.5 4,533.95 45.34 Yes" [ref=e141]:
+            - cell [ref=e142]:
+              - checkbox [ref=e143] [cursor=pointer]:
+                - img [ref=e146]
+            - cell [ref=e148]
+            - cell "Soccer (World Cup)" [ref=e149]
+            - cell "USA vs Paraguay" [ref=e150]
+            - cell "overround" [ref=e151]
+            - cell "3-leg plan — open details for legs" [ref=e152]
+            - cell "1" [ref=e153]:
+              - generic [ref=e154]: "1"
+            - cell "0.5" [ref=e155]
+            - cell "4,533.95" [ref=e156]
+            - cell "45.34" [ref=e157]
+            - cell "Yes" [ref=e158]
+            - cell [ref=e159]:
+              - status [ref=e160]: Settlement caveat
+      - generic [ref=e161]:
+        - generic [ref=e162]:
+          - generic [ref=e163]: "Records per page:"
+          - generic [ref=e166] [cursor=pointer]:
+            - generic [ref=e168]:
+              - generic [ref=e169]: "15"
+              - combobox "15" [ref=e170]
+            - generic [ref=e172]: arrow_drop_down
+        - generic [ref=e174]: 1-4 of 4
+    - generic [ref=e175]:
+      - generic [ref=e176]: Review Required — settlement-dependent
+      - button [ref=e177] [cursor=pointer]:
+        - img [ref=e179]: view_column
+    - generic [ref=e180]: Real, executable-looking edges whose legs may not settle together (e.g. an exact-score bundle vs the match winner) — verify the settlement rules first; never auto-tradable.
+    - generic "Review-required opportunities" [ref=e181]:
+      - table [ref=e183]:
+        - rowgroup [ref=e184]:
+          - row "Sport Participant / match Detail Action plan Gross edge ¢ ROI % Max units Max gross profit Tradable Caveat" [ref=e185]:
+            - columnheader [ref=e186]
+            - columnheader [ref=e187]
+            - columnheader "Sport" [ref=e188] [cursor=pointer]:
+              - text: Sport
+              - generic [ref=e189]: arrow_upward
+            - columnheader "Participant / match" [ref=e190] [cursor=pointer]:
+              - text: Participant / match
+              - generic [ref=e191]: arrow_upward
+            - columnheader "Detail" [ref=e192]
+            - columnheader "Action plan" [ref=e193]
+            - columnheader "Gross edge ¢" [ref=e194] [cursor=pointer]:
+              - text: Gross edge ¢
+              - generic [ref=e195]: arrow_upward
+            - columnheader "ROI %" [ref=e196] [cursor=pointer]:
+              - text: ROI %
+              - generic [ref=e197]: arrow_upward
+            - columnheader "Max units" [ref=e198] [cursor=pointer]:
+              - text: Max units
+              - generic [ref=e199]: arrow_upward
+            - columnheader "Max gross profit" [ref=e200] [cursor=pointer]:
+              - text: Max gross profit
+              - generic [ref=e201]: arrow_upward
+            - columnheader "Tradable" [ref=e202]
+            - columnheader "Caveat" [ref=e203]
+        - rowgroup
+      - generic [ref=e204]:
+        - generic [ref=e205]: warning
+        - text: No review-required opportunities in the current filters.
+    - generic [ref=e206]: Discrepancies that exist but aren't tradable now (no firm size / an inactive leg).
+    - generic [ref=e207]:
+      - generic [ref=e208]: Qualifier setups — World Cup group-stage ideas & signals
+      - button [ref=e209] [cursor=pointer]:
+        - img [ref=e211]: view_column
+    - generic [ref=e212]: Speculative top-two ideas (review-only) + diagnostic reference bundles + game-support signals — gross, top-of-book, settlement-unverified; NOT arbitrage and never Actionable.
+    - generic "Qualifier setups" [ref=e213]:
+      - table [ref=e215]:
+        - rowgroup [ref=e216]:
+          - row "Sport Team Setup Qualifier YES ask ¢ Top-two bundle cost ¢ Cheaper vs qualifier ¢ If top two ¢ If not top two ¢ Max units Worst leg quote Comparator quote Legs Review status Caveat" [ref=e217]:
+            - columnheader [ref=e218]
+            - columnheader [ref=e219]
+            - columnheader "Sport" [ref=e220] [cursor=pointer]:
+              - text: Sport
+              - generic [ref=e221]: arrow_upward
+            - columnheader "Team" [ref=e222] [cursor=pointer]:
+              - text: Team
+              - generic [ref=e223]: arrow_upward
+            - columnheader "Setup" [ref=e224] [cursor=pointer]:
+              - text: Setup
+              - generic [ref=e225]: arrow_upward
+            - columnheader "Qualifier YES ask ¢" [ref=e226] [cursor=pointer]:
+              - text: Qualifier YES ask ¢
+              - generic [ref=e227]: arrow_upward
+            - columnheader "Top-two bundle cost ¢" [ref=e228] [cursor=pointer]:
+              - text: Top-two bundle cost ¢
+              - generic [ref=e229]: arrow_upward
+            - columnheader "Cheaper vs qualifier ¢" [ref=e230] [cursor=pointer]:
+              - text: Cheaper vs qualifier ¢
+              - generic [ref=e231]: arrow_upward
+            - columnheader "If top two ¢" [ref=e232] [cursor=pointer]:
+              - text: If top two ¢
+              - generic [ref=e233]: arrow_upward
+            - columnheader "If not top two ¢" [ref=e234] [cursor=pointer]:
+              - text: If not top two ¢
+              - generic [ref=e235]: arrow_upward
+            - columnheader "Max units" [ref=e236] [cursor=pointer]:
+              - text: Max units
+              - generic [ref=e237]: arrow_upward
+            - columnheader "Worst leg quote" [ref=e238] [cursor=pointer]:
+              - text: Worst leg quote
+              - generic [ref=e239]: arrow_upward
+            - columnheader "Comparator quote" [ref=e240] [cursor=pointer]:
+              - text: Comparator quote
+              - generic [ref=e241]: arrow_upward
+            - columnheader "Legs" [ref=e242] [cursor=pointer]:
+              - text: Legs
+              - generic [ref=e243]: arrow_upward
+            - columnheader "Review status" [ref=e244] [cursor=pointer]:
+              - text: Review status
+              - generic [ref=e245]: arrow_upward
+            - columnheader "Caveat" [ref=e246]
+        - rowgroup [ref=e247]:
+          - row "Soccer (World Cup) Sweden Speculative top-two bundle 63 43 +20¢ cheaper 57 43 125 Tight Tight 12 Review execution" [ref=e248]:
+            - cell [ref=e249]:
+              - checkbox [ref=e250] [cursor=pointer]:
+                - img [ref=e253]
+            - cell [ref=e255]
+            - cell "Soccer (World Cup)" [ref=e256]
+            - cell "Sweden" [ref=e257]
+            - cell "Speculative top-two bundle" [ref=e258]
+            - cell "63" [ref=e259]
+            - cell "43" [ref=e260]
+            - cell "+20¢ cheaper" [ref=e261]:
+              - generic [ref=e262]: +20¢ cheaper
+            - cell "57" [ref=e263]
+            - cell "43" [ref=e264]
+            - cell "125" [ref=e265]
+            - cell "Tight" [ref=e266]
+            - cell "Tight" [ref=e267]
+            - cell "12" [ref=e268]
+            - cell "Review execution" [ref=e269]
+            - cell [ref=e270]:
+              - status [ref=e271]: Comparator only
+              - status [ref=e272]: Top-two only
+              - status [ref=e273]: Settlement caveat
+          - row "Soccer (World Cup) IR Iran Speculative top-two bundle 62 43 +19¢ cheaper 57 43 47 Tight Tight 12 Review execution" [ref=e274]:
+            - cell [ref=e275]:
+              - checkbox [ref=e276] [cursor=pointer]:
+                - img [ref=e279]
+            - cell [ref=e281]
+            - cell "Soccer (World Cup)" [ref=e282]
+            - cell "IR Iran" [ref=e283]
+            - cell "Speculative top-two bundle" [ref=e284]
+            - cell "62" [ref=e285]
+            - cell "43" [ref=e286]
+            - cell "+19¢ cheaper" [ref=e287]:
+              - generic [ref=e288]: +19¢ cheaper
+            - cell "57" [ref=e289]
+            - cell "43" [ref=e290]
+            - cell "47" [ref=e291]
+            - cell "Tight" [ref=e292]
+            - cell "Tight" [ref=e293]
+            - cell "12" [ref=e294]
+            - cell "Review execution" [ref=e295]
+            - cell [ref=e296]:
+              - status [ref=e297]: Comparator only
+              - status [ref=e298]: Top-two only
+              - status [ref=e299]: Settlement caveat
+          - row "Soccer (World Cup) Congo DR Speculative top-two bundle 42 25 +17¢ cheaper 75 25 23 Tight Tight 12 Review execution" [ref=e300]:
+            - cell [ref=e301]:
+              - checkbox [ref=e302] [cursor=pointer]:
+                - img [ref=e305]
+            - cell [ref=e307]
+            - cell "Soccer (World Cup)" [ref=e308]
+            - cell "Congo DR" [ref=e309]
+            - cell "Speculative top-two bundle" [ref=e310]
+            - cell "42" [ref=e311]
+            - cell "25" [ref=e312]
+            - cell "+17¢ cheaper" [ref=e313]:
+              - generic [ref=e314]: +17¢ cheaper
+            - cell "75" [ref=e315]
+            - cell "25" [ref=e316]
+            - cell "23" [ref=e317]
+            - cell "Tight" [ref=e318]
+            - cell "Tight" [ref=e319]
+            - cell "12" [ref=e320]
+            - cell "Review execution" [ref=e321]
+            - cell [ref=e322]:
+              - status [ref=e323]: Comparator only
+              - status [ref=e324]: Top-two only
+              - status [ref=e325]: Settlement caveat
+          - row "Soccer (World Cup) Paraguay Speculative top-two bundle 64 47 +17¢ cheaper 53 47 8 Tight Tight 12 Review execution" [ref=e326]:
+            - cell [ref=e327]:
+              - checkbox [ref=e328] [cursor=pointer]:
+                - img [ref=e331]
+            - cell [ref=e333]
+            - cell "Soccer (World Cup)" [ref=e334]
+            - cell "Paraguay" [ref=e335]
+            - cell "Speculative top-two bundle" [ref=e336]
+            - cell "64" [ref=e337]
+            - cell "47" [ref=e338]
+            - cell "+17¢ cheaper" [ref=e339]:
+              - generic [ref=e340]: +17¢ cheaper
+            - cell "53" [ref=e341]
+            - cell "47" [ref=e342]
+            - cell "8" [ref=e343]
+            - cell "Tight" [ref=e344]
+            - cell "Tight" [ref=e345]
+            - cell "12" [ref=e346]
+            - cell "Review execution" [ref=e347]
+            - cell [ref=e348]:
+              - status [ref=e349]: Comparator only
+              - status [ref=e350]: Top-two only
+              - status [ref=e351]: Settlement caveat
+          - row "Soccer (World Cup) Australia Speculative top-two bundle 45 29 +16¢ cheaper 71 29 212 Tight Tight 12 Review execution" [ref=e352]:
+            - cell [ref=e353]:
+              - checkbox [ref=e354] [cursor=pointer]:
+                - img [ref=e357]
+            - cell [ref=e359]
+            - cell "Soccer (World Cup)" [ref=e360]
+            - cell "Australia" [ref=e361]
+            - cell "Speculative top-two bundle" [ref=e362]
+            - cell "45" [ref=e363]
+            - cell "29" [ref=e364]
+            - cell "+16¢ cheaper" [ref=e365]:
+              - generic [ref=e366]: +16¢ cheaper
+            - cell "71" [ref=e367]
+            - cell "29" [ref=e368]
+            - cell "212" [ref=e369]
+            - cell "Tight" [ref=e370]
+            - cell "Tight" [ref=e371]
+            - cell "12" [ref=e372]
+            - cell "Review execution" [ref=e373]
+            - cell [ref=e374]:
+              - status [ref=e375]: Comparator only
+              - status [ref=e376]: Top-two only
+              - status [ref=e377]: Settlement caveat
+          - row "Soccer (World Cup) Japan Speculative top-two bundle 79 63 +16¢ cheaper 37 63 110 Tight Tight 12 Review execution" [ref=e378]:
+            - cell [ref=e379]:
+              - checkbox [ref=e380] [cursor=pointer]:
+                - img [ref=e383]
+            - cell [ref=e385]
+            - cell "Soccer (World Cup)" [ref=e386]
+            - cell "Japan" [ref=e387]
+            - cell "Speculative top-two bundle" [ref=e388]
+            - cell "79" [ref=e389]
+            - cell "63" [ref=e390]
+            - cell "+16¢ cheaper" [ref=e391]:
+              - generic [ref=e392]: +16¢ cheaper
+            - cell "37" [ref=e393]
+            - cell "63" [ref=e394]
+            - cell "110" [ref=e395]
+            - cell "Tight" [ref=e396]
+            - cell "Tight" [ref=e397]
+            - cell "12" [ref=e398]
+            - cell "Review execution" [ref=e399]
+            - cell [ref=e400]:
+              - status [ref=e401]: Comparator only
+              - status [ref=e402]: Top-two only
+              - status [ref=e403]: Settlement caveat
+          - row "Soccer (World Cup) Senegal Speculative top-two bundle 68 53 +15¢ cheaper 47 53 162 Tight Tight 12 Review execution" [ref=e404]:
+            - cell [ref=e405]:
+              - checkbox [ref=e406] [cursor=pointer]:
+                - img [ref=e409]
+            - cell [ref=e411]
+            - cell "Soccer (World Cup)" [ref=e412]
+            - cell "Senegal" [ref=e413]
+            - cell "Speculative top-two bundle" [ref=e414]
+            - cell "68" [ref=e415]
+            - cell "53" [ref=e416]
+            - cell "+15¢ cheaper" [ref=e417]:
+              - generic [ref=e418]: +15¢ cheaper
+            - cell "47" [ref=e419]
+            - cell "53" [ref=e420]
+            - cell "162" [ref=e421]
+            - cell "Tight" [ref=e422]
+            - cell "Tight" [ref=e423]
+            - cell "12" [ref=e424]
+            - cell "Review execution" [ref=e425]
+            - cell [ref=e426]:
+              - status [ref=e427]: Comparator only
+              - status [ref=e428]: Top-two only
+              - status [ref=e429]: Settlement caveat
+          - row "Soccer (World Cup) Saudi Arabia Speculative top-two bundle 36 22 +14¢ cheaper 78 22 202 Tight Tight 12 Review execution" [ref=e430]:
+            - cell [ref=e431]:
+              - checkbox [ref=e432] [cursor=pointer]:
+                - img [ref=e435]
+            - cell [ref=e437]
+            - cell "Soccer (World Cup)" [ref=e438]
+            - cell "Saudi Arabia" [ref=e439]
+            - cell "Speculative top-two bundle" [ref=e440]
+            - cell "36" [ref=e441]
+            - cell "22" [ref=e442]
+            - cell "+14¢ cheaper" [ref=e443]:
+              - generic [ref=e444]: +14¢ cheaper
+            - cell "78" [ref=e445]
+            - cell "22" [ref=e446]
+            - cell "202" [ref=e447]
+            - cell "Tight" [ref=e448]
+            - cell "Tight" [ref=e449]
+            - cell "12" [ref=e450]
+            - cell "Review execution" [ref=e451]
+            - cell [ref=e452]:
+              - status [ref=e453]: Comparator only
+              - status [ref=e454]: Top-two only
+              - status [ref=e455]: Settlement caveat
+          - row "Soccer (World Cup) Egypt Speculative top-two bundle 74 60 +14¢ cheaper 40 60 47 Tight Tight 12 Review execution" [ref=e456]:
+            - cell [ref=e457]:
+              - checkbox [ref=e458] [cursor=pointer]:
+                - img [ref=e461]
+            - cell [ref=e463]
+            - cell "Soccer (World Cup)" [ref=e464]
+            - cell "Egypt" [ref=e465]
+            - cell "Speculative top-two bundle" [ref=e466]
+            - cell "74" [ref=e467]
+            - cell "60" [ref=e468]
+            - cell "+14¢ cheaper" [ref=e469]:
+              - generic [ref=e470]: +14¢ cheaper
+            - cell "40" [ref=e471]
+            - cell "60" [ref=e472]
+            - cell "47" [ref=e473]
+            - cell "Tight" [ref=e474]
+            - cell "Tight" [ref=e475]
+            - cell "12" [ref=e476]
+            - cell "Review execution" [ref=e477]
+            - cell [ref=e478]:
+              - status [ref=e479]: Comparator only
+              - status [ref=e480]: Top-two only
+              - status [ref=e481]: Settlement caveat
+          - row "Soccer (World Cup) Korea Republic Speculative top-two bundle 72 59 +13¢ cheaper 41 59 81 Tight Tight 12 Review execution" [ref=e482]:
+            - cell [ref=e483]:
+              - checkbox [ref=e484] [cursor=pointer]:
+                - img [ref=e487]
+            - cell [ref=e489]
+            - cell "Soccer (World Cup)" [ref=e490]
+            - cell "Korea Republic" [ref=e491]
+            - cell "Speculative top-two bundle" [ref=e492]
+            - cell "72" [ref=e493]
+            - cell "59" [ref=e494]
+            - cell "+13¢ cheaper" [ref=e495]:
+              - generic [ref=e496]: +13¢ cheaper
+            - cell "41" [ref=e497]
+            - cell "59" [ref=e498]
+            - cell "81" [ref=e499]
+            - cell "Tight" [ref=e500]
+            - cell "Tight" [ref=e501]
+            - cell "12" [ref=e502]
+            - cell "Review execution" [ref=e503]
+            - cell [ref=e504]:
+              - status [ref=e505]: Comparator only
+              - status [ref=e506]: Top-two only
+              - status [ref=e507]: Settlement caveat
+      - generic [ref=e508]:
+        - generic [ref=e509]:
+          - generic [ref=e510]: "Records per page:"
+          - generic [ref=e513] [cursor=pointer]:
+            - generic [ref=e515]:
+              - generic [ref=e516]: "10"
+              - combobox "10" [ref=e517]
+            - generic [ref=e519]: arrow_drop_down
+        - generic [ref=e520]:
+          - generic [ref=e521]: 1-10 of 53
+          - button "First page" [disabled] [ref=e522]:
+            - img [ref=e524]: first_page
+          - button "Previous page" [disabled] [ref=e525]:
+            - img [ref=e527]: chevron_left
+          - button "Next page" [ref=e528] [cursor=pointer]:
+            - img [ref=e530]: chevron_right
+          - button "Last page" [ref=e531] [cursor=pointer]:
+            - img [ref=e533]: last_page
+    - generic "Bounded-loss bets section" [ref=e534]:
+      - button "Expand" [ref=e536] [cursor=pointer]:
+        - generic [ref=e537]:
+          - generic [ref=e538]: unfold_more
+          - generic [ref=e539]: Bounded-Loss Bets — capped downside, convex upside (21)
+          - button [ref=e541]:
+            - img [ref=e543]: view_column
+        - generic [ref=e545]: keyboard_arrow_down
+    - generic "Overpriced books section" [ref=e546]:
+      - button "Expand" [ref=e548] [cursor=pointer]:
+        - generic [ref=e549]:
+          - generic [ref=e550]: unfold_more
+          - generic [ref=e551]: Overpriced Books — flat guaranteed loss, watch-only (158)
+          - button [ref=e553]:
+            - img [ref=e555]: view_column
+        - generic [ref=e557]: keyboard_arrow_down
+    - button "Expand \"Recently Actionable — recently left the set\"" [ref=e560] [cursor=pointer]:
+      - generic [ref=e562]: Recently Actionable — recently left the set
+      - generic [ref=e564]: keyboard_arrow_down
+    - button "Expand \"Durable backlog (last 7 days) — survives restarts\"" [ref=e567] [cursor=pointer]:
+      - generic [ref=e569]: Durable backlog (last 7 days) — survives restarts
+      - generic [ref=e571]: keyboard_arrow_down
+    - button "Expand \"Market Telemetry — Liquidity & Volatility (context, not signals)\"" [ref=e574] [cursor=pointer]:
+      - generic [ref=e576]: Market Telemetry — Liquidity & Volatility (context, not signals)
+      - generic [ref=e578]: keyboard_arrow_down
+    - generic "Selected detail" [ref=e579]:
+      - button "Expand \"Selected Detail — click a row\"" [ref=e581] [cursor=pointer]:
+        - generic [ref=e583]: Selected Detail — click a row
+        - generic [ref=e585]: keyboard_arrow_down
+    - generic "Diagnostics and debug" [ref=e586]:
+      - button "Expand \"Diagnostics & Debug\"" [ref=e588] [cursor=pointer]:
+        - generic [ref=e590]: Diagnostics & Debug
+        - generic [ref=e592]: keyboard_arrow_down

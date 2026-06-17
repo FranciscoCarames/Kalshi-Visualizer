@@ -1,42 +1,21 @@
-# Python
-__pycache__/
-*.py[cod]
-.venv/
-venv/
-env/
+# .gitignore for the PRIVATE cross-machine mirror (branch: desktop-sync)
+#
+# Intent: sync *everything* between laptop and desktop EXCEPT secrets and the
+# large, regenerable SQLite snapshot caches (GitHub rejects files > 100 MB and
+# the app rebuilds these by scanning Kalshi). Unlike the public repo's
+# .gitignore, this DOES include .claude/, .kss/, node_modules/, mockups,
+# screenshots, logs, etc.
 
-# Secrets / credentials (never commit) — Kalshi API key id + RSA private key
+# --- Secrets / credentials (never publish) ---
 .env
+.env.*
 *.pem
+*.key
+*.p12
 .streamlit/secrets.toml
 
-# Snapshot store (Stage 1) — local opportunity-history SQLite DB
+# --- Large / regenerable SQLite stores (rebuilt by the app; auth.db = creds) ---
 *.db
-snapshots.db
-# Per-user auth store (auth_store.py) — credentials; covered by *.db but listed explicitly so it is never
-# committed even if the *.db rule is ever narrowed.
-auth.db
-# WAL sidecar files (v3 enables WAL mode) — gitignore has no inline comments, so keep these bare:
 *.db-wal
 *.db-shm
-# pre-migration backups (store._backup_before_migration)
 *.pre-v*-backup
-
-# OS / editor
-.DS_Store
-.vscode/
-.idea/
-
-# Local Claude Code session settings
-.claude/
-
-# Scratch / temp working dirs (audits, throwaway docs) — never tracked
-.codex_tmp/
-# Playwright MCP browser artifacts (snapshots, console logs, screenshots) — session scratch, never tracked
-.playwright-mcp/
-# Session scratch: boot logs + screenshots produced while verifying (never tracked)
-serve_*.log
-*.err.log
-
-# Local kss planning shell (topics, milestones, codebase snapshots) — keep out of the repo
-.kss/

@@ -1,0 +1,381 @@
+- main [ref=e5]:
+  - generic [ref=e7]:
+    - generic [ref=e8]:
+      - generic [ref=e9]: KALSHI TERMINAL PRO
+      - generic [ref=e10]:
+        - generic [ref=e11] [cursor=pointer]: OPP
+        - generic [ref=e12] [cursor=pointer]: RES
+        - generic [ref=e13] [cursor=pointer]: OPS
+        - generic [ref=e14] [cursor=pointer]: ALRT
+      - textbox [ref=e19]:
+        - /placeholder: "> filter participant / match"
+      - generic [ref=e20]: 20:55:18 UTC
+    - generic [ref=e21]:
+      - generic [ref=e22]: Data 20:54:27 UTC · age 51s · 2,510 opportunities · 93 series · 1 failed · 3,555 contracts scanned · 1,778 checks tested · 283 Kalshi requests
+      - generic [ref=e23]: GROSS · TOP-OF-BOOK · $1 BASIS · READ-ONLY · NO ORDER ENTRY · NOT RISKLESS
+    - generic [ref=e24]:
+      - generic [ref=e25]:
+        - generic [ref=e450] [cursor=pointer]:
+          - generic [ref=e451]: "14"
+          - generic [ref=e452]: ACT-NOW
+        - generic [ref=e453] [cursor=pointer]:
+          - generic [ref=e454]: "32"
+          - generic [ref=e455]: REVIEW
+        - generic [ref=e456] [cursor=pointer]:
+          - generic [ref=e457]: "11"
+          - generic [ref=e458]: BLOCKED
+        - generic [ref=e459] [cursor=pointer]:
+          - generic [ref=e460]: "178"
+          - generic [ref=e461]: SPEC
+        - generic [ref=e462] [cursor=pointer]:
+          - generic [ref=e463]: "430"
+          - generic [ref=e464]: CHEAP-NO
+      - generic [ref=e41]:
+        - generic [ref=e42]:
+          - generic [ref=e43]:
+            - generic [ref=e44]: BLOTTER
+            - generic [ref=e45]:
+              - button "Blended" [pressed] [ref=e46] [cursor=pointer]:
+                - generic [ref=e48]: Blended
+              - button "Per-unit edge ¢" [ref=e49] [cursor=pointer]:
+                - generic [ref=e51]: Per-unit edge ¢
+              - button "Spread upside" [ref=e52] [cursor=pointer]:
+                - generic [ref=e54]: Spread upside
+              - button "Outright + spread" [ref=e55] [cursor=pointer]:
+                - generic [ref=e57]: Outright + spread
+              - button "Implied EV" [ref=e58] [cursor=pointer]:
+                - generic [ref=e60]: Implied EV
+            - generic [ref=e61]: lens
+          - generic [ref=e62]:
+            - table [ref=e64]:
+              - rowgroup [ref=e65]:
+                - row "Sport Participant / match Detail Action plan Edge ¢ ROI % Units Max $ Tradable" [ref=e66]:
+                  - columnheader [ref=e67]
+                  - columnheader [ref=e68]
+                  - columnheader "Sport" [ref=e69] [cursor=pointer]:
+                    - text: Sport
+                    - generic [ref=e70]: arrow_upward
+                  - columnheader "Participant / match" [ref=e71] [cursor=pointer]:
+                    - text: Participant / match
+                    - generic [ref=e72]: arrow_upward
+                  - columnheader "Detail" [ref=e73]
+                  - columnheader "Action plan" [ref=e74]
+                  - columnheader "Edge ¢" [ref=e75] [cursor=pointer]:
+                    - generic [ref=e76]: arrow_upward
+                    - text: Edge ¢
+                  - columnheader "ROI %" [ref=e77] [cursor=pointer]:
+                    - generic [ref=e78]: arrow_upward
+                    - text: ROI %
+                  - columnheader "Units" [ref=e79] [cursor=pointer]:
+                    - generic [ref=e80]: arrow_upward
+                    - text: Units
+                  - columnheader "Max $" [ref=e81] [cursor=pointer]:
+                    - generic [ref=e82]: arrow_upward
+                    - text: Max $
+                  - columnheader "Tradable" [ref=e83]
+              - rowgroup [ref=e84]:
+                - row "Esports Carolina Royal Ravens vs Riyadh Falcons underround Buy YES — Carolina Royal Ravens @ 36¢ + Buy YES — Riyadh Falcons @ 62¢ 2 2 138 2.76 Yes" [ref=e119] [cursor=pointer]:
+                  - cell [ref=e120]:
+                    - checkbox [ref=e121]:
+                      - img [ref=e124]
+                  - cell [ref=e126]
+                  - cell "Esports" [ref=e127]
+                  - cell "Carolina Royal Ravens vs Riyadh Falcons" [ref=e128]
+                  - cell "underround" [ref=e129]
+                  - cell "Buy YES — Carolina Royal Ravens @ 36¢ + Buy YES — Riyadh Falcons @ 62¢" [ref=e130]
+                  - cell "2" [ref=e131]
+                  - cell "2" [ref=e132]
+                  - cell "138" [ref=e133]
+                  - cell "2.76" [ref=e134]
+                  - cell "Yes" [ref=e135]
+                - row "Esports ODDIK vs paiN Academy overround Buy NO — ODDIK @ 34¢ + Buy NO — paiN Academy @ 64¢ 2 2 4 0.08 Yes" [ref=e136] [cursor=pointer]:
+                  - cell [ref=e137]:
+                    - checkbox [ref=e138]:
+                      - img [ref=e141]
+                  - cell [ref=e143]
+                  - cell "Esports" [ref=e144]
+                  - cell "ODDIK vs paiN Academy" [ref=e145]
+                  - cell "overround" [ref=e146]
+                  - cell "Buy NO — ODDIK @ 34¢ + Buy NO — paiN Academy @ 64¢" [ref=e147]
+                  - cell "2" [ref=e148]
+                  - cell "2" [ref=e149]
+                  - cell "4" [ref=e150]
+                  - cell "0.08" [ref=e151]
+                  - cell "Yes" [ref=e152]
+                - row "Soccer (World Cup) Group Stage — stage of elimination overround 7-leg plan — open details for legs 4 0.7 1.5 0.06 Yes" [ref=e465] [cursor=pointer]:
+                  - cell [ref=e103]:
+                    - checkbox [ref=e104]:
+                      - img [ref=e107]
+                  - cell [ref=e109]
+                  - cell "Soccer (World Cup)" [ref=e110]
+                  - cell "Group Stage — stage of elimination" [ref=e111]
+                  - cell "overround" [ref=e112]
+                  - cell "7-leg plan — open details for legs" [ref=e113]
+                  - cell "4" [ref=e466]
+                  - cell "0.7" [ref=e467]
+                  - cell "1.5" [ref=e116]
+                  - cell "0.06" [ref=e468]
+                  - cell "Yes" [ref=e118]
+                - row "Soccer (World Cup) Scotland vs Morocco overround 3-leg plan — open details for legs 2 1 63.67 1.27 Yes" [ref=e187] [cursor=pointer]:
+                  - cell [ref=e188]:
+                    - checkbox [ref=e189]:
+                      - img [ref=e192]
+                  - cell [ref=e194]
+                  - cell "Soccer (World Cup)" [ref=e195]
+                  - cell "Scotland vs Morocco" [ref=e196]
+                  - cell "overround" [ref=e197]
+                  - cell "3-leg plan — open details for legs" [ref=e198]
+                  - cell "2" [ref=e199]
+                  - cell "1" [ref=e200]
+                  - cell "63.67" [ref=e201]
+                  - cell "1.27" [ref=e202]
+                  - cell "Yes" [ref=e203]
+                - row "Soccer (World Cup) Group Stage — stage of elimination overround 7-leg plan — open details for legs 3 0.5 1 0.03 Yes" [ref=e469] [cursor=pointer]:
+                  - cell [ref=e171]:
+                    - checkbox [ref=e172]:
+                      - img [ref=e175]
+                  - cell [ref=e177]
+                  - cell "Soccer (World Cup)" [ref=e178]
+                  - cell "Group Stage — stage of elimination" [ref=e179]
+                  - cell "overround" [ref=e180]
+                  - cell "7-leg plan — open details for legs" [ref=e181]
+                  - cell "3" [ref=e470]
+                  - cell "0.5" [ref=e471]
+                  - cell "1" [ref=e184]
+                  - cell "0.03" [ref=e472]
+                  - cell "Yes" [ref=e186]
+                - row "NBA Pro Basketball (M) · 27 winner field overround 19-leg plan — open details for legs 3 0.2 12.64 0.38 Yes" [ref=e473] [cursor=pointer]:
+                  - cell [ref=e154]:
+                    - checkbox [ref=e155]:
+                      - img [ref=e158]
+                  - cell [ref=e160]
+                  - cell "NBA" [ref=e161]
+                  - cell "Pro Basketball (M) · 27 winner field" [ref=e162]
+                  - cell "overround" [ref=e163]
+                  - cell "19-leg plan — open details for legs" [ref=e164]
+                  - cell "3" [ref=e474]
+                  - cell "0.2" [ref=e475]
+                  - cell "12.64" [ref=e476]
+                  - cell "0.38" [ref=e477]
+                  - cell "Yes" [ref=e169]
+                - row "Soccer (World Cup) Cape Verde Reach Semifinals ≤ Reach Quarterfinals Buy YES — Reach Quarterfinals @ 2¢ + Buy NO — Reach Semifinals @ 97¢ 1 1 3 0.03 Yes" [ref=e204] [cursor=pointer]:
+                  - cell [ref=e205]:
+                    - checkbox [ref=e206]:
+                      - img [ref=e209]
+                  - cell [ref=e211]
+                  - cell "Soccer (World Cup)" [ref=e212]
+                  - cell "Cape Verde" [ref=e213]
+                  - cell "Reach Semifinals ≤ Reach Quarterfinals" [ref=e214]
+                  - cell "Buy YES — Reach Quarterfinals @ 2¢ + Buy NO — Reach Semifinals @ 97¢" [ref=e215]
+                  - cell "1" [ref=e216]
+                  - cell "1" [ref=e217]
+                  - cell "3" [ref=e218]
+                  - cell "0.03" [ref=e219]
+                  - cell "Yes" [ref=e220]
+                - row "Soccer (World Cup) Cape Verde vs Saudi Arabia underround 3-leg plan — open details for legs 1 1 526 5.26 Yes" [ref=e478] [cursor=pointer]:
+                  - cell [ref=e222]:
+                    - checkbox [ref=e223]:
+                      - img [ref=e226]
+                  - cell [ref=e228]
+                  - cell "Soccer (World Cup)" [ref=e229]
+                  - cell "Cape Verde vs Saudi Arabia" [ref=e230]
+                  - cell "underround" [ref=e231]
+                  - cell "3-leg plan — open details for legs" [ref=e232]
+                  - cell "1" [ref=e233]
+                  - cell "1" [ref=e234]
+                  - cell "526" [ref=e479]
+                  - cell "5.26" [ref=e480]
+                  - cell "Yes" [ref=e237]
+                - row "Esports Fluxo W7M vs FaZe Clan overround Buy NO — Fluxo W7M @ 70¢ + Buy NO — FaZe Clan @ 29¢ 1 1 8 0.08 Yes" [ref=e481] [cursor=pointer]:
+                  - cell [ref=e239]:
+                    - checkbox [ref=e240]:
+                      - img [ref=e243]
+                  - cell [ref=e245]
+                  - cell "Esports" [ref=e246]
+                  - cell "Fluxo W7M vs FaZe Clan" [ref=e247]
+                  - cell "overround" [ref=e248]
+                  - cell "Buy NO — Fluxo W7M @ 70¢ + Buy NO — FaZe Clan @ 29¢" [ref=e482]
+                  - cell "1" [ref=e250]
+                  - cell "1" [ref=e251]
+                  - cell "8" [ref=e252]
+                  - cell "0.08" [ref=e253]
+                  - cell "Yes" [ref=e254]
+                - row "MLB San Francisco vs Atlanta overround Buy NO — San Francisco @ 60¢ + Buy NO — Atlanta @ 39¢ 1 1 1 0.01 Yes" [ref=e483] [cursor=pointer]:
+                  - cell [ref=e484]:
+                    - checkbox [ref=e485]:
+                      - img [ref=e488]
+                  - cell [ref=e490]
+                  - cell "MLB" [ref=e491]
+                  - cell "San Francisco vs Atlanta" [ref=e492]
+                  - cell "overround" [ref=e493]
+                  - cell "Buy NO — San Francisco @ 60¢ + Buy NO — Atlanta @ 39¢" [ref=e494]
+                  - cell "1" [ref=e495]
+                  - cell "1" [ref=e496]
+                  - cell "1" [ref=e497]
+                  - cell "0.01" [ref=e498]
+                  - cell "Yes" [ref=e499]
+                - row "Tennis Tommy Paul vs Zachary Svajda overround Buy NO — Tommy Paul @ 28¢ + Buy NO — Zachary Svajda @ 71¢ 1 1 34 0.34 Yes" [ref=e500] [cursor=pointer]:
+                  - cell [ref=e501]:
+                    - checkbox [ref=e502]:
+                      - img [ref=e505]
+                  - cell [ref=e507]
+                  - cell "Tennis" [ref=e508]
+                  - cell "Tommy Paul vs Zachary Svajda" [ref=e509]
+                  - cell "overround" [ref=e510]
+                  - cell "Buy NO — Tommy Paul @ 28¢ + Buy NO — Zachary Svajda @ 71¢" [ref=e511]
+                  - cell "1" [ref=e512]
+                  - cell "1" [ref=e513]
+                  - cell "34" [ref=e514]
+                  - cell "0.34" [ref=e515]
+                  - cell "Yes" [ref=e516]
+                - row "Soccer (World Cup) Croatia vs Ghana overround 3-leg plan — open details for legs 1 0.5 103 1.03 Yes" [ref=e272] [cursor=pointer]:
+                  - cell [ref=e273]:
+                    - checkbox [ref=e274]:
+                      - img [ref=e277]
+                  - cell [ref=e279]
+                  - cell "Soccer (World Cup)" [ref=e280]
+                  - cell "Croatia vs Ghana" [ref=e281]
+                  - cell "overround" [ref=e282]
+                  - cell "3-leg plan — open details for legs" [ref=e283]
+                  - cell "1" [ref=e284]
+                  - cell "0.5" [ref=e285]
+                  - cell "103" [ref=e286]
+                  - cell "1.03" [ref=e287]
+                  - cell "Yes" [ref=e288]
+                - row "Motorsport F1 · main-race · 26 winner field overround 4-leg plan — open details for legs 1 0.3 13 0.13 Yes" [ref=e289] [cursor=pointer]:
+                  - cell [ref=e290]:
+                    - checkbox [ref=e291]:
+                      - img [ref=e294]
+                  - cell [ref=e296]
+                  - cell "Motorsport" [ref=e297]
+                  - cell "F1 · main-race · 26 winner field" [ref=e298]
+                  - cell "overround" [ref=e299]
+                  - cell "4-leg plan — open details for legs" [ref=e300]
+                  - cell "1" [ref=e301]
+                  - cell "0.3" [ref=e302]
+                  - cell "13" [ref=e303]
+                  - cell "0.13" [ref=e304]
+                  - cell "Yes" [ref=e305]
+                - row "Soccer (World Cup) Group Stage — stage of elimination overround 7-leg plan — open details for legs 1 0.2 4 0.04 Yes" [ref=e306] [cursor=pointer]:
+                  - cell [ref=e307]:
+                    - checkbox [ref=e308]:
+                      - img [ref=e311]
+                  - cell [ref=e313]
+                  - cell "Soccer (World Cup)" [ref=e314]
+                  - cell "Group Stage — stage of elimination" [ref=e315]
+                  - cell "overround" [ref=e316]
+                  - cell "7-leg plan — open details for legs" [ref=e317]
+                  - cell "1" [ref=e318]
+                  - cell "0.2" [ref=e319]
+                  - cell "4" [ref=e320]
+                  - cell "0.04" [ref=e321]
+                  - cell "Yes" [ref=e322]
+            - generic [ref=e323]:
+              - generic [ref=e324]:
+                - generic [ref=e325]: "Records per page:"
+                - generic [ref=e328] [cursor=pointer]:
+                  - generic [ref=e330]:
+                    - generic [ref=e331]: "20"
+                    - combobox "20" [ref=e332]
+                  - generic [ref=e334]: arrow_drop_down
+              - generic [ref=e336]: 1-14 of 14
+        - generic [ref=e337]:
+          - generic [ref=e517]:
+            - generic [ref=e518]:
+              - generic [ref=e519]: ACT-NOW
+              - generic [ref=e520]: Carolina Royal Ravens vs Riyadh Falcons
+            - generic [ref=e521]:
+              - button "$1" [pressed] [ref=e522] [cursor=pointer]:
+                - generic [ref=e524]: $1
+              - button "$100" [ref=e525] [cursor=pointer]:
+                - generic [ref=e527]: $100
+          - generic [ref=e528]: underround · dutch_book
+          - generic [ref=e529]: Buy YES — Carolina Royal Ravens @ 36¢ + Buy YES — Riyadh Falcons @ 62¢
+          - generic [ref=e530]:
+            - generic [ref=e531]:
+              - generic [ref=e532]: COST
+              - generic [ref=e533]: 98¢
+            - generic [ref=e534]:
+              - generic [ref=e535]: FLOOR
+              - generic [ref=e536]: 100¢
+            - generic [ref=e537]:
+              - generic [ref=e538]: EDGE
+              - generic [ref=e539]: 2¢
+            - generic [ref=e540]:
+              - generic [ref=e541]: ROI
+              - generic [ref=e542]: 2.0%
+            - generic [ref=e543]:
+              - generic [ref=e544]: UNITS
+              - generic [ref=e545]: "138"
+            - generic [ref=e546]:
+              - generic [ref=e547]: MAX $
+              - generic [ref=e548]: $2.76
+          - generic [ref=e549]:
+            - generic [ref=e550]:
+              - generic [ref=e551]: IDENTITY
+              - generic [ref=e552]: high
+            - generic [ref=e553]:
+              - generic [ref=e554]: TRADABLE
+              - generic [ref=e555]: "Yes"
+          - generic [ref=e556]: LEGS
+          - table [ref=e559]:
+            - rowgroup [ref=e560]:
+              - row "Leg Side Market Price Size Status Quote" [ref=e561]:
+                - columnheader "Leg" [ref=e562]
+                - columnheader "Side" [ref=e563]
+                - columnheader "Market" [ref=e564]
+                - columnheader "Price" [ref=e565]
+                - columnheader "Size" [ref=e566]
+                - columnheader "Status" [ref=e567]
+                - columnheader "Quote" [ref=e568]
+            - rowgroup [ref=e569]:
+              - row "Leg 1 Buy YES Buy YES — Carolina Royal Ravens @ 36¢ 36¢ active Tight" [ref=e570]:
+                - cell "Leg 1" [ref=e571]
+                - cell "Buy YES" [ref=e572]
+                - cell "Buy YES — Carolina Royal Ravens @ 36¢" [ref=e573]
+                - cell "36¢" [ref=e574]
+                - cell [ref=e575]
+                - cell "active" [ref=e576]
+                - cell "Tight" [ref=e577]
+              - row "Leg 2 Buy YES Buy YES — Riyadh Falcons @ 62¢ 62¢ active Tight" [ref=e578]:
+                - cell "Leg 2" [ref=e579]
+                - cell "Buy YES" [ref=e580]
+                - cell "Buy YES — Riyadh Falcons @ 62¢" [ref=e581]
+                - cell "62¢" [ref=e582]
+                - cell [ref=e583]
+                - cell "active" [ref=e584]
+                - cell "Tight" [ref=e585]
+          - generic [ref=e586]: MD — TOP-OF-BOOK DEPTH PREVIEW
+          - generic [ref=e587]: READ-ONLY DEPTH VIEW — NO ORDERS · single firm level each side, not full orderbook depth
+          - generic [ref=e588]:
+            - generic [ref=e589]:
+              - generic [ref=e590]: Carolina Royal Ravens win map 3 in the Carolina Royal Ravens vs. Riyadh Falcons match
+              - generic [ref=e591]: Tight
+            - generic [ref=e592]:
+              - generic [ref=e593]: ASK
+              - generic [ref=e594]: 36¢
+              - generic [ref=e595]: ×625
+            - generic [ref=e596]: spread 1¢
+            - generic [ref=e597]:
+              - generic [ref=e598]: BID
+              - generic [ref=e599]: 35¢
+              - generic [ref=e600]: ×500
+            - generic [ref=e601]: Buy NO 65¢ ×500 · last 36¢ · vol 360 · OI 360
+          - generic [ref=e602]:
+            - generic [ref=e603]:
+              - generic [ref=e604]: Riyadh Falcons win map 3 in the Carolina Royal Ravens vs. Riyadh Falcons match
+              - generic [ref=e605]: Tight
+            - generic [ref=e606]:
+              - generic [ref=e607]: ASK
+              - generic [ref=e608]: 62¢
+              - generic [ref=e609]: ×138
+            - generic [ref=e610]: spread 2¢
+            - generic [ref=e611]:
+              - generic [ref=e612]: BID
+              - generic [ref=e613]: 60¢
+              - generic [ref=e614]: ×660
+            - generic [ref=e615]: Buy NO 40¢ ×660 · last 60¢ · vol 162 · OI 162
+          - generic [ref=e616]: "Settlement caveat: Per-game settlement risk: if the game is postponed, delayed past its scheduled start window, abandoned, ruled no-contest, or not played as originally scheduled (some leagues then resolve to a fair market price), the legs may not settle together and the gross gap need not hold — review the settlement rules before trading."
+          - button "Expand \"EVIDENCE\"" [ref=e619] [cursor=pointer]:
+            - generic [ref=e621]: EVIDENCE
+            - generic [ref=e623]: keyboard_arrow_down

@@ -1,0 +1,9 @@
+[     199ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:8000/auth/me:0
+[  301347ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:8000/api/terminal/stream:0
+[ 2075382ms] [ERROR] Failed to load resource: net::ERR_NETWORK_CHANGED @ http://127.0.0.1:8000/api/terminal/orderbook?ticker=KXWCGROUPQUAL-26C-HTI:0
+[ 2075392ms] [ERROR] Failed to load resource: net::ERR_NETWORK_CHANGED @ http://127.0.0.1:8000/api/terminal/orderbook?ticker=KXWCGROUPQUAL-26C-HTI:0
+[ 7022568ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:8000/api/terminal/orderbook?ticker=KXWCROUND-26RO16-ARG:0
+[ 7027609ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:8000/api/terminal/orderbook?ticker=KXWCROUND-26RO16-ARG:0
+[ 7032564ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:8000/api/terminal/orderbook?ticker=KXWCROUND-26RO16-ARG:0
+[ 7037584ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:8000/api/terminal/orderbook?ticker=KXWCROUND-26RO16-ARG:0
+[ 7042546ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:8000/api/terminal/orderbook?ticker=KXWCROUND-26RO16-ARG:0

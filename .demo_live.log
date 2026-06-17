@@ -1,0 +1,25 @@
+Loaded 2 setting(s) from .env (values not shown).
+Live feed ARMED: the app now holds Kalshi EXCHANGE credentials (read-only WS). Subscribing to 80 markets from the latest snapshot. Mode: 2C (live display).
+Auto-scan presence gate: ON (paused while no viewer connected; terminal feed poll counts as a viewer)
+INFO:     Started server process [26044]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8200 (Press CTRL+C to quit)
+INFO:     127.0.0.1:51438 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51439 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51440 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51441 - "GET /api/terminal/live HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51442 - "GET /api/terminal/orderbook?ticker=KXATPMATCH-26JUN18ZVEHAN-ZVE HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51444 - "GET /api/terminal/orderbook?ticker=KXATPMATCH-26JUN18ZVEHAN-ZVE HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51450 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51451 - "GET /api/terminal/feed HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51452 - "GET /api/terminal/orderbook?ticker=KXATPMATCH-26JUN18ZVEHAN-ZVE HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57810 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57813 - "GET /terminal/assets/index-B0bPax_Q.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57810 - "GET /terminal/assets/index-AHllnA_x.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57810 - "GET /auth/config HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57813 - "GET /favicon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57813 - "GET /api/terminal/stream HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57810 - "GET /api/terminal/feed HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57815 - "GET /auth/preferences HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57810 - "PUT /auth/preferences HTTP/1.1" 200 OK

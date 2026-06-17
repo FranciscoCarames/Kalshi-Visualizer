@@ -1,0 +1,3 @@
+[     727ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://localhost:5180/terminal/node_modules/.vite/deps/chunk-TYILIMWK.js?v=7669ead4:21550
+[     890ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5180/favicon.ico:0
+[  128835ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5180/api/terminal/feed:0

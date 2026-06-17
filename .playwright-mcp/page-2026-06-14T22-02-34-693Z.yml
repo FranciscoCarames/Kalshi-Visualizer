@@ -1,0 +1,589 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6] [cursor=pointer]: OPP
+      - generic [ref=e7] [cursor=pointer]: RES
+      - generic [ref=e8] [cursor=pointer]: OPS
+      - generic [ref=e9] [cursor=pointer]: ALRT
+    - generic [ref=e10]:
+      - generic [ref=e11]: ">"
+      - textbox "SEARCH — functions · participants · lenses · layouts (Ctrl-K · Phase B3)" [ref=e12]:
+        - /placeholder: SEARCH — functions · participants · lenses · layouts  (Ctrl-K · Phase B3)
+      - button "<GO>" [ref=e13] [cursor=pointer]
+    - generic [ref=e14]: 3515s · KALSHI
+  - generic [ref=e15]:
+    - generic [ref=e16]:
+      - generic [ref=e17]: ●
+      - text: "SNAPSHOT #2545 · 3515s ago"
+    - generic [ref=e18]:
+      - text: Opps
+      - generic [ref=e19]: 2,370
+    - generic [ref=e20]:
+      - text: Contracts
+      - generic [ref=e21]: 3,778
+    - generic [ref=e22]:
+      - text: Checks
+      - generic [ref=e23]: 1,574
+    - generic [ref=e24]:
+      - text: Requests
+      - generic [ref=e25]: "188"
+    - generic [ref=e26]:
+      - text: Sports
+      - generic [ref=e27]: "10"
+    - generic [ref=e28]:
+      - generic [ref=e29]: ●
+      - text: Failed
+      - generic [ref=e30]: "0"
+    - generic [ref=e31]: GROSS · TOP-OF-BOOK · $1 BASIS · READ-ONLY · NO ORDER ENTRY · NOT RISKLESS
+  - generic [ref=e32]:
+    - generic [ref=e33] [cursor=pointer]:
+      - generic [ref=e34]: 1)
+      - text: OPP
+    - generic [ref=e35] [cursor=pointer]:
+      - generic [ref=e36]: 2)
+      - text: RES
+    - generic [ref=e37] [cursor=pointer]:
+      - generic [ref=e38]: 3)
+      - text: OPS
+    - generic [ref=e39]:
+      - generic [ref=e40]: LENS
+      - generic [ref=e41]:
+        - button "BLENDED" [ref=e42] [cursor=pointer]
+        - button "EDGE¢" [ref=e43] [cursor=pointer]
+        - button "SPREAD" [ref=e44] [cursor=pointer]
+        - button "OUTRIGHT+SPREAD" [ref=e45] [cursor=pointer]
+        - button "IMPLIED EV" [ref=e46] [cursor=pointer]
+        - button "RIPENESS" [ref=e47] [cursor=pointer]
+      - generic [ref=e48]: engine order
+  - generic [ref=e49]:
+    - button "ACTIONABLE 12 executable now" [ref=e268] [cursor=pointer]:
+      - generic [ref=e51]: ACTIONABLE
+      - generic [ref=e52]: "12"
+      - generic [ref=e53]: executable now
+    - button "REVIEW 29 settlement-dep" [ref=e269] [cursor=pointer]:
+      - generic [ref=e55]: REVIEW
+      - generic [ref=e56]: "29"
+      - generic [ref=e57]: settlement-dep
+    - button "BLOCKED 13 not fillable" [ref=e270] [cursor=pointer]:
+      - generic [ref=e59]: BLOCKED
+      - generic [ref=e60]: "13"
+      - generic [ref=e61]: not fillable
+    - button "BOUNDED-LOSS 231 can lose money" [ref=e271] [cursor=pointer]:
+      - generic [ref=e63]: BOUNDED-LOSS
+      - generic [ref=e64]: "231"
+      - generic [ref=e65]: can lose money
+    - button "NEAR-MISS 205 watchlist" [ref=e272] [cursor=pointer]:
+      - generic [ref=e67]: NEAR-MISS
+      - generic [ref=e68]: "205"
+      - generic [ref=e69]: watchlist
+    - button "QUALIFIER 50 WC setups" [ref=e273] [cursor=pointer]:
+      - generic [ref=e71]: QUALIFIER
+      - generic [ref=e72]: "50"
+      - generic [ref=e73]: WC setups
+    - button "CHEAP-NO 488 NO fades" [ref=e274] [cursor=pointer]:
+      - generic [ref=e75]: CHEAP-NO
+      - generic [ref=e76]: "488"
+      - generic [ref=e77]: NO fades
+    - button "DATA-QUALITY 1,342 diagnostic" [ref=e275] [cursor=pointer]:
+      - generic [ref=e79]: DATA-QUALITY
+      - generic [ref=e80]: 1,342
+      - generic [ref=e81]: diagnostic
+  - generic [ref=e82]:
+    - generic [ref=e83]: SPORT
+    - combobox [ref=e84]:
+      - option "All" [selected]
+      - option "Esports"
+      - option "Golf"
+      - option "MLB"
+      - option "Motorsport"
+      - option "NBA"
+      - option "NFL"
+      - option "NHL"
+      - option "Soccer (World Cup)"
+      - option "Tennis"
+      - option "WNBA"
+    - generic [ref=e85]: PARTICIPANT
+    - textbox "contains…" [ref=e86]
+    - generic [ref=e87] [cursor=pointer]: clear
+  - generic [ref=e88]:
+    - generic [ref=e89]:
+      - generic [ref=e90]: LAYOUT
+      - combobox [ref=e91]:
+        - option "Default" [selected]
+        - option "Inspect"
+        - option "Research"
+        - option "Triage"
+        - option "Blotter full"
+      - button "⧉ POP" [ref=e92] [cursor=pointer]
+      - button "↺" [ref=e93] [cursor=pointer]
+      - generic [ref=e94]: drag tabs to rearrange · drag splitters to resize · ⧉ to pop out
+    - generic [ref=e118]:
+      - generic [ref=e125]:
+        - generic [ref=e127]:
+          - generic [ref=e132] [cursor=pointer]:
+            - generic [ref=e133]: BLOTTER
+            - img [ref=e135]
+          - generic [ref=e140]:
+            - generic [ref=e141]:
+              - generic [ref=e142] [cursor=pointer]: EXECUTABLE 12 firm · gross edge
+              - generic [ref=e143] [cursor=pointer]: SPECULATIVE 231 bounded-loss · can lose money
+              - generic [ref=e144] [cursor=pointer]: DIAGNOSTIC 1,342 review-only · data quality
+            - generic [ref=e145]:
+              - generic [ref=e146] [cursor=pointer]: ACTIONABLE12
+              - generic [ref=e147] [cursor=pointer]: REVIEW29
+              - generic [ref=e148] [cursor=pointer]: BLOCKED13
+              - generic [ref=e149]: Showing 12 · 8 cols · ⚙ columns ▾
+            - generic [ref=e152]:
+              - generic [ref=e153]: Press SPACE to deselect this row
+              - grid [ref=e154]:
+                - rowgroup [ref=e156]:
+                  - row "ROI % Max units Max gross profit Tradable Caveat" [ref=e404]:
+                    - columnheader "ROI %" [ref=e167]:
+                      - text: 
+                      - generic [ref=e169] [cursor=pointer]: ROI %
+                      - text: 
+                      - generic:    
+                    - columnheader "Max units" [ref=e405]:
+                      - text: 
+                      - generic [ref=e407] [cursor=pointer]: Max units
+                      - text: 
+                      - generic:    
+                    - columnheader "Max gross profit" [ref=e408]:
+                      - text: 
+                      - generic [ref=e410] [cursor=pointer]: Max gross profit
+                      - text: 
+                      - generic:    
+                    - columnheader "Tradable" [ref=e411]:
+                      - text: 
+                      - generic [ref=e413] [cursor=pointer]: Tradable
+                      - text: 
+                      - generic:    
+                    - columnheader "Caveat" [ref=e414]:
+                      - text: 
+                      - generic [ref=e416] [cursor=pointer]: Caveat
+                      - text: 
+                      - generic:    
+                - rowgroup [ref=e170]:
+                  - 'row "0.2% 10.7 $0.43 Yes One-winner-field overround: this buys NO on the priceable subset of a mutually-exclusive field (exactly one winner), not every entrant — safe because an untraded or unlisted winner only pays more. Gross, top-of-book; many legs are illiquid so the position is often only partly fillable." [active] [selected] [ref=e417]':
+                    - gridcell "0.2%" [ref=e281]
+                    - gridcell "10.7" [ref=e418]
+                    - gridcell "$0.43" [ref=e419]
+                    - gridcell "Yes" [ref=e420]
+                    - 'gridcell "One-winner-field overround: this buys NO on the priceable subset of a mutually-exclusive field (exactly one winner), not every entrant — safe because an untraded or unlisted winner only pays more. Gross, top-of-book; many legs are illiquid so the position is often only partly fillable." [ref=e421]'
+                  - row "0.7% 1.5 $0.06 Yes" [ref=e422]:
+                    - gridcell "0.7%" [ref=e287]
+                    - gridcell "1.5" [ref=e423]
+                    - gridcell "$0.06" [ref=e424]
+                    - gridcell "Yes" [ref=e425]
+                    - gridcell [ref=e426]
+                  - row "0.5% 1 $0.03 Yes" [ref=e427]:
+                    - gridcell "0.5%" [ref=e293]
+                    - gridcell "1" [ref=e428]
+                    - gridcell "$0.03" [ref=e429]
+                    - gridcell "Yes" [ref=e430]
+                    - gridcell [ref=e431]
+                  - 'row "2% 138 $2.76 Yes Per-game settlement risk: if the game is postponed, delayed past its scheduled start window, abandoned, ruled no-contest, or not played as originally scheduled (some leagues then resolve to a fair market price), the legs may not settle together and the gross gap need not hold — review the settlement rules before trading." [ref=e432]':
+                    - gridcell "2%" [ref=e299]
+                    - gridcell "138" [ref=e433]
+                    - gridcell "$2.76" [ref=e434]
+                    - gridcell "Yes" [ref=e435]
+                    - 'gridcell "Per-game settlement risk: if the game is postponed, delayed past its scheduled start window, abandoned, ruled no-contest, or not played as originally scheduled (some leagues then resolve to a fair market price), the legs may not settle together and the gross gap need not hold — review the settlement rules before trading." [ref=e436]'
+                  - 'row "2% 4 $0.08 Yes Per-game settlement risk: if the game is postponed, delayed past its scheduled start window, abandoned, ruled no-contest, or not played as originally scheduled (some leagues then resolve to a fair market price), the legs may not settle together and the gross gap need not hold — review the settlement rules before trading." [ref=e437]':
+                    - gridcell "2%" [ref=e305]
+                    - gridcell "4" [ref=e438]
+                    - gridcell "$0.08" [ref=e439]
+                    - gridcell "Yes" [ref=e440]
+                    - 'gridcell "Per-game settlement risk: if the game is postponed, delayed past its scheduled start window, abandoned, ruled no-contest, or not played as originally scheduled (some leagues then resolve to a fair market price), the legs may not settle together and the gross gap need not hold — review the settlement rules before trading." [ref=e441]'
+                  - 'row "1% 63.7 $1.27 Yes Per-game settlement risk: if the game is postponed, delayed past its scheduled start window, abandoned, ruled no-contest, or not played as originally scheduled (some leagues then resolve to a fair market price), the legs may not settle together and the gross gap need not hold — review the settlement rules before trading." [ref=e442]':
+                    - gridcell "1%" [ref=e311]
+                    - gridcell "63.7" [ref=e443]
+                    - gridcell "$1.27" [ref=e444]
+                    - gridcell "Yes" [ref=e445]
+                    - 'gridcell "Per-game settlement risk: if the game is postponed, delayed past its scheduled start window, abandoned, ruled no-contest, or not played as originally scheduled (some leagues then resolve to a fair market price), the legs may not settle together and the gross gap need not hold — review the settlement rules before trading." [ref=e446]'
+                  - row "1% 3 $0.03 Yes" [ref=e447]:
+                    - gridcell "1%" [ref=e317]
+                    - gridcell "3" [ref=e448]
+                    - gridcell "$0.03" [ref=e449]
+                    - gridcell "Yes" [ref=e450]
+                    - gridcell [ref=e451]
+                  - 'row "1% 608.2 $6.08 Yes Per-game settlement risk: if the game is postponed, delayed past its scheduled start window, abandoned, ruled no-contest, or not played as originally scheduled (some leagues then resolve to a fair market price), the legs may not settle together and the gross gap need not hold — review the settlement rules before trading." [ref=e452]':
+                    - gridcell "1%" [ref=e323]
+                    - gridcell "608.2" [ref=e453]
+                    - gridcell "$6.08" [ref=e454]
+                    - gridcell "Yes" [ref=e455]
+                    - 'gridcell "Per-game settlement risk: if the game is postponed, delayed past its scheduled start window, abandoned, ruled no-contest, or not played as originally scheduled (some leagues then resolve to a fair market price), the legs may not settle together and the gross gap need not hold — review the settlement rules before trading." [ref=e456]'
+                  - 'row "0.3% 8 $0.08 Yes One-winner-field overround: this buys NO on the priceable subset of a mutually-exclusive field (exactly one winner), not every entrant — safe because an untraded or unlisted winner only pays more. Gross, top-of-book; many legs are illiquid so the position is often only partly fillable." [ref=e457]':
+                    - gridcell "0.3%" [ref=e329]
+                    - gridcell "8" [ref=e458]
+                    - gridcell "$0.08" [ref=e459]
+                    - gridcell "Yes" [ref=e460]
+                    - 'gridcell "One-winner-field overround: this buys NO on the priceable subset of a mutually-exclusive field (exactly one winner), not every entrant — safe because an untraded or unlisted winner only pays more. Gross, top-of-book; many legs are illiquid so the position is often only partly fillable." [ref=e461]'
+                  - row "1% 1 $0.01 Yes" [ref=e462]:
+                    - gridcell "1%" [ref=e335]
+                    - gridcell "1" [ref=e463]
+                    - gridcell "$0.01" [ref=e464]
+                    - gridcell "Yes" [ref=e465]
+                    - gridcell [ref=e466]
+                  - row "1% 34 $0.34 Yes" [ref=e467]:
+                    - gridcell "1%" [ref=e341]
+                    - gridcell "34" [ref=e468]
+                    - gridcell "$0.34" [ref=e469]
+                    - gridcell "Yes" [ref=e470]
+                    - gridcell [ref=e471]
+                  - 'row "0.5% 103 $1.03 Yes Per-game settlement risk: if the game is postponed, delayed past its scheduled start window, abandoned, ruled no-contest, or not played as originally scheduled (some leagues then resolve to a fair market price), the legs may not settle together and the gross gap need not hold — review the settlement rules before trading." [ref=e472]':
+                    - gridcell "0.5%" [ref=e347]
+                    - gridcell "103" [ref=e473]
+                    - gridcell "$1.03" [ref=e474]
+                    - gridcell "Yes" [ref=e475]
+                    - 'gridcell "Per-game settlement risk: if the game is postponed, delayed past its scheduled start window, abandoned, ruled no-contest, or not played as originally scheduled (some leagues then resolve to a fair market price), the legs may not settle together and the gross gap need not hold — review the settlement rules before trading." [ref=e476]'
+                - rowgroup
+                - rowgroup [ref=e171]
+                - rowgroup
+              - text:    
+        - generic [ref=e175]:
+          - generic [ref=e180] [cursor=pointer]:
+            - generic [ref=e181]: MD LADDER
+            - img [ref=e183]
+          - generic [ref=e188]:
+            - generic [ref=e189]: READ-ONLY DEPTH VIEW — NO ORDERS · TOP-OF-BOOK + DERIVED
+            - generic [ref=e190]:
+              - generic [ref=e477]:
+                - text: Pro Basketball (M) · 27 winner field
+                - generic [ref=e478]: · 19 contracts
+              - combobox [ref=e479]:
+                - option "NO · Atlanta @ 99¢" [selected]
+                - option "NO · Boston @ 87¢"
+                - option "NO · Charlotte @ 99¢"
+                - option "NO · Cleveland @ 98¢"
+                - option "NO · Denver @ 97¢"
+                - option "NO · Detroit @ 96¢"
+                - option "NO · Golden State @ 98¢"
+                - option "NO · Houston @ 99¢"
+                - option "NO · Indiana @ 97¢"
+                - option "NO · Los Angeles L @ 97¢"
+                - option "NO · Miami @ 98¢"
+                - option "NO · Minnesota @ 98¢"
+                - option "NO · New York @ 87¢"
+                - option "NO · Oklahoma City @ 74¢"
+                - option "NO · Orlando @ 99¢"
+                - option "NO · Philadelphia @ 99¢"
+                - option "NO · Portland @ 99¢"
+                - option "NO · San Antonio @ 76¢"
+                - option "NO · Toronto @ 99¢"
+            - table [ref=e481]:
+              - rowgroup [ref=e482]:
+                - row "Bid size Px¢ Ask size" [ref=e483]:
+                  - columnheader "Bid size" [ref=e484]
+                  - columnheader "Px¢" [ref=e485]
+                  - columnheader "Ask size" [ref=e486]
+              - rowgroup [ref=e487]:
+                - row "20 99 20" [ref=e488]:
+                  - cell "20" [ref=e489]: "20"
+                  - cell "99" [ref=e491]
+                  - cell "20" [ref=e492]: "20"
+                - row "34 98" [ref=e494]:
+                  - cell "34" [ref=e495]: "34"
+                  - cell "98" [ref=e497]
+                  - cell [ref=e498]
+                - row "48 97" [ref=e499]:
+                  - cell "48" [ref=e500]: "48"
+                  - cell "97" [ref=e502]
+                  - cell [ref=e503]
+                - row "62 96" [ref=e504]:
+                  - cell "62" [ref=e505]: "62"
+                  - cell "96" [ref=e507]
+                  - cell [ref=e508]
+                - row "76 95" [ref=e509]:
+                  - cell "76" [ref=e510]: "76"
+                  - cell "95" [ref=e512]
+                  - cell [ref=e513]
+                - row "90 94" [ref=e514]:
+                  - cell "90" [ref=e515]: "90"
+                  - cell "94" [ref=e517]
+                  - cell [ref=e518]
+                - row "104 93" [ref=e519]:
+                  - cell "104" [ref=e520]: "104"
+                  - cell "93" [ref=e522]
+                  - cell [ref=e523]
+            - generic [ref=e524]:
+              - generic [ref=e525]: Touch 99¢
+              - generic [ref=e526]: top size 20 · derived depth
+        - generic [ref=e196]:
+          - generic [ref=e198]:
+            - generic [ref=e203] [cursor=pointer]:
+              - generic [ref=e204]: RECENTLY ACTIONABLE
+              - img [ref=e206]
+            - generic [ref=e211]:
+              - generic [ref=e353] [cursor=pointer]:
+                - generic [ref=e354]: ●
+                - generic [ref=e355]:
+                  - text: Pro Basketball (M) · 27 winner field
+                  - generic [ref=e356]: NBA · overround
+                - generic [ref=e357]: 4¢
+              - generic [ref=e358] [cursor=pointer]:
+                - generic [ref=e359]: ●
+                - generic [ref=e360]:
+                  - text: Group Stage — stage of elimination
+                  - generic [ref=e361]: Soccer (World Cup) · overround
+                - generic [ref=e362]: 4¢
+              - generic [ref=e363] [cursor=pointer]:
+                - generic [ref=e364]: ●
+                - generic [ref=e365]:
+                  - text: Group Stage — stage of elimination
+                  - generic [ref=e366]: Soccer (World Cup) · overround
+                - generic [ref=e367]: 3¢
+              - generic [ref=e368] [cursor=pointer]:
+                - generic [ref=e369]: ●
+                - generic [ref=e370]:
+                  - text: Carolina Royal Ravens vs Riyadh Falcons
+                  - generic [ref=e371]: Esports · underround
+                - generic [ref=e372]: 2¢
+              - generic [ref=e373] [cursor=pointer]:
+                - generic [ref=e374]: ●
+                - generic [ref=e375]:
+                  - text: ODDIK vs paiN Academy
+                  - generic [ref=e376]: Esports · overround
+                - generic [ref=e377]: 2¢
+              - generic [ref=e378] [cursor=pointer]:
+                - generic [ref=e379]: ●
+                - generic [ref=e380]:
+                  - text: Scotland vs Morocco
+                  - generic [ref=e381]: Soccer (World Cup) · overround
+                - generic [ref=e382]: 2¢
+              - generic [ref=e383] [cursor=pointer]:
+                - generic [ref=e384]: ●
+                - generic [ref=e385]:
+                  - text: Cape Verde
+                  - generic [ref=e386]: Soccer (World Cup) · Reach Semifinals ≤ Reach Quarterfinals
+                - generic [ref=e387]: 1¢
+              - generic [ref=e213] [cursor=pointer]: REVIEW MOVERS
+              - generic [ref=e388] [cursor=pointer]:
+                - generic [ref=e389]: ◐
+                - generic [ref=e390]:
+                  - text: Round of 32 — Reach Round of 32 (synthetic vs advance)
+                  - generic [ref=e391]: Soccer (World Cup) · rule-dep
+              - generic [ref=e392] [cursor=pointer]:
+                - generic [ref=e393]: ◐
+                - generic [ref=e394]:
+                  - text: Quarterfinals — Reach Quarterfinals (synthetic vs advance)
+                  - generic [ref=e395]: Soccer (World Cup) · rule-dep
+              - generic [ref=e396] [cursor=pointer]:
+                - generic [ref=e397]: ◐
+                - generic [ref=e398]:
+                  - text: Round of 16 — Reach Round of 16 (synthetic vs advance)
+                  - generic [ref=e399]: Soccer (World Cup) · rule-dep
+              - generic [ref=e400] [cursor=pointer]:
+                - generic [ref=e401]: ◐
+                - generic [ref=e402]:
+                  - text: Round of 16 — Reach Round of 16 (synthetic vs advance)
+                  - generic [ref=e403]: Soccer (World Cup) · rule-dep
+          - generic [ref=e215]:
+            - generic [ref=e220] [cursor=pointer]:
+              - generic [ref=e221]: ALERTS
+              - img [ref=e223]
+            - generic [ref=e228]:
+              - generic [ref=e229]:
+                - generic [ref=e230]: ●
+                - generic [ref=e231]:
+                  - generic [ref=e232]: became executable — Pro Basketball (M) · 27 winner field
+                  - generic [ref=e233]: firm both legs
+              - generic [ref=e234]:
+                - generic [ref=e235]: ●
+                - generic [ref=e236]:
+                  - generic [ref=e237]: bucket changed — → Review · rule-check
+                  - generic [ref=e238]: settlement check
+              - generic [ref=e239]:
+                - generic [ref=e240]: ●
+                - generic [ref=e241]:
+                  - generic [ref=e242]: series failed — 0 series
+                  - generic [ref=e243]: coverage partial
+              - generic [ref=e244]:
+                - generic [ref=e245]: ●
+                - generic [ref=e246]:
+                  - generic [ref=e247]: new bounded-loss — Pittsburgh
+                  - generic [ref=e248]: watchlist
+      - generic [ref=e250]:
+        - generic [ref=e255] [cursor=pointer]:
+          - generic [ref=e256]: INSPECTOR
+          - img [ref=e258]
+        - generic [ref=e264]:
+          - generic [ref=e527]:
+            - generic [ref=e528]: EXECUTABLE
+            - generic [ref=e529]: Pro Basketball (M) · 27 winner field
+            - generic [ref=e530]:
+              - button "$1" [ref=e531] [cursor=pointer]
+              - button "$100" [ref=e532] [cursor=pointer]
+          - generic [ref=e533]: Pro Basketball (M) · 27 · NBA · calendar
+          - generic [ref=e534]: BUY-ONLY PLAN — 19 LEGS
+          - generic [ref=e535]:
+            - generic [ref=e536]: "NO"
+            - generic [ref=e537]: Atlanta
+            - generic [ref=e538]: 99¢
+            - generic [ref=e539]: ×13.64
+            - link "↗" [ref=e540] [cursor=pointer]:
+              - /url: https://kalshi.com/markets/kxnba/pro-basketball-champion/kxnba-27
+          - generic [ref=e541]:
+            - generic [ref=e542]: "NO"
+            - generic [ref=e543]: Boston
+            - generic [ref=e544]: 87¢
+            - generic [ref=e545]: ×1071.66
+            - link "↗" [ref=e546] [cursor=pointer]:
+              - /url: https://kalshi.com/markets/kxnba/pro-basketball-champion/kxnba-27
+          - generic [ref=e547]:
+            - generic [ref=e548]: "NO"
+            - generic [ref=e549]: Charlotte
+            - generic [ref=e550]: 99¢
+            - generic [ref=e551]: ×12143.64
+            - link "↗" [ref=e552] [cursor=pointer]:
+              - /url: https://kalshi.com/markets/kxnba/pro-basketball-champion/kxnba-27
+          - generic [ref=e553]:
+            - generic [ref=e554]: "NO"
+            - generic [ref=e555]: Cleveland
+            - generic [ref=e556]: 98¢
+            - generic [ref=e557]: ×4811.73
+            - link "↗" [ref=e558] [cursor=pointer]:
+              - /url: https://kalshi.com/markets/kxnba/pro-basketball-champion/kxnba-27
+          - generic [ref=e559]:
+            - generic [ref=e560]: "NO"
+            - generic [ref=e561]: Denver
+            - generic [ref=e562]: 97¢
+            - generic [ref=e563]: ×21256.82
+            - link "↗" [ref=e564] [cursor=pointer]:
+              - /url: https://kalshi.com/markets/kxnba/pro-basketball-champion/kxnba-27
+          - generic [ref=e565]:
+            - generic [ref=e566]: "NO"
+            - generic [ref=e567]: Detroit
+            - generic [ref=e568]: 96¢
+            - generic [ref=e569]: ×10.66
+            - link "↗" [ref=e570] [cursor=pointer]:
+              - /url: https://kalshi.com/markets/kxnba/pro-basketball-champion/kxnba-27
+          - generic [ref=e571]:
+            - generic [ref=e572]: "NO"
+            - generic [ref=e573]: Golden State
+            - generic [ref=e574]: 98¢
+            - generic [ref=e575]: ×50
+            - link "↗" [ref=e576] [cursor=pointer]:
+              - /url: https://kalshi.com/markets/kxnba/pro-basketball-champion/kxnba-27
+          - generic [ref=e577]:
+            - generic [ref=e578]: "NO"
+            - generic [ref=e579]: Houston
+            - generic [ref=e580]: 99¢
+            - generic [ref=e581]: ×10614.64
+            - link "↗" [ref=e582] [cursor=pointer]:
+              - /url: https://kalshi.com/markets/kxnba/pro-basketball-champion/kxnba-27
+          - generic [ref=e583]:
+            - generic [ref=e584]: "NO"
+            - generic [ref=e585]: Indiana
+            - generic [ref=e586]: 97¢
+            - generic [ref=e587]: ×109.1
+            - link "↗" [ref=e588] [cursor=pointer]:
+              - /url: https://kalshi.com/markets/kxnba/pro-basketball-champion/kxnba-27
+          - generic [ref=e589]:
+            - generic [ref=e590]: "NO"
+            - generic [ref=e591]: Los Angeles L
+            - generic [ref=e592]: 97¢
+            - generic [ref=e593]: ×4864.88
+            - link "↗" [ref=e594] [cursor=pointer]:
+              - /url: https://kalshi.com/markets/kxnba/pro-basketball-champion/kxnba-27
+          - generic [ref=e595]:
+            - generic [ref=e596]: "NO"
+            - generic [ref=e597]: Miami
+            - generic [ref=e598]: 98¢
+            - generic [ref=e599]: ×11915.64
+            - link "↗" [ref=e600] [cursor=pointer]:
+              - /url: https://kalshi.com/markets/kxnba/pro-basketball-champion/kxnba-27
+          - generic [ref=e601]:
+            - generic [ref=e602]: "NO"
+            - generic [ref=e603]: Minnesota
+            - generic [ref=e604]: 98¢
+            - generic [ref=e605]: ×11206.64
+            - link "↗" [ref=e606] [cursor=pointer]:
+              - /url: https://kalshi.com/markets/kxnba/pro-basketball-champion/kxnba-27
+          - generic [ref=e607]:
+            - generic [ref=e608]: "NO"
+            - generic [ref=e609]: New York
+            - generic [ref=e610]: 87¢
+            - generic [ref=e611]: ×3600.73
+            - link "↗" [ref=e612] [cursor=pointer]:
+              - /url: https://kalshi.com/markets/kxnba/pro-basketball-champion/kxnba-27
+          - generic [ref=e613]:
+            - generic [ref=e614]: "NO"
+            - generic [ref=e615]: Oklahoma City
+            - generic [ref=e616]: 74¢
+            - generic [ref=e617]: ×9417.68
+            - link "↗" [ref=e618] [cursor=pointer]:
+              - /url: https://kalshi.com/markets/kxnba/pro-basketball-champion/kxnba-27
+          - generic [ref=e619]:
+            - generic [ref=e620]: "NO"
+            - generic [ref=e621]: Orlando
+            - generic [ref=e622]: 99¢
+            - generic [ref=e623]: ×477.45
+            - link "↗" [ref=e624] [cursor=pointer]:
+              - /url: https://kalshi.com/markets/kxnba/pro-basketball-champion/kxnba-27
+          - generic [ref=e625]:
+            - generic [ref=e626]: "NO"
+            - generic [ref=e627]: Philadelphia
+            - generic [ref=e628]: 99¢
+            - generic [ref=e629]: ×6607.45
+            - link "↗" [ref=e630] [cursor=pointer]:
+              - /url: https://kalshi.com/markets/kxnba/pro-basketball-champion/kxnba-27
+          - generic [ref=e631]:
+            - generic [ref=e632]: "NO"
+            - generic [ref=e633]: Portland
+            - generic [ref=e634]: 99¢
+            - generic [ref=e635]: ×12.64
+            - link "↗" [ref=e636] [cursor=pointer]:
+              - /url: https://kalshi.com/markets/kxnba/pro-basketball-champion/kxnba-27
+          - generic [ref=e637]:
+            - generic [ref=e638]: "NO"
+            - generic [ref=e639]: San Antonio
+            - generic [ref=e640]: 76¢
+            - generic [ref=e641]: ×2047.39
+            - link "↗" [ref=e642] [cursor=pointer]:
+              - /url: https://kalshi.com/markets/kxnba/pro-basketball-champion/kxnba-27
+          - generic [ref=e643]:
+            - generic [ref=e644]: "NO"
+            - generic [ref=e645]: Toronto
+            - generic [ref=e646]: 99¢
+            - generic [ref=e647]: ×209.45
+            - link "↗" [ref=e648] [cursor=pointer]:
+              - /url: https://kalshi.com/markets/kxnba/pro-basketball-champion/kxnba-27
+          - generic [ref=e649]: ECONOMICS (PER UNIT)
+          - generic [ref=e650]:
+            - generic [ref=e651]: Cost
+            - generic [ref=e652]: —
+            - generic [ref=e653]: Worst case
+            - generic [ref=e654]: —
+            - generic [ref=e655]: Best case
+            - generic [ref=e656]: 0¢
+            - generic [ref=e657]: ROI
+            - generic [ref=e658]: 0.2%
+            - generic [ref=e659]: Max units
+            - generic [ref=e660]: "10.66"
+            - generic [ref=e661]: Quote
+            - generic [ref=e662]: —
+            - generic [ref=e663]: Tradable
+            - generic [ref=e664]: "Yes"
+          - generic [ref=e665]: WHY RANKED HERE · ENGINE ORDER
+          - generic [ref=e666]:
+            - generic [ref=e667]: "Promotes:"
+            - generic [ref=e668]: baseline
+          - generic [ref=e669]:
+            - generic [ref=e670]: "Demotes:"
+            - generic [ref=e671]: none
+          - generic [ref=e672]: SETTLEMENT / RULES
+          - generic [ref=e673]: "One-winner-field overround: this buys NO on the priceable subset of a mutually-exclusive field (exactly one winner), not every entrant — safe because an untraded or unlisted winner only pays more. Gross, top-of-book; many legs are illiquid so the position is often only partly fillable."
+          - generic [ref=e674]: EVIDENCEPACK
+          - generic [ref=e675]:
+            - generic [ref=e676]: Snapshot
+            - generic [ref=e677]: "#2545"
+            - generic [ref=e678]: Status
+            - generic [ref=e679]: EXECUTABLE_DUTCH_BOOK
+            - generic [ref=e680]: Opp id
+            - generic [ref=e681]: 52ee01e0194a0d93
+            - generic [ref=e682]: Market
+            - link "open ↗" [ref=e684] [cursor=pointer]:
+              - /url: https://kalshi.com/markets/kxnba/pro-basketball-champion/kxnba-27
+  - generic [ref=e265]:
+    - generic [ref=e266]: TERMINAL PRO · Phase B2
+    - generic [ref=e267]: docked workspace (Dockview) · drag / resize / pop-out panels + layout presets · 6 lenses · per-bucket columns · palette / multi-select land in B3–B4

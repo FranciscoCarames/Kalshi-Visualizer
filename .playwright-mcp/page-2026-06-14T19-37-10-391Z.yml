@@ -1,0 +1,408 @@
+- main [ref=e5]:
+  - generic [ref=e7]:
+    - generic [ref=e8]:
+      - generic [ref=e9]: KALSHI TERMINAL PRO
+      - generic [ref=e10]:
+        - generic [ref=e11]: OPP
+        - generic [ref=e12]: RES
+        - generic [ref=e13]: OPS
+      - textbox [ref=e18]:
+        - /placeholder: "> filter participant / match"
+      - generic [ref=e19]: 19:37:10 UTC
+    - generic [ref=e20]:
+      - generic [ref=e21]: Data 17:09:04 UTC · age 181686s ⚠ STALE · 2,471 opportunities · 93 series · 10 failed · 2,977 contracts scanned · 1,830 checks tested · 275 Kalshi requests
+      - generic [ref=e22]: GROSS · TOP-OF-BOOK · $1 BASIS · READ-ONLY · NO ORDER ENTRY · NOT RISKLESS
+    - generic [ref=e23]:
+      - generic [ref=e275] [cursor=pointer]:
+        - generic [ref=e276]: "8"
+        - generic [ref=e277]: ACT-NOW
+      - generic [ref=e278] [cursor=pointer]:
+        - generic [ref=e279]: "9"
+        - generic [ref=e280]: REVIEW
+      - generic [ref=e281] [cursor=pointer]:
+        - generic [ref=e282]: "1"
+        - generic [ref=e283]: BLOCKED
+      - generic [ref=e284] [cursor=pointer]:
+        - generic [ref=e285]: "131"
+        - generic [ref=e286]: SPEC
+      - generic [ref=e287] [cursor=pointer]:
+        - generic [ref=e288]: "340"
+        - generic [ref=e289]: CHEAP-NO
+    - generic [ref=e39]:
+      - generic [ref=e40]:
+        - generic [ref=e41]:
+          - generic [ref=e42]: BLOTTER
+          - generic [ref=e43]:
+            - button "Blended" [pressed] [ref=e44] [cursor=pointer]:
+              - generic [ref=e46]: Blended
+            - button "Per-unit edge ¢" [ref=e47] [cursor=pointer]:
+              - generic [ref=e49]: Per-unit edge ¢
+            - button "Spread upside" [ref=e50] [cursor=pointer]:
+              - generic [ref=e52]: Spread upside
+            - button "Outright + spread" [ref=e53] [cursor=pointer]:
+              - generic [ref=e55]: Outright + spread
+            - button "Implied EV" [ref=e56] [cursor=pointer]:
+              - generic [ref=e58]: Implied EV
+          - generic [ref=e59]: lens
+        - generic [ref=e60]:
+          - table [ref=e62]:
+            - rowgroup [ref=e63]:
+              - row "Sport Participant / match Detail Action plan Edge ¢ ROI % Units Max $ Tradable" [ref=e64]:
+                - columnheader [ref=e65]
+                - columnheader [ref=e66]
+                - columnheader "Sport" [ref=e67] [cursor=pointer]:
+                  - text: Sport
+                  - generic [ref=e68]: arrow_upward
+                - columnheader "Participant / match" [ref=e69] [cursor=pointer]:
+                  - text: Participant / match
+                  - generic [ref=e70]: arrow_upward
+                - columnheader "Detail" [ref=e71]
+                - columnheader "Action plan" [ref=e72]
+                - columnheader "Edge ¢" [ref=e73] [cursor=pointer]:
+                  - generic [ref=e74]: arrow_upward
+                  - text: Edge ¢
+                - columnheader "ROI %" [ref=e75] [cursor=pointer]:
+                  - generic [ref=e76]: arrow_upward
+                  - text: ROI %
+                - columnheader "Units" [ref=e77] [cursor=pointer]:
+                  - generic [ref=e78]: arrow_upward
+                  - text: Units
+                - columnheader "Max $" [ref=e79] [cursor=pointer]:
+                  - generic [ref=e80]: arrow_upward
+                  - text: Max $
+                - columnheader "Tradable" [ref=e81]
+            - rowgroup [ref=e82]:
+              - row "Soccer (World Cup) Czechia Reach Finals ≤ Reach Semifinals Buy YES — Reach Semifinals @ 2¢ + Buy NO — Reach Finals @ 99¢ -1 -1 140 -1.4 Yes" [ref=e290] [cursor=pointer]:
+                - cell [ref=e291]:
+                  - checkbox [ref=e292]:
+                    - img [ref=e295]
+                - cell [ref=e297]
+                - cell "Soccer (World Cup)" [ref=e298]
+                - cell "Czechia" [ref=e299]
+                - cell "Reach Finals ≤ Reach Semifinals" [ref=e300]
+                - cell "Buy YES — Reach Semifinals @ 2¢ + Buy NO — Reach Finals @ 99¢" [ref=e301]
+                - cell "-1" [ref=e302]
+                - cell "-1" [ref=e303]
+                - cell "140" [ref=e304]
+                - cell "-1.4" [ref=e305]
+                - cell "Yes" [ref=e306]
+              - row "Soccer (World Cup) Iraq Reach Quarterfinals ≤ Reach Round of 16 Buy YES — Reach Round of 16 @ 3¢ + Buy NO — Reach Quarterfinals @ 99¢ -2 -2 1000 -20 Yes" [ref=e307] [cursor=pointer]:
+                - cell [ref=e308]:
+                  - checkbox [ref=e309]:
+                    - img [ref=e312]
+                - cell [ref=e314]
+                - cell "Soccer (World Cup)" [ref=e315]
+                - cell "Iraq" [ref=e316]
+                - cell "Reach Quarterfinals ≤ Reach Round of 16" [ref=e317]
+                - cell "Buy YES — Reach Round of 16 @ 3¢ + Buy NO — Reach Quarterfinals @ 99¢" [ref=e318]
+                - cell "-2" [ref=e319]
+                - cell "-2" [ref=e320]
+                - cell "1000" [ref=e321]
+                - cell "-20" [ref=e322]
+                - cell "Yes" [ref=e323]
+              - row "NFL Pittsburgh Win Super Bowl ≤ Win Conference Buy YES — Win Conference @ 3¢ + Buy NO — Win the Super Bowl @ 99¢ -2 -2 30243.22 -604.86 Yes" [ref=e324] [cursor=pointer]:
+                - cell [ref=e325]:
+                  - checkbox [ref=e326]:
+                    - img [ref=e329]
+                - cell [ref=e331]
+                - cell "NFL" [ref=e332]
+                - cell "Pittsburgh" [ref=e333]
+                - cell "Win Super Bowl ≤ Win Conference" [ref=e334]
+                - cell "Buy YES — Win Conference @ 3¢ + Buy NO — Win the Super Bowl @ 99¢" [ref=e335]
+                - cell "-2" [ref=e336]
+                - cell "-2" [ref=e337]
+                - cell "30243.22" [ref=e338]
+                - cell "-604.86" [ref=e339]
+                - cell "Yes" [ref=e340]
+              - row "NFL Atlanta Win Super Bowl ≤ Win Conference Buy YES — Win Conference @ 3¢ + Buy NO — Win the Super Bowl @ 99¢ -2 -2 39386.61 -787.73 Yes" [ref=e341] [cursor=pointer]:
+                - cell [ref=e342]:
+                  - checkbox [ref=e343]:
+                    - img [ref=e346]
+                - cell [ref=e348]
+                - cell "NFL" [ref=e349]
+                - cell "Atlanta" [ref=e350]
+                - cell "Win Super Bowl ≤ Win Conference" [ref=e351]
+                - cell "Buy YES — Win Conference @ 3¢ + Buy NO — Win the Super Bowl @ 99¢" [ref=e352]
+                - cell "-2" [ref=e353]
+                - cell "-2" [ref=e354]
+                - cell "39386.61" [ref=e355]
+                - cell "-787.73" [ref=e356]
+                - cell "Yes" [ref=e357]
+              - row "NFL Tampa Bay Win Super Bowl ≤ Win Conference Buy YES — Win Conference @ 3¢ + Buy NO — Win the Super Bowl @ 99¢ -2 -2 8364.16 -167.28 Yes" [ref=e358] [cursor=pointer]:
+                - cell [ref=e359]:
+                  - checkbox [ref=e360]:
+                    - img [ref=e363]
+                - cell [ref=e365]
+                - cell "NFL" [ref=e366]
+                - cell "Tampa Bay" [ref=e367]
+                - cell "Win Super Bowl ≤ Win Conference" [ref=e368]
+                - cell "Buy YES — Win Conference @ 3¢ + Buy NO — Win the Super Bowl @ 99¢" [ref=e369]
+                - cell "-2" [ref=e370]
+                - cell "-2" [ref=e371]
+                - cell "8364.16" [ref=e372]
+                - cell "-167.28" [ref=e373]
+                - cell "Yes" [ref=e374]
+              - row "NFL Minnesota Win Super Bowl ≤ Win Conference Buy YES — Win Conference @ 4¢ + Buy NO — Win the Super Bowl @ 99¢ -3 -2.9 8380.09 -251.4 Yes" [ref=e375] [cursor=pointer]:
+                - cell [ref=e376]:
+                  - checkbox [ref=e377]:
+                    - img [ref=e380]
+                - cell [ref=e382]
+                - cell "NFL" [ref=e383]
+                - cell "Minnesota" [ref=e384]
+                - cell "Win Super Bowl ≤ Win Conference" [ref=e385]
+                - cell "Buy YES — Win Conference @ 4¢ + Buy NO — Win the Super Bowl @ 99¢" [ref=e386]
+                - cell "-3" [ref=e387]
+                - cell "-2.9" [ref=e388]
+                - cell "8380.09" [ref=e389]
+                - cell "-251.4" [ref=e390]
+                - cell "Yes" [ref=e391]
+              - row "NFL Indianapolis Win Super Bowl ≤ Win Conference Buy YES — Win Conference @ 4¢ + Buy NO — Win the Super Bowl @ 99¢ -3 -2.9 63793.95 -1913.82 Yes" [ref=e392] [cursor=pointer]:
+                - cell [ref=e393]:
+                  - checkbox [ref=e394]:
+                    - img [ref=e397]
+                - cell [ref=e399]
+                - cell "NFL" [ref=e400]
+                - cell "Indianapolis" [ref=e401]
+                - cell "Win Super Bowl ≤ Win Conference" [ref=e402]
+                - cell "Buy YES — Win Conference @ 4¢ + Buy NO — Win the Super Bowl @ 99¢" [ref=e403]
+                - cell "-3" [ref=e404]
+                - cell "-2.9" [ref=e405]
+                - cell "63793.95" [ref=e406]
+                - cell "-1913.82" [ref=e407]
+                - cell "Yes" [ref=e408]
+              - row "NFL Washington Win Super Bowl ≤ Win Conference Buy YES — Win Conference @ 5¢ + Buy NO — Win the Super Bowl @ 98¢ -3 -2.9 13032 -390.96 Yes" [ref=e409] [cursor=pointer]:
+                - cell [ref=e410]:
+                  - checkbox [ref=e411]:
+                    - img [ref=e414]
+                - cell [ref=e416]
+                - cell "NFL" [ref=e417]
+                - cell "Washington" [ref=e418]
+                - cell "Win Super Bowl ≤ Win Conference" [ref=e419]
+                - cell "Buy YES — Win Conference @ 5¢ + Buy NO — Win the Super Bowl @ 98¢" [ref=e420]
+                - cell "-3" [ref=e421]
+                - cell "-2.9" [ref=e422]
+                - cell "13032" [ref=e423]
+                - cell "-390.96" [ref=e424]
+                - cell "Yes" [ref=e425]
+              - row "NFL San Francisco Win Super Bowl ≤ Win Conference Buy YES — Win Conference @ 8¢ + Buy NO — Win the Super Bowl @ 96¢ -4 -3.8 27923.91 -1116.96 Yes" [ref=e426] [cursor=pointer]:
+                - cell [ref=e427]:
+                  - checkbox [ref=e428]:
+                    - img [ref=e431]
+                - cell [ref=e433]
+                - cell "NFL" [ref=e434]
+                - cell "San Francisco" [ref=e435]
+                - cell "Win Super Bowl ≤ Win Conference" [ref=e436]
+                - cell "Buy YES — Win Conference @ 8¢ + Buy NO — Win the Super Bowl @ 96¢" [ref=e437]
+                - cell "-4" [ref=e438]
+                - cell "-3.8" [ref=e439]
+                - cell "27923.91" [ref=e440]
+                - cell "-1116.96" [ref=e441]
+                - cell "Yes" [ref=e442]
+              - row "Soccer (World Cup) USA Reach Finals ≤ Reach Semifinals Buy YES — Reach Semifinals @ 10¢ + Buy NO — Reach Finals @ 94¢ -4 -3.8 79 -3.16 Yes" [ref=e443] [cursor=pointer]:
+                - cell [ref=e444]:
+                  - checkbox [ref=e445]:
+                    - img [ref=e448]
+                - cell [ref=e450]
+                - cell "Soccer (World Cup)" [ref=e451]
+                - cell "USA" [ref=e452]
+                - cell "Reach Finals ≤ Reach Semifinals" [ref=e453]
+                - cell "Buy YES — Reach Semifinals @ 10¢ + Buy NO — Reach Finals @ 94¢" [ref=e454]
+                - cell "-4" [ref=e455]
+                - cell "-3.8" [ref=e456]
+                - cell "79" [ref=e457]
+                - cell "-3.16" [ref=e458]
+                - cell "Yes" [ref=e459]
+              - row "Soccer (World Cup) Qatar Reach Quarterfinals ≤ Reach Round of 16 Buy YES — Reach Round of 16 @ 5¢ + Buy NO — Reach Quarterfinals @ 99¢ -4 -3.8 1000 -40 Yes" [ref=e460] [cursor=pointer]:
+                - cell [ref=e461]:
+                  - checkbox [ref=e462]:
+                    - img [ref=e465]
+                - cell [ref=e467]
+                - cell "Soccer (World Cup)" [ref=e468]
+                - cell "Qatar" [ref=e469]
+                - cell "Reach Quarterfinals ≤ Reach Round of 16" [ref=e470]
+                - cell "Buy YES — Reach Round of 16 @ 5¢ + Buy NO — Reach Quarterfinals @ 99¢" [ref=e471]
+                - cell "-4" [ref=e472]
+                - cell "-3.8" [ref=e473]
+                - cell "1000" [ref=e474]
+                - cell "-40" [ref=e475]
+                - cell "Yes" [ref=e476]
+              - row "NFL New York G Win Super Bowl ≤ Win Conference Buy YES — Win Conference @ 5¢ + Buy NO — Win the Super Bowl @ 99¢ -4 -3.8 38082.27 -1523.29 Yes" [ref=e477] [cursor=pointer]:
+                - cell [ref=e478]:
+                  - checkbox [ref=e479]:
+                    - img [ref=e482]
+                - cell [ref=e484]
+                - cell "NFL" [ref=e485]
+                - cell "New York G" [ref=e486]
+                - cell "Win Super Bowl ≤ Win Conference" [ref=e487]
+                - cell "Buy YES — Win Conference @ 5¢ + Buy NO — Win the Super Bowl @ 99¢" [ref=e488]
+                - cell "-4" [ref=e489]
+                - cell "-3.8" [ref=e490]
+                - cell "38082.27" [ref=e491]
+                - cell "-1523.29" [ref=e492]
+                - cell "Yes" [ref=e493]
+              - row "NFL Philadelphia Win Super Bowl ≤ Win Conference Buy YES — Win Conference @ 9¢ + Buy NO — Win the Super Bowl @ 96¢ -5 -4.8 11068.01 -553.4 Yes" [ref=e494] [cursor=pointer]:
+                - cell [ref=e495]:
+                  - checkbox [ref=e496]:
+                    - img [ref=e499]
+                - cell [ref=e501]
+                - cell "NFL" [ref=e502]
+                - cell "Philadelphia" [ref=e503]
+                - cell "Win Super Bowl ≤ Win Conference" [ref=e504]
+                - cell "Buy YES — Win Conference @ 9¢ + Buy NO — Win the Super Bowl @ 96¢" [ref=e505]
+                - cell "-5" [ref=e506]
+                - cell "-4.8" [ref=e507]
+                - cell "11068.01" [ref=e508]
+                - cell "-553.4" [ref=e509]
+                - cell "Yes" [ref=e510]
+              - row "Soccer (World Cup) Ecuador Reach Finals ≤ Reach Semifinals Buy YES — Reach Semifinals @ 7¢ + Buy NO — Reach Finals @ 98¢ -5 -4.8 1756.16 -87.81 Yes" [ref=e511] [cursor=pointer]:
+                - cell [ref=e512]:
+                  - checkbox [ref=e513]:
+                    - img [ref=e516]
+                - cell [ref=e518]
+                - cell "Soccer (World Cup)" [ref=e519]
+                - cell "Ecuador" [ref=e520]
+                - cell "Reach Finals ≤ Reach Semifinals" [ref=e521]
+                - cell "Buy YES — Reach Semifinals @ 7¢ + Buy NO — Reach Finals @ 98¢" [ref=e522]
+                - cell "-5" [ref=e523]
+                - cell "-4.8" [ref=e524]
+                - cell "1756.16" [ref=e525]
+                - cell "-87.81" [ref=e526]
+                - cell "Yes" [ref=e527]
+              - row "NFL Houston Win Super Bowl ≤ Win Conference Buy YES — Win Conference @ 8¢ + Buy NO — Win the Super Bowl @ 97¢ -5 -4.8 38274.7 -1913.73 Yes" [ref=e528] [cursor=pointer]:
+                - cell [ref=e529]:
+                  - checkbox [ref=e530]:
+                    - img [ref=e533]
+                - cell [ref=e535]
+                - cell "NFL" [ref=e536]
+                - cell "Houston" [ref=e537]
+                - cell "Win Super Bowl ≤ Win Conference" [ref=e538]
+                - cell "Buy YES — Win Conference @ 8¢ + Buy NO — Win the Super Bowl @ 97¢" [ref=e539]
+                - cell "-5" [ref=e540]
+                - cell "-4.8" [ref=e541]
+                - cell "38274.7" [ref=e542]
+                - cell "-1913.73" [ref=e543]
+                - cell "Yes" [ref=e544]
+              - row "NFL Denver Win Super Bowl ≤ Win Conference Buy YES — Win Conference @ 10¢ + Buy NO — Win the Super Bowl @ 95¢ -5 -4.8 2.89 -0.14 Yes" [ref=e545] [cursor=pointer]:
+                - cell [ref=e546]:
+                  - checkbox [ref=e547]:
+                    - img [ref=e550]
+                - cell [ref=e552]
+                - cell "NFL" [ref=e553]
+                - cell "Denver" [ref=e554]
+                - cell "Win Super Bowl ≤ Win Conference" [ref=e555]
+                - cell "Buy YES — Win Conference @ 10¢ + Buy NO — Win the Super Bowl @ 95¢" [ref=e556]
+                - cell "-5" [ref=e557]
+                - cell "-4.8" [ref=e558]
+                - cell "2.89" [ref=e559]
+                - cell "-0.14" [ref=e560]
+                - cell "Yes" [ref=e561]
+              - row "NFL Chicago Win Super Bowl ≤ Win Conference Buy YES — Win Conference @ 8¢ + Buy NO — Win the Super Bowl @ 97¢ -5 -4.8 17154.09 -857.7 Yes" [ref=e562] [cursor=pointer]:
+                - cell [ref=e563]:
+                  - checkbox [ref=e564]:
+                    - img [ref=e567]
+                - cell [ref=e569]
+                - cell "NFL" [ref=e570]
+                - cell "Chicago" [ref=e571]
+                - cell "Win Super Bowl ≤ Win Conference" [ref=e572]
+                - cell "Buy YES — Win Conference @ 8¢ + Buy NO — Win the Super Bowl @ 97¢" [ref=e573]
+                - cell "-5" [ref=e574]
+                - cell "-4.8" [ref=e575]
+                - cell "17154.09" [ref=e576]
+                - cell "-857.7" [ref=e577]
+                - cell "Yes" [ref=e578]
+              - row "NFL New England Win Super Bowl ≤ Win Conference Buy YES — Win Conference @ 9¢ + Buy NO — Win the Super Bowl @ 96¢ -5 -4.8 5000.15 -250.01 Yes" [ref=e579] [cursor=pointer]:
+                - cell [ref=e580]:
+                  - checkbox [ref=e581]:
+                    - img [ref=e584]
+                - cell [ref=e586]
+                - cell "NFL" [ref=e587]
+                - cell "New England" [ref=e588]
+                - cell "Win Super Bowl ≤ Win Conference" [ref=e589]
+                - cell "Buy YES — Win Conference @ 9¢ + Buy NO — Win the Super Bowl @ 96¢" [ref=e590]
+                - cell "-5" [ref=e591]
+                - cell "-4.8" [ref=e592]
+                - cell "5000.15" [ref=e593]
+                - cell "-250.01" [ref=e594]
+                - cell "Yes" [ref=e595]
+              - row "NFL Seattle Win Super Bowl ≤ Win Conference Buy YES — Win Conference @ 14¢ + Buy NO — Win the Super Bowl @ 92¢ -6 -5.7 9233.51 -554.01 Yes" [ref=e596] [cursor=pointer]:
+                - cell [ref=e597]:
+                  - checkbox [ref=e598]:
+                    - img [ref=e601]
+                - cell [ref=e603]
+                - cell "NFL" [ref=e604]
+                - cell "Seattle" [ref=e605]
+                - cell "Win Super Bowl ≤ Win Conference" [ref=e606]
+                - cell "Buy YES — Win Conference @ 14¢ + Buy NO — Win the Super Bowl @ 92¢" [ref=e607]
+                - cell "-6" [ref=e608]
+                - cell "-5.7" [ref=e609]
+                - cell "9233.51" [ref=e610]
+                - cell "-554.01" [ref=e611]
+                - cell "Yes" [ref=e612]
+              - row "NFL Green Bay Win Super Bowl ≤ Win Conference Buy YES — Win Conference @ 9¢ + Buy NO — Win the Super Bowl @ 97¢ -6 -5.7 47883.17 -2872.99 Yes" [ref=e613] [cursor=pointer]:
+                - cell [ref=e614]:
+                  - checkbox [ref=e615]:
+                    - img [ref=e618]
+                - cell [ref=e620]
+                - cell "NFL" [ref=e621]
+                - cell "Green Bay" [ref=e622]
+                - cell "Win Super Bowl ≤ Win Conference" [ref=e623]
+                - cell "Buy YES — Win Conference @ 9¢ + Buy NO — Win the Super Bowl @ 97¢" [ref=e624]
+                - cell "-6" [ref=e625]
+                - cell "-5.7" [ref=e626]
+                - cell "47883.17" [ref=e627]
+                - cell "-2872.99" [ref=e628]
+                - cell "Yes" [ref=e629]
+          - generic [ref=e219]:
+            - generic [ref=e220]:
+              - generic [ref=e221]: "Records per page:"
+              - generic [ref=e224] [cursor=pointer]:
+                - generic [ref=e226]:
+                  - generic [ref=e227]: "20"
+                  - combobox "20" [ref=e228]
+                - generic [ref=e230]: arrow_drop_down
+            - generic [ref=e231]:
+              - generic [ref=e232]: 1-20 of 131
+              - button "First page" [disabled] [ref=e630]:
+                - img [ref=e632]: first_page
+              - button "Previous page" [disabled] [ref=e633]:
+                - img [ref=e635]: chevron_left
+              - button "Next page" [ref=e636] [cursor=pointer]:
+                - img [ref=e638]: chevron_right
+              - button "Last page" [ref=e639] [cursor=pointer]:
+                - img [ref=e641]: last_page
+      - generic [ref=e233]:
+        - generic [ref=e644]: Czechia
+        - generic [ref=e645]: Reach Finals ≤ Reach Semifinals
+        - generic [ref=e646]: Buy YES — Reach Semifinals @ 2¢ + Buy NO — Reach Finals @ 99¢
+        - generic [ref=e647]:
+          - generic [ref=e648]: Edge -1.0¢
+          - generic [ref=e649]: ROI -1.0%
+          - generic [ref=e650]: Units 140.0
+        - generic [ref=e651]: "Tradable: Yes"
+        - table [ref=e654]:
+          - rowgroup [ref=e655]:
+            - row "Leg Side Market Price Size Status Quote" [ref=e656]:
+              - columnheader "Leg" [ref=e657]
+              - columnheader "Side" [ref=e658]
+              - columnheader "Market" [ref=e659]
+              - columnheader "Price" [ref=e660]
+              - columnheader "Size" [ref=e661]
+              - columnheader "Status" [ref=e662]
+              - columnheader "Quote" [ref=e663]
+          - rowgroup [ref=e664]:
+            - row "Leg 1 Buy YES Buy YES — Reach Semifinals @ 2¢ 2¢" [ref=e665]:
+              - cell "Leg 1" [ref=e666]
+              - cell "Buy YES" [ref=e667]
+              - cell "Buy YES — Reach Semifinals @ 2¢" [ref=e668]
+              - cell "2¢" [ref=e669]
+              - cell [ref=e670]
+              - cell [ref=e671]
+              - cell [ref=e672]
+            - row "Leg 2 Buy NO Buy NO — Reach Finals @ 99¢ 99¢" [ref=e673]:
+              - cell "Leg 2" [ref=e674]
+              - cell "Buy NO" [ref=e675]
+              - cell "Buy NO — Reach Finals @ 99¢" [ref=e676]
+              - cell "99¢" [ref=e677]
+              - cell [ref=e678]
+              - cell [ref=e679]
+              - cell [ref=e680]

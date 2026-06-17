@@ -1,0 +1,51 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e4]
+    - generic [ref=e9]
+    - generic [ref=e14]: 111s · KALSHI
+  - generic [ref=e15]:
+    - generic [ref=e16]
+    - generic [ref=e18]
+    - generic [ref=e20]
+    - generic [ref=e22]
+    - generic [ref=e24]
+    - generic [ref=e26]
+    - generic [ref=e28]
+    - generic [ref=e31]
+    - generic [ref=e34]: GROSS · TOP-OF-BOOK · $1 BASIS · READ-ONLY · NO ORDER ENTRY · NOT RISKLESS · fees est. only
+  - generic [ref=e35]:
+    - generic [ref=e36] [cursor=pointer]
+    - generic [ref=e38] [cursor=pointer]
+    - generic [ref=e40] [cursor=pointer]
+    - generic [ref=e42]
+  - generic [ref=e57]:
+    - generic [ref=e58]: SPORT
+    - button "Filter by Sport (All)" [ref=e60] [cursor=pointer]: "Sport: All ▾"
+    - generic [ref=e61]: TOURNAMENT
+    - button "Filter by Tournament (All)" [ref=e63] [cursor=pointer]: "Tournament: All ▾"
+    - generic [ref=e64]: PARTICIPANT
+    - textbox "Filter by participant" [ref=e65]:
+      - /placeholder: contains…
+    - generic [ref=e66]: MIN SIZE
+    - spinbutton "Minimum size" [ref=e67]: "0"
+    - generic [ref=e68] [cursor=pointer]
+    - button "Export current view as CSV" [ref=e70] [cursor=pointer]: ⬇ CSV
+    - button "Export filtered snapshot as ZIP" [ref=e71] [cursor=pointer]: ⬇ ZIP
+    - generic [ref=e72]: 10 shown
+    - generic [ref=e73] [cursor=pointer]: clear
+  - generic [ref=e74]:
+    - generic [ref=e75] [cursor=pointer]
+    - generic [ref=e79] [cursor=pointer]
+    - generic [ref=e83] [cursor=pointer]
+    - generic [ref=e87] [cursor=pointer]
+    - generic [ref=e91] [cursor=pointer]
+    - generic [ref=e95] [cursor=pointer]
+    - generic [ref=e99] [cursor=pointer]
+    - generic [ref=e103] [cursor=pointer]
+  - generic [ref=e108]:
+    - generic [ref=e109]
+    - generic [ref=e153]
+    - generic [ref=e167]
+  - generic [ref=e210]:
+    - generic [ref=e211]: KALSHI STRUCTURED SCANNER · real viewmodel rows · full column catalog · bounded-loss + cheap-NO splits · read-only over the live snapshot
+    - generic [ref=e212]

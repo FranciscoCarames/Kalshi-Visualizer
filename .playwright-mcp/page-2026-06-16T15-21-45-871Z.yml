@@ -1,0 +1,1340 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - generic [ref=e5] [cursor=pointer]: OPP
+      - generic [ref=e6] [cursor=pointer]: RES
+      - generic [ref=e7] [cursor=pointer]: OPS
+      - generic [ref=e8] [cursor=pointer]: ALRT
+    - generic [ref=e9]:
+      - generic [ref=e10]: ">"
+      - textbox "Open command palette" [ref=e11]:
+        - /placeholder: SEARCH — functions · participants · lenses · layouts   (press / or Ctrl-K)
+      - generic [ref=e12]: Ctrl K
+      - button "<GO>" [ref=e13] [cursor=pointer]
+    - generic [ref=e14]: 1029s · KALSHI
+  - generic [ref=e15]:
+    - generic [ref=e16]:
+      - generic [ref=e17]: ●
+      - text: "SNAPSHOT #487 · 1029s ago"
+    - generic [ref=e18]:
+      - text: Opps
+      - generic [ref=e19]: 2,180
+    - generic [ref=e20]:
+      - text: Contracts
+      - generic [ref=e21]: 3,664
+    - generic [ref=e22]:
+      - text: Checks
+      - generic [ref=e23]: 1,314
+    - generic [ref=e24]:
+      - text: Requests
+      - generic [ref=e25]: "166"
+    - generic [ref=e26]:
+      - text: Sports
+      - generic [ref=e27]: "10"
+    - generic [ref=e28]:
+      - generic [ref=e29]: ●
+      - text: Failed
+      - generic [ref=e30]: "0"
+    - generic [ref=e31]:
+      - generic [ref=e32]: ●
+      - text: ALRT
+      - generic [ref=e33]: "10"
+    - generic [ref=e34]: GROSS · TOP-OF-BOOK · $1 BASIS · READ-ONLY · NO ORDER ENTRY · NOT RISKLESS · fees est. only
+  - generic [ref=e35]:
+    - generic [ref=e36] [cursor=pointer]:
+      - generic [ref=e37]: 1)
+      - text: OPP
+    - generic [ref=e38] [cursor=pointer]:
+      - generic [ref=e39]: 2)
+      - text: RES
+    - generic [ref=e40] [cursor=pointer]:
+      - generic [ref=e41]: 3)
+      - text: OPS
+    - generic [ref=e42]:
+      - generic [ref=e43]: LAYOUT
+      - combobox [ref=e44]:
+        - option "Default" [selected]
+        - option "Triage"
+        - option "Inspect"
+        - option "Research"
+        - option "Scanner full"
+      - button "＋ ADD ▾" [ref=e45] [cursor=pointer]
+      - button "▦ ELEMENTS ▾" [ref=e46] [cursor=pointer]
+      - generic [ref=e47]: LENS
+      - generic [ref=e48]:
+        - button "BLENDED" [ref=e49] [cursor=pointer]
+        - button "EDGE¢" [ref=e50] [cursor=pointer]
+        - button "SPREAD" [ref=e51] [cursor=pointer]
+        - button "OUTRIGHT+SPREAD" [ref=e52] [cursor=pointer]
+        - button "IMPLIED EV" [ref=e53] [cursor=pointer]
+        - button "RIPENESS" [ref=e54] [cursor=pointer]
+      - button "⚙ SETTINGS ▾" [ref=e56] [cursor=pointer]
+      - button "Scan now" [ref=e57] [cursor=pointer]: ▷ SCAN
+      - button "Force scan (bypass cooldown)" [ref=e58] [cursor=pointer]: ⚡
+      - button "Toggle theme" [ref=e59] [cursor=pointer]: ◐
+  - generic [ref=e60]:
+    - generic [ref=e61]: SPORT
+    - button "Filter by Sport (All)" [ref=e63] [cursor=pointer]: "Sport: All ▾"
+    - generic [ref=e64]: TOURNAMENT
+    - button "Filter by Tournament (All)" [ref=e66] [cursor=pointer]: "Tournament: All ▾"
+    - generic [ref=e67]: PARTICIPANT
+    - textbox "Filter by participant" [ref=e68]:
+      - /placeholder: contains…
+    - generic [ref=e69]: MIN SIZE
+    - spinbutton "Minimum size" [ref=e70]: "0"
+    - generic [ref=e71] [cursor=pointer]:
+      - checkbox "Tradable-only" [ref=e72]
+      - text: Tradable-only
+    - button "Export current view as CSV" [ref=e73] [cursor=pointer]: ⬇ CSV
+    - button "Export filtered snapshot as ZIP" [ref=e74] [cursor=pointer]: ⬇ ZIP
+    - generic [ref=e75]: 72 shown
+    - generic [ref=e76] [cursor=pointer]: clear
+  - generic [ref=e225]:
+    - generic [ref=e226]: CHEAP-NO
+    - generic [ref=e227]:
+      - text: Kind
+      - combobox "Kind" [ref=e228]:
+        - option "all" [selected]
+        - option "band"
+        - option "outright"
+    - generic [ref=e229]:
+      - text: Max loss ¢
+      - spinbutton "Max loss ¢" [ref=e230]: "15"
+    - generic [ref=e231]:
+      - text: Max Buy-NO ¢
+      - spinbutton "Max Buy-NO ¢" [ref=e232]: "15"
+    - generic [ref=e233] [cursor=pointer]:
+      - checkbox "Group by ladder" [ref=e234]
+      - text: Group by ladder
+    - generic [ref=e235]: "defaults: max-loss 15¢ · max-Buy-NO 15¢ (active)"
+  - generic [ref=e77]:
+    - generic [ref=e78] [cursor=pointer]:
+      - generic [ref=e79]: ACTIONABLE
+      - generic [ref=e80]: "10"
+      - generic [ref=e81]: executable now
+    - generic [ref=e82] [cursor=pointer]:
+      - generic [ref=e83]: REVIEW
+      - generic [ref=e84]: "14"
+      - generic [ref=e85]: settlement-dep
+    - generic [ref=e86] [cursor=pointer]:
+      - generic [ref=e87]: BLOCKED
+      - generic [ref=e88]: "5"
+      - generic [ref=e89]: not fillable
+    - generic [ref=e90] [cursor=pointer]:
+      - generic [ref=e91]: BOUNDED-LOSS
+      - generic [ref=e92]: "49"
+      - generic [ref=e93]: can lose money
+    - generic [ref=e94] [cursor=pointer]:
+      - generic [ref=e95]: NEAR-MISS
+      - generic [ref=e96]: "178"
+      - generic [ref=e97]: watchlist
+    - generic [ref=e98] [cursor=pointer]:
+      - generic [ref=e99]: QUALIFIER
+      - generic [ref=e100]: "48"
+      - generic [ref=e101]: WC setups
+    - generic [ref=e102] [cursor=pointer]:
+      - generic [ref=e103]: CHEAP-NO
+      - generic [ref=e104]: "72"
+      - generic [ref=e105]: NO fades
+    - generic [ref=e106] [cursor=pointer]:
+      - generic [ref=e107]: DATA-QUALITY
+      - generic [ref=e108]: "967"
+      - generic [ref=e109]: diagnostic
+  - generic [ref=e111]:
+    - generic [ref=e112]:
+      - generic [ref=e114]:
+        - generic [ref=e115]:
+          - generic [ref=e116]: "1"
+          - heading "SCANNER" [level=3] [ref=e117]
+          - generic [ref=e118]: click row · J/K · ENTER · drag splitters · ⚙ columns
+          - generic [ref=e119]:
+            - generic "Pop out" [ref=e120] [cursor=pointer]: ⧉
+            - generic "Maximize" [ref=e121] [cursor=pointer]: ▢
+            - generic "Collapse" [ref=e122] [cursor=pointer]: ▁
+            - generic "Remove from this view" [ref=e123] [cursor=pointer]: ✕
+        - generic [ref=e124]:
+          - generic [ref=e125]:
+            - generic [ref=e126] [cursor=pointer]: EXECUTABLE 29 firm · gross edge
+            - generic [ref=e127] [cursor=pointer]: SPECULATIVE 347 bounded-loss · convex EV · can lose money
+            - generic [ref=e128] [cursor=pointer]: DIAGNOSTIC 967 review-only · data quality
+          - generic [ref=e129]:
+            - generic [ref=e236] [cursor=pointer]: BOUNDED-LOSS49
+            - generic [ref=e237] [cursor=pointer]: NEAR-MISS178
+            - generic [ref=e238] [cursor=pointer]: QUALIFIER48
+            - generic [ref=e239] [cursor=pointer]: CHEAP-NO72
+            - generic [ref=e133] [cursor=pointer]: ⚙ columns ▾
+          - table [ref=e240]:
+            - rowgroup [ref=e241]:
+              - row "Kind Sport Participant / market Wins if… Buy NO ¢ Cost ¢ Max loss ¢ Breakeven % Win profit ¢ Payout÷cost Quote health Caveat" [ref=e242]:
+                - columnheader "Kind" [ref=e243]
+                - columnheader "Sport" [ref=e244]
+                - columnheader "Participant / market" [ref=e245]
+                - columnheader "Wins if…" [ref=e246]
+                - columnheader "Buy NO ¢" [ref=e247]
+                - columnheader "Cost ¢" [ref=e248]
+                - columnheader "Max loss ¢" [ref=e249]
+                - columnheader "Breakeven %" [ref=e250]
+                - columnheader "Win profit ¢" [ref=e251]
+                - columnheader "Payout÷cost" [ref=e252]
+                - columnheader "Quote health" [ref=e253]
+                - columnheader "Caveat" [ref=e254]
+            - rowgroup [ref=e255]:
+              - row "Outright Tennis Martina Capurro Taborda ITF Beat Barbora Michalkova — Round of 32 does NOT happen 10¢ 10¢ 10¢ 10% 90¢ 10× OK" [ref=e256] [cursor=pointer]:
+                - cell "Outright" [ref=e257]
+                - cell "Tennis" [ref=e258]
+                - cell "Martina Capurro Taborda ITF" [ref=e259]
+                - cell "Beat Barbora Michalkova — Round of 32 does NOT happen" [ref=e260]
+                - cell "10¢" [ref=e261]
+                - cell "10¢" [ref=e262]
+                - cell "10¢" [ref=e263]
+                - cell "10%" [ref=e264]
+                - cell "90¢" [ref=e265]
+                - cell "10×" [ref=e266]
+                - cell "OK" [ref=e267]
+                - cell [ref=e268]
+              - row "Outright MLB Atlanta Pro Baseball · 26 Reach Playoffs does NOT happen 9¢ 9¢ 9¢ 9% 91¢ 11.1× OK" [ref=e269] [cursor=pointer]:
+                - cell "Outright" [ref=e270]
+                - cell "MLB" [ref=e271]
+                - cell "Atlanta Pro Baseball · 26" [ref=e272]
+                - cell "Reach Playoffs does NOT happen" [ref=e273]
+                - cell "9¢" [ref=e274]
+                - cell "9¢" [ref=e275]
+                - cell "9¢" [ref=e276]
+                - cell "9%" [ref=e277]
+                - cell "91¢" [ref=e278]
+                - cell "11.1×" [ref=e279]
+                - cell "OK" [ref=e280]
+                - cell [ref=e281]
+              - row "Outright Soccer (World Cup) Ecuador FIFA World Cup · 26 Ecuador vs Curacao Winner does NOT happen 12¢ 12¢ 12¢ 12% 88¢ 8.3× Tight" [ref=e282] [cursor=pointer]:
+                - cell "Outright" [ref=e283]
+                - cell "Soccer (World Cup)" [ref=e284]
+                - cell "Ecuador FIFA World Cup · 26" [ref=e285]
+                - cell "Ecuador vs Curacao Winner does NOT happen" [ref=e286]
+                - cell "12¢" [ref=e287]
+                - cell "12¢" [ref=e288]
+                - cell "12¢" [ref=e289]
+                - cell "12%" [ref=e290]
+                - cell "88¢" [ref=e291]
+                - cell "8.3×" [ref=e292]
+                - cell "Tight" [ref=e293]
+                - cell [ref=e294]
+              - row "Outright Esports Aimclub CS2 · 26 aimclub win map 1 in the Noir Verse vs. aimclub match does NOT happen 1¢ 1¢ 1¢ 1% 99¢ 100× Tight" [ref=e295] [cursor=pointer]:
+                - cell "Outright" [ref=e296]
+                - cell "Esports" [ref=e297]
+                - cell "Aimclub CS2 · 26" [ref=e298]
+                - cell "aimclub win map 1 in the Noir Verse vs. aimclub match does NOT happen" [ref=e299]
+                - cell "1¢" [ref=e300]
+                - cell "1¢" [ref=e301]
+                - cell "1¢" [ref=e302]
+                - cell "1%" [ref=e303]
+                - cell "99¢" [ref=e304]
+                - cell "100×" [ref=e305]
+                - cell "Tight" [ref=e306]
+                - cell [ref=e307]
+              - row "Outright Esports Team Resilience Dota 2 · 26 Team Resilience win the Team Resilience vs. Team Refuser Dota 2 match does NOT happen 1¢ 1¢ 1¢ 1% 99¢ 100× Tight" [ref=e308] [cursor=pointer]:
+                - cell "Outright" [ref=e309]
+                - cell "Esports" [ref=e310]
+                - cell "Team Resilience Dota 2 · 26" [ref=e311]
+                - cell "Team Resilience win the Team Resilience vs. Team Refuser Dota 2 match does NOT happen" [ref=e312]
+                - cell "1¢" [ref=e313]
+                - cell "1¢" [ref=e314]
+                - cell "1¢" [ref=e315]
+                - cell "1%" [ref=e316]
+                - cell "99¢" [ref=e317]
+                - cell "100×" [ref=e318]
+                - cell "Tight" [ref=e319]
+                - cell [ref=e320]
+              - row "Outright Esports Los Angeles Thieves Call of Duty · 26 Los Angeles Thieves win map 1 in the Cloud9 New York vs. Los Angeles Thieves match does NOT happen 12¢ 12¢ 12¢ 12% 88¢ 8.3× OK" [ref=e321] [cursor=pointer]:
+                - cell "Outright" [ref=e322]
+                - cell "Esports" [ref=e323]
+                - cell "Los Angeles Thieves Call of Duty · 26" [ref=e324]
+                - cell "Los Angeles Thieves win map 1 in the Cloud9 New York vs. Los Angeles Thieves match does NOT happen" [ref=e325]
+                - cell "12¢" [ref=e326]
+                - cell "12¢" [ref=e327]
+                - cell "12¢" [ref=e328]
+                - cell "12%" [ref=e329]
+                - cell "88¢" [ref=e330]
+                - cell "8.3×" [ref=e331]
+                - cell "OK" [ref=e332]
+                - cell [ref=e333]
+              - row "Outright Tennis Sergi Perez Contri ITF Beat Xavi Palomar — Round of 32 does NOT happen 3¢ 3¢ 3¢ 3% 97¢ 33.3× Tight" [ref=e334] [cursor=pointer]:
+                - cell "Outright" [ref=e335]
+                - cell "Tennis" [ref=e336]
+                - cell "Sergi Perez Contri ITF" [ref=e337]
+                - cell "Beat Xavi Palomar — Round of 32 does NOT happen" [ref=e338]
+                - cell "3¢" [ref=e339]
+                - cell "3¢" [ref=e340]
+                - cell "3¢" [ref=e341]
+                - cell "3%" [ref=e342]
+                - cell "97¢" [ref=e343]
+                - cell "33.3×" [ref=e344]
+                - cell "Tight" [ref=e345]
+                - cell [ref=e346]
+              - row "Outright MLB Milwaukee Pro Baseball · 26 Reach Playoffs does NOT happen 12¢ 12¢ 12¢ 12% 88¢ 8.3× OK" [ref=e347] [cursor=pointer]:
+                - cell "Outright" [ref=e348]
+                - cell "MLB" [ref=e349]
+                - cell "Milwaukee Pro Baseball · 26" [ref=e350]
+                - cell "Reach Playoffs does NOT happen" [ref=e351]
+                - cell "12¢" [ref=e352]
+                - cell "12¢" [ref=e353]
+                - cell "12¢" [ref=e354]
+                - cell "12%" [ref=e355]
+                - cell "88¢" [ref=e356]
+                - cell "8.3×" [ref=e357]
+                - cell "OK" [ref=e358]
+                - cell [ref=e359]
+              - row "Outright Soccer (World Cup) Haiti FIFA World Cup · 26 Haiti finish bottom of Group C in the 2026 Men's FIFA World Cup does NOT happen 7¢ 7¢ 7¢ 7% 93¢ 14.3× Tight" [ref=e360] [cursor=pointer]:
+                - cell "Outright" [ref=e361]
+                - cell "Soccer (World Cup)" [ref=e362]
+                - cell "Haiti FIFA World Cup · 26" [ref=e363]
+                - cell "Haiti finish bottom of Group C in the 2026 Men's FIFA World Cup does NOT happen" [ref=e364]
+                - cell "7¢" [ref=e365]
+                - cell "7¢" [ref=e366]
+                - cell "7¢" [ref=e367]
+                - cell "7%" [ref=e368]
+                - cell "93¢" [ref=e369]
+                - cell "14.3×" [ref=e370]
+                - cell "Tight" [ref=e371]
+                - cell [ref=e372]
+              - row "Outright Soccer (World Cup) Argentina FIFA World Cup · 26 Reach Round of 32 does NOT happen 4¢ 4¢ 4¢ 4% 96¢ 25× Tight" [ref=e373] [cursor=pointer]:
+                - cell "Outright" [ref=e374]
+                - cell "Soccer (World Cup)" [ref=e375]
+                - cell "Argentina FIFA World Cup · 26" [ref=e376]
+                - cell "Reach Round of 32 does NOT happen" [ref=e377]
+                - cell "4¢" [ref=e378]
+                - cell "4¢" [ref=e379]
+                - cell "4¢" [ref=e380]
+                - cell "4%" [ref=e381]
+                - cell "96¢" [ref=e382]
+                - cell "25×" [ref=e383]
+                - cell "Tight" [ref=e384]
+                - cell [ref=e385]
+              - row "Outright Soccer (World Cup) Mexico FIFA World Cup · 26 Reach Round of 32 does NOT happen 4¢ 4¢ 4¢ 4% 96¢ 25× Tight" [ref=e386] [cursor=pointer]:
+                - cell "Outright" [ref=e387]
+                - cell "Soccer (World Cup)" [ref=e388]
+                - cell "Mexico FIFA World Cup · 26" [ref=e389]
+                - cell "Reach Round of 32 does NOT happen" [ref=e390]
+                - cell "4¢" [ref=e391]
+                - cell "4¢" [ref=e392]
+                - cell "4¢" [ref=e393]
+                - cell "4%" [ref=e394]
+                - cell "96¢" [ref=e395]
+                - cell "25×" [ref=e396]
+                - cell "Tight" [ref=e397]
+                - cell [ref=e398]
+              - row "Outright Tennis Sergi Fita Juan ITF Beat Iker Gaztambide Arrastia — Round of 32 does NOT happen 3¢ 3¢ 3¢ 3% 97¢ 33.3× Tight" [ref=e399] [cursor=pointer]:
+                - cell "Outright" [ref=e400]
+                - cell "Tennis" [ref=e401]
+                - cell "Sergi Fita Juan ITF" [ref=e402]
+                - cell "Beat Iker Gaztambide Arrastia — Round of 32 does NOT happen" [ref=e403]
+                - cell "3¢" [ref=e404]
+                - cell "3¢" [ref=e405]
+                - cell "3¢" [ref=e406]
+                - cell "3%" [ref=e407]
+                - cell "97¢" [ref=e408]
+                - cell "33.3×" [ref=e409]
+                - cell "Tight" [ref=e410]
+                - cell [ref=e411]
+              - row "Outright Tennis Leyla Fiorella Britez Risso ITF Beat Victoria Lopez Ocampos — Round of 32 does NOT happen 1¢ 1¢ 1¢ 1% 99¢ 100× Tight" [ref=e412] [cursor=pointer]:
+                - cell "Outright" [ref=e413]
+                - cell "Tennis" [ref=e414]
+                - cell "Leyla Fiorella Britez Risso ITF" [ref=e415]
+                - cell "Beat Victoria Lopez Ocampos — Round of 32 does NOT happen" [ref=e416]
+                - cell "1¢" [ref=e417]
+                - cell "1¢" [ref=e418]
+                - cell "1¢" [ref=e419]
+                - cell "1%" [ref=e420]
+                - cell "99¢" [ref=e421]
+                - cell "100×" [ref=e422]
+                - cell "Tight" [ref=e423]
+                - cell [ref=e424]
+              - row "Outright Esports Noir Verse CS2 · 26 Noir Verse win map 2 in the Noir Verse vs. aimclub match does NOT happen 1¢ 1¢ 1¢ 1% 99¢ 100× Tight" [ref=e425] [cursor=pointer]:
+                - cell "Outright" [ref=e426]
+                - cell "Esports" [ref=e427]
+                - cell "Noir Verse CS2 · 26" [ref=e428]
+                - cell "Noir Verse win map 2 in the Noir Verse vs. aimclub match does NOT happen" [ref=e429]
+                - cell "1¢" [ref=e430]
+                - cell "1¢" [ref=e431]
+                - cell "1¢" [ref=e432]
+                - cell "1%" [ref=e433]
+                - cell "99¢" [ref=e434]
+                - cell "100×" [ref=e435]
+                - cell "Tight" [ref=e436]
+                - cell [ref=e437]
+              - row "Outright Tennis Lucas Marionneau ITF Beat Zac Hamill — Round of 16 does NOT happen 8¢ 8¢ 8¢ 8% 92¢ 12.5× Tight" [ref=e438] [cursor=pointer]:
+                - cell "Outright" [ref=e439]
+                - cell "Tennis" [ref=e440]
+                - cell "Lucas Marionneau ITF" [ref=e441]
+                - cell "Beat Zac Hamill — Round of 16 does NOT happen" [ref=e442]
+                - cell "8¢" [ref=e443]
+                - cell "8¢" [ref=e444]
+                - cell "8¢" [ref=e445]
+                - cell "8%" [ref=e446]
+                - cell "92¢" [ref=e447]
+                - cell "12.5×" [ref=e448]
+                - cell "Tight" [ref=e449]
+                - cell [ref=e450]
+              - row "Outright Soccer (World Cup) France FIFA World Cup · 26 Reach Round of 32 does NOT happen 3¢ 3¢ 3¢ 3% 97¢ 33.3× Tight" [ref=e451] [cursor=pointer]:
+                - cell "Outright" [ref=e452]
+                - cell "Soccer (World Cup)" [ref=e453]
+                - cell "France FIFA World Cup · 26" [ref=e454]
+                - cell "Reach Round of 32 does NOT happen" [ref=e455]
+                - cell "3¢" [ref=e456]
+                - cell "3¢" [ref=e457]
+                - cell "3¢" [ref=e458]
+                - cell "3%" [ref=e459]
+                - cell "97¢" [ref=e460]
+                - cell "33.3×" [ref=e461]
+                - cell "Tight" [ref=e462]
+                - cell [ref=e463]
+              - row "Outright Soccer (World Cup) Curacao FIFA World Cup · 26 Curacao finish bottom of Group E in the 2026 Men's FIFA World Cup does NOT happen 7¢ 7¢ 7¢ 7% 93¢ 14.3× Tight" [ref=e464] [cursor=pointer]:
+                - cell "Outright" [ref=e465]
+                - cell "Soccer (World Cup)" [ref=e466]
+                - cell "Curacao FIFA World Cup · 26" [ref=e467]
+                - cell "Curacao finish bottom of Group E in the 2026 Men's FIFA World Cup does NOT happen" [ref=e468]
+                - cell "7¢" [ref=e469]
+                - cell "7¢" [ref=e470]
+                - cell "7¢" [ref=e471]
+                - cell "7%" [ref=e472]
+                - cell "93¢" [ref=e473]
+                - cell "14.3×" [ref=e474]
+                - cell "Tight" [ref=e475]
+                - cell [ref=e476]
+              - row "Outright Soccer (World Cup) Brazil FIFA World Cup · 26 Brazil vs Haiti Winner does NOT happen 12¢ 12¢ 12¢ 12% 88¢ 8.3× Tight" [ref=e477] [cursor=pointer]:
+                - cell "Outright" [ref=e478]
+                - cell "Soccer (World Cup)" [ref=e479]
+                - cell "Brazil FIFA World Cup · 26" [ref=e480]
+                - cell "Brazil vs Haiti Winner does NOT happen" [ref=e481]
+                - cell "12¢" [ref=e482]
+                - cell "12¢" [ref=e483]
+                - cell "12¢" [ref=e484]
+                - cell "12%" [ref=e485]
+                - cell "88¢" [ref=e486]
+                - cell "8.3×" [ref=e487]
+                - cell "Tight" [ref=e488]
+                - cell [ref=e489]
+              - row "Outright Tennis JJ Wolf ITF Beat Axel Nefve — Round of 32 does NOT happen 10¢ 10¢ 10¢ 10% 90¢ 10× Tight" [ref=e490] [cursor=pointer]:
+                - cell "Outright" [ref=e491]
+                - cell "Tennis" [ref=e492]
+                - cell "JJ Wolf ITF" [ref=e493]
+                - cell "Beat Axel Nefve — Round of 32 does NOT happen" [ref=e494]
+                - cell "10¢" [ref=e495]
+                - cell "10¢" [ref=e496]
+                - cell "10¢" [ref=e497]
+                - cell "10%" [ref=e498]
+                - cell "90¢" [ref=e499]
+                - cell "10×" [ref=e500]
+                - cell "Tight" [ref=e501]
+                - cell [ref=e502]
+              - row "Outright Soccer (World Cup) Group Stage FIFA World Cup · 26 Curacao get eliminated in the Group Stage in the 2026 Men's FIFA World Cup does NOT happen 3¢ 3¢ 3¢ 3% 97¢ 33.3× Tight" [ref=e503] [cursor=pointer]:
+                - cell "Outright" [ref=e504]
+                - cell "Soccer (World Cup)" [ref=e505]
+                - cell "Group Stage FIFA World Cup · 26" [ref=e506]
+                - cell "Curacao get eliminated in the Group Stage in the 2026 Men's FIFA World Cup does NOT happen" [ref=e507]
+                - cell "3¢" [ref=e508]
+                - cell "3¢" [ref=e509]
+                - cell "3¢" [ref=e510]
+                - cell "3%" [ref=e511]
+                - cell "97¢" [ref=e512]
+                - cell "33.3×" [ref=e513]
+                - cell "Tight" [ref=e514]
+                - cell [ref=e515]
+              - row "Outright Tennis Julia Riera ITF Beat Mathilde Lollia — Round of 32 does NOT happen 15¢ 15¢ 15¢ 15% 85¢ 6.7× OK" [ref=e516] [cursor=pointer]:
+                - cell "Outright" [ref=e517]
+                - cell "Tennis" [ref=e518]
+                - cell "Julia Riera ITF" [ref=e519]
+                - cell "Beat Mathilde Lollia — Round of 32 does NOT happen" [ref=e520]
+                - cell "15¢" [ref=e521]
+                - cell "15¢" [ref=e522]
+                - cell "15¢" [ref=e523]
+                - cell "15%" [ref=e524]
+                - cell "85¢" [ref=e525]
+                - cell "6.7×" [ref=e526]
+                - cell "OK" [ref=e527]
+                - cell [ref=e528]
+              - row "Outright Tennis Andrej Martin ITF Beat Adrien Burdet — Round of 32 does NOT happen 5¢ 5¢ 5¢ 5% 95¢ 20× Tight" [ref=e529] [cursor=pointer]:
+                - cell "Outright" [ref=e530]
+                - cell "Tennis" [ref=e531]
+                - cell "Andrej Martin ITF" [ref=e532]
+                - cell "Beat Adrien Burdet — Round of 32 does NOT happen" [ref=e533]
+                - cell "5¢" [ref=e534]
+                - cell "5¢" [ref=e535]
+                - cell "5¢" [ref=e536]
+                - cell "5%" [ref=e537]
+                - cell "95¢" [ref=e538]
+                - cell "20×" [ref=e539]
+                - cell "Tight" [ref=e540]
+                - cell [ref=e541]
+              - row "Outright Tennis Flynn Thomas ITF Beat Batiste Guerra — Round of 32 does NOT happen 5¢ 5¢ 5¢ 5% 95¢ 20× Tight" [ref=e542] [cursor=pointer]:
+                - cell "Outright" [ref=e543]
+                - cell "Tennis" [ref=e544]
+                - cell "Flynn Thomas ITF" [ref=e545]
+                - cell "Beat Batiste Guerra — Round of 32 does NOT happen" [ref=e546]
+                - cell "5¢" [ref=e547]
+                - cell "5¢" [ref=e548]
+                - cell "5¢" [ref=e549]
+                - cell "5%" [ref=e550]
+                - cell "95¢" [ref=e551]
+                - cell "20×" [ref=e552]
+                - cell "Tight" [ref=e553]
+                - cell [ref=e554]
+              - row "Outright Soccer (World Cup) Morocco FIFA World Cup · 26 Reach Round of 32 does NOT happen 8¢ 8¢ 8¢ 8% 92¢ 12.5× Tight" [ref=e555] [cursor=pointer]:
+                - cell "Outright" [ref=e556]
+                - cell "Soccer (World Cup)" [ref=e557]
+                - cell "Morocco FIFA World Cup · 26" [ref=e558]
+                - cell "Reach Round of 32 does NOT happen" [ref=e559]
+                - cell "8¢" [ref=e560]
+                - cell "8¢" [ref=e561]
+                - cell "8¢" [ref=e562]
+                - cell "8%" [ref=e563]
+                - cell "92¢" [ref=e564]
+                - cell "12.5×" [ref=e565]
+                - cell "Tight" [ref=e566]
+                - cell [ref=e567]
+              - row "Outright Soccer (World Cup) France FIFA World Cup · 26 France vs Iraq Winner does NOT happen 12¢ 12¢ 12¢ 12% 88¢ 8.3× Tight" [ref=e568] [cursor=pointer]:
+                - cell "Outright" [ref=e569]
+                - cell "Soccer (World Cup)" [ref=e570]
+                - cell "France FIFA World Cup · 26" [ref=e571]
+                - cell "France vs Iraq Winner does NOT happen" [ref=e572]
+                - cell "12¢" [ref=e573]
+                - cell "12¢" [ref=e574]
+                - cell "12¢" [ref=e575]
+                - cell "12%" [ref=e576]
+                - cell "88¢" [ref=e577]
+                - cell "8.3×" [ref=e578]
+                - cell "Tight" [ref=e579]
+                - cell [ref=e580]
+              - row "Outright Esports Leviatán Esports Valorant · 26 Leviatán Esports win the XLG Gaming vs. Leviatán Esports Valorant match does NOT happen 10¢ 10¢ 10¢ 10% 90¢ 10× Tight" [ref=e581] [cursor=pointer]:
+                - cell "Outright" [ref=e582]
+                - cell "Esports" [ref=e583]
+                - cell "Leviatán Esports Valorant · 26" [ref=e584]
+                - cell "Leviatán Esports win the XLG Gaming vs. Leviatán Esports Valorant match does NOT happen" [ref=e585]
+                - cell "10¢" [ref=e586]
+                - cell "10¢" [ref=e587]
+                - cell "10¢" [ref=e588]
+                - cell "10%" [ref=e589]
+                - cell "90¢" [ref=e590]
+                - cell "10×" [ref=e591]
+                - cell "Tight" [ref=e592]
+                - cell [ref=e593]
+              - row "Outright Soccer (World Cup) Spain FIFA World Cup · 26 Reach Round of 32 does NOT happen 4¢ 4¢ 4¢ 4% 96¢ 25× Tight" [ref=e594] [cursor=pointer]:
+                - cell "Outright" [ref=e595]
+                - cell "Soccer (World Cup)" [ref=e596]
+                - cell "Spain FIFA World Cup · 26" [ref=e597]
+                - cell "Reach Round of 32 does NOT happen" [ref=e598]
+                - cell "4¢" [ref=e599]
+                - cell "4¢" [ref=e600]
+                - cell "4¢" [ref=e601]
+                - cell "4%" [ref=e602]
+                - cell "96¢" [ref=e603]
+                - cell "25×" [ref=e604]
+                - cell "Tight" [ref=e605]
+                - cell [ref=e606]
+              - row "Outright MLB Los Angeles D Pro Baseball · 26 Reach Playoffs does NOT happen 2¢ 2¢ 2¢ 2% 98¢ 50× Tight" [ref=e607] [cursor=pointer]:
+                - cell "Outright" [ref=e608]
+                - cell "MLB" [ref=e609]
+                - cell "Los Angeles D Pro Baseball · 26" [ref=e610]
+                - cell "Reach Playoffs does NOT happen" [ref=e611]
+                - cell "2¢" [ref=e612]
+                - cell "2¢" [ref=e613]
+                - cell "2¢" [ref=e614]
+                - cell "2%" [ref=e615]
+                - cell "98¢" [ref=e616]
+                - cell "50×" [ref=e617]
+                - cell "Tight" [ref=e618]
+                - cell [ref=e619]
+              - row "Outright Tennis Maria Herazo ITF Beat Agustina Soto Neira — Round of 32 does NOT happen 10¢ 10¢ 10¢ 10% 90¢ 10× Tight" [ref=e620] [cursor=pointer]:
+                - cell "Outright" [ref=e621]
+                - cell "Tennis" [ref=e622]
+                - cell "Maria Herazo ITF" [ref=e623]
+                - cell "Beat Agustina Soto Neira — Round of 32 does NOT happen" [ref=e624]
+                - cell "10¢" [ref=e625]
+                - cell "10¢" [ref=e626]
+                - cell "10¢" [ref=e627]
+                - cell "10%" [ref=e628]
+                - cell "90¢" [ref=e629]
+                - cell "10×" [ref=e630]
+                - cell "Tight" [ref=e631]
+                - cell [ref=e632]
+              - row "Outright Soccer (World Cup) Group Stage FIFA World Cup · 26 Iraq get eliminated in the Group Stage in the 2026 Men's FIFA World Cup does NOT happen 12¢ 12¢ 12¢ 12% 88¢ 8.3× Tight" [ref=e633] [cursor=pointer]:
+                - cell "Outright" [ref=e634]
+                - cell "Soccer (World Cup)" [ref=e635]
+                - cell "Group Stage FIFA World Cup · 26" [ref=e636]
+                - cell "Iraq get eliminated in the Group Stage in the 2026 Men's FIFA World Cup does NOT happen" [ref=e637]
+                - cell "12¢" [ref=e638]
+                - cell "12¢" [ref=e639]
+                - cell "12¢" [ref=e640]
+                - cell "12%" [ref=e641]
+                - cell "88¢" [ref=e642]
+                - cell "8.3×" [ref=e643]
+                - cell "Tight" [ref=e644]
+                - cell [ref=e645]
+              - row "Outright Tennis Aryna Sabalenka Berlin Beat Ekaterina Alexandrova — Round of 16 does NOT happen 15¢ 15¢ 15¢ 15% 85¢ 6.7× Tight" [ref=e646] [cursor=pointer]:
+                - cell "Outright" [ref=e647]
+                - cell "Tennis" [ref=e648]
+                - cell "Aryna Sabalenka Berlin" [ref=e649]
+                - cell "Beat Ekaterina Alexandrova — Round of 16 does NOT happen" [ref=e650]
+                - cell "15¢" [ref=e651]
+                - cell "15¢" [ref=e652]
+                - cell "15¢" [ref=e653]
+                - cell "15%" [ref=e654]
+                - cell "85¢" [ref=e655]
+                - cell "6.7×" [ref=e656]
+                - cell "Tight" [ref=e657]
+                - cell [ref=e658]
+              - row "Outright Tennis Yasmine Mansouri ITF Beat Andrea Palazon Lacasa — Round of 32 does NOT happen 5¢ 5¢ 5¢ 5% 95¢ 20× Tight" [ref=e659] [cursor=pointer]:
+                - cell "Outright" [ref=e660]
+                - cell "Tennis" [ref=e661]
+                - cell "Yasmine Mansouri ITF" [ref=e662]
+                - cell "Beat Andrea Palazon Lacasa — Round of 32 does NOT happen" [ref=e663]
+                - cell "5¢" [ref=e664]
+                - cell "5¢" [ref=e665]
+                - cell "5¢" [ref=e666]
+                - cell "5%" [ref=e667]
+                - cell "95¢" [ref=e668]
+                - cell "20×" [ref=e669]
+                - cell "Tight" [ref=e670]
+                - cell [ref=e671]
+              - row "Outright Tennis Jenson Brooksby ATP London Beat Martin Damm Jr — Round of 32 does NOT happen 15¢ 15¢ 15¢ 15% 85¢ 6.7× Tight" [ref=e672] [cursor=pointer]:
+                - cell "Outright" [ref=e673]
+                - cell "Tennis" [ref=e674]
+                - cell "Jenson Brooksby ATP London" [ref=e675]
+                - cell "Beat Martin Damm Jr — Round of 32 does NOT happen" [ref=e676]
+                - cell "15¢" [ref=e677]
+                - cell "15¢" [ref=e678]
+                - cell "15¢" [ref=e679]
+                - cell "15%" [ref=e680]
+                - cell "85¢" [ref=e681]
+                - cell "6.7×" [ref=e682]
+                - cell "Tight" [ref=e683]
+                - cell [ref=e684]
+              - row "Outright Soccer (World Cup) Norway FIFA World Cup · 26 Reach Round of 32 does NOT happen 15¢ 15¢ 15¢ 15% 85¢ 6.7× Tight" [ref=e685] [cursor=pointer]:
+                - cell "Outright" [ref=e686]
+                - cell "Soccer (World Cup)" [ref=e687]
+                - cell "Norway FIFA World Cup · 26" [ref=e688]
+                - cell "Reach Round of 32 does NOT happen" [ref=e689]
+                - cell "15¢" [ref=e690]
+                - cell "15¢" [ref=e691]
+                - cell "15¢" [ref=e692]
+                - cell "15%" [ref=e693]
+                - cell "85¢" [ref=e694]
+                - cell "6.7×" [ref=e695]
+                - cell "Tight" [ref=e696]
+                - cell [ref=e697]
+              - row "Outright Tennis Alejandro Juan Mano ITF Beat Esteban Talavera Cortes — Round of 32 does NOT happen 2¢ 2¢ 2¢ 2% 98¢ 50× Tight" [ref=e698] [cursor=pointer]:
+                - cell "Outright" [ref=e699]
+                - cell "Tennis" [ref=e700]
+                - cell "Alejandro Juan Mano ITF" [ref=e701]
+                - cell "Beat Esteban Talavera Cortes — Round of 32 does NOT happen" [ref=e702]
+                - cell "2¢" [ref=e703]
+                - cell "2¢" [ref=e704]
+                - cell "2¢" [ref=e705]
+                - cell "2%" [ref=e706]
+                - cell "98¢" [ref=e707]
+                - cell "50×" [ref=e708]
+                - cell "Tight" [ref=e709]
+                - cell [ref=e710]
+              - row "Outright WNBA New York Pro Basketball (W) · 26 Reach Playoffs does NOT happen 10¢ 10¢ 10¢ 10% 90¢ 10× OK" [ref=e711] [cursor=pointer]:
+                - cell "Outright" [ref=e712]
+                - cell "WNBA" [ref=e713]
+                - cell "New York Pro Basketball (W) · 26" [ref=e714]
+                - cell "Reach Playoffs does NOT happen" [ref=e715]
+                - cell "10¢" [ref=e716]
+                - cell "10¢" [ref=e717]
+                - cell "10¢" [ref=e718]
+                - cell "10%" [ref=e719]
+                - cell "90¢" [ref=e720]
+                - cell "10×" [ref=e721]
+                - cell "OK" [ref=e722]
+                - cell [ref=e723]
+              - row "Outright Soccer (World Cup) Portugal FIFA World Cup · 26 Reach Round of 32 does NOT happen 5¢ 5¢ 5¢ 5% 95¢ 20× Tight" [ref=e724] [cursor=pointer]:
+                - cell "Outright" [ref=e725]
+                - cell "Soccer (World Cup)" [ref=e726]
+                - cell "Portugal FIFA World Cup · 26" [ref=e727]
+                - cell "Reach Round of 32 does NOT happen" [ref=e728]
+                - cell "5¢" [ref=e729]
+                - cell "5¢" [ref=e730]
+                - cell "5¢" [ref=e731]
+                - cell "5%" [ref=e732]
+                - cell "95¢" [ref=e733]
+                - cell "20×" [ref=e734]
+                - cell "Tight" [ref=e735]
+                - cell [ref=e736]
+              - row "Outright Soccer (World Cup) Switzerland FIFA World Cup · 26 Reach Round of 32 does NOT happen 14¢ 14¢ 14¢ 14% 86¢ 7.1× Tight" [ref=e737] [cursor=pointer]:
+                - cell "Outright" [ref=e738]
+                - cell "Soccer (World Cup)" [ref=e739]
+                - cell "Switzerland FIFA World Cup · 26" [ref=e740]
+                - cell "Reach Round of 32 does NOT happen" [ref=e741]
+                - cell "14¢" [ref=e742]
+                - cell "14¢" [ref=e743]
+                - cell "14¢" [ref=e744]
+                - cell "14%" [ref=e745]
+                - cell "86¢" [ref=e746]
+                - cell "7.1×" [ref=e747]
+                - cell "Tight" [ref=e748]
+                - cell [ref=e749]
+              - row "Outright WNBA Indiana Pro Basketball (W) · 26 Reach Playoffs does NOT happen 13¢ 13¢ 13¢ 13% 87¢ 7.7× OK" [ref=e750] [cursor=pointer]:
+                - cell "Outright" [ref=e751]
+                - cell "WNBA" [ref=e752]
+                - cell "Indiana Pro Basketball (W) · 26" [ref=e753]
+                - cell "Reach Playoffs does NOT happen" [ref=e754]
+                - cell "13¢" [ref=e755]
+                - cell "13¢" [ref=e756]
+                - cell "13¢" [ref=e757]
+                - cell "13%" [ref=e758]
+                - cell "87¢" [ref=e759]
+                - cell "7.7×" [ref=e760]
+                - cell "OK" [ref=e761]
+                - cell [ref=e762]
+              - row "Outright Tennis Francisco Cerundolo ATP London Beat Aleksandar Kovacevic — Round of 32 does NOT happen 15¢ 15¢ 15¢ 15% 85¢ 6.7× Tight" [ref=e763] [cursor=pointer]:
+                - cell "Outright" [ref=e764]
+                - cell "Tennis" [ref=e765]
+                - cell "Francisco Cerundolo ATP London" [ref=e766]
+                - cell "Beat Aleksandar Kovacevic — Round of 32 does NOT happen" [ref=e767]
+                - cell "15¢" [ref=e768]
+                - cell "15¢" [ref=e769]
+                - cell "15¢" [ref=e770]
+                - cell "15%" [ref=e771]
+                - cell "85¢" [ref=e772]
+                - cell "6.7×" [ref=e773]
+                - cell "Tight" [ref=e774]
+                - cell [ref=e775]
+              - row "Outright Soccer (World Cup) Group Stage FIFA World Cup · 26 Tunisia get eliminated in the Group Stage in the 2026 Men's FIFA World Cup does NOT happen 10¢ 10¢ 10¢ 10% 90¢ 10× Tight" [ref=e776] [cursor=pointer]:
+                - cell "Outright" [ref=e777]
+                - cell "Soccer (World Cup)" [ref=e778]
+                - cell "Group Stage FIFA World Cup · 26" [ref=e779]
+                - cell "Tunisia get eliminated in the Group Stage in the 2026 Men's FIFA World Cup does NOT happen" [ref=e780]
+                - cell "10¢" [ref=e781]
+                - cell "10¢" [ref=e782]
+                - cell "10¢" [ref=e783]
+                - cell "10%" [ref=e784]
+                - cell "90¢" [ref=e785]
+                - cell "10×" [ref=e786]
+                - cell "Tight" [ref=e787]
+                - cell [ref=e788]
+              - row "Outright WNBA Las Vegas Pro Basketball (W) · 26 Reach Playoffs does NOT happen 9¢ 9¢ 9¢ 9% 91¢ 11.1× OK" [ref=e789] [cursor=pointer]:
+                - cell "Outright" [ref=e790]
+                - cell "WNBA" [ref=e791]
+                - cell "Las Vegas Pro Basketball (W) · 26" [ref=e792]
+                - cell "Reach Playoffs does NOT happen" [ref=e793]
+                - cell "9¢" [ref=e794]
+                - cell "9¢" [ref=e795]
+                - cell "9¢" [ref=e796]
+                - cell "9%" [ref=e797]
+                - cell "91¢" [ref=e798]
+                - cell "11.1×" [ref=e799]
+                - cell "OK" [ref=e800]
+                - cell [ref=e801]
+              - row "Outright Soccer (World Cup) Australia FIFA World Cup · 26 Reach Round of 32 does NOT happen 15¢ 15¢ 15¢ 15% 85¢ 6.7× Tight" [ref=e802] [cursor=pointer]:
+                - cell "Outright" [ref=e803]
+                - cell "Soccer (World Cup)" [ref=e804]
+                - cell "Australia FIFA World Cup · 26" [ref=e805]
+                - cell "Reach Round of 32 does NOT happen" [ref=e806]
+                - cell "15¢" [ref=e807]
+                - cell "15¢" [ref=e808]
+                - cell "15¢" [ref=e809]
+                - cell "15%" [ref=e810]
+                - cell "85¢" [ref=e811]
+                - cell "6.7×" [ref=e812]
+                - cell "Tight" [ref=e813]
+                - cell [ref=e814]
+              - row "Outright Tennis Mika Petkovic ITF Beat Pierre Antoine Tailleu — Round of 32 does NOT happen 7¢ 7¢ 7¢ 7% 93¢ 14.3× Tight" [ref=e815] [cursor=pointer]:
+                - cell "Outright" [ref=e816]
+                - cell "Tennis" [ref=e817]
+                - cell "Mika Petkovic ITF" [ref=e818]
+                - cell "Beat Pierre Antoine Tailleu — Round of 32 does NOT happen" [ref=e819]
+                - cell "7¢" [ref=e820]
+                - cell "7¢" [ref=e821]
+                - cell "7¢" [ref=e822]
+                - cell "7%" [ref=e823]
+                - cell "93¢" [ref=e824]
+                - cell "14.3×" [ref=e825]
+                - cell "Tight" [ref=e826]
+                - cell [ref=e827]
+              - row "Outright Soccer (World Cup) Germany FIFA World Cup · 26 Reach Round of 32 does NOT happen 1¢ 1¢ 1¢ 1% 99¢ 100× Tight" [ref=e828] [cursor=pointer]:
+                - cell "Outright" [ref=e829]
+                - cell "Soccer (World Cup)" [ref=e830]
+                - cell "Germany FIFA World Cup · 26" [ref=e831]
+                - cell "Reach Round of 32 does NOT happen" [ref=e832]
+                - cell "1¢" [ref=e833]
+                - cell "1¢" [ref=e834]
+                - cell "1¢" [ref=e835]
+                - cell "1%" [ref=e836]
+                - cell "99¢" [ref=e837]
+                - cell "100×" [ref=e838]
+                - cell "Tight" [ref=e839]
+                - cell [ref=e840]
+              - row "Outright Soccer (World Cup) Ivory Coast FIFA World Cup · 26 Curacao vs Ivory Coast Winner does NOT happen 15¢ 15¢ 15¢ 15% 85¢ 6.7× Tight" [ref=e841] [cursor=pointer]:
+                - cell "Outright" [ref=e842]
+                - cell "Soccer (World Cup)" [ref=e843]
+                - cell "Ivory Coast FIFA World Cup · 26" [ref=e844]
+                - cell "Curacao vs Ivory Coast Winner does NOT happen" [ref=e845]
+                - cell "15¢" [ref=e846]
+                - cell "15¢" [ref=e847]
+                - cell "15¢" [ref=e848]
+                - cell "15%" [ref=e849]
+                - cell "85¢" [ref=e850]
+                - cell "6.7×" [ref=e851]
+                - cell "Tight" [ref=e852]
+                - cell [ref=e853]
+              - row "Outright Soccer (World Cup) USA FIFA World Cup · 26 Reach Round of 32 does NOT happen 3¢ 3¢ 3¢ 3% 97¢ 33.3× Tight" [ref=e854] [cursor=pointer]:
+                - cell "Outright" [ref=e855]
+                - cell "Soccer (World Cup)" [ref=e856]
+                - cell "USA FIFA World Cup · 26" [ref=e857]
+                - cell "Reach Round of 32 does NOT happen" [ref=e858]
+                - cell "3¢" [ref=e859]
+                - cell "3¢" [ref=e860]
+                - cell "3¢" [ref=e861]
+                - cell "3%" [ref=e862]
+                - cell "97¢" [ref=e863]
+                - cell "33.3×" [ref=e864]
+                - cell "Tight" [ref=e865]
+                - cell [ref=e866]
+              - row "Outright Soccer (World Cup) Spain FIFA World Cup · 26 Spain vs Saudi Arabia Winner does NOT happen 12¢ 12¢ 12¢ 12% 88¢ 8.3× Tight" [ref=e867] [cursor=pointer]:
+                - cell "Outright" [ref=e868]
+                - cell "Soccer (World Cup)" [ref=e869]
+                - cell "Spain FIFA World Cup · 26" [ref=e870]
+                - cell "Spain vs Saudi Arabia Winner does NOT happen" [ref=e871]
+                - cell "12¢" [ref=e872]
+                - cell "12¢" [ref=e873]
+                - cell "12¢" [ref=e874]
+                - cell "12%" [ref=e875]
+                - cell "88¢" [ref=e876]
+                - cell "8.3×" [ref=e877]
+                - cell "Tight" [ref=e878]
+                - cell [ref=e879]
+              - row "Outright Soccer (World Cup) Belgium FIFA World Cup · 26 Reach Round of 32 does NOT happen 6¢ 6¢ 6¢ 6% 94¢ 16.7× Tight" [ref=e880] [cursor=pointer]:
+                - cell "Outright" [ref=e881]
+                - cell "Soccer (World Cup)" [ref=e882]
+                - cell "Belgium FIFA World Cup · 26" [ref=e883]
+                - cell "Reach Round of 32 does NOT happen" [ref=e884]
+                - cell "6¢" [ref=e885]
+                - cell "6¢" [ref=e886]
+                - cell "6¢" [ref=e887]
+                - cell "6%" [ref=e888]
+                - cell "94¢" [ref=e889]
+                - cell "16.7×" [ref=e890]
+                - cell "Tight" [ref=e891]
+                - cell [ref=e892]
+              - row "Outright Soccer (World Cup) Canada FIFA World Cup · 26 Reach Round of 32 does NOT happen 15¢ 15¢ 15¢ 15% 85¢ 6.7× Tight" [ref=e893] [cursor=pointer]:
+                - cell "Outright" [ref=e894]
+                - cell "Soccer (World Cup)" [ref=e895]
+                - cell "Canada FIFA World Cup · 26" [ref=e896]
+                - cell "Reach Round of 32 does NOT happen" [ref=e897]
+                - cell "15¢" [ref=e898]
+                - cell "15¢" [ref=e899]
+                - cell "15¢" [ref=e900]
+                - cell "15%" [ref=e901]
+                - cell "85¢" [ref=e902]
+                - cell "6.7×" [ref=e903]
+                - cell "Tight" [ref=e904]
+                - cell [ref=e905]
+              - row "Outright Soccer (World Cup) Ivory Coast FIFA World Cup · 26 Reach Round of 32 does NOT happen 5¢ 5¢ 5¢ 5% 95¢ 20× Tight" [ref=e906] [cursor=pointer]:
+                - cell "Outright" [ref=e907]
+                - cell "Soccer (World Cup)" [ref=e908]
+                - cell "Ivory Coast FIFA World Cup · 26" [ref=e909]
+                - cell "Reach Round of 32 does NOT happen" [ref=e910]
+                - cell "5¢" [ref=e911]
+                - cell "5¢" [ref=e912]
+                - cell "5¢" [ref=e913]
+                - cell "5%" [ref=e914]
+                - cell "95¢" [ref=e915]
+                - cell "20×" [ref=e916]
+                - cell "Tight" [ref=e917]
+                - cell [ref=e918]
+              - row "Outright Tennis Victoria Bosio ITF Beat Romane Longueville — Round of 32 does NOT happen 8¢ 8¢ 8¢ 8% 92¢ 12.5× Tight" [ref=e919] [cursor=pointer]:
+                - cell "Outright" [ref=e920]
+                - cell "Tennis" [ref=e921]
+                - cell "Victoria Bosio ITF" [ref=e922]
+                - cell "Beat Romane Longueville — Round of 32 does NOT happen" [ref=e923]
+                - cell "8¢" [ref=e924]
+                - cell "8¢" [ref=e925]
+                - cell "8¢" [ref=e926]
+                - cell "8%" [ref=e927]
+                - cell "92¢" [ref=e928]
+                - cell "12.5×" [ref=e929]
+                - cell "Tight" [ref=e930]
+                - cell [ref=e931]
+              - row "Outright Esports LGD Gaming Dota 2 · 26 LGD Gaming win the Lindorfitos vs. LGD Gaming Dota 2 match does NOT happen 10¢ 10¢ 10¢ 10% 90¢ 10× Tight" [ref=e932] [cursor=pointer]:
+                - cell "Outright" [ref=e933]
+                - cell "Esports" [ref=e934]
+                - cell "LGD Gaming Dota 2 · 26" [ref=e935]
+                - cell "LGD Gaming win the Lindorfitos vs. LGD Gaming Dota 2 match does NOT happen" [ref=e936]
+                - cell "10¢" [ref=e937]
+                - cell "10¢" [ref=e938]
+                - cell "10¢" [ref=e939]
+                - cell "10%" [ref=e940]
+                - cell "90¢" [ref=e941]
+                - cell "10×" [ref=e942]
+                - cell "Tight" [ref=e943]
+                - cell [ref=e944]
+              - row "Outright Tennis Eri Shimizu ITF Beat Nagi Hanatani — Round of 32 does NOT happen 10¢ 10¢ 10¢ 10% 90¢ 10× Tight" [ref=e945] [cursor=pointer]:
+                - cell "Outright" [ref=e946]
+                - cell "Tennis" [ref=e947]
+                - cell "Eri Shimizu ITF" [ref=e948]
+                - cell "Beat Nagi Hanatani — Round of 32 does NOT happen" [ref=e949]
+                - cell "10¢" [ref=e950]
+                - cell "10¢" [ref=e951]
+                - cell "10¢" [ref=e952]
+                - cell "10%" [ref=e953]
+                - cell "90¢" [ref=e954]
+                - cell "10×" [ref=e955]
+                - cell "Tight" [ref=e956]
+                - cell [ref=e957]
+              - row "Outright Soccer (World Cup) Colombia FIFA World Cup · 26 Reach Round of 32 does NOT happen 10¢ 10¢ 10¢ 10% 90¢ 10× Tight" [ref=e958] [cursor=pointer]:
+                - cell "Outright" [ref=e959]
+                - cell "Soccer (World Cup)" [ref=e960]
+                - cell "Colombia FIFA World Cup · 26" [ref=e961]
+                - cell "Reach Round of 32 does NOT happen" [ref=e962]
+                - cell "10¢" [ref=e963]
+                - cell "10¢" [ref=e964]
+                - cell "10¢" [ref=e965]
+                - cell "10%" [ref=e966]
+                - cell "90¢" [ref=e967]
+                - cell "10×" [ref=e968]
+                - cell "Tight" [ref=e969]
+                - cell [ref=e970]
+              - row "Outright Soccer (World Cup) Korea Republic FIFA World Cup · 26 Reach Round of 32 does NOT happen 7¢ 7¢ 7¢ 7% 93¢ 14.3× Tight" [ref=e971] [cursor=pointer]:
+                - cell "Outright" [ref=e972]
+                - cell "Soccer (World Cup)" [ref=e973]
+                - cell "Korea Republic FIFA World Cup · 26" [ref=e974]
+                - cell "Reach Round of 32 does NOT happen" [ref=e975]
+                - cell "7¢" [ref=e976]
+                - cell "7¢" [ref=e977]
+                - cell "7¢" [ref=e978]
+                - cell "7%" [ref=e979]
+                - cell "93¢" [ref=e980]
+                - cell "14.3×" [ref=e981]
+                - cell "Tight" [ref=e982]
+                - cell [ref=e983]
+              - row "Outright Tennis Kirill Kivattsev ITF Beat Fausto Tabacco — Round of 32 does NOT happen 10¢ 10¢ 10¢ 10% 90¢ 10× Tight" [ref=e984] [cursor=pointer]:
+                - cell "Outright" [ref=e985]
+                - cell "Tennis" [ref=e986]
+                - cell "Kirill Kivattsev ITF" [ref=e987]
+                - cell "Beat Fausto Tabacco — Round of 32 does NOT happen" [ref=e988]
+                - cell "10¢" [ref=e989]
+                - cell "10¢" [ref=e990]
+                - cell "10¢" [ref=e991]
+                - cell "10%" [ref=e992]
+                - cell "90¢" [ref=e993]
+                - cell "10×" [ref=e994]
+                - cell "Tight" [ref=e995]
+                - cell [ref=e996]
+              - row "Outright Tennis Jakub Filip ITF Beat Arian Barbic — Round of 32 does NOT happen 12¢ 12¢ 12¢ 12% 88¢ 8.3× Tight" [ref=e997] [cursor=pointer]:
+                - cell "Outright" [ref=e998]
+                - cell "Tennis" [ref=e999]
+                - cell "Jakub Filip ITF" [ref=e1000]
+                - cell "Beat Arian Barbic — Round of 32 does NOT happen" [ref=e1001]
+                - cell "12¢" [ref=e1002]
+                - cell "12¢" [ref=e1003]
+                - cell "12¢" [ref=e1004]
+                - cell "12%" [ref=e1005]
+                - cell "88¢" [ref=e1006]
+                - cell "8.3×" [ref=e1007]
+                - cell "Tight" [ref=e1008]
+                - cell [ref=e1009]
+              - row "Outright WNBA Minnesota Pro Basketball (W) · 26 Reach Playoffs does NOT happen 8¢ 8¢ 8¢ 8% 92¢ 12.5× OK" [ref=e1010] [cursor=pointer]:
+                - cell "Outright" [ref=e1011]
+                - cell "WNBA" [ref=e1012]
+                - cell "Minnesota Pro Basketball (W) · 26" [ref=e1013]
+                - cell "Reach Playoffs does NOT happen" [ref=e1014]
+                - cell "8¢" [ref=e1015]
+                - cell "8¢" [ref=e1016]
+                - cell "8¢" [ref=e1017]
+                - cell "8%" [ref=e1018]
+                - cell "92¢" [ref=e1019]
+                - cell "12.5×" [ref=e1020]
+                - cell "OK" [ref=e1021]
+                - cell [ref=e1022]
+              - row "Outright Soccer (World Cup) England FIFA World Cup · 26 Reach Round of 32 does NOT happen 3¢ 3¢ 3¢ 3% 97¢ 33.3× Tight" [ref=e1023] [cursor=pointer]:
+                - cell "Outright" [ref=e1024]
+                - cell "Soccer (World Cup)" [ref=e1025]
+                - cell "England FIFA World Cup · 26" [ref=e1026]
+                - cell "Reach Round of 32 does NOT happen" [ref=e1027]
+                - cell "3¢" [ref=e1028]
+                - cell "3¢" [ref=e1029]
+                - cell "3¢" [ref=e1030]
+                - cell "3%" [ref=e1031]
+                - cell "97¢" [ref=e1032]
+                - cell "33.3×" [ref=e1033]
+                - cell "Tight" [ref=e1034]
+                - cell [ref=e1035]
+              - row "Outright Soccer (World Cup) Netherlands FIFA World Cup · 26 Reach Round of 32 does NOT happen 10¢ 10¢ 10¢ 10% 90¢ 10× Tight" [ref=e1036] [cursor=pointer]:
+                - cell "Outright" [ref=e1037]
+                - cell "Soccer (World Cup)" [ref=e1038]
+                - cell "Netherlands FIFA World Cup · 26" [ref=e1039]
+                - cell "Reach Round of 32 does NOT happen" [ref=e1040]
+                - cell "10¢" [ref=e1041]
+                - cell "10¢" [ref=e1042]
+                - cell "10¢" [ref=e1043]
+                - cell "10%" [ref=e1044]
+                - cell "90¢" [ref=e1045]
+                - cell "10×" [ref=e1046]
+                - cell "Tight" [ref=e1047]
+                - cell [ref=e1048]
+              - row "Outright Tennis Daria Gorska ITF Beat Kornelia Krzesniak — Round of 16 does NOT happen 3¢ 3¢ 3¢ 3% 97¢ 33.3× Tight" [ref=e1049] [cursor=pointer]:
+                - cell "Outright" [ref=e1050]
+                - cell "Tennis" [ref=e1051]
+                - cell "Daria Gorska ITF" [ref=e1052]
+                - cell "Beat Kornelia Krzesniak — Round of 16 does NOT happen" [ref=e1053]
+                - cell "3¢" [ref=e1054]
+                - cell "3¢" [ref=e1055]
+                - cell "3¢" [ref=e1056]
+                - cell "3%" [ref=e1057]
+                - cell "97¢" [ref=e1058]
+                - cell "33.3×" [ref=e1059]
+                - cell "Tight" [ref=e1060]
+                - cell [ref=e1061]
+              - row "Outright Tennis Jenny Lim ITF Beat Liv Boulard — Round of 32 does NOT happen 9¢ 9¢ 9¢ 9% 91¢ 11.1× Tight" [ref=e1062] [cursor=pointer]:
+                - cell "Outright" [ref=e1063]
+                - cell "Tennis" [ref=e1064]
+                - cell "Jenny Lim ITF" [ref=e1065]
+                - cell "Beat Liv Boulard — Round of 32 does NOT happen" [ref=e1066]
+                - cell "9¢" [ref=e1067]
+                - cell "9¢" [ref=e1068]
+                - cell "9¢" [ref=e1069]
+                - cell "9%" [ref=e1070]
+                - cell "91¢" [ref=e1071]
+                - cell "11.1×" [ref=e1072]
+                - cell "Tight" [ref=e1073]
+                - cell [ref=e1074]
+              - row "Outright Soccer (World Cup) Sweden FIFA World Cup · 26 Reach Round of 32 does NOT happen 8¢ 8¢ 8¢ 8% 92¢ 12.5× Tight" [ref=e1075] [cursor=pointer]:
+                - cell "Outright" [ref=e1076]
+                - cell "Soccer (World Cup)" [ref=e1077]
+                - cell "Sweden FIFA World Cup · 26" [ref=e1078]
+                - cell "Reach Round of 32 does NOT happen" [ref=e1079]
+                - cell "8¢" [ref=e1080]
+                - cell "8¢" [ref=e1081]
+                - cell "8¢" [ref=e1082]
+                - cell "8%" [ref=e1083]
+                - cell "92¢" [ref=e1084]
+                - cell "12.5×" [ref=e1085]
+                - cell "Tight" [ref=e1086]
+                - cell [ref=e1087]
+              - row "Outright Tennis Jie Cui ITF Beat Alejandro Jacome Jaramillo — Round of 32 does NOT happen 11¢ 11¢ 11¢ 11% 89¢ 9.1× OK" [ref=e1088] [cursor=pointer]:
+                - cell "Outright" [ref=e1089]
+                - cell "Tennis" [ref=e1090]
+                - cell "Jie Cui ITF" [ref=e1091]
+                - cell "Beat Alejandro Jacome Jaramillo — Round of 32 does NOT happen" [ref=e1092]
+                - cell "11¢" [ref=e1093]
+                - cell "11¢" [ref=e1094]
+                - cell "11¢" [ref=e1095]
+                - cell "11%" [ref=e1096]
+                - cell "89¢" [ref=e1097]
+                - cell "9.1×" [ref=e1098]
+                - cell "OK" [ref=e1099]
+                - cell [ref=e1100]
+              - row "Outright Tennis Caty McNally WTA Nottingham Beat Antonia Ruzic — Round of 32 does NOT happen 1¢ 1¢ 1¢ 1% 99¢ 100× Tight" [ref=e1101] [cursor=pointer]:
+                - cell "Outright" [ref=e1102]
+                - cell "Tennis" [ref=e1103]
+                - cell "Caty McNally WTA Nottingham" [ref=e1104]
+                - cell "Beat Antonia Ruzic — Round of 32 does NOT happen" [ref=e1105]
+                - cell "1¢" [ref=e1106]
+                - cell "1¢" [ref=e1107]
+                - cell "1¢" [ref=e1108]
+                - cell "1%" [ref=e1109]
+                - cell "99¢" [ref=e1110]
+                - cell "100×" [ref=e1111]
+                - cell "Tight" [ref=e1112]
+                - cell [ref=e1113]
+              - row "Outright Motorsport Alex Palou IndyCar · main-race · NTTICS26 Win the Championship does NOT happen 14¢ 14¢ 14¢ 14% 86¢ 7.1× Tight" [ref=e1114] [cursor=pointer]:
+                - cell "Outright" [ref=e1115]
+                - cell "Motorsport" [ref=e1116]
+                - cell "Alex Palou IndyCar · main-race · NTTICS26" [ref=e1117]
+                - cell "Win the Championship does NOT happen" [ref=e1118]
+                - cell "14¢" [ref=e1119]
+                - cell "14¢" [ref=e1120]
+                - cell "14¢" [ref=e1121]
+                - cell "14%" [ref=e1122]
+                - cell "86¢" [ref=e1123]
+                - cell "7.1×" [ref=e1124]
+                - cell "Tight" [ref=e1125]
+                - cell [ref=e1126]
+              - row "Outright Soccer (World Cup) Group Stage FIFA World Cup · 26 Haiti get eliminated in the Group Stage in the 2026 Men's FIFA World Cup does NOT happen 6¢ 6¢ 6¢ 6% 94¢ 16.7× Tight" [ref=e1127] [cursor=pointer]:
+                - cell "Outright" [ref=e1128]
+                - cell "Soccer (World Cup)" [ref=e1129]
+                - cell "Group Stage FIFA World Cup · 26" [ref=e1130]
+                - cell "Haiti get eliminated in the Group Stage in the 2026 Men's FIFA World Cup does NOT happen" [ref=e1131]
+                - cell "6¢" [ref=e1132]
+                - cell "6¢" [ref=e1133]
+                - cell "6¢" [ref=e1134]
+                - cell "6%" [ref=e1135]
+                - cell "94¢" [ref=e1136]
+                - cell "16.7×" [ref=e1137]
+                - cell "Tight" [ref=e1138]
+                - cell [ref=e1139]
+              - row "Outright MLB New York Y Pro Baseball · 26 Reach Playoffs does NOT happen 10¢ 10¢ 10¢ 10% 90¢ 10× OK" [ref=e1140] [cursor=pointer]:
+                - cell "Outright" [ref=e1141]
+                - cell "MLB" [ref=e1142]
+                - cell "New York Y Pro Baseball · 26" [ref=e1143]
+                - cell "Reach Playoffs does NOT happen" [ref=e1144]
+                - cell "10¢" [ref=e1145]
+                - cell "10¢" [ref=e1146]
+                - cell "10¢" [ref=e1147]
+                - cell "10%" [ref=e1148]
+                - cell "90¢" [ref=e1149]
+                - cell "10×" [ref=e1150]
+                - cell "OK" [ref=e1151]
+                - cell [ref=e1152]
+              - row "Outright Tennis Elise Renard ITF Beat Leilany Ipunesso — Round of 32 does NOT happen 12¢ 12¢ 12¢ 12% 88¢ 8.3× Tight" [ref=e1153] [cursor=pointer]:
+                - cell "Outright" [ref=e1154]
+                - cell "Tennis" [ref=e1155]
+                - cell "Elise Renard ITF" [ref=e1156]
+                - cell "Beat Leilany Ipunesso — Round of 32 does NOT happen" [ref=e1157]
+                - cell "12¢" [ref=e1158]
+                - cell "12¢" [ref=e1159]
+                - cell "12¢" [ref=e1160]
+                - cell "12%" [ref=e1161]
+                - cell "88¢" [ref=e1162]
+                - cell "8.3×" [ref=e1163]
+                - cell "Tight" [ref=e1164]
+                - cell [ref=e1165]
+              - row "Outright Soccer (World Cup) Brazil FIFA World Cup · 26 Reach Round of 32 does NOT happen 6¢ 6¢ 6¢ 6% 94¢ 16.7× Tight" [ref=e1166] [cursor=pointer]:
+                - cell "Outright" [ref=e1167]
+                - cell "Soccer (World Cup)" [ref=e1168]
+                - cell "Brazil FIFA World Cup · 26" [ref=e1169]
+                - cell "Reach Round of 32 does NOT happen" [ref=e1170]
+                - cell "6¢" [ref=e1171]
+                - cell "6¢" [ref=e1172]
+                - cell "6¢" [ref=e1173]
+                - cell "6%" [ref=e1174]
+                - cell "94¢" [ref=e1175]
+                - cell "16.7×" [ref=e1176]
+                - cell "Tight" [ref=e1177]
+                - cell [ref=e1178]
+              - row "Outright Tennis Marian Gomez Pezuela Cano ITF Beat Hanna Jankowska — Round of 16 does NOT happen 1¢ 1¢ 1¢ 1% 99¢ 100× Tight" [ref=e1179] [cursor=pointer]:
+                - cell "Outright" [ref=e1180]
+                - cell "Tennis" [ref=e1181]
+                - cell "Marian Gomez Pezuela Cano ITF" [ref=e1182]
+                - cell "Beat Hanna Jankowska — Round of 16 does NOT happen" [ref=e1183]
+                - cell "1¢" [ref=e1184]
+                - cell "1¢" [ref=e1185]
+                - cell "1¢" [ref=e1186]
+                - cell "1%" [ref=e1187]
+                - cell "99¢" [ref=e1188]
+                - cell "100×" [ref=e1189]
+                - cell "Tight" [ref=e1190]
+                - cell [ref=e1191]
+          - generic [ref=e136]: Showing 72 of 551 in scope (479 hidden by settings)· 12 cols · engine order
+      - generic [ref=e139]:
+        - generic [ref=e140]:
+          - generic [ref=e141]: "2"
+          - heading "INSPECTOR" [level=3] [ref=e142]
+          - generic [ref=e143]: read-only · buy-only · gross
+          - generic [ref=e144]:
+            - generic "Pop out" [ref=e145] [cursor=pointer]: ⧉
+            - generic "Maximize" [ref=e146] [cursor=pointer]: ▢
+            - generic "Collapse" [ref=e147] [cursor=pointer]: ▁
+            - generic "Remove from this view" [ref=e148] [cursor=pointer]: ✕
+        - generic [ref=e149]:
+          - generic [ref=e150] [cursor=pointer]: TRADE CARD
+          - generic [ref=e151] [cursor=pointer]: PARTICIPANT DETAIL
+          - generic [ref=e152] [cursor=pointer]: FORMULAS
+        - generic [ref=e154]:
+          - generic [ref=e1259]:
+            - generic [ref=e1260]: SPECULATIVE
+            - generic [ref=e1261]: Argentina
+            - generic [ref=e1262]:
+              - button "$1" [ref=e1263] [cursor=pointer]
+              - button "$100" [ref=e1264] [cursor=pointer]
+          - generic [ref=e1265]: FIFA World Cup · 26 · Soccer (World Cup) · calendar
+          - generic [ref=e1266]: BUY-ONLY PLAN — 1 LEG
+          - generic [ref=e1267]:
+            - generic [ref=e1268]: "NO"
+            - generic [ref=e1269]: 4¢
+            - generic [ref=e1270]: ×0
+          - generic [ref=e1271]: ECONOMICS (PER UNIT)
+          - generic [ref=e1272]:
+            - generic [ref=e1273]: Cost
+            - generic [ref=e1274]: 4¢
+            - generic [ref=e1275]: Max loss
+            - generic [ref=e1276]: 4¢
+            - generic [ref=e1277]: Max profit
+            - generic [ref=e1278]: —
+            - generic [ref=e1279]: ROI
+            - generic [ref=e1280]: —
+            - generic [ref=e1281]: Max units
+            - generic [ref=e1282]: "259.37"
+            - generic [ref=e1283]: Quote
+            - generic [ref=e1284]: Tight
+            - generic [ref=e1285]: Tradable
+            - generic [ref=e1286]: Speculative
+          - generic [ref=e1287]: FEES — IMMEDIATE-FILL (TAKER)
+          - generic [ref=e1288]:
+            - generic [ref=e1289]: Est. fees
+            - generic [ref=e1290]: incomplete — flat/unknown leg
+            - generic [ref=e1291]: Est. net edge / unit
+            - generic [ref=e1292]: —
+            - generic [ref=e1293]: Breakeven gross gap
+            - generic [ref=e1294]: —
+          - generic [ref=e1295]: Immediate-fill estimate — cross visible top-of-book now.
+          - generic [ref=e1296]: FEES — RESTING-ORDER (MAKER)
+          - generic [ref=e1297]:
+            - generic [ref=e1298]: Est. fees
+            - generic [ref=e1299]: incomplete — flat/unknown leg
+            - generic [ref=e1300]: Est. net edge / unit
+            - generic [ref=e1301]: —
+          - generic [ref=e1302]: "Resting-order scenario: assumes posted orders later fill; queue position, fill probability, and edge decay are not modeled. Mixed execution (some legs taker, some maker) is not modeled."
+          - generic [ref=e1303]:
+            - generic [ref=e1304]: "Source: unknown fee type — incomplete."
+            - text: Conservative pre-trade estimate; realized fee depends on fill path, price precision, quantity, rounding fee, rebate, and the fee accumulator. Still gross of order-book depth.
+            - generic [ref=e1305]: never ranks
+          - generic [ref=e1306]: WHY RANKED HERE · ENGINE ORDER
+          - generic [ref=e1307]:
+            - generic [ref=e1308]: "Promotes:"
+            - generic [ref=e1309]: tight quote
+          - generic [ref=e1310]:
+            - generic [ref=e1311]: "Demotes:"
+            - generic [ref=e1312]: none
+          - generic [ref=e1313]: "NOT AN EDGE: bounded-loss speculation — can lose money; metrics gross/top-of-book, never feed actionability."
+          - generic [ref=e1314]: EVIDENCEPACK
+          - generic [ref=e1315]:
+            - generic [ref=e1316]: Snapshot
+            - generic [ref=e1317]: "#487"
+            - generic [ref=e1318]: Status
+            - generic [ref=e1319]: NO_STRUCTURE_OUTRIGHT
+            - generic [ref=e1320]: Opp id
+            - generic [ref=e1321]: 29fe8e1e2726e39b
+            - generic [ref=e1322]: Market
+            - link "open ↗" [ref=e1324] [cursor=pointer]:
+              - /url: https://kalshi.com/markets/kxwcgroupqual/world-cup-group-qualifiers/kxwcgroupqual-26j
+    - generic [ref=e158]:
+      - generic [ref=e159]:
+        - generic [ref=e160]: "3"
+        - heading "DEPTH LADDER" [level=3] [ref=e161]
+        - generic [ref=e162]: live order book · top-of-book
+        - generic [ref=e163]:
+          - generic "Pop out" [ref=e164] [cursor=pointer]: ⧉
+          - generic "Maximize" [ref=e165] [cursor=pointer]: ▢
+          - generic "Collapse" [ref=e166] [cursor=pointer]: ▁
+          - generic "Remove from this view" [ref=e167] [cursor=pointer]: ✕
+      - generic [ref=e168]: READ-ONLY · LIVE KALSHI ORDER BOOK · TOP-OF-BOOK · POLL-REFRESHED
+      - generic [ref=e169]:
+        - generic [ref=e1325]:
+          - text: Argentina
+          - generic [ref=e1326]: · 6 rungs
+        - combobox [ref=e1327]:
+          - option "Reach Round of 32 · 96.5%"
+          - option "Reach Round of 16 · 69.5%"
+          - option "Reach Quarterfinals · 51.5%"
+          - option "Reach Semifinals · 32.5%"
+          - option "Reach Finals · 18%"
+          - option "Win the World Cup · 8.5%" [selected]
+      - generic [ref=e1404]: loading live order book…
+    - generic [ref=e171]:
+      - generic [ref=e173]:
+        - generic [ref=e174]:
+          - generic [ref=e175]: ★
+          - heading "WATCHLIST · TOP ACTIONABLE" [level=3] [ref=e176]
+          - generic [ref=e177]:
+            - generic "Pop out" [ref=e178] [cursor=pointer]: ⧉
+            - generic "Maximize" [ref=e179] [cursor=pointer]: ▢
+            - generic "Collapse" [ref=e180] [cursor=pointer]: ▁
+            - generic "Remove from this view" [ref=e181] [cursor=pointer]: ✕
+        - generic [ref=e182]:
+          - generic [ref=e1192] [cursor=pointer]:
+            - generic [ref=e1193]: ●
+            - generic [ref=e1194]:
+              - text: Pro Basketball (M) · 27 winner field
+              - generic [ref=e1195]: NBA · overround
+            - generic [ref=e1196]: 5¢
+          - generic [ref=e1197] [cursor=pointer]:
+            - generic [ref=e1198]: ●
+            - generic [ref=e1199]:
+              - text: NASCAR Cup Series · main-race · AND26 winner field
+              - generic [ref=e1200]: Motorsport · overround
+            - generic [ref=e1201]: 2¢
+          - generic [ref=e1202] [cursor=pointer]:
+            - generic [ref=e1203]: ●
+            - generic [ref=e1204]:
+              - text: Minnesota vs Texas
+              - generic [ref=e1205]: MLB · overround
+            - generic [ref=e1206]: 2¢
+          - generic [ref=e1207] [cursor=pointer]:
+            - generic [ref=e1208]: ●
+            - generic [ref=e1209]:
+              - text: Tomas Martin Etcheverry vs Daniil Medvedev
+              - generic [ref=e1210]: Tennis · overround
+            - generic [ref=e1211]: 1¢
+          - generic [ref=e1212] [cursor=pointer]:
+            - generic [ref=e1213]: ●
+            - generic [ref=e1214]:
+              - text: Romane Longueville vs Victoria Bosio
+              - generic [ref=e1215]: Tennis · overround
+            - generic [ref=e1216]: 1¢
+          - generic [ref=e1217] [cursor=pointer]:
+            - generic [ref=e1218]: ●
+            - generic [ref=e1219]:
+              - text: BetBoom vs Aurora Gaming
+              - generic [ref=e1220]: Esports · overround
+            - generic [ref=e1221]: 1¢
+          - generic [ref=e1222] [cursor=pointer]:
+            - generic [ref=e1223]: ●
+            - generic [ref=e1224]:
+              - text: Suzan Lamens vs Paula Badosa
+              - generic [ref=e1225]: Tennis · overround
+            - generic [ref=e1226]: 1¢
+          - generic [ref=e184] [cursor=pointer]: REVIEW MOVERS
+          - generic [ref=e1227] [cursor=pointer]:
+            - generic [ref=e1228]: ◐
+            - generic [ref=e1229]:
+              - text: Semifinals — Reach Semifinals (synthetic vs advance)
+              - generic [ref=e1230]: Soccer (World Cup) · rule-dep
+          - generic [ref=e1231] [cursor=pointer]:
+            - generic [ref=e1232]: ◐
+            - generic [ref=e1233]:
+              - text: Runner-Up — Reach Finals (synthetic vs advance)
+              - generic [ref=e1234]: Soccer (World Cup) · rule-dep
+          - generic [ref=e1235] [cursor=pointer]:
+            - generic [ref=e1236]: ◐
+            - generic [ref=e1237]:
+              - text: Runner-Up — Reach Finals (synthetic vs advance)
+              - generic [ref=e1238]: Soccer (World Cup) · rule-dep
+          - generic [ref=e1239] [cursor=pointer]:
+            - generic [ref=e1240]: ◐
+            - generic [ref=e1241]:
+              - text: Semifinals — Reach Semifinals (synthetic vs advance)
+              - generic [ref=e1242]: Soccer (World Cup) · rule-dep
+      - generic [ref=e187]:
+        - generic [ref=e188]:
+          - generic [ref=e189]: "!"
+          - heading "ALERTS" [level=3] [ref=e190]
+          - generic [ref=e191]:
+            - generic "Pop out" [ref=e192] [cursor=pointer]: ⧉
+            - generic "Maximize" [ref=e193] [cursor=pointer]: ▢
+            - generic "Collapse" [ref=e194] [cursor=pointer]: ▁
+            - generic "Remove from this view" [ref=e195] [cursor=pointer]: ✕
+        - generic [ref=e197]: No prior scan baseline yet — alerts appear after the next scan.
+      - generic [ref=e200]:
+        - generic [ref=e201]:
+          - generic [ref=e202]: ≈
+          - heading "RESEARCH" [level=3] [ref=e203]
+          - generic [ref=e204]: read-only · P5
+          - generic [ref=e205]:
+            - generic "Pop out" [ref=e206] [cursor=pointer]: ⧉
+            - generic "Maximize" [ref=e207] [cursor=pointer]: ▢
+            - generic "Collapse" [ref=e208] [cursor=pointer]: ▁
+            - generic "Remove from this view" [ref=e209] [cursor=pointer]: ✕
+        - generic [ref=e210]:
+          - generic [ref=e211]: Read-only research (P5) — derived data only, never feeds actionability.
+          - generic [ref=e212]: OPPORTUNITIES BY SPORT
+          - generic [ref=e213]:
+            - generic [ref=e1244]: NBA
+            - generic [ref=e1246]: Moto
+            - generic [ref=e1248]: MLB
+            - generic [ref=e1250]: Tenn
+            - generic [ref=e1252]: Espo
+            - generic [ref=e1254]: Socc
+            - generic [ref=e1256]: Golf
+            - generic [ref=e1258]: NFL
+          - generic [ref=e214]: BOUNDED-LOSS MIX
+          - generic [ref=e215]: Vertical 213 · Calendar 134. Cheap-NO scope — Championship 0 · Tournament 0 · Event 0.
+  - generic [ref=e216]:
+    - generic [ref=e217]: KALSHI STRUCTURED SCANNER · real viewmodel rows · full column catalog · bounded-loss + cheap-NO splits · read-only over the live snapshot
+    - generic [ref=e218]:
+      - generic [ref=e219]: Ctrl K palette
+      - generic [ref=e220]: 1-6 lens
+      - generic [ref=e221]: J/K rows
+      - generic [ref=e222]: ↵ open
+      - generic [ref=e223]: drag splitters resize
+      - generic [ref=e224]: Ctrl/Shift-click multi-select

@@ -1,0 +1,3 @@
+[     618ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://localhost:5173/node_modules/.vite/deps/chunk-SQIELOP7.js?v=50be2b89:21550
+[     712ms] [WARNING] AG Grid: As of version 32.2.1, using `rowSelection` with the values "single" or "multiple" has been deprecated. Use the object value instead. @ http://localhost:5173/node_modules/.vite/deps/chunk-QTM77JIJ.js?v=50be2b89:709
+[     894ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5173/favicon.ico:0

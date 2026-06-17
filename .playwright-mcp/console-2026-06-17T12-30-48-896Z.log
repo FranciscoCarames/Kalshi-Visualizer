@@ -1,0 +1,29 @@
+[    1291ms] [ERROR] Failed to load resource: net::ERR_NAME_NOT_RESOLVED @ https://cdn.lr-ingest.io/logger-1.min.js:0
+[    1341ms] [WARNING] [WEBSOCKETS] - Subscribing {params: Object, subscriber: bound wsHandlePosition} @ https://kalshi.com/_next/static/chunks/0q~3w5mbasf3y.js?dpl=dpl_7dWU2t55wxyR9wVLtpgDJNykXJtb:3
+[    1367ms] [WARNING] [WEBSOCKETS] - Subscribing {params: Object, subscriber: bound queueWsHandleTicker} @ https://kalshi.com/_next/static/chunks/0q~3w5mbasf3y.js?dpl=dpl_7dWU2t55wxyR9wVLtpgDJNykXJtb:3
+[    1368ms] [WARNING] [WEBSOCKETS] - Subscribing {params: Object, subscriber: bound wsHandleLifecycle} @ https://kalshi.com/_next/static/chunks/0q~3w5mbasf3y.js?dpl=dpl_7dWU2t55wxyR9wVLtpgDJNykXJtb:3
+[    1391ms] [ERROR] Failed to load resource: net::ERR_NAME_NOT_RESOLVED @ https://sr-client-cfg.amplitude.com/config/a80cc4d021d62947ce3cd389ec3f7e2d?config_group=browser:0
+[    1694ms] [ERROR] Failed to load resource: net::ERR_NAME_NOT_RESOLVED @ https://sr-client-cfg.amplitude.com/config/a80cc4d021d62947ce3cd389ec3f7e2d?config_group=browser:0
+[    2966ms] Error: Minified React error #418; visit https://react.dev/errors/418?args[]=HTML&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings.
+    at rX (https://kalshi.com/_next/static/chunks/0i16ot124v9.5.js?dpl=dpl_7dWU2t55wxyR9wVLtpgDJNykXJtb:1:45266)
+    at iu (https://kalshi.com/_next/static/chunks/0i16ot124v9.5.js?dpl=dpl_7dWU2t55wxyR9wVLtpgDJNykXJtb:1:96307)
+    at sd (https://kalshi.com/_next/static/chunks/0i16ot124v9.5.js?dpl=dpl_7dWU2t55wxyR9wVLtpgDJNykXJtb:1:136997)
+    at https://kalshi.com/_next/static/chunks/0i16ot124v9.5.js?dpl=dpl_7dWU2t55wxyR9wVLtpgDJNykXJtb:1:136842
+    at sf (https://kalshi.com/_next/static/chunks/0i16ot124v9.5.js?dpl=dpl_7dWU2t55wxyR9wVLtpgDJNykXJtb:1:136850)
+    at se (https://kalshi.com/_next/static/chunks/0i16ot124v9.5.js?dpl=dpl_7dWU2t55wxyR9wVLtpgDJNykXJtb:1:131990)
+    at sW (https://kalshi.com/_next/static/chunks/0i16ot124v9.5.js?dpl=dpl_7dWU2t55wxyR9wVLtpgDJNykXJtb:1:158669)
+    at sU (https://kalshi.com/_next/static/chunks/0i16ot124v9.5.js?dpl=dpl_7dWU2t55wxyR9wVLtpgDJNykXJtb:1:156883)
+    at sH (https://kalshi.com/_next/static/chunks/0i16ot124v9.5.js?dpl=dpl_7dWU2t55wxyR9wVLtpgDJNykXJtb:1:157227)
+    at https://kalshi.com/_next/static/chunks/0i16ot124v9.5.js?dpl=dpl_7dWU2t55wxyR9wVLtpgDJNykXJtb:1:156512
+[    3013ms] [WARNING] [WEBSOCKETS] - Subscribing {params: Object, subscriber: bound queueWsHandleTicker} @ https://kalshi.com/_next/static/chunks/0q~3w5mbasf3y.js?dpl=dpl_7dWU2t55wxyR9wVLtpgDJNykXJtb:3
+[    3014ms] [WARNING] [WEBSOCKETS] - Found existing subscription {match: Object, subscription: Object} @ https://kalshi.com/_next/static/chunks/0q~3w5mbasf3y.js?dpl=dpl_7dWU2t55wxyR9wVLtpgDJNykXJtb:3
+[    3015ms] [WARNING] [WEBSOCKETS] - Subscribing {params: Object, subscriber: bound wsHandleLifecycle} @ https://kalshi.com/_next/static/chunks/0q~3w5mbasf3y.js?dpl=dpl_7dWU2t55wxyR9wVLtpgDJNykXJtb:3
+[    3016ms] [WARNING] [WEBSOCKETS] - Found existing subscription {match: Object, subscription: Object} @ https://kalshi.com/_next/static/chunks/0q~3w5mbasf3y.js?dpl=dpl_7dWU2t55wxyR9wVLtpgDJNykXJtb:3
+[    4113ms] [WARNING] LogRocket: script could not load. Check that you have a valid network connection. @ https://kalshi.com/_next/static/chunks/0q~3w5mbasf3y.js?dpl=dpl_7dWU2t55wxyR9wVLtpgDJNykXJtb:3
+[    4239ms] [WARNING] [GSI_LOGGER]: Your client application uses one of the Google One Tap prompt UI status methods that may stop functioning when FedCM becomes mandatory. Refer to the migration guide to update your code accordingly and opt-in to FedCM to test your changes. Learn more: https://developers.google.com/identity/gsi/web/guides/fedcm-migration?s=dc#display_moment and https://developers.google.com/identity/gsi/web/guides/fedcm-migration?s=dc#skipped_moment @ https://kalshi.com/_next/static/chunks/0q~3w5mbasf3y.js?dpl=dpl_7dWU2t55wxyR9wVLtpgDJNykXJtb:3
+[    4266ms] [ERROR] Failed to load resource: net::ERR_NAME_NOT_RESOLVED @ https://sr-client-cfg.amplitude.com/config/a80cc4d021d62947ce3cd389ec3f7e2d?config_group=browser:0
+[    4268ms] [ERROR] Access to fetch at 'https://ai-summary.kalshi.co/timeline-points?event_id=KXWCROUND-26QUAR&market_ticker=KXWCROUND-26QUAR-ENG&market_ticker=KXWCROUND-26QUAR-BRA' from origin 'https://kalshi.com' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ https://kalshi.com/markets/kxwcround/world-cup-reach-round/kxwcround-26quar?op_market_ticker=KXWCROUND-26QUAR-ENG&op_order_side=no:0
+[    4268ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://ai-summary.kalshi.co/timeline-points?event_id=KXWCROUND-26QUAR&market_ticker=KXWCROUND-26QUAR-ENG&market_ticker=KXWCROUND-26QUAR-BRA:0
+[    4268ms] [LOG] Failed to fetch timeline points: TypeError: Failed to fetch @ https://kalshi.com/_next/static/chunks/0q~3w5mbasf3y.js?dpl=dpl_7dWU2t55wxyR9wVLtpgDJNykXJtb:3
+[    4486ms] [ERROR] Not signed in with the identity provider. @ https://kalshi.com/markets/kxwcround/world-cup-reach-round/kxwcround-26quar?op_market_ticker=KXWCROUND-26QUAR-ENG&op_order_side=no:0
+[    4500ms] [ERROR] Failed to load resource: net::ERR_NAME_NOT_RESOLVED @ https://wa.onelink.me/v1/onelink:0

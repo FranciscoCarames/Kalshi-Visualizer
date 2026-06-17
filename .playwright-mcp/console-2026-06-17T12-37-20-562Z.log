@@ -1,0 +1,13 @@
+[  229650ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:8000/api/terminal/orderbook?ticker=KXNBA-27-ATL:0
+[  233398ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:8000/api/terminal/feed:0
+[  233652ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:8000/api/terminal/orderbook?ticker=KXNBA-27-ATL:0
+[  239625ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:8000/api/terminal/orderbook?ticker=KXNBA-27-ATL:0
+[  243380ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:8000/api/terminal/feed:0
+[  243626ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:8000/api/terminal/orderbook?ticker=KXNBA-27-ATL:0
+[  249633ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:8000/api/terminal/orderbook?ticker=KXNBA-27-ATL:0
+[ 3380134ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:8000/api/terminal/orderbook?ticker=KXNBA-27-ATL:0
+[ 3383342ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:8000/api/terminal/feed:0
+[ 3383622ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:8000/api/terminal/orderbook?ticker=KXNBA-27-ATL:0
+[ 3389592ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:8000/api/terminal/orderbook?ticker=KXNBA-27-ATL:0
+[ 3393377ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:8000/api/terminal/feed:0
+[ 3393591ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:8000/api/terminal/orderbook?ticker=KXNBA-27-ATL:0

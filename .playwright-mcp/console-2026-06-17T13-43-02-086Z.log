@@ -1,0 +1,4 @@
+[    1285ms] [ERROR] Failed to load resource: net::ERR_NAME_NOT_RESOLVED @ https://ogads-pa.clients6.google.com/$rpc/google.internal.onegoogle.asyncdata.v1.AsyncDataService/GetAsyncData:0
+[  384704ms] [WARNING] AG Grid: warning #29 tried to call sizeColumnsToFit() but the grid is coming back with zero width, maybe the grid is not visible yet on the screen? 
+See https://www.ag-grid.com/javascript-data-grid/errors/29?_version_=34.2.0 @ http://127.0.0.1:8000/dashboard/_nicegui/3.12.1/esm/3bacee81d94ad4f90becff832b897bfb/index.js:0
+[  415183ms] [LOG] reloading because implicit handshake failed for clientId e2e53e4c-fb7e-43e7-ae81-7b4de80bf09a @ http://127.0.0.1:8000/dashboard/_nicegui/3.12.1/static/nicegui.js:467

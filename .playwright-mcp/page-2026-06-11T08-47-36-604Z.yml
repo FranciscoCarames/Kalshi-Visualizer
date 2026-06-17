@@ -1,0 +1,297 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e3]: KALSHI·WS
+    - generic [ref=e4]:
+      - generic [ref=e5] [cursor=pointer]:
+        - text: Default
+        - generic [ref=e6]: ✕
+      - generic [ref=e7] [cursor=pointer]:
+        - text: WC Desk
+        - generic [ref=e8]: ✕
+      - generic [ref=e9] [cursor=pointer]:
+        - text: Tennis
+        - generic [ref=e10]: ✕
+    - generic [ref=e11] [cursor=pointer]: +
+    - 'button "Lens: Blended ▾" [ref=e12] [cursor=pointer]'
+    - button "Save layout" [ref=e13] [cursor=pointer]
+    - button "◐ Theme" [ref=e14] [cursor=pointer]
+  - generic [ref=e15]:
+    - generic [ref=e16]:
+      - text: Scan
+      - generic [ref=e18]: idle · 12s
+    - generic [ref=e19]:
+      - text: Contracts
+      - generic [ref=e20]: 1,204
+    - generic [ref=e21]:
+      - text: Checks
+      - generic [ref=e22]: "747"
+    - generic [ref=e23]:
+      - text: Req
+      - generic [ref=e24]: "49"
+    - generic [ref=e25]:
+      - text: Exchange
+      - generic [ref=e27]: Open
+    - generic [ref=e28]:
+      - text: Auto-scan
+      - generic [ref=e29]: on · 30s
+    - generic [ref=e30]:
+      - text: Failed
+      - generic [ref=e32]: "1"
+    - generic [ref=e33]:
+      - text: DB
+      - generic [ref=e34]: 42 MB
+    - generic [ref=e35]: Gross · top-of-book · $1 basis · read-only (ladder is analysis, never orders)
+  - generic [ref=e36]:
+    - generic [ref=e37]:
+      - generic "Opportunity" [ref=e38] [cursor=pointer]: ▤
+      - generic "Research Lab" [ref=e39] [cursor=pointer]: 📈
+      - generic "Operations" [ref=e40] [cursor=pointer]: ⚙
+      - generic "Watchlist" [ref=e41] [cursor=pointer]: ★
+      - generic "Alerts" [ref=e42] [cursor=pointer]: 🔔
+    - generic [ref=e43]:
+      - generic [ref=e44]:
+        - generic [ref=e45]:
+          - generic [ref=e46] [cursor=pointer]: Opportunity Blotter
+          - generic [ref=e47] [cursor=pointer]: Review
+          - generic [ref=e48] [cursor=pointer]: Blocked
+          - generic [ref=e49]:
+            - generic "float" [ref=e50] [cursor=pointer]: ⧉
+            - generic "maximize" [ref=e51] [cursor=pointer]: ▢
+            - generic "close" [ref=e52] [cursor=pointer]: ✕
+        - table [ref=e55]:
+          - rowgroup [ref=e56]:
+            - row "Bkt Sport Participant / match Setup Edge¢ ROI% Units P$ Trad" [ref=e57]:
+              - columnheader [ref=e58]
+              - columnheader "Bkt" [ref=e59]
+              - columnheader "Sport" [ref=e60]
+              - columnheader "Participant / match" [ref=e61]
+              - columnheader "Setup" [ref=e62]
+              - columnheader "Edge¢" [ref=e63]
+              - columnheader "ROI%" [ref=e64]
+              - columnheader "Units" [ref=e65]
+              - columnheader "P$" [ref=e66]
+              - columnheader "Trad" [ref=e67]
+          - rowgroup [ref=e68]:
+            - row "NEW ACT Tennis J. Sinner Reach Final ⊇ Win Containment 7 14.0 140 9.80 Yes" [ref=e69] [cursor=pointer]:
+              - cell "NEW" [ref=e70]
+              - cell "ACT" [ref=e71]
+              - cell "Tennis" [ref=e72]
+              - cell "J. Sinner Reach Final ⊇ Win" [ref=e73]
+              - cell "Containment" [ref=e74]
+              - cell "7" [ref=e75]
+              - cell "14.0" [ref=e76]
+              - cell "140" [ref=e77]
+              - cell "9.80" [ref=e78]
+              - cell "Yes" [ref=e79]
+            - row "▲ ACT Soccer Brazil v Serbia Home/Away/Tie 3-way Dutch overround 11 5.5 90 9.90 Yes" [ref=e80] [cursor=pointer]:
+              - cell "▲" [ref=e81]:
+                - generic [ref=e82]: ▲
+              - cell "ACT" [ref=e83]
+              - cell "Soccer" [ref=e84]
+              - cell "Brazil v Serbia Home/Away/Tie 3-way" [ref=e85]
+              - cell "Dutch overround" [ref=e86]
+              - cell "11" [ref=e87]
+              - cell "5.5" [ref=e88]
+              - cell "90" [ref=e89]
+              - cell "9.90" [ref=e90]
+              - cell "Yes" [ref=e91]
+            - row "ACT NHL Oilers @ Panthers Head-to-head Game dutch 4 4.0 200 8.00 Yes" [ref=e92] [cursor=pointer]:
+              - cell [ref=e93]
+              - cell "ACT" [ref=e94]
+              - cell "NHL" [ref=e95]
+              - cell "Oilers @ Panthers Head-to-head" [ref=e96]
+              - cell "Game dutch" [ref=e97]
+              - cell "4" [ref=e98]
+              - cell "4.0" [ref=e99]
+              - cell "200" [ref=e100]
+              - cell "8.00" [ref=e101]
+              - cell "Yes" [ref=e102]
+            - row "↺ ACT Esports FaZe v Vitality Map-1 draw-free Map dutch 3 3.0 60 1.80 Yes" [ref=e103] [cursor=pointer]:
+              - cell "↺" [ref=e104]
+              - cell "ACT" [ref=e105]
+              - cell "Esports" [ref=e106]
+              - cell "FaZe v Vitality Map-1 draw-free" [ref=e107]
+              - cell "Map dutch" [ref=e108]
+              - cell "3" [ref=e109]
+              - cell "3.0" [ref=e110]
+              - cell "60" [ref=e111]
+              - cell "1.80" [ref=e112]
+              - cell "Yes" [ref=e113]
+            - row "REV Tennis C. Alcaraz Score bundle ≡ Win Synthetic 5 5.0 40 2.00 Review" [ref=e114] [cursor=pointer]:
+              - cell [ref=e115]
+              - cell "REV" [ref=e116]
+              - cell "Tennis" [ref=e117]
+              - cell "C. Alcaraz Score bundle ≡ Win" [ref=e118]
+              - cell "Synthetic" [ref=e119]
+              - cell "5" [ref=e120]
+              - cell "5.0" [ref=e121]
+              - cell "40" [ref=e122]
+              - cell "2.00" [ref=e123]
+              - cell "Review" [ref=e124]
+            - row "NEW REV NBA Boston Celtics Reach SF ≡ Win Conf Equivalence 4 6.0 50 2.00 Rule" [ref=e125] [cursor=pointer]:
+              - cell "NEW" [ref=e126]
+              - cell "REV" [ref=e127]
+              - cell "NBA" [ref=e128]
+              - cell "Boston Celtics Reach SF ≡ Win Conf" [ref=e129]
+              - cell "Equivalence" [ref=e130]
+              - cell "4" [ref=e131]
+              - cell "6.0" [ref=e132]
+              - cell "50" [ref=e133]
+              - cell "2.00" [ref=e134]
+              - cell "Rule" [ref=e135]
+            - row "BLK MLB LA Dodgers Playoffs ⊇ Win WS Containment 6 — — — No" [ref=e136] [cursor=pointer]:
+              - cell [ref=e137]
+              - cell "BLK" [ref=e138]
+              - cell "MLB" [ref=e139]
+              - cell "LA Dodgers Playoffs ⊇ Win WS" [ref=e140]
+              - cell "Containment" [ref=e141]
+              - cell "6" [ref=e142]
+              - cell "—" [ref=e143]
+              - cell "—" [ref=e144]
+              - cell "—" [ref=e145]
+              - cell "No" [ref=e146]
+      - generic [ref=e147]:
+        - generic [ref=e148]:
+          - generic [ref=e149] [cursor=pointer]: MD Ladder
+          - generic [ref=e150] [cursor=pointer]: Chart
+          - generic [ref=e151]:
+            - generic [ref=e152] [cursor=pointer]: ⧉
+            - generic [ref=e153] [cursor=pointer]: ▢
+            - generic [ref=e154] [cursor=pointer]: ✕
+        - generic [ref=e155]:
+          - generic [ref=e156]: J. Sinner · Tennis
+          - generic [ref=e157]: Reach Final · KXATPADVANCE
+        - table [ref=e159]:
+          - rowgroup [ref=e160]:
+            - row "Bid size Px ¢ Ask size" [ref=e161]:
+              - columnheader "Bid size" [ref=e162]
+              - columnheader "Px ¢" [ref=e163]
+              - columnheader "Ask size" [ref=e164]
+          - rowgroup [ref=e165]:
+            - row "43 560" [ref=e166] [cursor=pointer]:
+              - cell [ref=e167]
+              - cell "43" [ref=e168]
+              - cell "560" [ref=e169]: "560"
+            - row "42 476" [ref=e171] [cursor=pointer]:
+              - cell [ref=e172]
+              - cell "42" [ref=e173]
+              - cell "476" [ref=e174]: "476"
+            - row "41 392" [ref=e176] [cursor=pointer]:
+              - cell [ref=e177]
+              - cell "41" [ref=e178]
+              - cell "392" [ref=e179]: "392"
+            - row "40 ◀ watch trigger 308" [ref=e181] [cursor=pointer]:
+              - cell [ref=e182]
+              - cell "40 ◀ watch trigger" [ref=e183]:
+                - text: "40"
+                - generic [ref=e184]: ◀ watch trigger
+              - cell "308" [ref=e185]: "308"
+            - row "39 224" [ref=e187] [cursor=pointer]:
+              - cell [ref=e188]
+              - cell "39" [ref=e189]
+              - cell "224" [ref=e190]: "224"
+            - row "140 38 140" [ref=e192] [cursor=pointer]:
+              - cell "140" [ref=e193]: "140"
+              - cell "38" [ref=e195]
+              - cell "140" [ref=e196]: "140"
+            - row "238 37" [ref=e198] [cursor=pointer]:
+              - cell "238" [ref=e199]: "238"
+              - cell "37" [ref=e201]
+              - cell [ref=e202]
+            - row "336 36" [ref=e203] [cursor=pointer]:
+              - cell "336" [ref=e204]: "336"
+              - cell "36" [ref=e206]
+              - cell [ref=e207]
+            - row "434 35" [ref=e208] [cursor=pointer]:
+              - cell "434" [ref=e209]: "434"
+              - cell "35" [ref=e211]
+              - cell [ref=e212]
+            - row "532 34" [ref=e213] [cursor=pointer]:
+              - cell "532" [ref=e214]: "532"
+              - cell "34" [ref=e216]
+              - cell [ref=e217]
+            - row "630 33" [ref=e218] [cursor=pointer]:
+              - cell "630" [ref=e219]: "630"
+              - cell "33" [ref=e221]
+              - cell [ref=e222]
+        - generic [ref=e223]:
+          - generic [ref=e224]: Touch 38¢ · eff fill@50 ≈ 94¢
+          - generic [ref=e225]: max fill 140
+      - generic [ref=e226]:
+        - generic [ref=e227]:
+          - generic [ref=e228] [cursor=pointer]: Analysis Ticket
+          - generic [ref=e229] [cursor=pointer]: Rules
+          - generic [ref=e230] [cursor=pointer]: Evidence
+          - generic [ref=e231]:
+            - generic [ref=e232] [cursor=pointer]: ⧉
+            - generic [ref=e233] [cursor=pointer]: ▢
+            - generic [ref=e234] [cursor=pointer]: ✕
+        - generic [ref=e237]:
+          - generic [ref=e238]:
+            - generic [ref=e239]: ACT
+            - generic [ref=e240]: J. Sinner
+            - generic [ref=e241]: Reach Final ⊇ Win
+            - generic [ref=e242]: Containment
+          - generic [ref=e243]:
+            - generic [ref=e244]: Buy-only plan
+            - generic [ref=e245]:
+              - generic [ref=e246]: "YES"
+              - generic [ref=e247]: Reach Final · KXATPADVANCE
+              - generic [ref=e248]: 38¢
+              - generic [ref=e249]: ×140
+            - generic [ref=e250]:
+              - generic [ref=e251]: "NO"
+              - generic [ref=e252]: Win · KXFOMEN
+              - generic [ref=e253]: 55¢
+              - generic [ref=e254]: ×140
+            - generic [ref=e255]:
+              - generic [ref=e256]: Cost / $1
+              - generic [ref=e257]: 93¢
+              - generic [ref=e258]: Floor
+              - generic [ref=e259]: 100¢
+              - generic [ref=e260]: Worst / best
+              - generic [ref=e261]: "-7 / +7¢"
+              - generic [ref=e262]: Break-even
+              - generic [ref=e263]: 93%
+              - generic [ref=e264]: Fillable
+              - generic [ref=e265]: "140"
+            - generic [ref=e266]: Evidence
+            - generic [ref=e267]:
+              - generic [ref=e268]: Scan
+              - generic [ref=e269]: scan_8841
+              - generic [ref=e270]: Quote ts
+              - generic [ref=e271]: 12s
+              - generic [ref=e272]: Rules
+              - generic [ref=e273]: r3
+          - generic [ref=e274]:
+            - generic [ref=e275]: Decomposed confidence — 9 dim
+            - generic [ref=e276]:
+              - generic [ref=e277]: Data
+              - generic [ref=e280]: "95"
+            - generic [ref=e281]:
+              - generic [ref=e282]: Quote
+              - generic [ref=e285]: "92"
+            - generic [ref=e286]:
+              - generic [ref=e287]: Liq
+              - generic [ref=e290]: "78"
+            - generic [ref=e291]:
+              - generic [ref=e292]: Exec
+              - generic [ref=e295]: "80"
+            - generic [ref=e296]:
+              - generic [ref=e297]: Settle
+              - generic [ref=e300]: "88"
+            - generic [ref=e301]:
+              - generic [ref=e302]: Strat
+              - generic [ref=e305]: "96"
+            - generic [ref=e306]:
+              - generic [ref=e307]: Model
+              - generic [ref=e310]: "60"
+            - generic [ref=e311]:
+              - generic [ref=e312]: Compar
+              - generic [ref=e315]: "84"
+            - generic [ref=e316]:
+              - generic [ref=e317]: Cplx
+              - generic [ref=e320]: "90"
+            - generic [ref=e321]: Why flagged
+            - generic [ref=e322]: Firm child bid (Reach Final) exceeds parent ask (Win) by 7¢.
+        - generic [ref=e323]: "Blueprint: dockable panels host the roadmap — blotter §9 · MD ladder = depth §8 · ticket = TradeCard+EvidencePack+9-dim confidence §8/§3/§7 · rail surfaces §9.1 · alerts §10 · workspaces = saved views §9.3."

@@ -1,0 +1,245 @@
+- main [ref=e5]:
+  - generic [ref=e6]:
+    - generic [ref=e7]: Kalshi Opportunity Engine — Cross-Sport
+    - generic [ref=e8]: Opportunities across all sports, ranked best→worst. Core series, gross of fees — NOT all of Kalshi.
+    - generic [ref=e9]:
+      - generic [ref=e12] [cursor=pointer]:
+        - generic [ref=e13]:
+          - generic: Sport
+          - generic "Filter by sport" [ref=e14]:
+            - combobox "Sport" [ref=e15]
+        - generic [ref=e17]: arrow_drop_down
+      - generic [ref=e20] [cursor=pointer]:
+        - generic [ref=e21]:
+          - generic: Tournament
+          - generic "Filter by tournament" [ref=e22]:
+            - combobox "Tournament" [ref=e23]
+        - generic [ref=e25]: arrow_drop_down
+      - generic [ref=e28]:
+        - generic [ref=e29]:
+          - generic: Players / matches
+          - combobox "Filter by players or matches" [ref=e31]
+        - generic [ref=e33] [cursor=pointer]: arrow_drop_down
+      - generic [ref=e37]:
+        - generic: Min size
+        - spinbutton "Minimum tradable size" [ref=e38]
+      - button "Refresh snapshot" [ref=e39] [cursor=pointer]:
+        - generic [ref=e41]: Refresh snapshot
+      - button "Clear all filters" [ref=e42] [cursor=pointer]:
+        - generic [ref=e44]: Clear filters
+      - button "Open settings" [ref=e45] [cursor=pointer]:
+        - img [ref=e47]: settings
+    - generic [ref=e48]: Data 10:59:32 WEST · age 5932s ⚠ STALE · 882 opportunities · 62 series · 0 failed · 1,621 contracts scanned · 747 checks tested · 145 Kalshi requests
+    - generic [ref=e49]: "Actionable: 6 shown · Speculative: 192 shown · Near-miss: 129 shown"
+    - separator [ref=e50]
+    - generic [ref=e51]:
+      - generic [ref=e52]: Actionable — executable gross edges
+      - button [ref=e53] [cursor=pointer]:
+        - img [ref=e55]: view_column
+    - generic [ref=e56]: Firm, sized, currently-tradable gross pricing discrepancies. Gross of fees.
+    - generic "Actionable opportunities" [ref=e57]:
+      - table [ref=e59]:
+        - rowgroup [ref=e60]:
+          - row "Sport Participant / match Detail Action plan Gross edge ¢ ROI % Max units Max gross profit Tradable Caveat" [ref=e61]:
+            - columnheader [ref=e62]
+            - columnheader [ref=e63]
+            - columnheader "Sport" [ref=e64] [cursor=pointer]:
+              - text: Sport
+              - generic [ref=e65]: arrow_upward
+            - columnheader "Participant / match" [ref=e66] [cursor=pointer]:
+              - text: Participant / match
+              - generic [ref=e67]: arrow_upward
+            - columnheader "Detail" [ref=e68]
+            - columnheader "Action plan" [ref=e69]
+            - columnheader "Gross edge ¢" [ref=e70] [cursor=pointer]:
+              - text: Gross edge ¢
+              - generic [ref=e71]: arrow_upward
+            - columnheader "ROI %" [ref=e72] [cursor=pointer]:
+              - text: ROI %
+              - generic [ref=e73]: arrow_upward
+            - columnheader "Max units" [ref=e74] [cursor=pointer]:
+              - text: Max units
+              - generic [ref=e75]: arrow_upward
+            - columnheader "Max gross profit" [ref=e76] [cursor=pointer]:
+              - text: Max gross profit
+              - generic [ref=e77]: arrow_upward
+            - columnheader "Tradable" [ref=e78]
+            - columnheader "Caveat" [ref=e79]
+        - rowgroup [ref=e80]:
+          - row "MLB Chicago C vs Colorado overround Buy NO — Chicago C @ 42¢ + Buy NO — Colorado @ 55¢ 3 3.1 814 24.42 Yes" [ref=e81]:
+            - cell [ref=e82]:
+              - checkbox [ref=e83] [cursor=pointer]:
+                - img [ref=e86]
+            - cell [ref=e88]
+            - cell "MLB" [ref=e89]
+            - cell "Chicago C vs Colorado" [ref=e90]
+            - cell "overround" [ref=e91]
+            - cell "Buy NO — Chicago C @ 42¢ + Buy NO — Colorado @ 55¢" [ref=e92]
+            - cell "3" [ref=e93]:
+              - generic [ref=e94]: "3"
+            - cell "3.1" [ref=e95]
+            - cell "814" [ref=e96]
+            - cell "24.42" [ref=e97]
+            - cell "Yes" [ref=e98]
+            - cell [ref=e99]:
+              - status [ref=e100]: Settlement caveat
+          - row "MLB Atlanta vs Chicago WS overround Buy NO — Atlanta @ 39¢ + Buy NO — Chicago WS @ 59¢ 2 2 0.1 0 Yes" [ref=e101]:
+            - cell [ref=e102]:
+              - checkbox [ref=e103] [cursor=pointer]:
+                - img [ref=e106]
+            - cell [ref=e108]
+            - cell "MLB" [ref=e109]
+            - cell "Atlanta vs Chicago WS" [ref=e110]
+            - cell "overround" [ref=e111]
+            - cell "Buy NO — Atlanta @ 39¢ + Buy NO — Chicago WS @ 59¢" [ref=e112]
+            - cell "2" [ref=e113]:
+              - generic [ref=e114]: "2"
+            - cell "2" [ref=e115]
+            - cell "0.1" [ref=e116]
+            - cell "0" [ref=e117]
+            - cell "Yes" [ref=e118]
+            - cell [ref=e119]:
+              - status [ref=e120]: Settlement caveat
+          - row "Tennis Mika Stojsavljevic vs Marta Kostyuk overround Buy NO — Mika Stojsavljevic @ 86¢ + Buy NO — Marta Kostyuk @ 13¢ 1 1 5.51 0.06 Yes" [ref=e121]:
+            - cell [ref=e122]:
+              - checkbox [ref=e123] [cursor=pointer]:
+                - img [ref=e126]
+            - cell [ref=e128]
+            - cell "Tennis" [ref=e129]
+            - cell "Mika Stojsavljevic vs Marta Kostyuk" [ref=e130]
+            - cell "overround" [ref=e131]
+            - cell "Buy NO — Mika Stojsavljevic @ 86¢ + Buy NO — Marta Kostyuk @ 13¢" [ref=e132]
+            - cell "1" [ref=e133]:
+              - generic [ref=e134]: "1"
+            - cell "1" [ref=e135]
+            - cell "5.51" [ref=e136]
+            - cell "0.06" [ref=e137]
+            - cell "Yes" [ref=e138]
+            - cell [ref=e139]
+          - row "MLB Milwaukee vs A's overround Buy NO — Milwaukee @ 45¢ + Buy NO — A's @ 54¢ 1 1 30 0.3 Yes" [ref=e140]:
+            - cell [ref=e141]:
+              - checkbox [ref=e142] [cursor=pointer]:
+                - img [ref=e145]
+            - cell [ref=e147]
+            - cell "MLB" [ref=e148]
+            - cell "Milwaukee vs A's" [ref=e149]
+            - cell "overround" [ref=e150]
+            - cell "Buy NO — Milwaukee @ 45¢ + Buy NO — A's @ 54¢" [ref=e151]
+            - cell "1" [ref=e152]:
+              - generic [ref=e153]: "1"
+            - cell "1" [ref=e154]
+            - cell "30" [ref=e155]
+            - cell "0.3" [ref=e156]
+            - cell "Yes" [ref=e157]
+            - cell [ref=e158]:
+              - status [ref=e159]: Settlement caveat
+          - row "NHL CAR Hurricanes vs VGK Golden Knights overround Buy NO — CAR Hurricanes @ 43¢ + Buy NO — VGK Golden Knights @ 56¢ 1 1 49.23 0.49 Yes" [ref=e160]:
+            - cell [ref=e161]:
+              - checkbox [ref=e162] [cursor=pointer]:
+                - img [ref=e165]
+            - cell [ref=e167]
+            - cell "NHL" [ref=e168]
+            - cell "CAR Hurricanes vs VGK Golden Knights" [ref=e169]
+            - cell "overround" [ref=e170]
+            - cell "Buy NO — CAR Hurricanes @ 43¢ + Buy NO — VGK Golden Knights @ 56¢" [ref=e171]
+            - cell "1" [ref=e172]:
+              - generic [ref=e173]: "1"
+            - cell "1" [ref=e174]
+            - cell "49.23" [ref=e175]
+            - cell "0.49" [ref=e176]
+            - cell "Yes" [ref=e177]
+            - cell [ref=e178]:
+              - status [ref=e179]: Settlement caveat
+          - row "Tennis Gauthier Onclin vs Fabian Marozsan overround Buy NO — Gauthier Onclin @ 60¢ + Buy NO — Fabian Marozsan @ 39¢ 1 1 105 1.05 Yes" [ref=e180]:
+            - cell [ref=e181]:
+              - checkbox [ref=e182] [cursor=pointer]:
+                - img [ref=e185]
+            - cell [ref=e187]
+            - cell "Tennis" [ref=e188]
+            - cell "Gauthier Onclin vs Fabian Marozsan" [ref=e189]
+            - cell "overround" [ref=e190]
+            - cell "Buy NO — Gauthier Onclin @ 60¢ + Buy NO — Fabian Marozsan @ 39¢" [ref=e191]
+            - cell "1" [ref=e192]:
+              - generic [ref=e193]: "1"
+            - cell "1" [ref=e194]
+            - cell "105" [ref=e195]
+            - cell "1.05" [ref=e196]
+            - cell "Yes" [ref=e197]
+            - cell [ref=e198]
+      - generic [ref=e199]:
+        - generic [ref=e200]:
+          - generic [ref=e201]: "Records per page:"
+          - generic [ref=e204] [cursor=pointer]:
+            - generic [ref=e206]:
+              - generic [ref=e207]: "15"
+              - combobox "15" [ref=e208]
+            - generic [ref=e210]: arrow_drop_down
+        - generic [ref=e212]: 1-6 of 6
+    - generic [ref=e213]:
+      - generic [ref=e214]: Review Required — settlement-dependent
+      - button [ref=e215] [cursor=pointer]:
+        - img [ref=e217]: view_column
+    - generic [ref=e218]: Real, executable-looking edges whose legs may not settle together (e.g. an exact-score bundle vs the match winner) — verify the settlement rules first; never auto-tradable.
+    - generic "Review-required opportunities" [ref=e219]:
+      - table [ref=e221]:
+        - rowgroup [ref=e222]:
+          - row "Sport Participant / match Detail Action plan Gross edge ¢ ROI % Max units Max gross profit Tradable Caveat" [ref=e223]:
+            - columnheader [ref=e224]
+            - columnheader [ref=e225]
+            - columnheader "Sport" [ref=e226] [cursor=pointer]:
+              - text: Sport
+              - generic [ref=e227]: arrow_upward
+            - columnheader "Participant / match" [ref=e228] [cursor=pointer]:
+              - text: Participant / match
+              - generic [ref=e229]: arrow_upward
+            - columnheader "Detail" [ref=e230]
+            - columnheader "Action plan" [ref=e231]
+            - columnheader "Gross edge ¢" [ref=e232] [cursor=pointer]:
+              - text: Gross edge ¢
+              - generic [ref=e233]: arrow_upward
+            - columnheader "ROI %" [ref=e234] [cursor=pointer]:
+              - text: ROI %
+              - generic [ref=e235]: arrow_upward
+            - columnheader "Max units" [ref=e236] [cursor=pointer]:
+              - text: Max units
+              - generic [ref=e237]: arrow_upward
+            - columnheader "Max gross profit" [ref=e238] [cursor=pointer]:
+              - text: Max gross profit
+              - generic [ref=e239]: arrow_upward
+            - columnheader "Tradable" [ref=e240]
+            - columnheader "Caveat" [ref=e241]
+        - rowgroup
+      - generic [ref=e242]:
+        - generic [ref=e243]: warning
+        - text: No review-required opportunities in the current filters.
+    - generic [ref=e244]: Discrepancies that exist but aren't tradable now (no firm size / an inactive leg).
+    - generic "Bounded-loss bets section" [ref=e245]:
+      - button "Expand" [ref=e247] [cursor=pointer]:
+        - generic [ref=e248]:
+          - generic [ref=e249]: unfold_more
+          - generic [ref=e250]: Bounded-Loss Bets — capped downside, convex upside (9)
+          - button [ref=e252]:
+            - img [ref=e254]: view_column
+        - generic [ref=e256]: keyboard_arrow_down
+    - generic "Overpriced books section" [ref=e257]:
+      - button "Expand" [ref=e259] [cursor=pointer]:
+        - generic [ref=e260]:
+          - generic [ref=e261]: unfold_more
+          - generic [ref=e262]: Overpriced Books — flat guaranteed loss, watch-only (128)
+          - button [ref=e264]:
+            - img [ref=e266]: view_column
+        - generic [ref=e268]: keyboard_arrow_down
+    - button "Expand \"Recently Actionable — recently left the set\"" [ref=e271] [cursor=pointer]:
+      - generic [ref=e273]: Recently Actionable — recently left the set
+      - generic [ref=e275]: keyboard_arrow_down
+    - button "Expand \"Market Telemetry — Liquidity & Volatility (context, not signals)\"" [ref=e278] [cursor=pointer]:
+      - generic [ref=e280]: Market Telemetry — Liquidity & Volatility (context, not signals)
+      - generic [ref=e282]: keyboard_arrow_down
+    - generic "Selected detail" [ref=e283]:
+      - button "Expand \"Selected Detail — click a row\"" [ref=e285] [cursor=pointer]:
+        - generic [ref=e287]: Selected Detail — click a row
+        - generic [ref=e289]: keyboard_arrow_down
+    - generic "Diagnostics and debug" [ref=e290]:
+      - button "Expand \"Diagnostics & Debug\"" [ref=e292] [cursor=pointer]:
+        - generic [ref=e294]: Diagnostics & Debug
+        - generic [ref=e296]: keyboard_arrow_down

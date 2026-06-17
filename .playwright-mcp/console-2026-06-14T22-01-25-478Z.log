@@ -1,0 +1,7 @@
+[     376ms] [ERROR] AG Grid: error #272 No AG Grid modules are registered! It is recommended to start with all Community features via the AllCommunityModule:
+                    
+    import { ModuleRegistry, AllCommunityModule } from 'ag-grid-community';
+    
+    ModuleRegistry.registerModules([ AllCommunityModule ]);
+     
+Visit https://www.ag-grid.com/react-data-grid/errors/272?_version_=33.3.2 @ http://127.0.0.1:8000/terminal/assets/index-JKcESMzo.js:49

@@ -1,0 +1,230 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - generic [ref=e5] [cursor=pointer]: OPP
+      - generic [ref=e6] [cursor=pointer]: RES
+      - generic [ref=e7] [cursor=pointer]: OPS
+      - generic [ref=e8] [cursor=pointer]: ALRT
+    - generic [ref=e9]:
+      - generic [ref=e10]: ">"
+      - textbox "SEARCH — functions · participants · lenses · layouts (press / or Ctrl-K)" [ref=e11]:
+        - /placeholder: SEARCH — functions · participants · lenses · layouts   (press / or Ctrl-K)
+      - generic [ref=e12]: Ctrl K
+      - button "<GO>" [ref=e13] [cursor=pointer]
+    - generic [ref=e14]: — · KALSHI
+  - generic [ref=e15]:
+    - generic [ref=e16]:
+      - generic [ref=e17]: ●
+      - text: "SNAPSHOT #— · — ago"
+    - generic [ref=e18]:
+      - text: Opps
+      - generic [ref=e19]: "0"
+    - generic [ref=e20]:
+      - text: Contracts
+      - generic [ref=e21]: "0"
+    - generic [ref=e22]:
+      - text: Checks
+      - generic [ref=e23]: "0"
+    - generic [ref=e24]:
+      - text: Requests
+      - generic [ref=e25]: "0"
+    - generic [ref=e26]:
+      - text: Sports
+      - generic [ref=e27]: "0"
+    - generic [ref=e28]:
+      - generic [ref=e29]: ●
+      - text: Failed
+      - generic [ref=e30]: "0"
+    - generic [ref=e31]:
+      - generic [ref=e32]: ●
+      - text: ALRT
+      - generic [ref=e33]: "0"
+    - generic [ref=e34]: GROSS · TOP-OF-BOOK · $1 BASIS · READ-ONLY · NO ORDER ENTRY · NOT RISKLESS · fees est. only
+  - generic [ref=e35]:
+    - generic [ref=e36] [cursor=pointer]:
+      - generic [ref=e37]: 1)
+      - text: OPP
+    - generic [ref=e38] [cursor=pointer]:
+      - generic [ref=e39]: 2)
+      - text: RES
+    - generic [ref=e40] [cursor=pointer]:
+      - generic [ref=e41]: 3)
+      - text: OPS
+    - generic [ref=e42]:
+      - generic [ref=e43]: LAYOUT
+      - combobox [ref=e44]:
+        - option "Default" [selected]
+        - option "Triage"
+        - option "Inspect"
+        - option "Research"
+        - option "Blotter full"
+      - button "＋ ADD ▾" [ref=e45] [cursor=pointer]
+      - button "▦ ELEMENTS ▾" [ref=e46] [cursor=pointer]
+      - generic [ref=e47]: LENS
+      - generic [ref=e48]:
+        - button "BLENDED" [ref=e49] [cursor=pointer]
+        - button "EDGE¢" [ref=e50] [cursor=pointer]
+        - button "SPREAD" [ref=e51] [cursor=pointer]
+        - button "OUTRIGHT+SPREAD" [ref=e52] [cursor=pointer]
+        - button "IMPLIED EV" [ref=e53] [cursor=pointer]
+        - button "RIPENESS" [ref=e54] [cursor=pointer]
+      - button "⚙ SETTINGS ▾" [ref=e56] [cursor=pointer]
+      - button "▷ SCAN" [ref=e57] [cursor=pointer]
+      - button "⚡" [ref=e58] [cursor=pointer]
+      - button "◐" [ref=e59] [cursor=pointer]
+  - generic [ref=e60]:
+    - generic [ref=e61]: SPORT
+    - 'button "Sport: All ▾" [ref=e63] [cursor=pointer]'
+    - generic [ref=e64]: TOURNAMENT
+    - 'button "Tournament: All ▾" [ref=e66] [cursor=pointer]'
+    - generic [ref=e67]: PARTICIPANT
+    - textbox "contains…" [ref=e68]
+    - generic [ref=e69]: MIN SIZE
+    - spinbutton [ref=e70]: "0"
+    - generic [ref=e71] [cursor=pointer]:
+      - checkbox "Tradable-only" [ref=e72]
+      - text: Tradable-only
+    - button "⬇ CSV" [ref=e73] [cursor=pointer]
+    - generic [ref=e74]: 0 shown
+    - generic [ref=e75] [cursor=pointer]: clear
+  - generic [ref=e76]:
+    - generic [ref=e77] [cursor=pointer]:
+      - generic [ref=e78]: ACTIONABLE
+      - generic [ref=e79]: "0"
+      - generic [ref=e80]: executable now
+    - generic [ref=e81] [cursor=pointer]:
+      - generic [ref=e82]: REVIEW
+      - generic [ref=e83]: "0"
+      - generic [ref=e84]: settlement-dep
+    - generic [ref=e85] [cursor=pointer]:
+      - generic [ref=e86]: BLOCKED
+      - generic [ref=e87]: "0"
+      - generic [ref=e88]: not fillable
+    - generic [ref=e89] [cursor=pointer]:
+      - generic [ref=e90]: BOUNDED-LOSS
+      - generic [ref=e91]: "0"
+      - generic [ref=e92]: can lose money
+    - generic [ref=e93] [cursor=pointer]:
+      - generic [ref=e94]: NEAR-MISS
+      - generic [ref=e95]: "0"
+      - generic [ref=e96]: watchlist
+    - generic [ref=e97] [cursor=pointer]:
+      - generic [ref=e98]: QUALIFIER
+      - generic [ref=e99]: "0"
+      - generic [ref=e100]: WC setups
+    - generic [ref=e101] [cursor=pointer]:
+      - generic [ref=e102]: CHEAP-NO
+      - generic [ref=e103]: "0"
+      - generic [ref=e104]: NO fades
+    - generic [ref=e105] [cursor=pointer]:
+      - generic [ref=e106]: DATA-QUALITY
+      - generic [ref=e107]: "0"
+      - generic [ref=e108]: diagnostic
+  - generic [ref=e110]:
+    - generic [ref=e111]:
+      - generic [ref=e113]:
+        - generic [ref=e114]:
+          - generic [ref=e115]: "1"
+          - heading "BLOTTER" [level=3] [ref=e116]
+          - generic [ref=e117]: click row · J/K · ENTER · drag splitters · ⚙ columns
+          - generic [ref=e118]:
+            - generic "Pop out" [ref=e119] [cursor=pointer]: ⧉
+            - generic "Maximize" [ref=e120] [cursor=pointer]: ▢
+            - generic "Collapse" [ref=e121] [cursor=pointer]: ▁
+            - generic "Remove from this view" [ref=e122] [cursor=pointer]: ✕
+        - generic [ref=e123]:
+          - generic [ref=e124]:
+            - generic [ref=e125] [cursor=pointer]: EXECUTABLE 0 firm · gross edge
+            - generic [ref=e126] [cursor=pointer]: SPECULATIVE 0 bounded-loss · can lose money
+            - generic [ref=e127] [cursor=pointer]: DIAGNOSTIC 0 review-only · data quality
+          - generic [ref=e128]:
+            - generic [ref=e129] [cursor=pointer]: ACTIONABLE0
+            - generic [ref=e130] [cursor=pointer]: REVIEW0
+            - generic [ref=e131] [cursor=pointer]: BLOCKED0
+            - generic [ref=e132] [cursor=pointer]: ⚙ columns ▾
+          - generic [ref=e134]: No rows in this section for the current filters.
+          - generic [ref=e135]: Showing 0 · 8 cols · engine order
+      - generic [ref=e138]:
+        - generic [ref=e139]:
+          - generic [ref=e140]: "2"
+          - heading "INSPECTOR" [level=3] [ref=e141]
+          - generic [ref=e142]: read-only · buy-only · gross
+          - generic [ref=e143]:
+            - generic "Pop out" [ref=e144] [cursor=pointer]: ⧉
+            - generic "Maximize" [ref=e145] [cursor=pointer]: ▢
+            - generic "Collapse" [ref=e146] [cursor=pointer]: ▁
+            - generic "Remove from this view" [ref=e147] [cursor=pointer]: ✕
+        - generic [ref=e148]:
+          - generic [ref=e149] [cursor=pointer]: TRADE CARD
+          - generic [ref=e150] [cursor=pointer]: PARTICIPANT DETAIL
+          - generic [ref=e151] [cursor=pointer]: FORMULAS
+        - generic [ref=e153]: Click a blotter row to load the trade card — legs · economics · evidence.
+    - generic [ref=e157]:
+      - generic [ref=e158]:
+        - generic [ref=e159]: "3"
+        - heading "DEPTH LADDER" [level=3] [ref=e160]
+        - generic [ref=e161]: top-of-book + derived
+        - generic [ref=e162]:
+          - generic "Pop out" [ref=e163] [cursor=pointer]: ⧉
+          - generic "Maximize" [ref=e164] [cursor=pointer]: ▢
+          - generic "Collapse" [ref=e165] [cursor=pointer]: ▁
+          - generic "Remove from this view" [ref=e166] [cursor=pointer]: ✕
+      - generic [ref=e167]: READ-ONLY · TOP-OF-BOOK + DERIVED · POLL-REFRESHED · LIVE BOOK = FUTURE
+      - generic [ref=e168]: —
+    - generic [ref=e170]:
+      - generic [ref=e172]:
+        - generic [ref=e173]:
+          - generic [ref=e174]: ★
+          - heading "RECENTLY ACTIONABLE" [level=3] [ref=e175]
+          - generic [ref=e176]:
+            - generic "Pop out" [ref=e177] [cursor=pointer]: ⧉
+            - generic "Maximize" [ref=e178] [cursor=pointer]: ▢
+            - generic "Collapse" [ref=e179] [cursor=pointer]: ▁
+            - generic "Remove from this view" [ref=e180] [cursor=pointer]: ✕
+        - generic [ref=e183] [cursor=pointer]: REVIEW MOVERS
+      - generic [ref=e186]:
+        - generic [ref=e187]:
+          - generic [ref=e188]: "!"
+          - heading "ALERTS" [level=3] [ref=e189]
+          - generic [ref=e190]:
+            - generic "Pop out" [ref=e191] [cursor=pointer]: ⧉
+            - generic "Maximize" [ref=e192] [cursor=pointer]: ▢
+            - generic "Collapse" [ref=e193] [cursor=pointer]: ▁
+            - generic "Remove from this view" [ref=e194] [cursor=pointer]: ✕
+        - generic [ref=e195]:
+          - generic [ref=e198]:
+            - generic [ref=e199]: became executable — —
+            - generic [ref=e200]: firm both legs
+          - generic [ref=e203]:
+            - generic [ref=e204]: bucket changed — → Review · rule-check
+            - generic [ref=e205]: settlement check
+          - generic [ref=e208]:
+            - generic [ref=e209]: series failed — 0 series
+            - generic [ref=e210]: coverage partial
+          - generic [ref=e213]:
+            - generic [ref=e214]: new bounded-loss — —
+            - generic [ref=e215]: watchlist
+      - generic [ref=e218]:
+        - generic [ref=e219]:
+          - generic [ref=e220]: ≈
+          - heading "RESEARCH" [level=3] [ref=e221]
+          - generic [ref=e222]: read-only · P5
+          - generic [ref=e223]:
+            - generic "Pop out" [ref=e224] [cursor=pointer]: ⧉
+            - generic "Maximize" [ref=e225] [cursor=pointer]: ▢
+            - generic "Collapse" [ref=e226] [cursor=pointer]: ▁
+            - generic "Remove from this view" [ref=e227] [cursor=pointer]: ✕
+        - generic [ref=e228]:
+          - generic [ref=e229]: Read-only research (P5) — derived data only, never feeds actionability.
+          - generic [ref=e230]: OPPORTUNITIES BY SPORT
+          - generic [ref=e232]: BOUNDED-LOSS MIX
+          - generic [ref=e233]: Vertical 0 · Calendar 0. Cheap-NO scope — Championship 0 · Tournament 0 · Event 0.
+  - generic [ref=e234]:
+    - generic [ref=e235]: TERMINAL PRO · real viewmodel rows · full column catalog · bounded-loss + cheap-NO splits · read-only over the live snapshot
+    - generic [ref=e236]:
+      - generic [ref=e237]: Ctrl K palette
+      - generic [ref=e238]: 1-6 lens
+      - generic [ref=e239]: J/K rows
+      - generic [ref=e240]: ↵ open
+      - generic [ref=e241]: drag splitters resize
+      - generic [ref=e242]: Ctrl/Shift-click multi-select

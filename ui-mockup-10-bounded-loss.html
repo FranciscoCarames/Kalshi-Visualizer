@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="amber">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kalshi Workstation — Mockup 10 · BOUNDED-LOSS WORKBENCH</title>
+<style>
+/* ===== Mockup 10: BOUNDED-LOSS WORKBENCH — thinkorswim option-chain framing =====
+   A SEPARATE area from the strict executable-inconsistency blotter (mockup 8). These are bounded-RISK,
+   convex candidates — NOT executable arbitrage, NOT calibrated probability. Reuses the Terminal Pro
+   palette + shared OPPS data. Mockup only; running app untouched.
+   LANGUAGE DISCIPLINE: no "riskless"/"locked"/"true arbitrage"; no fake Greeks; conditional ratio is
+   shown as "—" because parent/child CONDITIONAL probability is not present in the sample data. */
+:root{
+  --bg:#000; --bg1:#070705; --bg2:#0d0c09; --panel:#0a0a08; --line:#1b1910; --line2:#2a2616; --hover:#14120a;
+  --amber:#ffb000; --amber-d:#7a5500; --orange:#ff7b00; --green:#33ff7a; --red:#ff453a; --cyan:#43d9ff; --violet:#b69bff;
+  --tx:#e8c878; --tx2:#b79a52; --tx3:#7a6a3a; --white:#f6efe0;
+  --mono:'Consolas','SF Mono','DejaVu Sans Mono',monospace; --sans:'Segoe UI',system-ui,sans-serif;
+}
+html[data-theme="hc"]{
+  --bg:#05070a; --bg1:#0b0e13; --bg2:#11151c; --panel:#0c1016; --line:#243042; --line2:#33425a; --hover:#161c26;
+  --tx:#e9eef5; --tx2:#aebccd; --tx3:#71839a; --white:#fff; --amber:#ffc233; --amber-d:#8a6a18;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--tx);font-family:var(--mono);font-size:12px;line-height:1.4;height:100vh;overflow:hidden;display:flex;flex-direction:column;
+  background-image:repeating-linear-gradient(0deg,rgba(255,176,0,.018) 0 1px,transparent 1px 3px)}
+html[data-theme="hc"] body{background-image:none}
+::-webkit-scrollbar{width:9px;height:9px}::-webkit-scrollbar-thumb{background:var(--line2)}
+.amber{color:var(--amber)}.green{color:var(--green)}.red{color:var(--red)}.cyan{color:var(--cyan)}.violet{color:var(--violet)}.white{color:var(--white)}.dim{color:var(--tx3)}
+.sans{font-family:var(--sans)}
+
+.cmdline{display:flex;align-items:center;background:var(--bg1);border-bottom:2px solid var(--amber-d);height:32px;flex:0 0 auto}
+.cmdline .badge{padding:0 11px;font-weight:800;font-size:11px;color:#000;background:var(--violet);height:100%;display:flex;align-items:center;letter-spacing:.5px}
+.cmdline .ttl{padding:0 12px;color:var(--white);font-weight:700;letter-spacing:.5px}
+.cmdline .ttl .sub{color:var(--tx3);font-size:10px;font-weight:400}
+.cmdline .right{margin-left:auto;display:flex;gap:6px;padding:0 8px}
+.tbtn{background:var(--bg2);border:1px solid var(--line2);color:var(--tx2);font-size:10.5px;padding:3px 9px;cursor:pointer;font-family:var(--mono)}
+.tbtn:hover{color:var(--white);background:var(--hover)}
+
+/* loud non-executable banner */
+.banner{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:rgba(182,155,255,.07);border-bottom:1px solid var(--violet);padding:5px 12px;font-size:10.5px;color:var(--tx2);flex:0 0 auto;font-family:var(--sans)}
+.banner b{color:var(--violet)}
+.banner .chip{font-size:9px;font-weight:800;letter-spacing:.4px;padding:1px 6px;border-radius:3px;border:1px solid var(--violet);color:var(--violet);font-family:var(--mono)}
+.banner .chip.red{border-color:var(--red);color:var(--red)}
+.banner .chip.amber{border-color:var(--amber);color:var(--amber)}
+
+.statline{display:flex;align-items:center;background:var(--bg2);border-bottom:1px solid var(--line);font-size:10.5px;min-height:22px;flex:0 0 auto}
+.statline .s{padding:0 9px;border-right:1px solid var(--line);height:22px;display:flex;align-items:center;gap:5px}
+.statline b{color:var(--white)}
+.statline .discl{border-right:none;color:var(--amber)!important;font-weight:600;margin-left:auto}
+
+.wrap{flex:1;min-height:0;display:flex;flex-direction:column;padding:6px;gap:6px}
+.chainwrap{border:1px solid var(--line2);background:var(--panel);flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+.ph{display:flex;align-items:center;gap:8px;padding:0 9px;height:25px;background:linear-gradient(180deg,#14120a,#0a0908);border-bottom:1px solid var(--line2);flex:0 0 auto}
+html[data-theme="hc"] .ph{background:var(--bg2)}
+.ph .n{color:#000;background:var(--violet);font-weight:800;font-size:9px;padding:0 4px}
+.ph h3{margin:0;font-size:11px;font-weight:700;letter-spacing:.8px;color:var(--violet)}
+.ph .meta{margin-left:auto;color:var(--tx3);font-size:9px}
+.pbody{flex:1;overflow:auto;min-height:0}
+
+/* option-chain table */
+table.chain{border-collapse:collapse;font-size:11px;width:100%}
+table.chain thead th{position:sticky;top:0;z-index:5;background:var(--bg2);color:var(--tx3);font-weight:400;font-size:8.5px;letter-spacing:.4px;text-transform:uppercase;padding:4px 8px;border-bottom:1px solid var(--line2);text-align:right;white-space:nowrap}
+table.chain thead th.l{text-align:left}
+table.chain thead .grp{font-size:8px;color:var(--violet);letter-spacing:.6px;text-align:center;padding:2px 6px;border-bottom:1px solid var(--line)}
+table.chain td{padding:3px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+table.chain td.l{text-align:left}
+table.chain tbody tr{cursor:pointer}
+table.chain tbody tr:hover td{background:var(--hover)}
+table.chain tbody tr.sel td{background:#160f24}
+html[data-theme="hc"] table.chain tbody tr.sel td{background:#15203a}
+.grpcell{background:rgba(182,155,255,.04)}
+.nm{color:var(--white);font-weight:600;font-family:var(--sans)}
+.sub{color:var(--tx3);font-size:9px;font-family:var(--sans)}
+.pos{color:var(--green)}.neg{color:var(--red)}
+.qbadge{font-size:8.5px;font-weight:700;padding:0 4px;border-radius:2px}
+.qbadge.Tight{background:rgba(51,255,122,.15);color:var(--green)}.qbadge.OK{background:rgba(255,176,0,.15);color:var(--amber)}.qbadge.Wide{background:rgba(255,123,0,.15);color:var(--orange)}.qbadge.os{background:rgba(255,69,58,.15);color:var(--red)}
+.mode{font-size:9px;padding:0 5px;border:1px solid var(--line2);border-radius:9px;color:var(--tx2)}
+.mode.vertical{border-color:var(--cyan);color:var(--cyan)}.mode.calendar{border-color:var(--amber);color:var(--amber)}
+.lbl{font-size:8.5px;font-weight:800;letter-spacing:.3px;padding:1px 5px;border-radius:3px;border:1px solid}
+.lbl.cand{border-color:var(--violet);color:var(--violet);background:rgba(182,155,255,.08)}
+.lbl.rev{border-color:var(--amber);color:var(--amber);background:rgba(255,176,0,.08)}
+.lbl.unc{border-color:var(--tx3);color:var(--tx3)}
+.lbl.blk{border-color:var(--red);color:var(--red);background:rgba(255,69,58,.08)}
+.tip{border-bottom:1px dotted var(--tx3);cursor:help}
+
+/* per-row payoff diagram (svg) */
+.pay svg{display:block}
+
+/* detail strip */
+.detail{flex:0 0 auto;border:1px solid var(--line2);background:var(--panel);min-height:128px;display:grid;grid-template-columns:1.1fr 1fr 1fr;gap:0}
+.detail .c{padding:8px 12px;border-right:1px solid var(--line)}
+.detail .c:last-child{border-right:none}
+.sect{color:var(--violet);font-size:9px;letter-spacing:1px;margin:0 0 5px;border-bottom:1px solid var(--line);padding-bottom:2px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:2px 12px;font-size:10.5px}.kv .l{color:var(--tx3)}.kv .v{text-align:right;color:var(--white)}
+.note{font-size:10px;color:var(--tx2);line-height:1.5;font-family:var(--sans)}.note b{color:var(--white)}
+.bigpay{display:flex;align-items:center;justify-content:center;height:100%}
+
+.foot{flex:0 0 auto;display:flex;gap:14px;align-items:center;border-top:1px solid var(--line2);background:var(--bg1);padding:4px 10px;font-size:9.5px;color:var(--tx3)}
+.foot .help{margin-left:auto;display:flex;gap:10px}.foot .help b{color:var(--tx2)}
+</style>
+</head>
+<body>
+
+<div class="cmdline">
+  <div class="badge">BWB</div>
+  <div class="ttl">BOUNDED-LOSS WORKBENCH <span class="sub">— convex / bounded-risk candidates · option-chain view</span></div>
+  <div class="right"><button class="tbtn" id="themeBtn">◐ Theme</button></div>
+</div>
+
+<div class="banner">
+  <b>NOT a strict executable inconsistency.</b>
+  <span class="chip">RISK-BUDGET CANDIDATE</span>
+  <span class="chip amber">REVIEW-ONLY</span>
+  <span class="chip red">CAN LOSE MONEY</span>
+  <span class="chip red">NOT EXECUTABLE ARBITRAGE</span>
+  <span>Gross / top-of-book · fees, position limits &amp; full depth not modeled · uncalibrated — these live in their own area, kept apart from the Actionable blotter.</span>
+</div>
+
+<div class="statline" id="statline"></div>
+
+<div class="wrap">
+  <div class="chainwrap">
+    <div class="ph"><span class="n">10</span><h3>BOUNDED-LOSS CHAIN</h3><span class="meta">click a row for the payoff detail · grouped by participant</span></div>
+    <div class="pbody"><table class="chain" id="chain"></table></div>
+  </div>
+  <div class="detail" id="detail">
+    <div class="c"><div class="sect">SELECT A ROW</div><div class="note">Pick a structure above to see its bounded payoff, parent/child legs, and confidence labeling.</div></div>
+    <div class="c"></div><div class="c"></div>
+  </div>
+</div>
+
+<div class="foot">
+  <div><b class="amber">UNCALIBRATED · GROSS · TOP-OF-BOOK · READ-ONLY</b> — bounded-loss candidates are display-only; not fair value, not net of fees, never an actionability input · mockup preview</div>
+  <div class="help"><span><b>J/K</b> rows</span></div>
+</div>
+
+<script>
+"use strict";
+const OPPS=[
+ {id:1,b:"act",sport:"Tennis",name:"J. Sinner",sub:"Reach Final ⊇ Win Tournament",setup:"Containment",edge:7,roi:14.0,trad:"Yes",cav:"—",sev:"",q:"Tight",cost:93,floor:100,worst:-7,best:7,be:93,fill:140,touch:38,mode:"vertical",legs:[["YES","Reach Final · KXATPADVANCE","38¢",140],["NO","Win · KXFOMEN","55¢",140]],why:"Firm child bid (Reach Final) exceeds the parent ask (Win) by 7¢.",wrong:"A walkover advances without a match win — light rules check.",conf:{Data:95,Quote:92,Liquidity:78,Execution:80,Settlement:88,Strategy:96,Model:60,Comparability:84,Complexity:90}},
+ {id:5,b:"rev",sport:"NBA",name:"Boston Celtics",sub:"Reach SF ≡ Win Conference",setup:"Equivalence",edge:4,roi:6.0,trad:"Rule-dependent",cav:"RULE_CHECK_REQ",sev:"rev",q:"OK",cost:104,floor:100,worst:-4,best:4,be:104,fill:50,touch:71,mode:"vertical",legs:[["YES","Reach SF · KXNBA","71¢",50],["NO","Win Conf · KXNBA","33¢",50]],why:"Equivalence implies a cross, but settlement wording differs by a token.",wrong:"RULE_MISMATCH on a light token diff.",conf:{Data:88,Quote:76,Liquidity:64,Execution:60,Settlement:55,Strategy:80,Model:48,Comparability:72,Complexity:70}},
+ {id:6,b:"rev",sport:"Tennis",name:"C. Alcaraz",sub:"Exact-score bundle ≡ Win",setup:"Synthetic",edge:5,roi:5.0,trad:"Review rules",cav:"SETTLE_CHECK_REQ",sev:"rev",q:"Wide",cost:95,floor:100,worst:-5,best:5,be:95,fill:40,touch:54,mode:"vertical",legs:[["YES","3-0 · KXATPEXACT","12¢",40],["YES","3-1","18¢",40],["YES","3-2","21¢",40],["NO","Match winner","54¢",40]],why:"A bundle of MECE scorelines replicates 'they win' — priced 5¢ under the hedge.",wrong:"On a retirement the score legs settle to FMP — needs rule confirmation; never a dutch book.",conf:{Data:84,Quote:58,Liquidity:50,Execution:48,Settlement:45,Strategy:78,Model:42,Comparability:60,Complexity:55}},
+ {id:7,b:"blk",sport:"MLB",name:"LA Dodgers",sub:"Reach Playoffs ⊇ Win WS",setup:"Containment",edge:6,roi:0,trad:"No",cav:"Blocked: no size",sev:"blk",q:"One-sided",cost:0,floor:100,worst:0,best:0,be:0,fill:0,touch:60,mode:"calendar",legs:[["YES","Reach Playoffs · KXMLB","—",0],["NO","Win WS · KXMLB","—",0]],why:"Display cross exists but the firm side has zero resting size.",wrong:"No fill possible at top-of-book.",conf:{Data:80,Quote:30,Liquidity:10,Execution:15,Settlement:78,Strategy:82,Model:40,Comparability:55,Complexity:75}},
+];
+const $=(s,r=document)=>r.querySelector(s);const $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const g=(o,k,d)=>{const v=o?o[k]:undefined;return (v===undefined||v===null)?d:v;};
+let state={sel:1};
+function cssv(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim();}
+
+/* parent = broader (first YES leg); child = deeper (last leg). Real leg display prices only. */
+const parentPx=o=>{const l=g(o,'legs',[]).find(x=>x[0]==='YES');return l?l[2]:'—';};
+const childPx=o=>{const l=g(o,'legs',[]);if(!l.length)return '—';const last=l[l.length-1];return last[2];};
+const coverFloor=o=>g(o,'cost',0)-g(o,'floor',0);              /* premium paid over the guaranteed floor */
+const maxLoss=o=>Math.abs(g(o,'worst',0));
+const maxUp=o=>g(o,'best',0);
+const ur=o=>{const ml=maxLoss(o);return ml?(maxUp(o)/ml):(maxUp(o)?Infinity:0);};
+const confLabel=o=>o.b==="blk"?["blk","Blocked"]: o.b==="act"&&o.trad==="Yes"?["cand","Risk-budget candidate"]: o.b==="rev"?["rev","Review-only"]:["unc","Uncalibrated"];
+
+/* per-row mini payoff diagram: bounded loss (left) → break-even → bounded gain (right) */
+function payoff(o,w=120,h=30){
+  const ml=maxLoss(o),mu=maxUp(o),scale=Math.max(ml,mu,4);
+  const z=w/2, gx=mu/scale*(w/2-2), lx=ml/scale*(w/2-2);
+  return `<svg width="${w}" height="${h}" class="pay">
+    <line x1="0" y1="${h/2}" x2="${w}" y2="${h/2}" stroke="${cssv('--line2')}"/>
+    <line x1="${z}" y1="2" x2="${z}" y2="${h-2}" stroke="${cssv('--tx3')}" stroke-dasharray="2"/>
+    <rect x="${z-lx}" y="${h/2}" width="${lx}" height="${(h/2-3)}" fill="rgba(255,69,58,.45)"/>
+    <rect x="${z}" y="3" width="${gx}" height="${(h/2-3)}" fill="rgba(51,255,122,.5)"/>
+    <text x="2" y="${h-3}" fill="${cssv('--red')}" font-size="7">-${ml}</text>
+    <text x="${w-2}" y="9" fill="${cssv('--green')}" font-size="7" text-anchor="end">+${mu}</text>
+  </svg>`;
+}
+
+function statline(){$("#statline").innerHTML=
+  '<span class="s green">● SCAN IDLE · last 12s</span>'+
+  '<span class="s">Bounded structures <b>'+OPPS.length+'</b></span>'+
+  '<span class="s violet">● Risk-budget candidates <b>'+OPPS.filter(o=>confLabel(o)[0]==='cand').length+'</b></span>'+
+  '<span class="s amber">● Review-only <b>'+OPPS.filter(o=>o.b==='rev').length+'</b></span>'+
+  '<span class="s discl">Bounded-loss ≠ executable · displayed apart from the Actionable blotter</span>';}
+
+function chain(){
+  const HEAD=`<thead>
+    <tr><th class="l grpcell" rowspan="2">Participant / structure</th>
+      <th class="grp" colspan="4">RISK / REWARD</th>
+      <th class="grp" colspan="3">LEG PRICES</th>
+      <th class="grp" colspan="3">QUALITY</th></tr>
+    <tr>
+      <th>Cost over floor</th><th>Max loss</th><th>Max upside</th><th>Upside:risk</th>
+      <th>Parent px</th><th>Child px</th><th>Cond. ratio</th>
+      <th>Quote health</th><th>Resolution</th><th>Confidence</th></tr></thead>`;
+  let body='<tbody>';
+  OPPS.forEach(o=>{
+    const cf=coverFloor(o), urr=ur(o), lab=confLabel(o);
+    const qcls=o.q==="One-sided"?"os":o.q;
+    body+=`<tr data-id="${o.id}" class="${state.sel===o.id?'sel':''}">
+      <td class="l grpcell"><span class="nm">${o.name}</span> <span class="sub">${o.sub}</span><br><span class="sub">${o.sport} · ${o.setup}</span></td>
+      <td class="${cf<=0?'pos':'neg'}">${cf>0?'+':''}${cf}¢</td>
+      <td class="neg">${maxLoss(o)?'-'+maxLoss(o)+'¢':'—'}</td>
+      <td class="pos">${maxUp(o)?'+'+maxUp(o)+'¢':'—'}</td>
+      <td>${urr===Infinity?'∞':urr?urr.toFixed(2)+'×':'—'}</td>
+      <td>${parentPx(o)}</td>
+      <td>${childPx(o)}</td>
+      <td><span class="tip" title="Conditional probability P(child│parent) is NOT available in the sample data — not synthesized from payoff fields.">—</span></td>
+      <td><span class="qbadge ${qcls}">${o.q}</span></td>
+      <td><span class="mode ${o.mode}">${o.mode}</span></td>
+      <td><span class="lbl ${lab[0]}">${lab[1]}</span></td>
+    </tr>`;
+  });
+  $("#chain").innerHTML=HEAD+body+'</tbody>';
+  $$('#chain tr[data-id]').forEach(tr=>tr.onclick=()=>select(+tr.dataset.id));
+}
+
+function detail(o){
+  const legs=g(o,'legs',[]).map(l=>`<div style="display:flex;gap:7px;font-size:10.5px;padding:1px 0"><span class="${l[0]==='YES'?'pos':'neg'}" style="font-weight:700">${l[0]}</span><span style="flex:1;color:var(--tx2);font-family:var(--sans)">${l[1]}</span><span class="white">${l[2]}</span></div>`).join("");
+  const lab=confLabel(o);
+  $("#detail").innerHTML=`
+    <div class="c">
+      <div class="sect">${o.name} · ${o.setup} <span class="lbl ${lab[0]}" style="float:right">${lab[1]}</span></div>
+      ${legs}
+      <div class="kv" style="margin-top:6px">
+        <span class="l">Cost / floor</span><span class="v">${o.cost||'—'}¢ / ${o.floor}¢</span>
+        <span class="l">Cost over floor</span><span class="v ${coverFloor(o)<=0?'pos':'neg'}">${coverFloor(o)}¢</span>
+        <span class="l">Resolution mode</span><span class="v"><span class="mode ${o.mode}">${o.mode}</span> ${o.mode==='vertical'?'(same horizon)':'(spans seasons / calendar)'}</span>
+      </div>
+    </div>
+    <div class="c">
+      <div class="sect">BOUNDED PAYOFF</div>
+      <div class="bigpay">${payoff(o,260,72)}</div>
+      <div class="kv"><span class="l">Max loss</span><span class="v neg">-${maxLoss(o)}¢</span>
+        <span class="l">Max upside</span><span class="v pos">+${maxUp(o)}¢</span>
+        <span class="l">Upside:risk</span><span class="v">${ur(o)===Infinity?'∞':ur(o)?ur(o).toFixed(2)+'×':'—'}</span>
+        <span class="l">Break-even</span><span class="v">${o.be}%</span></div>
+    </div>
+    <div class="c">
+      <div class="sect">LABELING &amp; LIMITS</div>
+      <div class="note"><b>${lab[1]}.</b> ${o.why}<br><b>Risk:</b> ${o.wrong}</div>
+      <div class="note" style="margin-top:6px;color:var(--tx3)">Conditional ratio P(child│parent): <b>not in sample data</b> — shown as "—", never synthesized from payoff fields. No fair value, no Greeks, no calibration. Gross / top-of-book.</div>
+    </div>`;
+}
+function select(id){state.sel=id;chain();detail(OPPS.find(o=>o.id===id));}
+
+function init(){
+  statline();chain();detail(OPPS.find(o=>o.id===state.sel));
+  $("#themeBtn").onclick=()=>{const h=document.documentElement;h.dataset.theme=h.dataset.theme==='amber'?'hc':'amber';chain();detail(OPPS.find(o=>o.id===state.sel));};
+  document.addEventListener('keydown',e=>{
+    const ids=OPPS.map(o=>o.id);let i=ids.indexOf(state.sel);
+    if(e.key==="j"){i=Math.min(i+1,ids.length-1);select(ids[i]);}
+    if(e.key==="k"){i=Math.max(i-1,0);select(ids[i]);}
+  });
+}
+document.addEventListener('DOMContentLoaded',init);
+</script>
+</body>
+</html>

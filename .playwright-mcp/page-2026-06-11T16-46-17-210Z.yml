@@ -1,0 +1,733 @@
+- generic [ref=e1]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - generic [ref=e5]:
+        - generic [ref=e6] [cursor=pointer]: OPP
+        - generic [ref=e7] [cursor=pointer]: RES
+        - generic [ref=e8] [cursor=pointer]: OPS
+        - generic [ref=e9] [cursor=pointer]: ALRT
+      - generic [ref=e10]:
+        - generic [ref=e11]: ">"
+        - textbox "FUNCTION OR TICKER, THEN <GO>" [ref=e12]
+        - button "<GO>" [ref=e13] [cursor=pointer]
+      - generic [ref=e14]: KALSHI<WS>
+    - generic [ref=e15]:
+      - generic [ref=e16]:
+        - generic [ref=e17]: ●
+        - text: SCAN IDLE · 12s
+      - generic [ref=e18]:
+        - text: Contracts
+        - generic [ref=e19]: 1,204
+      - generic [ref=e20]:
+        - text: Checks
+        - generic [ref=e21]: "747"
+      - generic [ref=e22]:
+        - text: Req
+        - generic [ref=e23]: "49"
+      - generic [ref=e24]:
+        - generic [ref=e25]: ●
+        - text: Exchange Open
+      - generic [ref=e26]:
+        - text: Auto-scan
+        - generic [ref=e27]: on · 30s
+      - generic [ref=e28]:
+        - generic [ref=e29]: ●
+        - text: Failed
+        - generic [ref=e30]: "1"
+      - generic [ref=e31]:
+        - text: DB
+        - generic [ref=e32]: 42 MB
+      - generic [ref=e33]: GROSS · TOP-OF-BOOK · $1 BASIS · READ-ONLY · NO ORDER ENTRY · NOT RISKLESS
+    - generic [ref=e34]:
+      - generic [ref=e35] [cursor=pointer]:
+        - generic [ref=e36]: 1)
+        - text: OPP
+      - generic [ref=e37] [cursor=pointer]:
+        - generic [ref=e38]: 2)
+        - text: RES
+      - generic [ref=e39] [cursor=pointer]:
+        - generic [ref=e40]: 3)
+        - text: OPS
+      - generic [ref=e41]:
+        - generic [ref=e42]: LENS
+        - generic [ref=e43]:
+          - button "BLENDED" [ref=e44] [cursor=pointer]
+          - button "EDGE" [ref=e45] [cursor=pointer]
+          - button "ROI" [ref=e46] [cursor=pointer]
+          - button "IMPLIED EV" [ref=e47] [cursor=pointer]
+    - generic [ref=e48]:
+      - button "ACT-NOW 4 executable" [ref=e49] [cursor=pointer]:
+        - generic [ref=e50]: ACT-NOW
+        - generic [ref=e51]: "4"
+        - generic [ref=e52]: executable
+      - button "REVIEW 2 settlement" [ref=e53] [cursor=pointer]:
+        - generic [ref=e54]: REVIEW
+        - generic [ref=e55]: "2"
+        - generic [ref=e56]: settlement
+      - button "NEW 2 this scan" [ref=e57] [cursor=pointer]:
+        - generic [ref=e58]: NEW
+        - generic [ref=e59]: "2"
+        - generic [ref=e60]: this scan
+      - button "MOVERS 3 edge moved" [ref=e61] [cursor=pointer]:
+        - generic [ref=e62]: MOVERS
+        - generic [ref=e63]: "3"
+        - generic [ref=e64]: edge moved
+      - button "STALE 1 one-sided" [ref=e65] [cursor=pointer]:
+        - generic [ref=e66]: STALE
+        - generic [ref=e67]: "1"
+        - generic [ref=e68]: one-sided
+      - button "FAILED 1 KXMOTOGP" [ref=e69] [cursor=pointer]:
+        - generic [ref=e70]: FAILED
+        - generic [ref=e71]: "1"
+        - generic [ref=e72]: KXMOTOGP
+      - button "TOP LENS +7¢ Sinner" [ref=e73] [cursor=pointer]:
+        - generic [ref=e74]: TOP LENS
+        - generic [ref=e75]: +7¢
+        - generic [ref=e76]: Sinner
+    - generic [ref=e77]:
+      - generic [ref=e78]:
+        - generic [ref=e79]:
+          - generic [ref=e80]: "1"
+          - heading "BLOTTER" [level=3] [ref=e81]
+          - generic [ref=e82]: streaming · click row → DES + ladder
+        - generic [ref=e83]:
+          - generic [ref=e84] [cursor=pointer]: ACTIONABLE
+          - generic [ref=e85] [cursor=pointer]: REVIEW
+          - generic [ref=e86] [cursor=pointer]: BLOCKED
+          - generic [ref=e87] [cursor=pointer]: RESEARCH
+        - generic [ref=e90]:
+          - grid [ref=e92]:
+            - rowgroup [ref=e94]:
+              - row "SPT Participant / match Setup Edge¢ ROI% Units Profit$ Tradable Caveat" [ref=e95]:
+                - columnheader [ref=e96]:
+                  - text: 
+                  - text: 
+                  - generic:    
+                - columnheader "SPT" [ref=e98]:
+                  - text: 
+                  - generic [ref=e100] [cursor=pointer]: SPT
+                  - text: 
+                  - generic:    
+                - columnheader "Participant / match" [ref=e101]:
+                  - text: 
+                  - generic [ref=e103] [cursor=pointer]: Participant / match
+                  - text: 
+                  - generic:    
+                - columnheader "Setup" [ref=e104]:
+                  - text: 
+                  - generic [ref=e106] [cursor=pointer]: Setup
+                  - text: 
+                  - generic:    
+                - columnheader "Edge¢" [ref=e107]:
+                  - text: 
+                  - generic [ref=e109] [cursor=pointer]: Edge¢
+                  - text: 
+                  - generic [ref=e110] [cursor=pointer]:
+                    - text: 
+                    - generic [ref=e111]: 
+                    - text:  
+                - columnheader "ROI%" [ref=e112]:
+                  - text: 
+                  - generic [ref=e114] [cursor=pointer]: ROI%
+                  - text: 
+                  - generic:    
+                - columnheader "Units" [ref=e115]:
+                  - text: 
+                  - generic [ref=e117] [cursor=pointer]: Units
+                  - text: 
+                  - generic:    
+                - columnheader "Profit$" [ref=e118]:
+                  - text: 
+                  - generic [ref=e120] [cursor=pointer]: Profit$
+                  - text: 
+                  - generic:    
+                - columnheader "Tradable" [ref=e121]:
+                  - text: 
+                  - generic [ref=e123] [cursor=pointer]: Tradable
+                  - text: 
+                  - generic:    
+                - columnheader "Caveat" [ref=e124]:
+                  - text: 
+                  - generic [ref=e126] [cursor=pointer]: Caveat
+                  - text: 
+                  - generic:    
+            - rowgroup [ref=e127]:
+              - row "▲ Soccer Brazil v Serbia Home/Away/Tie 3-way Dutch overround 17 7.5 90 9.90 Yes Game postpone" [ref=e904]:
+                - gridcell "▲" [ref=e905]
+                - gridcell "Soccer" [ref=e906]
+                - gridcell "Brazil v Serbia Home/Away/Tie 3-way" [ref=e907]:
+                  - generic [ref=e908]: Brazil v Serbia Home/Away/Tie 3-way
+                - gridcell "Dutch overround" [ref=e909]
+                - gridcell "17" [ref=e910]
+                - gridcell "7.5" [ref=e911]
+                - gridcell "90" [ref=e912]
+                - gridcell "9.90" [ref=e913]
+                - gridcell "Yes" [ref=e914]
+                - gridcell "Game postpone" [ref=e915]
+              - 'row "▲ NFL Brazil v Serbia #257 Home/Away/Tie 3-way Dutch overround 17 2.5 90 9.90 Yes Game postpone" [ref=e916]':
+                - gridcell "▲" [ref=e917]
+                - gridcell "NFL" [ref=e918]
+                - 'gridcell "Brazil v Serbia #257 Home/Away/Tie 3-way" [ref=e919]':
+                  - generic [ref=e920]: "Brazil v Serbia #257 Home/Away/Tie 3-way"
+                - gridcell "Dutch overround" [ref=e921]
+                - gridcell "17" [ref=e922]
+                - gridcell "2.5" [ref=e923]
+                - gridcell "90" [ref=e924]
+                - gridcell "9.90" [ref=e925]
+                - gridcell "Yes" [ref=e926]
+                - gridcell "Game postpone" [ref=e927]
+              - 'row "▲ Soccer Brazil v Serbia #361 Home/Away/Tie 3-way Dutch overround 17 3.5 90 9.90 Yes Game postpone" [ref=e928]':
+                - gridcell "▲" [ref=e929]
+                - gridcell "Soccer" [ref=e930]
+                - 'gridcell "Brazil v Serbia #361 Home/Away/Tie 3-way" [ref=e931]':
+                  - generic [ref=e932]: "Brazil v Serbia #361 Home/Away/Tie 3-way"
+                - gridcell "Dutch overround" [ref=e933]
+                - gridcell "17" [ref=e934]
+                - gridcell "3.5" [ref=e935]
+                - gridcell "90" [ref=e936]
+                - gridcell "9.90" [ref=e937]
+                - gridcell "Yes" [ref=e938]
+                - gridcell "Game postpone" [ref=e939]
+              - 'row "▲ MLB Brazil v Serbia #465 Home/Away/Tie 3-way Dutch overround 17 4.5 90 9.90 Yes Game postpone" [ref=e940]':
+                - gridcell "▲" [ref=e941]
+                - gridcell "MLB" [ref=e942]
+                - 'gridcell "Brazil v Serbia #465 Home/Away/Tie 3-way" [ref=e943]':
+                  - generic [ref=e944]: "Brazil v Serbia #465 Home/Away/Tie 3-way"
+                - gridcell "Dutch overround" [ref=e945]
+                - gridcell "17" [ref=e946]
+                - gridcell "4.5" [ref=e947]
+                - gridcell "90" [ref=e948]
+                - gridcell "9.90" [ref=e949]
+                - gridcell "Yes" [ref=e950]
+                - gridcell "Game postpone" [ref=e951]
+              - 'row "▲ Motorsport Brazil v Serbia #569 Home/Away/Tie 3-way Dutch overround 17 5.5 90 9.90 Yes Game postpone" [ref=e952]':
+                - gridcell "▲" [ref=e953]
+                - gridcell "Motorsport" [ref=e954]
+                - 'gridcell "Brazil v Serbia #569 Home/Away/Tie 3-way" [ref=e955]':
+                  - generic [ref=e956]: "Brazil v Serbia #569 Home/Away/Tie 3-way"
+                - gridcell "Dutch overround" [ref=e957]
+                - gridcell "17" [ref=e958]
+                - gridcell "5.5" [ref=e959]
+                - gridcell "90" [ref=e960]
+                - gridcell "9.90" [ref=e961]
+                - gridcell "Yes" [ref=e962]
+                - gridcell "Game postpone" [ref=e963]
+              - 'row "▼ Esports Brazil v Serbia #673 Home/Away/Tie 3-way Dutch overround 16 6.5 90 9.90 Yes Game postpone" [ref=e964]':
+                - gridcell "▼" [ref=e965]
+                - gridcell "Esports" [ref=e966]
+                - 'gridcell "Brazil v Serbia #673 Home/Away/Tie 3-way" [ref=e967]':
+                  - generic [ref=e968]: "Brazil v Serbia #673 Home/Away/Tie 3-way"
+                - gridcell "Dutch overround" [ref=e969]
+                - gridcell "16" [ref=e970]
+                - gridcell "6.5" [ref=e971]
+                - gridcell "90" [ref=e972]
+                - gridcell "9.90" [ref=e973]
+                - gridcell "Yes" [ref=e974]
+                - gridcell "Game postpone" [ref=e975]
+              - 'row "▲ Motorsport Brazil v Serbia #929 Home/Away/Tie 3-way Dutch overround 17 8.5 90 9.90 Yes Game postpone" [ref=e976]':
+                - gridcell "▲" [ref=e977]
+                - gridcell "Motorsport" [ref=e978]
+                - 'gridcell "Brazil v Serbia #929 Home/Away/Tie 3-way" [ref=e979]':
+                  - generic [ref=e980]: "Brazil v Serbia #929 Home/Away/Tie 3-way"
+                - gridcell "Dutch overround" [ref=e981]
+                - gridcell "17" [ref=e982]
+                - gridcell "8.5" [ref=e983]
+                - gridcell "90" [ref=e984]
+                - gridcell "9.90" [ref=e985]
+                - gridcell "Yes" [ref=e986]
+                - gridcell "Game postpone" [ref=e987]
+              - 'row "▲ Esports Brazil v Serbia #1033 Home/Away/Tie 3-way Dutch overround 17 2.5 90 9.90 Yes Game postpone" [ref=e988]':
+                - gridcell "▲" [ref=e989]
+                - gridcell "Esports" [ref=e990]
+                - 'gridcell "Brazil v Serbia #1033 Home/Away/Tie 3-way" [ref=e991]':
+                  - generic [ref=e992]: "Brazil v Serbia #1033 Home/Away/Tie 3-way"
+                - gridcell "Dutch overround" [ref=e993]
+                - gridcell "17" [ref=e994]
+                - gridcell "2.5" [ref=e995]
+                - gridcell "90" [ref=e996]
+                - gridcell "9.90" [ref=e997]
+                - gridcell "Yes" [ref=e998]
+                - gridcell "Game postpone" [ref=e999]
+              - 'row "▲ Soccer Brazil v Serbia #1241 Home/Away/Tie 3-way Dutch overround 17 4.5 90 9.90 Yes Game postpone" [ref=e1000]':
+                - gridcell "▲" [ref=e1001]
+                - gridcell "Soccer" [ref=e1002]
+                - 'gridcell "Brazil v Serbia #1241 Home/Away/Tie 3-way" [ref=e1003]':
+                  - generic [ref=e1004]: "Brazil v Serbia #1241 Home/Away/Tie 3-way"
+                - gridcell "Dutch overround" [ref=e1005]
+                - gridcell "17" [ref=e1006]
+                - gridcell "4.5" [ref=e1007]
+                - gridcell "90" [ref=e1008]
+                - gridcell "9.90" [ref=e1009]
+                - gridcell "Yes" [ref=e1010]
+                - gridcell "Game postpone" [ref=e1011]
+              - 'row "▲ MLB Brazil v Serbia #1345 Home/Away/Tie 3-way Dutch overround 17 5.5 90 9.90 Yes Game postpone" [ref=e1012]':
+                - gridcell "▲" [ref=e1013]
+                - gridcell "MLB" [ref=e1014]
+                - 'gridcell "Brazil v Serbia #1345 Home/Away/Tie 3-way" [ref=e1015]':
+                  - generic [ref=e1016]: "Brazil v Serbia #1345 Home/Away/Tie 3-way"
+                - gridcell "Dutch overround" [ref=e1017]
+                - gridcell "17" [ref=e1018]
+                - gridcell "5.5" [ref=e1019]
+                - gridcell "90" [ref=e1020]
+                - gridcell "9.90" [ref=e1021]
+                - gridcell "Yes" [ref=e1022]
+                - gridcell "Game postpone" [ref=e1023]
+              - 'row "▲ Motorsport Brazil v Serbia #1449 Home/Away/Tie 3-way Dutch overround 17 6.5 90 9.90 Yes Game postpone" [ref=e1024]':
+                - gridcell "▲" [ref=e1025]
+                - gridcell "Motorsport" [ref=e1026]
+                - 'gridcell "Brazil v Serbia #1449 Home/Away/Tie 3-way" [ref=e1027]':
+                  - generic [ref=e1028]: "Brazil v Serbia #1449 Home/Away/Tie 3-way"
+                - gridcell "Dutch overround" [ref=e1029]
+                - gridcell "17" [ref=e1030]
+                - gridcell "6.5" [ref=e1031]
+                - gridcell "90" [ref=e1032]
+                - gridcell "9.90" [ref=e1033]
+                - gridcell "Yes" [ref=e1034]
+                - gridcell "Game postpone" [ref=e1035]
+              - 'row "▲ Esports Brazil v Serbia #1553 Home/Away/Tie 3-way Dutch overround 17 7.5 90 9.90 Yes Game postpone" [ref=e1036]':
+                - gridcell "▲" [ref=e1037]
+                - gridcell "Esports" [ref=e1038]
+                - 'gridcell "Brazil v Serbia #1553 Home/Away/Tie 3-way" [ref=e1039]':
+                  - generic [ref=e1040]: "Brazil v Serbia #1553 Home/Away/Tie 3-way"
+                - gridcell "Dutch overround" [ref=e1041]
+                - gridcell "17" [ref=e1042]
+                - gridcell "7.5" [ref=e1043]
+                - gridcell "90" [ref=e1044]
+                - gridcell "9.90" [ref=e1045]
+                - gridcell "Yes" [ref=e1046]
+                - gridcell "Game postpone" [ref=e1047]
+              - 'row "▼ MLB Brazil v Serbia #1705 Home/Away/Tie 3-way Dutch overround 16 8.5 90 9.90 Yes Game postpone" [ref=e1048]':
+                - gridcell "▼" [ref=e1049]
+                - gridcell "MLB" [ref=e1050]
+                - 'gridcell "Brazil v Serbia #1705 Home/Away/Tie 3-way" [ref=e1051]':
+                  - generic [ref=e1052]: "Brazil v Serbia #1705 Home/Away/Tie 3-way"
+                - gridcell "Dutch overround" [ref=e1053]
+                - gridcell "16" [ref=e1054]
+                - gridcell "8.5" [ref=e1055]
+                - gridcell "90" [ref=e1056]
+                - gridcell "9.90" [ref=e1057]
+                - gridcell "Yes" [ref=e1058]
+                - gridcell "Game postpone" [ref=e1059]
+              - 'row "▲ Motorsport Brazil v Serbia #1809 Home/Away/Tie 3-way Dutch overround 17 2.5 90 9.90 Yes Game postpone" [ref=e1060]':
+                - gridcell "▲" [ref=e1061]
+                - gridcell "Motorsport" [ref=e1062]
+                - 'gridcell "Brazil v Serbia #1809 Home/Away/Tie 3-way" [ref=e1063]':
+                  - generic [ref=e1064]: "Brazil v Serbia #1809 Home/Away/Tie 3-way"
+                - gridcell "Dutch overround" [ref=e1065]
+                - gridcell "17" [ref=e1066]
+                - gridcell "2.5" [ref=e1067]
+                - gridcell "90" [ref=e1068]
+                - gridcell "9.90" [ref=e1069]
+                - gridcell "Yes" [ref=e1070]
+                - gridcell "Game postpone" [ref=e1071]
+              - 'row "▲ Esports Brazil v Serbia #1913 Home/Away/Tie 3-way Dutch overround 17 3.5 90 9.90 Yes Game postpone" [ref=e1072]':
+                - gridcell "▲" [ref=e1073]
+                - gridcell "Esports" [ref=e1074]
+                - 'gridcell "Brazil v Serbia #1913 Home/Away/Tie 3-way" [ref=e1075]':
+                  - generic [ref=e1076]: "Brazil v Serbia #1913 Home/Away/Tie 3-way"
+                - gridcell "Dutch overround" [ref=e1077]
+                - gridcell "17" [ref=e1078]
+                - gridcell "3.5" [ref=e1079]
+                - gridcell "90" [ref=e1080]
+                - gridcell "9.90" [ref=e1081]
+                - gridcell "Yes" [ref=e1082]
+                - gridcell "Game postpone" [ref=e1083]
+              - 'row "▲ NFL Brazil v Serbia #2017 Home/Away/Tie 3-way Dutch overround 17 4.5 90 9.90 Yes Game postpone" [ref=e1084]':
+                - gridcell "▲" [ref=e1085]
+                - gridcell "NFL" [ref=e1086]
+                - 'gridcell "Brazil v Serbia #2017 Home/Away/Tie 3-way" [ref=e1087]':
+                  - generic [ref=e1088]: "Brazil v Serbia #2017 Home/Away/Tie 3-way"
+                - gridcell "Dutch overround" [ref=e1089]
+                - gridcell "17" [ref=e1090]
+                - gridcell "4.5" [ref=e1091]
+                - gridcell "90" [ref=e1092]
+                - gridcell "9.90" [ref=e1093]
+                - gridcell "Yes" [ref=e1094]
+                - gridcell "Game postpone" [ref=e1095]
+              - 'row "▼ Soccer Brazil v Serbia #2121 Home/Away/Tie 3-way Dutch overround 16 5.5 90 9.90 Yes Game postpone" [ref=e1096]':
+                - gridcell "▼" [ref=e1097]
+                - gridcell "Soccer" [ref=e1098]
+                - 'gridcell "Brazil v Serbia #2121 Home/Away/Tie 3-way" [ref=e1099]':
+                  - generic [ref=e1100]: "Brazil v Serbia #2121 Home/Away/Tie 3-way"
+                - gridcell "Dutch overround" [ref=e1101]
+                - gridcell "16" [ref=e1102]
+                - gridcell "5.5" [ref=e1103]
+                - gridcell "90" [ref=e1104]
+                - gridcell "9.90" [ref=e1105]
+                - gridcell "Yes" [ref=e1106]
+                - gridcell "Game postpone" [ref=e1107]
+              - 'row "▲ Motorsport Brazil v Serbia #2329 Home/Away/Tie 3-way Dutch overround 17 7.5 90 9.90 Yes Game postpone" [ref=e1108]':
+                - gridcell "▲" [ref=e1109]
+                - gridcell "Motorsport" [ref=e1110]
+                - 'gridcell "Brazil v Serbia #2329 Home/Away/Tie 3-way" [ref=e1111]':
+                  - generic [ref=e1112]: "Brazil v Serbia #2329 Home/Away/Tie 3-way"
+                - gridcell "Dutch overround" [ref=e1113]
+                - gridcell "17" [ref=e1114]
+                - gridcell "7.5" [ref=e1115]
+                - gridcell "90" [ref=e1116]
+                - gridcell "9.90" [ref=e1117]
+                - gridcell "Yes" [ref=e1118]
+                - gridcell "Game postpone" [ref=e1119]
+              - 'row "▲ Soccer Brazil v Serbia #2481 Home/Away/Tie 3-way Dutch overround 17 8.5 90 9.90 Yes Game postpone" [ref=e1120]':
+                - gridcell "▲" [ref=e1121]
+                - gridcell "Soccer" [ref=e1122]
+                - 'gridcell "Brazil v Serbia #2481 Home/Away/Tie 3-way" [ref=e1123]':
+                  - generic [ref=e1124]: "Brazil v Serbia #2481 Home/Away/Tie 3-way"
+                - gridcell "Dutch overround" [ref=e1125]
+                - gridcell "17" [ref=e1126]
+                - gridcell "8.5" [ref=e1127]
+                - gridcell "90" [ref=e1128]
+                - gridcell "9.90" [ref=e1129]
+                - gridcell "Yes" [ref=e1130]
+                - gridcell "Game postpone" [ref=e1131]
+              - 'row "▲ Motorsport Brazil v Serbia #2689 Home/Away/Tie 3-way Dutch overround 17 3.5 90 9.90 Yes Game postpone" [ref=e1132]':
+                - gridcell "▲" [ref=e1133]
+                - gridcell "Motorsport" [ref=e1134]
+                - 'gridcell "Brazil v Serbia #2689 Home/Away/Tie 3-way" [ref=e1135]':
+                  - generic [ref=e1136]: "Brazil v Serbia #2689 Home/Away/Tie 3-way"
+                - gridcell "Dutch overround" [ref=e1137]
+                - gridcell "17" [ref=e1138]
+                - gridcell "3.5" [ref=e1139]
+                - gridcell "90" [ref=e1140]
+                - gridcell "9.90" [ref=e1141]
+                - gridcell "Yes" [ref=e1142]
+                - gridcell "Game postpone" [ref=e1143]
+              - 'row "▼ Esports Brazil v Serbia #2793 Home/Away/Tie 3-way Dutch overround 16 4.5 90 9.90 Yes Game postpone" [ref=e1144]':
+                - gridcell "▼" [ref=e1145]
+                - gridcell "Esports" [ref=e1146]
+                - 'gridcell "Brazil v Serbia #2793 Home/Away/Tie 3-way" [ref=e1147]':
+                  - generic [ref=e1148]: "Brazil v Serbia #2793 Home/Away/Tie 3-way"
+                - gridcell "Dutch overround" [ref=e1149]
+                - gridcell "16" [ref=e1150]
+                - gridcell "4.5" [ref=e1151]
+                - gridcell "90" [ref=e1152]
+                - gridcell "9.90" [ref=e1153]
+                - gridcell "Yes" [ref=e1154]
+                - gridcell "Game postpone" [ref=e1155]
+              - 'row "▲ NFL Brazil v Serbia #2897 Home/Away/Tie 3-way Dutch overround 17 5.5 90 9.90 Yes Game postpone" [ref=e1156]':
+                - gridcell "▲" [ref=e1157]
+                - gridcell "NFL" [ref=e1158]
+                - 'gridcell "Brazil v Serbia #2897 Home/Away/Tie 3-way" [ref=e1159]':
+                  - generic [ref=e1160]: "Brazil v Serbia #2897 Home/Away/Tie 3-way"
+                - gridcell "Dutch overround" [ref=e1161]
+                - gridcell "17" [ref=e1162]
+                - gridcell "5.5" [ref=e1163]
+                - gridcell "90" [ref=e1164]
+                - gridcell "9.90" [ref=e1165]
+                - gridcell "Yes" [ref=e1166]
+                - gridcell "Game postpone" [ref=e1167]
+              - 'row "▲ Soccer Brazil v Serbia #3001 Home/Away/Tie 3-way Dutch overround 17 6.5 90 9.90 Yes Game postpone" [ref=e1168]':
+                - gridcell "▲" [ref=e1169]
+                - gridcell "Soccer" [ref=e1170]
+                - 'gridcell "Brazil v Serbia #3001 Home/Away/Tie 3-way" [ref=e1171]':
+                  - generic [ref=e1172]: "Brazil v Serbia #3001 Home/Away/Tie 3-way"
+                - gridcell "Dutch overround" [ref=e1173]
+                - gridcell "17" [ref=e1174]
+                - gridcell "6.5" [ref=e1175]
+                - gridcell "90" [ref=e1176]
+                - gridcell "9.90" [ref=e1177]
+                - gridcell "Yes" [ref=e1178]
+                - gridcell "Game postpone" [ref=e1179]
+              - 'row "▲ MLB Brazil v Serbia #3105 Home/Away/Tie 3-way Dutch overround 17 7.5 90 9.90 Yes Game postpone" [ref=e1180]':
+                - gridcell "▲" [ref=e1181]
+                - gridcell "MLB" [ref=e1182]
+                - 'gridcell "Brazil v Serbia #3105 Home/Away/Tie 3-way" [ref=e1183]':
+                  - generic [ref=e1184]: "Brazil v Serbia #3105 Home/Away/Tie 3-way"
+                - gridcell "Dutch overround" [ref=e1185]
+                - gridcell "17" [ref=e1186]
+                - gridcell "7.5" [ref=e1187]
+                - gridcell "90" [ref=e1188]
+                - gridcell "9.90" [ref=e1189]
+                - gridcell "Yes" [ref=e1190]
+                - gridcell "Game postpone" [ref=e1191]
+              - 'row "▲ Soccer Brazil v Serbia #3361 Home/Away/Tie 3-way Dutch overround 17 2.5 90 9.90 Yes Game postpone" [ref=e1192]':
+                - gridcell "▲" [ref=e1193]
+                - gridcell "Soccer" [ref=e1194]
+                - 'gridcell "Brazil v Serbia #3361 Home/Away/Tie 3-way" [ref=e1195]':
+                  - generic [ref=e1196]: "Brazil v Serbia #3361 Home/Away/Tie 3-way"
+                - gridcell "Dutch overround" [ref=e1197]
+                - gridcell "17" [ref=e1198]
+                - gridcell "2.5" [ref=e1199]
+                - gridcell "90" [ref=e1200]
+                - gridcell "9.90" [ref=e1201]
+                - gridcell "Yes" [ref=e1202]
+                - gridcell "Game postpone" [ref=e1203]
+              - 'row "▲ MLB Brazil v Serbia #3465 Home/Away/Tie 3-way Dutch overround 17 3.5 90 9.90 Yes Game postpone" [ref=e1204]':
+                - gridcell "▲" [ref=e1205]
+                - gridcell "MLB" [ref=e1206]
+                - 'gridcell "Brazil v Serbia #3465 Home/Away/Tie 3-way" [ref=e1207]':
+                  - generic [ref=e1208]: "Brazil v Serbia #3465 Home/Away/Tie 3-way"
+                - gridcell "Dutch overround" [ref=e1209]
+                - gridcell "17" [ref=e1210]
+                - gridcell "3.5" [ref=e1211]
+                - gridcell "90" [ref=e1212]
+                - gridcell "9.90" [ref=e1213]
+                - gridcell "Yes" [ref=e1214]
+                - gridcell "Game postpone" [ref=e1215]
+              - 'row "▲ Motorsport Brazil v Serbia #3569 Home/Away/Tie 3-way Dutch overround 17 4.5 90 9.90 Yes Game postpone" [ref=e1216]':
+                - gridcell "▲" [ref=e1217]
+                - gridcell "Motorsport" [ref=e1218]
+                - 'gridcell "Brazil v Serbia #3569 Home/Away/Tie 3-way" [ref=e1219]':
+                  - generic [ref=e1220]: "Brazil v Serbia #3569 Home/Away/Tie 3-way"
+                - gridcell "Dutch overround" [ref=e1221]
+                - gridcell "17" [ref=e1222]
+                - gridcell "4.5" [ref=e1223]
+                - gridcell "90" [ref=e1224]
+                - gridcell "9.90" [ref=e1225]
+                - gridcell "Yes" [ref=e1226]
+                - gridcell "Game postpone" [ref=e1227]
+              - 'row "▲ Esports Brazil v Serbia #3673 Home/Away/Tie 3-way Dutch overround 17 5.5 90 9.90 Yes Game postpone" [ref=e1228]':
+                - gridcell "▲" [ref=e1229]
+                - gridcell "Esports" [ref=e1230]
+                - 'gridcell "Brazil v Serbia #3673 Home/Away/Tie 3-way" [ref=e1231]':
+                  - generic [ref=e1232]: "Brazil v Serbia #3673 Home/Away/Tie 3-way"
+                - gridcell "Dutch overround" [ref=e1233]
+                - gridcell "17" [ref=e1234]
+                - gridcell "5.5" [ref=e1235]
+                - gridcell "90" [ref=e1236]
+                - gridcell "9.90" [ref=e1237]
+                - gridcell "Yes" [ref=e1238]
+                - gridcell "Game postpone" [ref=e1239]
+              - 'row "▲ Esports Brazil v Serbia #4033 Home/Away/Tie 3-way Dutch overround 17 8.5 90 9.90 Yes Game postpone" [ref=e1240]':
+                - gridcell "▲" [ref=e1241]
+                - gridcell "Esports" [ref=e1242]
+                - 'gridcell "Brazil v Serbia #4033 Home/Away/Tie 3-way" [ref=e1243]':
+                  - generic [ref=e1244]: "Brazil v Serbia #4033 Home/Away/Tie 3-way"
+                - gridcell "Dutch overround" [ref=e1245]
+                - gridcell "17" [ref=e1246]
+                - gridcell "8.5" [ref=e1247]
+                - gridcell "90" [ref=e1248]
+                - gridcell "9.90" [ref=e1249]
+                - gridcell "Yes" [ref=e1250]
+                - gridcell "Game postpone" [ref=e1251]
+            - rowgroup
+            - rowgroup [ref=e647]
+            - rowgroup
+          - text:    
+      - generic [ref=e651]:
+        - generic [ref=e652]:
+          - generic [ref=e653]: "2"
+          - heading "DES — TRADE CARD" [level=3] [ref=e654]
+        - generic [ref=e656]:
+          - generic [ref=e657]:
+            - generic [ref=e658]:
+              - generic [ref=e659]: ACT
+              - generic [ref=e660]: J. Sinner
+              - generic [ref=e661]:
+                - button "$1" [ref=e662] [cursor=pointer]
+                - button "$100" [ref=e663] [cursor=pointer]
+            - generic [ref=e664]: Reach Final ⊇ Win · Containment
+            - generic [ref=e665]: BUY-ONLY PLAN (LEGS)
+            - generic [ref=e666]:
+              - generic [ref=e667]: "YES"
+              - generic [ref=e668]: Reach Final · KXATPADVANCE
+              - generic [ref=e669]: 38¢
+              - generic [ref=e670]: ×140
+            - generic [ref=e671]:
+              - generic [ref=e672]: "NO"
+              - generic [ref=e673]: Win · KXFOMEN
+              - generic [ref=e674]: 55¢
+              - generic [ref=e675]: ×140
+            - generic [ref=e676]:
+              - generic [ref=e677]: Cost / unit
+              - generic [ref=e678]: 93¢
+              - generic [ref=e679]: Payout floor
+              - generic [ref=e680]: 100¢
+              - generic [ref=e681]: Worst / best
+              - generic [ref=e682]: "-7¢ / +7¢"
+              - generic [ref=e683]: Break-even
+              - generic [ref=e684]: 93%
+              - generic [ref=e685]: Fillable
+              - generic [ref=e686]: "140"
+            - generic [ref=e687]: EVIDENCEPACK
+            - generic [ref=e688]:
+              - generic [ref=e689]: Scan
+              - generic [ref=e690]: scan_8841
+              - generic [ref=e691]: Quote ts
+              - generic [ref=e692]: 12s
+              - generic [ref=e693]: Rules
+              - generic [ref=e694]: r3
+          - generic [ref=e695]:
+            - generic [ref=e696]: DECOMPOSED CONFIDENCE — 9 DIM
+            - generic [ref=e697]:
+              - generic [ref=e698]: Data
+              - generic [ref=e701]: "95"
+            - generic [ref=e702]:
+              - generic [ref=e703]: Quote
+              - generic [ref=e706]: "92"
+            - generic [ref=e707]:
+              - generic [ref=e708]: Liquidity
+              - generic [ref=e711]: "78"
+            - generic [ref=e712]:
+              - generic [ref=e713]: Execution
+              - generic [ref=e716]: "80"
+            - generic [ref=e717]:
+              - generic [ref=e718]: Settlement
+              - generic [ref=e721]: "88"
+            - generic [ref=e722]:
+              - generic [ref=e723]: Strategy
+              - generic [ref=e726]: "96"
+            - generic [ref=e727]:
+              - generic [ref=e728]: Model
+              - generic [ref=e731]: "60"
+            - generic [ref=e732]:
+              - generic [ref=e733]: Comparability
+              - generic [ref=e736]: "84"
+            - generic [ref=e737]:
+              - generic [ref=e738]: Complexity
+              - generic [ref=e741]: "90"
+            - generic [ref=e742]: WHY FLAGGED
+            - generic [ref=e743]: Firm child bid exceeds parent ask — a deeper outcome priced above the broader one that contains it. Gross, top-of-book; fees & full depth not modeled.
+      - generic [ref=e744]:
+        - generic [ref=e745]:
+          - generic [ref=e746]: "3"
+          - heading "MD LADDER" [level=3] [ref=e747]
+        - generic [ref=e748]: READ-ONLY DEPTH VIEW — NO ORDERS
+        - generic [ref=e749]:
+          - generic [ref=e750]: J. Sinner · Tennis
+          - generic [ref=e751]: Reach Final · KXATPADVANCE
+        - table [ref=e753]:
+          - rowgroup [ref=e754]:
+            - row "Bid size Px¢ Ask size" [ref=e755]:
+              - columnheader "Bid size" [ref=e756]
+              - columnheader "Px¢" [ref=e757]
+              - columnheader "Ask size" [ref=e758]
+          - rowgroup [ref=e759]:
+            - row "38 560" [ref=e760]:
+              - cell [ref=e761]
+              - cell "38" [ref=e762]
+              - cell "560" [ref=e763]: "560"
+            - row "37 476" [ref=e765]:
+              - cell [ref=e766]
+              - cell "37" [ref=e767]
+              - cell "476" [ref=e768]: "476"
+            - row "36 392" [ref=e770]:
+              - cell [ref=e771]
+              - cell "36" [ref=e772]
+              - cell "392" [ref=e773]: "392"
+            - row "35 ◀ watch 308" [ref=e775]:
+              - cell [ref=e776]
+              - cell "35 ◀ watch" [ref=e777]:
+                - text: "35"
+                - generic [ref=e778]: ◀ watch
+              - cell "308" [ref=e779]: "308"
+            - row "34 224" [ref=e781]:
+              - cell [ref=e782]
+              - cell "34" [ref=e783]
+              - cell "224" [ref=e784]: "224"
+            - row "140 33 140" [ref=e786]:
+              - cell "140" [ref=e787]: "140"
+              - cell "33" [ref=e789]
+              - cell "140" [ref=e790]: "140"
+            - row "238 32" [ref=e792]:
+              - cell "238" [ref=e793]: "238"
+              - cell "32" [ref=e795]
+              - cell [ref=e796]
+            - row "336 31" [ref=e797]:
+              - cell "336" [ref=e798]: "336"
+              - cell "31" [ref=e800]
+              - cell [ref=e801]
+            - row "434 30" [ref=e802]:
+              - cell "434" [ref=e803]: "434"
+              - cell "30" [ref=e805]
+              - cell [ref=e806]
+            - row "532 29" [ref=e807]:
+              - cell "532" [ref=e808]: "532"
+              - cell "29" [ref=e810]
+              - cell [ref=e811]
+            - row "630 28" [ref=e812]:
+              - cell "630" [ref=e813]: "630"
+              - cell "28" [ref=e815]
+              - cell [ref=e816]
+        - generic [ref=e817]:
+          - generic [ref=e818]: Touch 33¢ · eff fill@50 ≈ 94¢
+          - generic [ref=e819]: max fill 140
+      - generic [ref=e820]:
+        - generic [ref=e821]:
+          - generic [ref=e822]: ★
+          - heading "WATCH · MOVERS" [level=3] [ref=e823]
+        - generic [ref=e824]:
+          - generic [ref=e825] [cursor=pointer]:
+            - generic [ref=e826]: ●
+            - generic [ref=e827]:
+              - text: Sinner — Reach Final ⊇ Win
+              - generic [ref=e828]: Tennis · executable
+            - generic [ref=e829]: live
+          - generic [ref=e830] [cursor=pointer]:
+            - generic [ref=e831]: ●
+            - generic [ref=e832]:
+              - text: Celtics — SF ≡ Win Conf
+              - generic [ref=e833]: NBA · rule-check
+            - generic [ref=e834]: +1¢
+          - generic [ref=e835] [cursor=pointer]:
+            - generic [ref=e836]: ●
+            - generic [ref=e837]:
+              - text: CS2 Map 1 dutch
+              - generic [ref=e838]: Esports · watching
+            - generic [ref=e839]: +2¢
+          - generic [ref=e840] [cursor=pointer]:
+            - generic [ref=e841]: ●
+            - generic [ref=e842]:
+              - text: Dodgers — WS ladder
+              - generic [ref=e843]: MLB · needs size
+            - generic [ref=e844]: size 0
+      - generic [ref=e845]:
+        - generic [ref=e846]:
+          - generic [ref=e847]: "!"
+          - heading "ALERTS" [level=3] [ref=e848]
+        - generic [ref=e849]:
+          - generic [ref=e850]:
+            - generic [ref=e851]: ●
+            - generic [ref=e852]:
+              - generic [ref=e853]: became executable — Sinner Reach Final ⊇ Win
+              - generic [ref=e854]: 2m · firm both legs
+          - generic [ref=e855]:
+            - generic [ref=e856]: ●
+            - generic [ref=e857]:
+              - generic [ref=e858]: bucket changed — Celtics → Review
+              - generic [ref=e859]: 7m · rule-check
+          - generic [ref=e860]:
+            - generic [ref=e861]: ●
+            - generic [ref=e862]:
+              - generic [ref=e863]: watched moved — CS2 Map 1 +3¢
+              - generic [ref=e864]: 9m
+          - generic [ref=e865]:
+            - generic [ref=e866]: ●
+            - generic [ref=e867]:
+              - generic [ref=e868]: series failed — KXMOTOGP not fetched
+              - generic [ref=e869]: 12m
+    - generic [ref=e870]:
+      - generic [ref=e871]: 7-VUE + AG GRID
+      - generic [ref=e872]: proxy reactivity (Quasar/NiceGUI lineage) · same AG Grid engine · stress it in the PERF overlay →
+  - generic [ref=e873]:
+    - generic [ref=e874]:
+      - text: PERF Vue + AG Grid
+      - generic [ref=e875]: 52 fps
+    - generic [ref=e876]:
+      - generic [ref=e877]: frame
+      - generic [ref=e878]: 19.2 ms
+      - generic [ref=e879]: apply p50
+      - generic [ref=e880]: 1.6 ms
+      - generic [ref=e881]: apply p95
+      - generic [ref=e882]: 61.9 ms
+      - generic [ref=e883]: dropped/s
+      - generic [ref=e884]: "3"
+      - generic [ref=e885]: batches
+      - generic [ref=e886]: 29/s
+      - generic [ref=e887]: rows×rate
+      - generic [ref=e888]: 10000×30
+    - generic [ref=e889]:
+      - generic [ref=e890]: ROWS
+      - button "100" [ref=e891] [cursor=pointer]
+      - button "1k" [ref=e892] [cursor=pointer]
+      - button "10k" [active] [ref=e893] [cursor=pointer]
+    - generic [ref=e894]:
+      - generic [ref=e895]: UPDATES/SEC
+      - button "1" [ref=e896] [cursor=pointer]
+      - button "10" [ref=e897] [cursor=pointer]
+      - button "60" [ref=e898] [cursor=pointer]
+      - button "240" [ref=e899] [cursor=pointer]
+    - generic [ref=e900]:
+      - generic [ref=e901]: SOURCE
+      - button "synthetic" [ref=e902] [cursor=pointer]
+      - button "real (poll)" [ref=e903] [cursor=pointer]

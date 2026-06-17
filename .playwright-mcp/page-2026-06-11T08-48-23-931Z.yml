@@ -1,0 +1,228 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e3]:
+      - text: What deserves
+      - emphasis [ref=e4]: attention
+      - text: now?
+    - generic [ref=e5]:
+      - button "◎" [ref=e6] [cursor=pointer]
+      - button "📈" [ref=e7] [cursor=pointer]
+      - button "⚙" [ref=e8] [cursor=pointer]
+    - generic [ref=e9]:
+      - button "Blended" [ref=e10] [cursor=pointer]
+      - button "Confidence" [ref=e11] [cursor=pointer]
+      - button "Edge" [ref=e12] [cursor=pointer]
+      - button "Immediacy" [ref=e13] [cursor=pointer]
+    - generic [ref=e14]:
+      - text: scan 12s ·
+      - generic [ref=e16]: 4 act
+      - text: ·
+      - generic [ref=e17]: 2 rev
+      - text: · 1 failed
+  - generic [ref=e18]:
+    - generic [ref=e19]:
+      - generic [ref=e20]:
+        - text: Act now
+        - generic [ref=e21]: "4"
+      - generic [ref=e22] [cursor=pointer]:
+        - img [ref=e23]
+        - generic [ref=e27]: "85"
+        - generic [ref=e28]:
+          - generic [ref=e29]:
+            - generic [ref=e30]: Tennis
+            - generic [ref=e31]: ACT
+          - generic [ref=e32]: J. Sinner
+          - generic [ref=e33]: Reach Final ⊇ Win Tournament
+          - generic [ref=e34]:
+            - generic [ref=e35]: edge 7¢
+            - generic [ref=e36]: ROI 14.0%
+            - generic [ref=e37]: size 140
+      - generic [ref=e38] [cursor=pointer]:
+        - img [ref=e39]
+        - generic [ref=e43]: "79"
+        - generic [ref=e44]:
+          - generic [ref=e45]:
+            - generic [ref=e46]: Soccer
+            - generic [ref=e47]: ACT
+          - generic [ref=e48]: Brazil v Serbia
+          - generic [ref=e49]: Home / Away / Tie 3-way
+          - generic [ref=e50]:
+            - generic [ref=e51]: edge 11¢
+            - generic [ref=e52]: ROI 5.5%
+            - generic [ref=e53]: size 90
+      - generic [ref=e54] [cursor=pointer]:
+        - img [ref=e55]
+        - generic [ref=e59]: "88"
+        - generic [ref=e60]:
+          - generic [ref=e61]:
+            - generic [ref=e62]: NHL
+            - generic [ref=e63]: ACT
+          - generic [ref=e64]: Oilers @ Panthers
+          - generic [ref=e65]: Head-to-head game book
+          - generic [ref=e66]:
+            - generic [ref=e67]: edge 4¢
+            - generic [ref=e68]: ROI 4.0%
+            - generic [ref=e69]: size 200
+      - generic [ref=e70] [cursor=pointer]:
+        - img [ref=e71]
+        - generic [ref=e75]: "76"
+        - generic [ref=e76]:
+          - generic [ref=e77]:
+            - generic [ref=e78]: Esports
+            - generic [ref=e79]: ACT
+          - generic [ref=e80]: FaZe v Vitality
+          - generic [ref=e81]: Map-1 (draw-free)
+          - generic [ref=e82]:
+            - generic [ref=e83]: edge 3¢
+            - generic [ref=e84]: ROI 3.0%
+            - generic [ref=e85]: size 60
+      - generic [ref=e86]:
+        - text: Review
+        - generic [ref=e87]: "1"
+      - generic [ref=e88] [cursor=pointer]:
+        - img [ref=e89]
+        - generic [ref=e93]: "68"
+        - generic [ref=e94]:
+          - generic [ref=e95]:
+            - generic [ref=e96]: NBA
+            - generic [ref=e97]: REV
+          - generic [ref=e98]: Boston Celtics
+          - generic [ref=e99]: Reach SF ≡ Win Conference
+          - generic [ref=e100]:
+            - generic [ref=e101]: edge 4¢
+            - generic [ref=e102]: ROI 6.0%
+            - generic [ref=e103]: size 50
+      - generic [ref=e104]:
+        - text: Research
+        - generic [ref=e105]: "1"
+      - generic [ref=e106] [cursor=pointer]:
+        - img [ref=e107]
+        - generic [ref=e111]: "43"
+        - generic [ref=e112]:
+          - generic [ref=e113]:
+            - generic [ref=e114]: Tennis
+            - generic [ref=e115]: RESEARCH
+          - generic [ref=e116]: Alcaraz vs Sinner
+          - generic [ref=e117]: Pairs divergence z = −2.3
+          - generic [ref=e119]: Research signal
+      - generic [ref=e120]:
+        - text: Blocked
+        - generic [ref=e121]: "1"
+      - generic [ref=e122] [cursor=pointer]:
+        - img [ref=e123]
+        - generic [ref=e127]: "52"
+        - generic [ref=e128]:
+          - generic [ref=e129]:
+            - generic [ref=e130]: MLB
+            - generic [ref=e131]: BLK
+          - generic [ref=e132]: LA Dodgers
+          - generic [ref=e133]: Reach Playoffs ⊇ Win WS
+          - generic [ref=e134]:
+            - generic [ref=e135]: edge 6¢
+            - generic [ref=e136]: ROI 0.0%
+            - generic [ref=e137]: size 0
+    - generic [ref=e138]:
+      - generic [ref=e139]:
+        - generic [ref=e140]:
+          - generic [ref=e141]:
+            - generic [ref=e142]: ACT
+            - generic [ref=e143]: Containment ladder
+            - generic [ref=e144]: Tennis
+          - generic [ref=e145]: J. Sinner
+          - generic [ref=e146]: Reach Final ⊇ Win Tournament
+        - generic [ref=e147]:
+          - button "★ Watch E" [ref=e148] [cursor=pointer]:
+            - generic [ref=e149]: ★
+            - text: Watch
+            - generic [ref=e150]: E
+          - button "🔔 Alert A" [ref=e151] [cursor=pointer]:
+            - generic [ref=e152]: 🔔
+            - text: Alert
+            - generic [ref=e153]: A
+          - button "⏱ Snooze S" [ref=e154] [cursor=pointer]:
+            - generic [ref=e155]: ⏱
+            - text: Snooze
+            - generic [ref=e156]: S
+          - button "✕ Dismiss X" [ref=e157] [cursor=pointer]:
+            - generic [ref=e158]: ✕
+            - text: Dismiss
+            - generic [ref=e159]: X
+      - generic [ref=e160]:
+        - generic [ref=e161]:
+          - generic [ref=e162]: Gross edge
+          - generic [ref=e163]: 7¢
+          - generic [ref=e164]: ROI 14.0% · 140 units · max $9.80 · Yes
+          - generic [ref=e165]: Buy-only plan
+          - generic [ref=e166]:
+            - generic [ref=e167]: "YES"
+            - generic [ref=e168]: Reach Final · KXATPADVANCE
+            - generic [ref=e169]: 38¢
+            - generic [ref=e170]: ×140
+          - generic [ref=e171]:
+            - generic [ref=e172]: "NO"
+            - generic [ref=e173]: Win · KXFOMEN
+            - generic [ref=e174]: 55¢
+            - generic [ref=e175]: ×140
+          - generic [ref=e176]:
+            - generic [ref=e177]: Cost / $1
+            - generic [ref=e178]: 93¢
+            - generic [ref=e179]: Payout floor
+            - generic [ref=e180]: 100¢
+            - generic [ref=e181]: Worst / best
+            - generic [ref=e182]: "-7 / +7¢"
+            - generic [ref=e183]: Break-even
+            - generic [ref=e184]: 93%
+            - generic [ref=e185]: Fillable
+            - generic [ref=e186]: "140"
+        - generic [ref=e187]:
+          - generic [ref=e188]: Confidence — 9 dimensions (agg 85)
+          - generic [ref=e189]:
+            - generic [ref=e190]: Data
+            - generic [ref=e193]: "95"
+          - generic [ref=e194]:
+            - generic [ref=e195]: Quote
+            - generic [ref=e198]: "92"
+          - generic [ref=e199]:
+            - generic [ref=e200]: Liquidity
+            - generic [ref=e203]: "78"
+          - generic [ref=e204]:
+            - generic [ref=e205]: Execution
+            - generic [ref=e208]: "80"
+          - generic [ref=e209]:
+            - generic [ref=e210]: Settlement
+            - generic [ref=e213]: "88"
+          - generic [ref=e214]:
+            - generic [ref=e215]: Strategy
+            - generic [ref=e218]: "96"
+          - generic [ref=e219]:
+            - generic [ref=e220]: Model
+            - generic [ref=e223]: "60"
+          - generic [ref=e224]:
+            - generic [ref=e225]: Comparability
+            - generic [ref=e228]: "84"
+          - generic [ref=e229]:
+            - generic [ref=e230]: Complexity
+            - generic [ref=e233]: "90"
+          - generic [ref=e234]: Why flagged
+          - generic [ref=e235]: Firm child bid (Reach Final) exceeds parent ask (Win) by 7¢ — a deeper outcome priced above the broader one that contains it.
+          - generic [ref=e236]: What would improve · what can go wrong
+          - generic [ref=e237]:
+            - text: "Improve: Already executable; more size if the Win ask deepens."
+            - text: "Risk: Walkover advances without a match win — light rules check."
+          - generic [ref=e238]: EvidencePack
+          - generic [ref=e239]:
+            - generic [ref=e240]: Scan
+            - generic [ref=e241]: scan_8841
+            - generic [ref=e242]: Quote ts
+            - generic [ref=e243]: 12s
+            - generic [ref=e244]: Rules
+            - generic [ref=e245]: r3
+      - generic [ref=e246]: "Blueprint: the feed = ranked candidates under a lens (§7); cards = standardized TradeCard + 9-dim confidence + EvidencePack (§8/§3); decision buttons = §15 workflow primitives (watch/alert/snooze/dismiss → journal); research cards visually distinct (§5). Surfaces switch top-left."
+  - generic [ref=e247]:
+    - generic [ref=e248]: J K move
+    - generic [ref=e249]: ↵ focus
+    - generic [ref=e250]: E watch
+    - generic [ref=e251]: X dismiss
+    - generic [ref=e252]: A alert
+    - generic [ref=e253]: S snooze
+    - generic [ref=e254]: Triage like an inbox — every opportunity gets a decision · read-only

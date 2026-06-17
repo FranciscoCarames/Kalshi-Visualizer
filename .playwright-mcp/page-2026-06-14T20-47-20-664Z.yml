@@ -1,0 +1,63 @@
+- main [ref=e5]:
+  - generic [ref=e7]:
+    - generic [ref=e8]:
+      - generic [ref=e9]: KALSHI TERMINAL PRO
+      - generic [ref=e10]:
+        - generic [ref=e11] [cursor=pointer]: OPP
+        - generic [ref=e12] [cursor=pointer]: RES
+        - generic [ref=e13] [cursor=pointer]: OPS
+        - generic [ref=e14] [cursor=pointer]: ALRT
+      - textbox [ref=e19]:
+        - /placeholder: "> filter participant / match"
+      - generic [ref=e20]: 20:47:19 UTC
+    - generic [ref=e21]:
+      - generic [ref=e22]: Data 17:09:04 UTC · age 185896s ⚠ STALE · 2,471 opportunities · 93 series · 10 failed · 2,977 contracts scanned · 1,830 checks tested · 275 Kalshi requests
+      - generic [ref=e23]: GROSS · TOP-OF-BOOK · $1 BASIS · READ-ONLY · NO ORDER ENTRY · NOT RISKLESS
+    - generic [ref=e239]:
+      - generic [ref=e240]:
+        - generic [ref=e241]: RES — research lab
+        - generic [ref=e242]: research — not a trade
+      - generic [ref=e243]: Display-only market telemetry & contract-universe composition — NOT an opportunity signal. Deeper §5 analytics (distributions, calibration, backtests, model lenses) are roadmap-future.
+      - generic [ref=e244]:
+        - generic [ref=e245]:
+          - generic [ref=e246]: MOST LIQUID SPORTS
+          - generic [ref=e247]: Soccer (World Cup) · depth 8436255
+          - generic [ref=e248]: NFL · depth 2921124
+          - generic [ref=e249]: MLB · depth 1394265
+          - generic [ref=e250]: NHL · depth 169247
+          - generic [ref=e251]: Motorsport · depth 130010
+        - generic [ref=e252]:
+          - generic [ref=e253]: MOST LIQUID CONTRACTS
+          - generic [ref=e254]: Japan — Win the World Cup · depth 812239 · 0¢
+          - generic [ref=e255]: Switzerland — Win the World Cup · depth 444344 · 0¢
+          - generic [ref=e256]: Minnesota — Win the Super Bowl · depth 422249 · 1¢
+          - generic [ref=e257]: Morocco — Brazil vs Morocco Winner · depth 361213 · 1¢
+          - generic [ref=e258]: Curacao — Germany vs Curacao Winner · depth 348893 · 1¢
+        - generic [ref=e259]:
+          - generic [ref=e260]: TIGHTEST
+          - generic [ref=e261]: Japan — Win the World Cup · 0¢ · depth 812239
+          - generic [ref=e262]: Switzerland — Win the World Cup · 0¢ · depth 444344
+          - generic [ref=e263]: Portugal — Win the World Cup · 0¢ · depth 263322
+          - generic [ref=e264]: England — Win the World Cup · 0¢ · depth 231492
+          - generic [ref=e265]: France — Win the World Cup · 0¢ · depth 224040
+        - generic [ref=e266]:
+          - generic [ref=e267]: MOST TRADED
+          - generic [ref=e268]: San Antonio — Win the Championship · vol 74677977
+          - generic [ref=e269]: New York — Win the Championship · vol 68999598
+          - generic [ref=e270]: USA — USA vs Paraguay Winner · vol 29863508
+          - generic [ref=e271]: Mexico — Win the World Cup · vol 14190485
+          - generic [ref=e272]: USA — Win the World Cup · vol 13421199
+      - generic [ref=e273]:
+        - generic [ref=e274]: CONTRACTS BY FAMILY
+        - generic [ref=e275]: advance · 914
+        - generic [ref=e276]: constructor · 22
+        - generic [ref=e277]: exact_order · 288
+        - generic [ref=e278]: fastest_lap · 60
+        - generic [ref=e279]: game · 705
+        - generic [ref=e280]: group_bottom · 48
+        - generic [ref=e281]: group_winner · 50
+        - generic [ref=e282]: match · 100
+        - generic [ref=e283]: race_winner · 60
+        - generic [ref=e284]: stage_of_elim · 336
+        - generic [ref=e285]: team · 28
+        - generic [ref=e286]: winner · 366

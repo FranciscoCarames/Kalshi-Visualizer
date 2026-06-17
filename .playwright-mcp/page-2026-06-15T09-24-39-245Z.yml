@@ -1,0 +1,321 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6] [cursor=pointer]: OPP
+      - generic [ref=e7] [cursor=pointer]: RES
+      - generic [ref=e8] [cursor=pointer]: OPS
+      - generic [ref=e9] [cursor=pointer]: ALRT
+    - generic [ref=e10]:
+      - generic [ref=e11]: ">"
+      - textbox "SEARCH — functions · participants · lenses · layouts (Ctrl-K or /)" [ref=e12]:
+        - /placeholder: SEARCH — functions · participants · lenses · layouts   (Ctrl-K or /)
+      - generic [ref=e13]: Ctrl K
+      - button "<GO>" [ref=e14] [cursor=pointer]
+    - generic [ref=e15]: 44439s · KALSHI
+  - generic [ref=e16]:
+    - generic [ref=e17]:
+      - generic [ref=e18]: ●
+      - text: "SNAPSHOT #2545 · 44439s ago"
+    - generic [ref=e19]:
+      - text: Opps
+      - generic [ref=e20]: 2,370
+    - generic [ref=e21]:
+      - text: Contracts
+      - generic [ref=e22]: 3,778
+    - generic [ref=e23]:
+      - text: Checks
+      - generic [ref=e24]: 1,574
+    - generic [ref=e25]:
+      - text: Requests
+      - generic [ref=e26]: "188"
+    - generic [ref=e27]:
+      - text: Sports
+      - generic [ref=e28]: "10"
+    - generic [ref=e29]:
+      - generic [ref=e30]: ●
+      - text: Failed
+      - generic [ref=e31]: "0"
+    - generic [ref=e32]: GROSS · TOP-OF-BOOK · $1 BASIS · READ-ONLY · NO ORDER ENTRY · NOT RISKLESS
+  - generic [ref=e33]:
+    - generic [ref=e34] [cursor=pointer]:
+      - generic [ref=e35]: 1)
+      - text: OPP
+    - generic [ref=e36] [cursor=pointer]:
+      - generic [ref=e37]: 2)
+      - text: RES
+    - generic [ref=e38] [cursor=pointer]:
+      - generic [ref=e39]: 3)
+      - text: OPS
+    - generic [ref=e40]:
+      - generic [ref=e41]: LENS
+      - generic [ref=e42]:
+        - button "BLENDED" [ref=e43] [cursor=pointer]
+        - button "EDGE¢" [ref=e44] [cursor=pointer]
+        - button "SPREAD" [ref=e45] [cursor=pointer]
+        - button "OUTRIGHT+SPREAD" [ref=e46] [cursor=pointer]
+        - button "IMPLIED EV" [ref=e47] [cursor=pointer]
+        - button "RIPENESS" [ref=e48] [cursor=pointer]
+      - generic [ref=e49]: engine order
+      - button "◐" [ref=e50] [cursor=pointer]
+  - generic [ref=e51]:
+    - button "ACTIONABLE 2 executable now" [ref=e442] [cursor=pointer]:
+      - generic [ref=e53]: ACTIONABLE
+      - generic [ref=e54]: "2"
+      - generic [ref=e55]: executable now
+    - button "REVIEW 0 settlement-dep" [ref=e443] [cursor=pointer]:
+      - generic [ref=e57]: REVIEW
+      - generic [ref=e58]: "0"
+      - generic [ref=e59]: settlement-dep
+    - button "BLOCKED 0 not fillable" [ref=e444] [cursor=pointer]:
+      - generic [ref=e61]: BLOCKED
+      - generic [ref=e62]: "0"
+      - generic [ref=e63]: not fillable
+    - button "BOUNDED-LOSS 0 can lose money" [ref=e445] [cursor=pointer]:
+      - generic [ref=e65]: BOUNDED-LOSS
+      - generic [ref=e66]: "0"
+      - generic [ref=e67]: can lose money
+    - button "NEAR-MISS 61 watchlist" [ref=e446] [cursor=pointer]:
+      - generic [ref=e69]: NEAR-MISS
+      - generic [ref=e70]: "61"
+      - generic [ref=e71]: watchlist
+    - button "QUALIFIER 0 WC setups" [ref=e447] [cursor=pointer]:
+      - generic [ref=e73]: QUALIFIER
+      - generic [ref=e74]: "0"
+      - generic [ref=e75]: WC setups
+    - button "CHEAP-NO 20 NO fades" [ref=e448] [cursor=pointer]:
+      - generic [ref=e77]: CHEAP-NO
+      - generic [ref=e78]: "20"
+      - generic [ref=e79]: NO fades
+    - button "DATA-QUALITY 0 diagnostic" [ref=e449] [cursor=pointer]:
+      - generic [ref=e81]: DATA-QUALITY
+      - generic [ref=e82]: "0"
+      - generic [ref=e83]: diagnostic
+  - generic [ref=e84]:
+    - generic [ref=e85]: SPORT
+    - generic [ref=e86]:
+      - 'button "Sport: 1 sel ▾" [ref=e450] [cursor=pointer]'
+      - generic [ref=e421]:
+        - generic [ref=e422] [cursor=pointer]:
+          - checkbox "Esports" [checked] [active] [ref=e423]
+          - text: Esports
+        - generic [ref=e424] [cursor=pointer]:
+          - checkbox "Golf" [ref=e425]
+          - text: Golf
+        - generic [ref=e426] [cursor=pointer]:
+          - checkbox "MLB" [ref=e427]
+          - text: MLB
+        - generic [ref=e428] [cursor=pointer]:
+          - checkbox "Motorsport" [ref=e429]
+          - text: Motorsport
+        - generic [ref=e430] [cursor=pointer]:
+          - checkbox "NBA" [ref=e431]
+          - text: NBA
+        - generic [ref=e432] [cursor=pointer]:
+          - checkbox "NFL" [ref=e433]
+          - text: NFL
+        - generic [ref=e434] [cursor=pointer]:
+          - checkbox "NHL" [ref=e435]
+          - text: NHL
+        - generic [ref=e436] [cursor=pointer]:
+          - checkbox "Soccer (World Cup)" [ref=e437]
+          - text: Soccer (World Cup)
+        - generic [ref=e438] [cursor=pointer]:
+          - checkbox "Tennis" [ref=e439]
+          - text: Tennis
+        - generic [ref=e440] [cursor=pointer]:
+          - checkbox "WNBA" [ref=e441]
+          - text: WNBA
+    - generic [ref=e88]: TOURNAMENT
+    - 'button "Tournament: All ▾" [ref=e90] [cursor=pointer]'
+    - generic [ref=e91]: PARTICIPANT
+    - textbox "contains…" [ref=e92]
+    - generic [ref=e93]: MIN SIZE
+    - spinbutton [ref=e94]
+    - generic [ref=e95] [cursor=pointer]:
+      - checkbox "Tradable-only" [ref=e96]
+      - text: Tradable-only
+    - button "⬇ CSV" [ref=e97] [cursor=pointer]
+    - generic [ref=e98] [cursor=pointer]: clear
+  - generic [ref=e100]:
+    - generic [ref=e101]:
+      - generic [ref=e102]: LAYOUT
+      - combobox [ref=e103]:
+        - option "Default" [selected]
+        - option "Inspect"
+        - option "Research"
+        - option "Triage"
+        - option "Blotter full"
+      - button "⧉ POP" [ref=e104] [cursor=pointer]
+      - button "↺" [ref=e105] [cursor=pointer]
+      - generic [ref=e106]: drag tabs to rearrange · drag splitters to resize · ⧉ to pop out
+    - generic [ref=e130]:
+      - generic [ref=e137]:
+        - generic [ref=e139]:
+          - generic [ref=e144] [cursor=pointer]:
+            - generic [ref=e145]: BLOTTER
+            - img [ref=e147]
+          - generic [ref=e152]:
+            - generic [ref=e153]:
+              - generic [ref=e154] [cursor=pointer]: EXECUTABLE 2 firm · gross edge
+              - generic [ref=e155] [cursor=pointer]: SPECULATIVE 0 bounded-loss · can lose money
+              - generic [ref=e156] [cursor=pointer]: DIAGNOSTIC 0 review-only · data quality
+            - generic [ref=e157]:
+              - generic [ref=e158] [cursor=pointer]: ACTIONABLE2
+              - generic [ref=e159] [cursor=pointer]: REVIEW0
+              - generic [ref=e160] [cursor=pointer]: BLOCKED0
+              - generic [ref=e161]: Showing 2 · 8 cols · ⚙ columns ▾
+            - generic [ref=e164]:
+              - grid [ref=e166]:
+                - rowgroup [ref=e168]:
+                  - row "Participant / match Sport Gross edge ¢ ROI %" [ref=e169]:
+                    - columnheader "Participant / match" [ref=e170]:
+                      - text: 
+                      - generic [ref=e172] [cursor=pointer]: Participant / match
+                      - text: 
+                      - generic:    
+                    - columnheader "Sport" [ref=e173]:
+                      - text: 
+                      - generic [ref=e175] [cursor=pointer]: Sport
+                      - text: 
+                      - generic:    
+                    - columnheader "Gross edge ¢" [ref=e176]:
+                      - text: 
+                      - generic [ref=e178] [cursor=pointer]: Gross edge ¢
+                      - text: 
+                      - generic:    
+                    - columnheader "ROI %" [ref=e179]:
+                      - text: 
+                      - generic [ref=e181] [cursor=pointer]: ROI %
+                      - text: 
+                      - generic:    
+                - rowgroup [ref=e182]:
+                  - row "Carolina Royal Ravens vs Riyadh Falcons Call of Duty · 26 Esports 2¢ 2%" [ref=e311]:
+                    - gridcell "Carolina Royal Ravens vs Riyadh Falcons Call of Duty · 26" [ref=e312]:
+                      - generic [ref=e313]: Carolina Royal Ravens vs Riyadh Falcons Call of Duty · 26
+                    - gridcell "Esports" [ref=e314]
+                    - gridcell "2¢" [ref=e315]
+                    - gridcell "2%" [ref=e316]
+                  - row "ODDIK vs paiN Academy CS2 · 26 Esports 2¢ 2%" [ref=e317]:
+                    - gridcell "ODDIK vs paiN Academy CS2 · 26" [ref=e318]:
+                      - generic [ref=e319]: ODDIK vs paiN Academy CS2 · 26
+                    - gridcell "Esports" [ref=e320]
+                    - gridcell "2¢" [ref=e321]
+                    - gridcell "2%" [ref=e322]
+                - rowgroup
+                - rowgroup [ref=e183]
+                - rowgroup
+              - text:    
+        - generic [ref=e187]:
+          - generic [ref=e192] [cursor=pointer]:
+            - generic [ref=e193]: MD LADDER
+            - img [ref=e195]
+          - generic [ref=e200]:
+            - generic [ref=e201]: READ-ONLY DEPTH VIEW — NO ORDERS · TOP-OF-BOOK + DERIVED
+            - generic [ref=e202]: —
+        - generic [ref=e208]:
+          - generic [ref=e210]:
+            - generic [ref=e215] [cursor=pointer]:
+              - generic [ref=e216]: RECENTLY ACTIONABLE
+              - img [ref=e218]
+            - generic [ref=e223]:
+              - generic [ref=e370] [cursor=pointer]:
+                - generic [ref=e371]: ●
+                - generic [ref=e372]:
+                  - text: Pro Basketball (M) · 27 winner field
+                  - generic [ref=e373]: NBA · overround
+                - generic [ref=e374]: 4¢
+              - generic [ref=e375] [cursor=pointer]:
+                - generic [ref=e376]: ●
+                - generic [ref=e377]:
+                  - text: Group Stage — stage of elimination
+                  - generic [ref=e378]: Soccer (World Cup) · overround
+                - generic [ref=e379]: 4¢
+              - generic [ref=e380] [cursor=pointer]:
+                - generic [ref=e381]: ●
+                - generic [ref=e382]:
+                  - text: Group Stage — stage of elimination
+                  - generic [ref=e383]: Soccer (World Cup) · overround
+                - generic [ref=e384]: 3¢
+              - generic [ref=e385] [cursor=pointer]:
+                - generic [ref=e386]: ●
+                - generic [ref=e387]:
+                  - text: Carolina Royal Ravens vs Riyadh Falcons
+                  - generic [ref=e388]: Esports · underround
+                - generic [ref=e389]: 2¢
+              - generic [ref=e390] [cursor=pointer]:
+                - generic [ref=e391]: ●
+                - generic [ref=e392]:
+                  - text: ODDIK vs paiN Academy
+                  - generic [ref=e393]: Esports · overround
+                - generic [ref=e394]: 2¢
+              - generic [ref=e395] [cursor=pointer]:
+                - generic [ref=e396]: ●
+                - generic [ref=e397]:
+                  - text: Scotland vs Morocco
+                  - generic [ref=e398]: Soccer (World Cup) · overround
+                - generic [ref=e399]: 2¢
+              - generic [ref=e400] [cursor=pointer]:
+                - generic [ref=e401]: ●
+                - generic [ref=e402]:
+                  - text: Cape Verde
+                  - generic [ref=e403]: Soccer (World Cup) · Reach Semifinals ≤ Reach Quarterfinals
+                - generic [ref=e404]: 1¢
+              - generic [ref=e225] [cursor=pointer]: REVIEW MOVERS
+              - generic [ref=e405] [cursor=pointer]:
+                - generic [ref=e406]: ◐
+                - generic [ref=e407]:
+                  - text: Round of 32 — Reach Round of 32 (synthetic vs advance)
+                  - generic [ref=e408]: Soccer (World Cup) · rule-dep
+              - generic [ref=e409] [cursor=pointer]:
+                - generic [ref=e410]: ◐
+                - generic [ref=e411]:
+                  - text: Quarterfinals — Reach Quarterfinals (synthetic vs advance)
+                  - generic [ref=e412]: Soccer (World Cup) · rule-dep
+              - generic [ref=e413] [cursor=pointer]:
+                - generic [ref=e414]: ◐
+                - generic [ref=e415]:
+                  - text: Round of 16 — Reach Round of 16 (synthetic vs advance)
+                  - generic [ref=e416]: Soccer (World Cup) · rule-dep
+              - generic [ref=e417] [cursor=pointer]:
+                - generic [ref=e418]: ◐
+                - generic [ref=e419]:
+                  - text: Round of 16 — Reach Round of 16 (synthetic vs advance)
+                  - generic [ref=e420]: Soccer (World Cup) · rule-dep
+          - generic [ref=e227]:
+            - generic [ref=e232] [cursor=pointer]:
+              - generic [ref=e233]: ALERTS
+              - img [ref=e235]
+            - generic [ref=e240]:
+              - generic [ref=e241]:
+                - generic [ref=e242]: ●
+                - generic [ref=e243]:
+                  - generic [ref=e244]: became executable — Pro Basketball (M) · 27 winner field
+                  - generic [ref=e245]: firm both legs
+              - generic [ref=e246]:
+                - generic [ref=e247]: ●
+                - generic [ref=e248]:
+                  - generic [ref=e249]: bucket changed — → Review · rule-check
+                  - generic [ref=e250]: settlement check
+              - generic [ref=e251]:
+                - generic [ref=e252]: ●
+                - generic [ref=e253]:
+                  - generic [ref=e254]: series failed — 0 series
+                  - generic [ref=e255]: coverage partial
+              - generic [ref=e256]:
+                - generic [ref=e257]: ●
+                - generic [ref=e258]:
+                  - generic [ref=e259]: new bounded-loss — Pittsburgh
+                  - generic [ref=e260]: watchlist
+      - generic [ref=e262]:
+        - generic [ref=e267] [cursor=pointer]:
+          - generic [ref=e268]: INSPECTOR
+          - img [ref=e270]
+        - generic [ref=e275]:
+          - generic [ref=e276]:
+            - generic [ref=e277] [cursor=pointer]: TRADE CARD
+            - generic [ref=e278] [cursor=pointer]: PARTICIPANT DETAIL
+            - generic [ref=e279] [cursor=pointer]: FORMULAS
+          - generic [ref=e281]: Click a blotter row to load the trade card — legs · economics · evidence.
+  - generic [ref=e282]:
+    - generic [ref=e283]: TERMINAL PRO · Phase C
+    - generic [ref=e284]: OPP / RES / OPS surfaces · inspector tabs (trade card · participant detail · formulas) · net-of-fees toggle (display-only)

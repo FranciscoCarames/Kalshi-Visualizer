@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark" data-density="dense">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kalshi Trading Workstation — UI Redesign Mockup</title>
+<style>
+/* ============================================================= THEME TOKENS */
+:root{
+  --accent:#3b82f6; --accent-2:#6366f1;
+  --pos:#22c55e; --neg:#ef4444; --warn:#f59e0b; --info:#38bdf8; --muted-amber:#d4a017;
+  --row-h:28px; --pad:6px;
+  --mono:'SF Mono','JetBrains Mono','Cascadia Code',Consolas,monospace;
+  --sans:'Inter',-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+}
+html[data-density="comfortable"]{ --row-h:38px; --pad:10px; }
+html[data-theme="dark"]{
+  --bg:#0b0e14; --bg-1:#10141c; --bg-2:#151b26; --bg-3:#1c2433; --bg-hover:#1f2937;
+  --line:#222c3c; --line-2:#2c3849;
+  --tx:#e6edf6; --tx-2:#9fb0c5; --tx-3:#6b7c93;
+  --tile:#121826; --chip:#1b2433; --shadow:0 8px 30px rgba(0,0,0,.55);
+  --sel:rgba(59,130,246,.16);
+}
+html[data-theme="light"]{
+  --bg:#f4f6fa; --bg-1:#ffffff; --bg-2:#ffffff; --bg-3:#eef2f8; --bg-hover:#eef3fb;
+  --line:#dde4ee; --line-2:#cdd6e4;
+  --tx:#0f1722; --tx-2:#4a5a70; --tx-3:#8190a5;
+  --tile:#ffffff; --chip:#eef2f8; --shadow:0 8px 30px rgba(20,40,80,.12);
+  --sel:rgba(59,130,246,.12);
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--tx);font-family:var(--sans);font-size:13px;line-height:1.4;
+  -webkit-font-smoothing:antialiased;display:flex;flex-direction:column;height:100vh;overflow:hidden}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums;text-align:right}
+button{font-family:inherit;color:inherit;cursor:pointer}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:var(--line-2);border-radius:6px}
+::-webkit-scrollbar-track{background:transparent}
+*:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
+
+/* ============================================================= TOP APP BAR */
+.appbar{display:flex;align-items:center;gap:14px;padding:0 14px;height:46px;flex:0 0 auto;
+  background:linear-gradient(180deg,var(--bg-2),var(--bg-1));border-bottom:1px solid var(--line)}
+.brand{font-weight:700;font-size:14px;letter-spacing:.2px;white-space:nowrap}
+.brand .dot{color:var(--accent)}
+.tabs{display:flex;gap:2px;margin-left:6px}
+.tab{padding:6px 12px;border-radius:7px 7px 0 0;color:var(--tx-2);font-weight:600;font-size:12.5px;
+  border:1px solid transparent;border-bottom:none;background:transparent}
+.tab[aria-selected="true"]{color:var(--tx);background:var(--bg);border-color:var(--line);position:relative;top:1px}
+.tab .badge{margin-left:6px;font-size:10px}
+.spacer{flex:1}
+.iconbtn{display:inline-flex;align-items:center;gap:6px;padding:5px 9px;border-radius:7px;border:1px solid var(--line);
+  background:var(--bg-2);color:var(--tx-2);font-size:12px}
+.iconbtn:hover{background:var(--bg-hover);color:var(--tx)}
+.kbd{font-family:var(--mono);font-size:10.5px;background:var(--chip);border:1px solid var(--line-2);
+  border-radius:4px;padding:1px 5px;color:var(--tx-2)}
+.bell{position:relative}
+.bell .count{position:absolute;top:-6px;right:-6px;background:var(--neg);color:#fff;border-radius:9px;
+  font-size:9.5px;padding:0 4px;font-weight:700}
+
+/* ============================================================= STATUS STRIP */
+.status{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:6px 14px;flex:0 0 auto;
+  background:var(--bg-1);border-bottom:1px solid var(--line);font-size:11.5px;color:var(--tx-2)}
+.st{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:6px;background:var(--chip);
+  border:1px solid var(--line)}
+.st b{color:var(--tx);font-weight:600}
+.led{width:7px;height:7px;border-radius:50%;background:var(--pos);box-shadow:0 0 6px var(--pos)}
+.led.warn{background:var(--warn);box-shadow:0 0 6px var(--warn)}
+.led.neg{background:var(--neg);box-shadow:0 0 6px var(--neg)}
+.led.scan{background:var(--info);box-shadow:0 0 6px var(--info);animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.scanbar{display:none;height:2px;background:linear-gradient(90deg,transparent,var(--accent),transparent);
+  background-size:50% 100%;animation:slide 1.1s linear infinite}
+body.scanning .scanbar{display:block}
+@keyframes slide{0%{background-position:-50% 0}100%{background-position:150% 0}}
+
+/* ============================================================= MAIN LAYOUT */
+.viewwrap{flex:1;min-height:0;overflow:auto;position:relative}
+.view{display:none;padding:14px;max-width:1700px;margin:0 auto}
+.view.active{display:block}
+.layout{display:grid;grid-template-columns:1fr 270px;gap:14px;align-items:start}
+@media(max-width:1200px){.layout{grid-template-columns:1fr}.rail{display:none}}
+
+/* ============================================================= TILES */
+.tiles{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:12px}
+@media(max-width:1100px){.tiles{grid-template-columns:repeat(4,1fr)}}
+.tile{background:var(--tile);border:1px solid var(--line);border-radius:10px;padding:9px 11px;text-align:left;
+  transition:.12s;position:relative;overflow:hidden}
+.tile:hover{border-color:var(--accent);transform:translateY(-1px)}
+.tile.on{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.tile .k{font-size:10.5px;color:var(--tx-3);text-transform:uppercase;letter-spacing:.4px}
+.tile .v{font-size:22px;font-weight:700;font-family:var(--mono);margin-top:2px}
+.tile .s{font-size:10.5px;color:var(--tx-2);margin-top:1px}
+.tile .v.pos{color:var(--pos)} .tile .v.warn{color:var(--warn)} .tile .v.neg{color:var(--neg)}
+.tile .accentbar{position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent);opacity:.0}
+.tile.on .accentbar{opacity:1}
+
+/* ============================================================= FILTER BAR */
+.filterbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px;
+  background:var(--bg-1);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+.field{display:flex;flex-direction:column;gap:2px}
+.field label{font-size:9.5px;color:var(--tx-3);text-transform:uppercase;letter-spacing:.4px;padding-left:2px}
+select,input[type=text],input[type=number]{background:var(--bg-2);border:1px solid var(--line-2);color:var(--tx);
+  border-radius:7px;padding:5px 8px;font-size:12px;font-family:inherit}
+input[type=text]::placeholder{color:var(--tx-3)}
+.search{position:relative}
+.search input{padding-left:24px;width:170px}
+.search .mag{position:absolute;left:7px;top:50%;transform:translateY(-50%);color:var(--tx-3)}
+.lens{display:flex;gap:0;background:var(--bg-2);border:1px solid var(--line-2);border-radius:8px;overflow:hidden}
+.lens button{padding:5px 10px;font-size:11.5px;color:var(--tx-2);border:none;background:transparent;white-space:nowrap}
+.lens button[aria-pressed="true"]{background:var(--accent);color:#fff;font-weight:600}
+.toggle{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--tx-2);user-select:none}
+.switch{width:32px;height:18px;border-radius:10px;background:var(--line-2);position:relative;transition:.15s}
+.switch::after{content:"";position:absolute;width:14px;height:14px;border-radius:50%;background:#fff;top:2px;left:2px;transition:.15s}
+.switch.on{background:var(--accent)} .switch.on::after{left:16px}
+
+/* ============================================================= SECTIONS / TABLES */
+.section{margin-bottom:14px;background:var(--bg-1);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.sechead{display:flex;align-items:center;gap:10px;padding:9px 12px;cursor:pointer;background:var(--bg-2)}
+.sechead h3{margin:0;font-size:13px;font-weight:700}
+.sechead .sub{font-size:10.5px;color:var(--tx-3);font-weight:400}
+.sechead .cnt{margin-left:auto;font-size:11px;color:var(--tx-2);background:var(--chip);border:1px solid var(--line);
+  border-radius:20px;padding:1px 9px;font-family:var(--mono)}
+.sechead .chev{color:var(--tx-3);transition:.15s;width:14px;text-align:center}
+.section.collapsed .sechead .chev{transform:rotate(-90deg)}
+.section.collapsed .tablewrap{display:none}
+.bar{height:3px;width:100%}
+.bar.act{background:linear-gradient(90deg,var(--pos),transparent)}
+.bar.rev{background:linear-gradient(90deg,var(--warn),transparent)}
+.bar.blk{background:linear-gradient(90deg,var(--neg),transparent)}
+.bar.spec{background:linear-gradient(90deg,var(--accent-2),transparent)}
+.tablewrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+thead th{position:sticky;top:0;background:var(--bg-2);text-align:left;font-weight:600;color:var(--tx-2);
+  font-size:10.5px;text-transform:uppercase;letter-spacing:.3px;padding:6px 10px;border-bottom:1px solid var(--line-2);
+  white-space:nowrap;cursor:pointer;user-select:none}
+thead th.r{text-align:right}
+tbody td{padding:0 10px;height:var(--row-h);border-bottom:1px solid var(--line);white-space:nowrap;color:var(--tx)}
+tbody td.r{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
+tbody tr{cursor:pointer}
+tbody tr:hover{background:var(--bg-hover)}
+tbody tr.sel{background:var(--sel)}
+tbody tr.sel td:first-child{box-shadow:inset 3px 0 0 0 var(--accent)}
+@keyframes flash{from{background:rgba(34,197,94,.5)}to{background:transparent}}
+tbody tr.flash td{animation:flash 1.8s ease-out 1}
+.ind{width:34px;text-align:center}
+td .name-main{font-weight:600}
+td .name-sub{color:var(--tx-3);font-size:10.5px}
+
+/* chips / badges */
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;padding:1px 7px;border-radius:20px;
+  border:1px solid var(--line-2);background:var(--chip);color:var(--tx-2);font-weight:600;white-space:nowrap}
+.chip.sport{font-family:var(--sans)}
+.chip.pos{color:var(--pos);border-color:rgba(34,197,94,.4);background:rgba(34,197,94,.08)}
+.chip.neg{color:var(--neg);border-color:rgba(239,68,68,.4);background:rgba(239,68,68,.08)}
+.chip.warn{color:var(--warn);border-color:rgba(245,158,11,.4);background:rgba(245,158,11,.08)}
+.chip.info{color:var(--info);border-color:rgba(56,189,248,.4);background:rgba(56,189,248,.08)}
+.chip.grey{color:var(--tx-2)}
+.delta.up{color:var(--pos)} .delta.down{color:var(--neg)} .delta.ret{color:var(--warn)}
+.newbadge{background:var(--pos);color:#04130a;font-weight:800;font-size:9.5px;padding:1px 5px;border-radius:4px}
+.pos{color:var(--pos)} .neg{color:var(--neg)} .warn{color:var(--warn)}
+.tradable-yes{color:var(--pos);font-weight:600}
+.tradable-rule{color:var(--warn);font-weight:600}
+.tradable-no{color:var(--tx-3)}
+
+/* sparkline */
+.spark{vertical-align:middle}
+
+/* ============================================================= RIGHT RAIL */
+.rail{position:sticky;top:0;display:flex;flex-direction:column;gap:12px}
+.card{background:var(--bg-1);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.card h4{margin:0;padding:9px 12px;font-size:11.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--tx-2);
+  background:var(--bg-2);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:6px}
+.card .body{padding:10px 12px}
+.watch-item{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line)}
+.watch-item:last-child{border-bottom:none}
+.watch-item .nm{flex:1;min-width:0}
+.watch-item .nm .t{font-weight:600;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.watch-item .nm .d{font-size:10px;color:var(--tx-3)}
+.dist{font-family:var(--mono);font-size:11px}
+.legend div{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--tx-2);margin:5px 0}
+.sw{width:11px;height:11px;border-radius:3px;flex:0 0 auto}
+
+/* ============================================================= DRAWER (TRADE CARD) */
+.scrim{position:fixed;inset:0;background:rgba(2,6,14,.55);opacity:0;pointer-events:none;transition:.18s;z-index:40}
+.scrim.on{opacity:1;pointer-events:auto}
+.drawer{position:fixed;top:0;right:0;height:100%;width:560px;max-width:94vw;background:var(--bg-1);
+  border-left:1px solid var(--line-2);box-shadow:var(--shadow);transform:translateX(100%);transition:.2s cubic-bezier(.2,.7,.2,1);
+  z-index:50;display:flex;flex-direction:column}
+.drawer.on{transform:none}
+.drawer .dh{display:flex;align-items:flex-start;gap:10px;padding:14px;border-bottom:1px solid var(--line)}
+.drawer .dh .x{margin-left:auto}
+.drawer .dbody{overflow:auto;padding:14px;display:flex;flex-direction:column;gap:14px}
+.cardsec{border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.cardsec .t{padding:7px 11px;background:var(--bg-2);font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;
+  color:var(--tx-2);border-bottom:1px solid var(--line);font-weight:700;display:flex;align-items:center;gap:6px}
+.cardsec .c{padding:11px}
+.kv{display:grid;grid-template-columns:1fr auto;gap:5px 10px;font-size:12px}
+.kv .lbl{color:var(--tx-2)} .kv .val{font-family:var(--mono);text-align:right}
+.legrow{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--line);font-size:12px}
+.legrow:last-child{border:none}
+.legtag{font-family:var(--mono);font-weight:700;font-size:10.5px;padding:1px 6px;border-radius:5px}
+.legtag.yes{background:rgba(34,197,94,.14);color:var(--pos)}
+.legtag.no{background:rgba(239,68,68,.14);color:var(--neg)}
+.conf .row{display:grid;grid-template-columns:120px 1fr 34px;align-items:center;gap:8px;margin:5px 0;font-size:11.5px}
+.conf .track{height:7px;border-radius:4px;background:var(--bg-3);overflow:hidden}
+.conf .fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--accent),var(--accent-2))}
+.depth{display:grid;grid-template-columns:1fr 1fr;gap:0 14px;font-family:var(--mono);font-size:11px}
+.depth .h{color:var(--tx-3);font-size:10px;text-transform:uppercase;border-bottom:1px solid var(--line);padding-bottom:3px;margin-bottom:3px}
+.depth .lvl{display:flex;justify-content:space-between;padding:1px 0}
+.depth .yes{color:var(--pos)} .depth .no{color:var(--neg)}
+.tape .tr{display:grid;grid-template-columns:auto auto 1fr auto;gap:8px;font-family:var(--mono);font-size:11px;padding:2px 0}
+.scen td,.scen th{padding:4px 8px;font-size:11.5px}
+.note{font-size:12px;color:var(--tx-2);line-height:1.5}
+.note b{color:var(--tx)}
+.basis-toggle{margin-left:auto;display:flex;border:1px solid var(--line-2);border-radius:6px;overflow:hidden}
+.basis-toggle button{padding:2px 9px;font-size:11px;background:transparent;color:var(--tx-2)}
+.basis-toggle button[aria-pressed=true]{background:var(--accent);color:#fff}
+
+/* ============================================================= OVERLAYS */
+.overlay{position:fixed;inset:0;background:rgba(2,6,14,.6);display:none;align-items:flex-start;justify-content:center;
+  z-index:60;padding-top:12vh}
+.overlay.on{display:flex}
+.palette{width:560px;max-width:92vw;background:var(--bg-1);border:1px solid var(--line-2);border-radius:12px;
+  box-shadow:var(--shadow);overflow:hidden}
+.palette input{width:100%;border:none;border-bottom:1px solid var(--line);border-radius:0;padding:13px 15px;font-size:14px;background:transparent}
+.palette .results{max-height:330px;overflow:auto}
+.palette .res{display:flex;align-items:center;gap:10px;padding:9px 15px;font-size:12.5px;cursor:pointer}
+.palette .res:hover,.palette .res.hi{background:var(--bg-hover)}
+.palette .res .k{color:var(--tx-3);font-size:10.5px;margin-left:auto}
+.help{width:620px;max-width:92vw;background:var(--bg-1);border:1px solid var(--line-2);border-radius:12px;
+  box-shadow:var(--shadow);padding:18px 20px}
+.help h3{margin:0 0 12px}
+.help .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 26px}
+.help .k{display:flex;justify-content:space-between;gap:10px;font-size:12.5px;padding:3px 0;border-bottom:1px solid var(--line)}
+.alertflyout{position:absolute;top:46px;right:14px;width:360px;background:var(--bg-1);border:1px solid var(--line-2);
+  border-radius:11px;box-shadow:var(--shadow);z-index:55;display:none;overflow:hidden}
+.alertflyout.on{display:block}
+.alertflyout .ah{padding:10px 13px;font-weight:700;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px}
+.alert-item{padding:9px 13px;border-bottom:1px solid var(--line);display:flex;gap:9px;font-size:12px}
+.alert-item:last-child{border:none}
+.alert-item .ic{width:8px;height:8px;border-radius:50%;margin-top:4px;flex:0 0 auto}
+.alert-item .meta{font-size:10.5px;color:var(--tx-3)}
+
+/* ============================================================= RESEARCH / OPS */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+@media(max-width:1100px){.grid2,.grid3{grid-template-columns:1fr}}
+.panel{background:var(--bg-1);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.panel .ph{padding:9px 12px;background:var(--bg-2);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px}
+.panel .ph h3{margin:0;font-size:12.5px}
+.panel .pc{padding:12px}
+.research-badge{font-size:9.5px;background:rgba(99,102,241,.15);color:var(--accent-2);border:1px solid rgba(99,102,241,.4);
+  padding:1px 6px;border-radius:5px;font-weight:700;text-transform:uppercase;letter-spacing:.3px}
+.banner{background:linear-gradient(90deg,rgba(99,102,241,.12),transparent);border:1px solid rgba(99,102,241,.3);
+  border-radius:9px;padding:10px 13px;font-size:12px;margin-bottom:14px;color:var(--tx-2)}
+.banner b{color:var(--tx)}
+.opsbar{display:flex;justify-content:space-between;font-size:11px;font-family:var(--mono);padding:3px 0;border-bottom:1px solid var(--line)}
+.hbar{height:8px;border-radius:4px;background:var(--bg-3);overflow:hidden;margin-top:4px}
+.hbar i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-2))}
+.blueprint{font-size:11px;color:var(--tx-3);margin-top:18px;padding:12px;border:1px dashed var(--line-2);border-radius:9px}
+.blueprint b{color:var(--tx-2)}
+.legend-foot{font-size:10.5px;color:var(--tx-3);padding:4px 2px}
+</style>
+</head>
+<body>
+
+<!-- ====================================================== APP BAR -->
+<div class="appbar">
+  <div class="brand">Kalshi <span class="dot">◆</span> Workstation</div>
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" aria-selected="true" data-surface="opp">Opportunity <span class="chip pos badge" id="tabcount">12</span></button>
+    <button class="tab" role="tab" aria-selected="false" data-surface="research">Research Lab</button>
+    <button class="tab" role="tab" aria-selected="false" data-surface="ops">Operations</button>
+  </div>
+  <div class="spacer"></div>
+  <button class="iconbtn" id="simScan" title="Demo the scanning + new-row flash states">▷ Simulate scan</button>
+  <button class="iconbtn" id="cmdBtn">⌘ Command <span class="kbd">Ctrl K</span></button>
+  <button class="iconbtn" id="densityBtn" title="Toggle row density">⊟ Density</button>
+  <button class="iconbtn" id="themeBtn" title="Toggle theme">◐ Theme</button>
+  <button class="iconbtn bell" id="bellBtn" title="Alerts">🔔<span class="count">4</span></button>
+  <button class="iconbtn" id="helpBtn" title="Keyboard help"><span class="kbd">?</span></button>
+</div>
+<div class="scanbar"></div>
+
+<!-- ====================================================== STATUS / TRUST STRIP -->
+<div class="status">
+  <span class="st"><span class="led" id="scanLed"></span> <b id="scanState">Idle</b> <span id="scanPhase">· last scan 12s ago</span></span>
+  <span class="st">Data age <b class="mono" id="dataAge">12s</b></span>
+  <span class="st">Contracts <b class="mono">1,204</b></span>
+  <span class="st">Checks <b class="mono">747</b></span>
+  <span class="st">Kalshi req <b class="mono">49</b></span>
+  <span class="st"><span class="led"></span> Exchange <b>Open</b></span>
+  <span class="st"><span class="led"></span> Auto-scan <b>on · 30s</b></span>
+  <span class="st"><span class="led warn"></span> Failed series <b>1</b></span>
+  <span class="st">DB <b class="mono">42 MB</b></span>
+  <span style="margin-left:auto;color:var(--tx-3);font-size:10.5px">Gross &amp; top-of-book · $1 payout basis · read-only · never "arbitrage"</span>
+</div>
+
+<!-- ====================================================== VIEWS -->
+<div class="viewwrap">
+
+  <!-- ================= OPPORTUNITY SURFACE ================= -->
+  <section class="view active" id="view-opp" role="tabpanel">
+    <div class="layout">
+      <div class="main">
+        <!-- tiles -->
+        <div class="tiles" id="tiles"></div>
+
+        <!-- filter bar -->
+        <div class="filterbar">
+          <div class="field"><label>Sport</label>
+            <select id="fSport"><option value="">All sports</option></select></div>
+          <div class="field"><label>Tournament</label>
+            <select id="fTour"><option value="">All</option></select></div>
+          <div class="field"><label>Participant</label>
+            <input type="text" id="fPart" placeholder="any" style="width:120px"></div>
+          <div class="field"><label>Min size</label>
+            <input type="number" id="fSize" value="0" style="width:70px"></div>
+          <div class="field"><label>Lens</label>
+            <div class="lens" id="lens">
+              <button data-lens="blended" aria-pressed="true">Blended</button>
+              <button data-lens="edge">Edge ¢</button>
+              <button data-lens="spread_upside">Spread upside</button>
+              <button data-lens="spread_ratio">Outright+spread</button>
+              <button data-lens="implied_ev">Implied EV</button>
+            </div>
+          </div>
+          <div class="field"><label>Search</label>
+            <div class="search"><span class="mag">⌕</span><input type="text" id="fSearch" placeholder="/ to search"></div></div>
+          <div class="spacer"></div>
+          <label class="toggle"><span>Active only</span><span class="switch on" id="tgActive"></span></label>
+          <label class="toggle"><span>Show marginal</span><span class="switch" id="tgMarginal"></span></label>
+          <div class="field"><label>Saved view</label>
+            <select id="fView"><option>Default</option><option>Liquidity-first</option><option>Settlement-safe</option><option>My WC desk</option></select></div>
+        </div>
+
+        <div id="sections"></div>
+
+        <div class="blueprint" id="blueprint">
+          <b>Blueprint — how this UI pre-wires the roadmap (MASTER_BACKLOG):</b>
+          status strip → §14 data-quality states · trade-card drawer + EvidencePack → §8/§3 ·
+          9-dim confidence + lens switcher → §7 · Research Lab tab → §5/§6/§11 · Operations tab → §1/§13 ·
+          alerts bell → §10 · watchlist / saved views / command palette → §9.3 · $1⇄$100 basis → §0.3/§8.
+          Every future detector family already has a slot: a bucket, a card shape, a confidence breakdown, and a lens.
+        </div>
+      </div>
+
+      <!-- right rail -->
+      <aside class="rail">
+        <div class="card">
+          <h4>★ Watchlist <span class="chip grey" style="margin-left:auto" id="watchCnt">4</span></h4>
+          <div class="body" id="watch"></div>
+        </div>
+        <div class="card">
+          <h4>≈ Movers (last scan)</h4>
+          <div class="body" id="movers"></div>
+        </div>
+        <div class="card">
+          <h4>⚑ Legend</h4>
+          <div class="body legend">
+            <div><span class="sw" style="background:var(--pos)"></span> Actionable — executable gross edge</div>
+            <div><span class="sw" style="background:var(--warn)"></span> Review — settlement-dependent</div>
+            <div><span class="sw" style="background:var(--neg)"></span> Blocked — not executable now</div>
+            <div><span class="sw" style="background:var(--accent-2)"></span> Speculative — bounded-loss / research</div>
+            <div class="legend-foot">Colour is never the only cue — every status also carries text + icon.</div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ================= RESEARCH SURFACE ================= -->
+  <section class="view" id="view-research" role="tabpanel">
+    <div class="banner"><b>Research Lab</b> — hypotheses & analytics, visually separated from executable rows.
+      Signals carry a <span class="research-badge">research signal</span> badge, never a trade instruction, and attach to cards as evidence (§5/§6/§11).</div>
+    <div class="grid2">
+      <div class="panel"><div class="ph"><h3>Implied distribution — NBA champion field</h3><span class="research-badge">research</span></div>
+        <div class="pc" id="rDist"></div></div>
+      <div class="panel"><div class="ph"><h3>Probability term structure — Reach SF → Win</h3><span class="research-badge">research</span></div>
+        <div class="pc" id="rTerm"></div></div>
+      <div class="panel"><div class="ph"><h3>Favorite–longshot calibration</h3><span class="research-badge">research</span></div>
+        <div class="pc" id="rCal"></div></div>
+      <div class="panel"><div class="ph"><h3>Binary "Greeks" — Sinner Win</h3><span class="research-badge">research</span></div>
+        <div class="pc">
+          <div class="kv">
+            <span class="lbl">Δ (implied probability)</span><span class="val">0.41</span>
+            <span class="lbl">Event-time gamma proxy</span><span class="val">high</span>
+            <span class="lbl">θ analog (drift to 0/1)</span><span class="val">−0.6/day</span>
+            <span class="lbl">Capital duration</span><span class="val">9 days</span>
+          </div>
+          <div class="note" style="margin-top:8px">Display/education layer. Δ ≡ implied probability; never feeds strict classification (§0.1).</div>
+        </div></div>
+      <div class="panel"><div class="ph"><h3>Pairs / dispersion watch</h3><span class="research-badge">research</span></div>
+        <div class="pc"><table><thead><tr><th>Pair</th><th class="r">z-score</th><th>Signal</th></tr></thead><tbody>
+          <tr><td>Alcaraz vs Sinner (Win)</td><td class="r neg">−2.3</td><td><span class="chip info">divergence</span></td></tr>
+          <tr><td>Celtics outright vs path-implied</td><td class="r pos">+1.8</td><td><span class="chip warn">rich path</span></td></tr>
+          <tr><td>CS2 map1 vs match implied</td><td class="r">0.4</td><td><span class="chip grey">in line</span></td></tr>
+        </tbody></table></div></div>
+      <div class="panel"><div class="ph"><h3>Backtest / calibration dashboard</h3><span class="research-badge">research</span></div>
+        <div class="pc"><div class="kv">
+          <span class="lbl">Brier (dutch-book, 90d)</span><span class="val">0.071</span>
+          <span class="lbl">Log score</span><span class="val">−0.21</span>
+          <span class="lbl">Actionable rows graded</span><span class="val">318</span>
+          <span class="lbl">"Doing nothing was better"</span><span class="val">12%</span>
+        </div><div class="note" style="margin-top:8px">Backfilled = reconstructed, not observed — forward-validated before any promotion (§0.4).</div></div></div>
+    </div>
+  </section>
+
+  <!-- ================= OPS SURFACE ================= -->
+  <section class="view" id="view-ops" role="tabpanel">
+    <div class="banner"><b>Operations / Diagnostics</b> — endpoint health, probes, scan profile, data-quality, coverage (§1/§13/§14).</div>
+    <div class="grid2">
+      <div class="panel"><div class="ph"><h3>Endpoint / capability health</h3></div>
+        <div class="pc"><table><thead><tr><th>Capability</th><th>Auth</th><th class="r">Tok</th><th>Last probe</th><th>Status</th></tr></thead><tbody>
+          <tr><td>/markets</td><td>public</td><td class="r">10</td><td>12s</td><td><span class="chip pos">healthy</span></td></tr>
+          <tr><td>/events</td><td>public</td><td class="r">10</td><td>12s</td><td><span class="chip pos">healthy</span></td></tr>
+          <tr><td>/orderbook</td><td>conflicted</td><td class="r">10</td><td>1h</td><td><span class="chip warn">probe-required</span></td></tr>
+          <tr><td>/candlesticks</td><td>public</td><td class="r">10</td><td>1h</td><td><span class="chip info">selective</span></td></tr>
+          <tr><td>/series/fee-changes</td><td>public</td><td class="r">10</td><td>6h</td><td><span class="chip grey">disabled</span></td></tr>
+        </tbody></table></div></div>
+      <div class="panel"><div class="ph"><h3>Scan profile (last run)</h3></div>
+        <div class="pc">
+          <div class="opsbar"><span>fetch</span><span>1.9s</span></div><div class="hbar"><i style="width:55%"></i></div>
+          <div class="opsbar" style="margin-top:8px"><span>parse</span><span>0.3s</span></div><div class="hbar"><i style="width:12%"></i></div>
+          <div class="opsbar" style="margin-top:8px"><span>detect (7 builders)</span><span>1.4s</span></div><div class="hbar"><i style="width:42%"></i></div>
+          <div class="opsbar" style="margin-top:8px"><span>store write</span><span>0.2s</span></div><div class="hbar"><i style="width:8%"></i></div>
+          <div class="opsbar" style="margin-top:8px"><span>render</span><span>0.3s</span></div><div class="hbar"><i style="width:11%"></i></div>
+          <div class="note" style="margin-top:10px">Total ≈ 3.4s · 49 GETs @ 15 rps · network-bound by design.</div>
+        </div></div>
+      <div class="panel"><div class="ph"><h3>Data-quality events</h3></div>
+        <div class="pc"><table><thead><tr><th>Type</th><th>Where</th><th>Sev</th></tr></thead><tbody>
+          <tr><td>YES/NO parity skew</td><td>KXNBA…CELT</td><td><span class="chip grey">data-quality</span></td></tr>
+          <tr><td>Crossed book</td><td>KXNHLGAME…</td><td><span class="chip warn">review</span></td></tr>
+          <tr><td>Series fetch failed</td><td>KXMOTOGP…</td><td><span class="chip neg">blocker</span></td></tr>
+        </tbody></table></div></div>
+      <div class="panel"><div class="ph"><h3>Market-class coverage matrix</h3></div>
+        <div class="pc"><table><thead><tr><th>Class</th><th>Detector</th><th>Status</th></tr></thead><tbody>
+          <tr><td>Binary participant</td><td>containment</td><td><span class="chip pos">live</span></td></tr>
+          <tr><td>Categorical MECE</td><td>dutch-book</td><td><span class="chip pos">live</span></td></tr>
+          <tr><td>One-winner field</td><td>overround</td><td><span class="chip pos">live</span></td></tr>
+          <tr><td>Scalar-range ladder</td><td>monotonicity</td><td><span class="chip warn">planned</span></td></tr>
+          <tr><td>Multivariate combo</td><td>combo-leg bound</td><td><span class="chip grey">probe</span></td></tr>
+        </tbody></table></div></div>
+    </div>
+  </section>
+
+</div><!-- /viewwrap -->
+
+<!-- ====================================================== DRAWER -->
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" aria-label="Trade card detail"></aside>
+
+<!-- ====================================================== ALERTS FLYOUT -->
+<div class="alertflyout" id="alertFly">
+  <div class="ah">🔔 Alerts <span class="chip grey" style="margin-left:auto">trusted-state</span></div>
+  <div class="alert-item"><span class="ic" style="background:var(--pos)"></span><div><div><b>Became executable</b> — Sinner Reach Final ⊇ Win</div><div class="meta">2m ago · firm both legs · size 140</div></div></div>
+  <div class="alert-item"><span class="ic" style="background:var(--warn)"></span><div><div><b>Bucket changed</b> — Celtics ladder → Review</div><div class="meta">7m ago · rule-check required</div></div></div>
+  <div class="alert-item"><span class="ic" style="background:var(--info)"></span><div><div><b>Watched market moved</b> — CS2 Map 1 dutch book +3¢</div><div class="meta">9m ago</div></div></div>
+  <div class="alert-item"><span class="ic" style="background:var(--neg)"></span><div><div><b>Series failed</b> — KXMOTOGP… not fetched</div><div class="meta">12m ago · degraded</div></div></div>
+</div>
+
+<!-- ====================================================== COMMAND PALETTE -->
+<div class="overlay" id="cmdOverlay">
+  <div class="palette">
+    <input type="text" id="cmdInput" placeholder="Search markets, participants, lenses, views, sections…">
+    <div class="results" id="cmdResults"></div>
+  </div>
+</div>
+
+<!-- ====================================================== HELP -->
+<div class="overlay" id="helpOverlay">
+  <div class="help">
+    <h3>Keyboard & workflow</h3>
+    <div class="grid">
+      <div class="k"><span>Move row</span><span><span class="kbd">j</span> <span class="kbd">k</span></span></div>
+      <div class="k"><span>Open trade card</span><span class="kbd">Enter</span></div>
+      <div class="k"><span>Close panel / overlay</span><span class="kbd">Esc</span></div>
+      <div class="k"><span>Focus search</span><span class="kbd">/</span></div>
+      <div class="k"><span>Command palette</span><span><span class="kbd">Ctrl</span> <span class="kbd">K</span></span></div>
+      <div class="k"><span>Jump Actionable</span><span><span class="kbd">g</span> <span class="kbd">a</span></span></div>
+      <div class="k"><span>Jump Review</span><span><span class="kbd">g</span> <span class="kbd">r</span></span></div>
+      <div class="k"><span>Jump Blocked</span><span><span class="kbd">g</span> <span class="kbd">b</span></span></div>
+      <div class="k"><span>Toggle theme</span><span class="kbd">t</span></div>
+      <div class="k"><span>This help</span><span class="kbd">?</span></div>
+    </div>
+    <div class="note" style="margin-top:12px">A trader-grade keyboard layer is part of §9.3 — this mockup wires the core set.</div>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ===================================================== SAMPLE DATA ===================================================== */
+const sp = (pts)=>pts; // sparkline points helper
+const OPPS = [
+ {id:1,bucket:"actionable",change:"new",flash:true,sport:"Tennis",sportc:"info",tour:"Wimbledon",name:"J. Sinner",sub:"Reach Final ⊇ Win Tournament",setup:"Containment ladder",plan:"Buy YES Reach Final 38¢ · Buy NO Win 55¢",edge:7,roi:14.0,units:140,profit:9.80,tradable:"Yes",sev:null,caveat:"—",quote:"Tight",spark:sp([34,35,33,36,38,37,38]),
+   legs:[["YES","Reach Final · KXATPADVANCE","38¢",140],["NO","Win Tournament · KXFOMEN","55¢",140]],cost:93,floor:100,worst:-7,best:7,be:0.93,fill:140,conf:{data:95,quote:92,liquidity:78,execution:80,settlement:88,strategy:96,model:60,comparability:84,complexity:90},
+   why:"Firm child bid (Reach Final) exceeds parent ask (Win) by 7¢ — a deeper outcome priced above the broader one that contains it.",rank:"Top under Blended: high ROI, tight quotes, size 140.",improve:"Already executable. More size would arrive if Win ask deepens.",wrong:"Settlement rules auto-checked light only; a walkover advances without a match win."},
+ {id:2,bucket:"actionable",change:"up",flash:false,sport:"Soccer",sportc:"info",tour:"World Cup",name:"Brazil vs Serbia",sub:"Home / Away / Tie 3-way",setup:"Dutch book (overround)",plan:"Buy NO Home 61¢ · Buy NO Away 78¢ · Buy NO Tie 72¢",edge:11,roi:5.5,units:90,profit:9.90,tradable:"Yes",sev:"advisory",caveat:"Per-game postponement caveat",quote:"OK",spark:sp([5,6,8,7,9,10,11]),
+   legs:[["NO","Home · KXWCGAME","61¢",90],["NO","Away · KXWCGAME","78¢",90],["NO","Tie · KXWCGAME","72¢",90]],cost:211,floor:200,worst:-11,best:11,be:1.06,fill:90,conf:{data:94,quote:80,liquidity:70,execution:74,settlement:82,strategy:95,model:55,comparability:80,complexity:78},
+   why:"Σ no-ask across the 3 mutually-exclusive outcomes is 11¢ below the (n−1)×100¢ floor.",rank:"Edge moved up +6¢ since last scan.",improve:"Tighter Away quote would add size.",wrong:"Game postponement is advisory; does not change tradable."},
+ {id:3,bucket:"actionable",change:null,flash:false,sport:"NHL",sportc:"info",tour:"Stanley Cup",name:"Oilers @ Panthers",setup:"Game dutch book",sub:"Head-to-head (bo1)",plan:"Buy YES OILERS 47¢ · Buy YES PANTHERS 49¢",edge:4,roi:4.0,units:200,profit:8.00,tradable:"Yes",sev:null,caveat:"—",quote:"Tight",spark:sp([2,3,3,4,4,3,4]),
+   legs:[["YES","Oilers · KXNHLGAME","47¢",200],["YES","Panthers · KXNHLGAME","49¢",200]],cost:96,floor:100,worst:-4,best:4,be:0.96,fill:200,conf:{data:96,quote:94,liquidity:88,execution:86,settlement:90,strategy:96,model:62,comparability:85,complexity:92},
+   why:"Underround: Σ yes-ask = 96¢ < 100¢ guaranteed payout on a draw-free 2-way game.",rank:"High size, tight — strong on liquidity-first lens.",improve:"Executable now.",wrong:"None material; draw-free game."},
+ {id:4,bucket:"actionable",change:"returned",flash:false,sport:"Esports",sportc:"info",tour:"CS2 Major",name:"FaZe vs Vitality",setup:"Map-1 dutch book",sub:"Map winner (draw-free)",plan:"Buy YES FaZe 52¢ · Buy YES Vitality 45¢",edge:3,roi:3.0,units:60,profit:1.80,tradable:"Yes",sev:null,caveat:"—",quote:"OK",spark:sp([3,2,0,1,2,3,3]),
+   legs:[["YES","FaZe · KXCS2MAP","52¢",60],["YES","Vitality · KXCS2MAP","45¢",60]],cost:97,floor:100,worst:-3,best:3,be:0.97,fill:60,conf:{data:90,quote:78,liquidity:60,execution:66,settlement:86,strategy:94,model:50,comparability:70,complexity:88},
+   why:"Underround on a 2-way draw-free map (97¢ < 100¢).",rank:"Returned to Actionable this scan.",improve:"Thin size — more depth would help.",wrong:"Allow-list maintained; esports series churn."},
+ {id:5,bucket:"review",change:"new",flash:true,sport:"NBA",sportc:"warn",tour:"NBA Playoffs",name:"Boston Celtics",sub:"Reach SF ≡ Win Conference",setup:"Match-alignment equivalence",plan:"Buy YES Reach SF 71¢ · Buy NO Win Conf 33¢",edge:4,roi:6.0,units:50,profit:2.00,tradable:"Rule-dependent",sev:"review",caveat:"RULE_CHECK_REQUIRED",quote:"OK",spark:sp([1,2,3,3,4,4,4]),
+   legs:[["YES","Reach SF · KXNBA…","71¢",50],["NO","Win Conf · KXNBA…","33¢",50]],cost:104,floor:100,worst:-4,best:4,be:1.04,fill:50,conf:{data:88,quote:76,liquidity:64,execution:60,settlement:55,strategy:80,model:48,comparability:72,complexity:70},
+   why:"Equivalence (round maps to a rung) implies a cross — but settlement wording differs by a token.",rank:"Review: rule-dependent, never auto-tradable.",improve:"Confirm settlement rules align → could promote.",wrong:"Light rules token diff flagged RULE_MISMATCH."},
+ {id:6,bucket:"review",change:null,flash:false,sport:"Tennis",sportc:"warn",tour:"Wimbledon",name:"C. Alcaraz",sub:"Exact-score bundle ≡ Win match",setup:"Synthetic bundle",plan:"Buy YES {3-0,3-1,3-2} · Buy NO Match winner",edge:5,roi:5.0,units:40,profit:2.00,tradable:"Review rules",sev:"review",caveat:"SETTLEMENT_CHECK_REQUIRED",quote:"Wide",spark:sp([4,5,5,4,5,5,5]),
+   legs:[["YES","3-0 · KXATPEXACT","12¢",40],["YES","3-1 · KXATPEXACT","18¢",40],["YES","3-2 · KXATPEXACT","21¢",40],["NO","Match winner","54¢",40]],cost:95,floor:100,worst:-5,best:5,be:0.95,fill:40,conf:{data:84,quote:58,liquidity:50,execution:48,settlement:45,strategy:78,model:42,comparability:60,complexity:55},
+   why:"A bundle of MECE scorelines replicates 'they win' — priced 5¢ under the hedge.",rank:"Review-only by construction.",improve:"On a retirement the score legs settle to FMP — needs rule confirmation.",wrong:"Never Actionable; not a dutch book."},
+ {id:7,bucket:"blocked",change:null,flash:false,sport:"MLB",sportc:"neg",tour:"World Series",name:"LA Dodgers",sub:"Reach Playoffs ⊇ Win World Series",setup:"Containment ladder",plan:"Buy YES Reach Playoffs · Buy NO Win WS",edge:6,roi:0,units:0,profit:0,tradable:"No",sev:"blocker",caveat:"Blocked: no size",quote:"One-sided",spark:sp([6,6,5,6,6,6,6]),
+   legs:[["YES","Reach Playoffs · KXMLB…","—",0],["NO","Win WS · KXMLB…","—",0]],cost:0,floor:100,worst:0,best:0,be:0,fill:0,conf:{data:80,quote:30,liquidity:10,execution:15,settlement:78,strategy:82,model:40,comparability:55,complexity:75},
+   why:"Display cross exists but the firm side has zero resting size — QUOTE_SIZE_MISSING.",rank:"Blocked: not executable now.",improve:"Resting size on the NO leg would unblock it.",wrong:"No fill possible at top-of-book."},
+];
+const QUALIFIER = [
+ {sport:"Soccer (Men)",team:"Brazil",setup:"Top-two speculative bundle",qy:62,cost:55,cheaper:7,roi:12.7,quote:"Tight",rev:"Diagnostic"},
+ {sport:"Soccer (Men)",team:"Argentina",setup:"Top-two speculative bundle",qy:58,cost:54,cheaper:4,roi:7.4,quote:"OK",rev:"Diagnostic"},
+ {sport:"Soccer (Men)",team:"France",setup:"Top-two speculative bundle",qy:60,cost:57,cheaper:3,roi:5.3,quote:"OK",rev:"Speculative"},
+];
+const BOUNDED = [
+ {sport:"Golf",name:"S. Scheffler",setup:"Make-cut floor + Top-5 upside",cost:22,worst:-22,best:78,quote:"OK"},
+ {sport:"Tennis",name:"A. Sabalenka",setup:"Reach SF floor, Win convex",cost:31,worst:-31,best:69,quote:"Tight"},
+];
+const OVERROUND = [
+ {sport:"Motorsport",name:"F1 — Monaco GP winner field",gap:-4,note:"Flat guaranteed loss — watch only",quote:"Wide"},
+];
+const RECENT = [
+ {sport:"Tennis",name:"N. Djokovic — Reach Final ⊇ Win",lastSeen:"34m ago",edge:5,life:"22m"},
+ {sport:"NHL",name:"Rangers @ Hurricanes game book",lastSeen:"1h ago",edge:3,life:"8m"},
+];
+const WATCH = [
+ {t:"Sinner — Reach Final ⊇ Win",d:"Tennis · executable",dist:"live",cls:"pos"},
+ {t:"Celtics — SF ≡ Win Conf",d:"NBA · rule-check",dist:"+1¢",cls:"warn"},
+ {t:"CS2 Map 1 dutch book",d:"Esports · watching",dist:"+2¢",cls:"info"},
+ {t:"Dodgers — WS ladder",d:"MLB · needs size",dist:"size 0",cls:"neg"},
+];
+
+/* ===================================================== UTIL ===================================================== */
+const $ = (s,r=document)=>r.querySelector(s);
+const $$ = (s,r=document)=>[...r.querySelectorAll(s)];
+const el=(t,c,h)=>{const e=document.createElement(t);if(c)e.className=c;if(h!=null)e.innerHTML=h;return e;};
+function sparkSVG(pts,color){
+  const w=64,h=18,min=Math.min(...pts),max=Math.max(...pts),rng=(max-min)||1;
+  const step=w/(pts.length-1);
+  const d=pts.map((p,i)=>`${i?'L':'M'}${(i*step).toFixed(1)},${(h-2-((p-min)/rng)*(h-4)).toFixed(1)}`).join(' ');
+  return `<svg class="spark" width="${w}" height="${h}"><path d="${d}" fill="none" stroke="${color}" stroke-width="1.5"/></svg>`;
+}
+const SPORTS=[...new Set(OPPS.map(o=>o.sport))];
+const TOURS=[...new Set(OPPS.map(o=>o.tour).filter(Boolean))];
+
+/* ===================================================== STATE ===================================================== */
+let state={lens:"blended",sport:"",tour:"",part:"",size:0,search:"",active:true,marginal:false,
+  selBucket:"actionable",selIdx:0,tile:null,basis:1};
+
+/* ===================================================== LENS SORT ===================================================== */
+function lensVal(o){
+  switch(state.lens){
+    case "edge": return o.edge;
+    case "spread_upside": return (o.best-o.worst);
+    case "spread_ratio": return o.cost? (o.best-o.worst)/o.cost*100 : 0;
+    case "implied_ev": return o.roi*0.6 + o.edge*0.4;
+    default: return o.edge*0.35 + o.roi*0.45 + (o.best-o.worst)*0.2;
+  }
+}
+function visibleOpps(){
+  return OPPS.filter(o=>{
+    if(state.sport && o.sport!==state.sport) return false;
+    if(state.tour && o.tour!==state.tour) return false;
+    if(state.part && !o.name.toLowerCase().includes(state.part.toLowerCase())) return false;
+    if(state.size && o.units<state.size) return false;
+    if(state.search){const q=state.search.toLowerCase();
+      if(!(o.name+o.sub+o.setup+o.plan+o.sport).toLowerCase().includes(q)) return false;}
+    if(state.tile==="new" && o.change!=="new") return false;
+    if(state.tile==="stale" && o.quote!=="One-sided") return false;
+    if(!state.marginal && o.quote==="Very wide") return false;
+    return true;
+  }).sort((a,b)=>lensVal(b)-lensVal(a));
+}
+
+/* ===================================================== RENDER: TILES ===================================================== */
+function renderTiles(){
+  const vis=OPPS;
+  const act=vis.filter(o=>o.bucket==="actionable").length;
+  const rev=vis.filter(o=>o.bucket==="review").length;
+  const nw=vis.filter(o=>o.change==="new").length;
+  const stale=vis.filter(o=>o.quote==="One-sided").length;
+  const tiles=[
+    {k:"Act-now",v:act,cls:"pos",s:"executable",id:"act"},
+    {k:"Review",v:rev,cls:"warn",s:"settlement-dep.",id:"rev"},
+    {k:"New",v:nw,cls:"",s:"this scan",id:"new"},
+    {k:"Movers",v:"3",cls:"",s:"edge changed",id:"mov"},
+    {k:"Stale",v:stale,cls:"neg",s:"one-sided",id:"stale"},
+    {k:"Failed series",v:"1",cls:"warn",s:"KXMOTOGP…",id:"fail"},
+    {k:"Top lens",v:"+7¢",cls:"pos",s:"Sinner",id:"top"},
+  ];
+  const c=$("#tiles");c.innerHTML="";
+  tiles.forEach(t=>{
+    const b=el("button","tile"+(state.tile===t.id?" on":""));
+    b.innerHTML=`<span class="accentbar"></span><div class="k">${t.k}</div><div class="v ${t.cls}">${t.v}</div><div class="s">${t.s}</div>`;
+    b.onclick=()=>{state.tile = state.tile===t.id?null:t.id; renderAll();};
+    c.appendChild(b);
+  });
+}
+
+/* ===================================================== RENDER: SECTIONS ===================================================== */
+const MAIN_COLS=[["","ind"],["Sport","sport"],["Participant / match","name"],["Setup","setup"],["Action plan","plan"],
+  ["Gross edge ¢","edge",1],["ROI %","roi",1],["Max units","units",1],["Max profit $","profit",1],["Tradable","tradable"],["Caveat","caveat"]];
+function changeCell(o){
+  if(o.change==="new") return `<span class="newbadge">NEW</span>`;
+  if(o.change==="up") return `<span class="delta up" title="edge up">▲</span>`;
+  if(o.change==="down") return `<span class="delta down" title="edge down">▼</span>`;
+  if(o.change==="returned") return `<span class="delta ret" title="returned">↺</span>`;
+  return "";
+}
+function tradableCell(t){
+  if(t==="Yes") return `<span class="tradable-yes">● Yes</span>`;
+  if(t==="No") return `<span class="tradable-no">○ No</span>`;
+  return `<span class="tradable-rule">◐ ${t}</span>`;
+}
+function caveatCell(o){
+  if(!o.sev) return `<span style="color:var(--tx-3)">—</span>`;
+  const cls=o.sev==="blocker"?"neg":o.sev==="review"?"warn":"grey";
+  return `<span class="chip ${cls}" title="${o.caveat}">${o.caveat}</span>`;
+}
+function oppRow(o,idx,bucket){
+  const tr=el("tr");
+  if(o.flash) tr.classList.add("flash");
+  if(bucket===state.selBucket && idx===state.selIdx) tr.classList.add("sel");
+  tr.innerHTML=
+    `<td class="ind">${changeCell(o)}</td>`+
+    `<td><span class="chip sport ${o.sportc}">${o.sport}</span></td>`+
+    `<td><div class="name-main">${o.name}</div><div class="name-sub">${o.sub} ${sparkSVG(o.spark, getComputedStyle(document.documentElement).getPropertyValue('--accent'))}</div></td>`+
+    `<td>${o.setup}</td>`+
+    `<td style="color:var(--tx-2);max-width:280px;white-space:normal">${o.plan}</td>`+
+    `<td class="r ${o.change==='up'?'pos':o.change==='down'?'neg':''}">${o.edge?o.edge.toFixed(0):'—'}</td>`+
+    `<td class="r">${o.roi?o.roi.toFixed(1):'—'}</td>`+
+    `<td class="r">${o.units?o.units.toLocaleString():'—'}</td>`+
+    `<td class="r">${o.profit?o.profit.toFixed(2):'—'}</td>`+
+    `<td>${tradableCell(o.tradable)}</td>`+
+    `<td>${caveatCell(o)}</td>`;
+  tr.onclick=()=>{state.selBucket=bucket;state.selIdx=idx;openCard(o);renderSections();};
+  return tr;
+}
+function makeTable(cols,rows,buildRow){
+  const wrap=el("div","tablewrap");
+  const t=el("table");
+  const thead=el("thead");const trh=el("tr");
+  cols.forEach(c=>{const th=el("th",c[2]?"r":"",c[0]);trh.appendChild(th);});
+  thead.appendChild(trh);t.appendChild(thead);
+  const tb=el("tbody");rows.forEach((r,i)=>tb.appendChild(buildRow(r,i)));
+  if(!rows.length){const tr=el("tr");tr.innerHTML=`<td colspan="${cols.length}" style="color:var(--tx-3);height:40px;text-align:center">No rows under the current filters.</td>`;tb.appendChild(tr);}
+  t.appendChild(tb);wrap.appendChild(t);return wrap;
+}
+function section(id,bar,title,sub,count,bodyEl,collapsed){
+  const s=el("section","section"+(collapsed?" collapsed":""));s.id="sec-"+id;
+  s.appendChild(el("div","bar "+bar));
+  const h=el("div","sechead");
+  h.innerHTML=`<span class="chev">▾</span><h3>${title}</h3><span class="sub">${sub}</span><span class="cnt">${count}</span>`;
+  h.onclick=()=>s.classList.toggle("collapsed");
+  s.appendChild(h);s.appendChild(bodyEl);return s;
+}
+function renderSections(){
+  const host=$("#sections");host.innerHTML="";
+  const vis=visibleOpps();
+  const act=vis.filter(o=>o.bucket==="actionable");
+  const rev=vis.filter(o=>o.bucket==="review");
+  const blk=vis.filter(o=>o.bucket==="blocked");
+
+  host.appendChild(section("act","act","Actionable","executable gross edges",act.length,
+    makeTable(MAIN_COLS,act,(o,i)=>oppRow(o,i,"actionable")),false));
+  host.appendChild(section("rev","rev","Review Required","settlement-dependent · never auto-tradable",rev.length,
+    makeTable(MAIN_COLS,rev,(o,i)=>oppRow(o,i,"review")),false));
+  host.appendChild(section("blk","blk","Blocked","exist but not currently executable",blk.length,
+    makeTable(MAIN_COLS,blk,(o,i)=>oppRow(o,i,"blocked")),true));
+
+  // Qualifier setups
+  const qCols=[["Sport","s"],["Team","t"],["Setup","st"],["Qualifier YES ¢","q",1],["Top-two cost ¢","c",1],["¢ cheaper","ch",1],["ROI bundle %","r",1],["Quote","qq"],["Review status","rv"]];
+  host.appendChild(section("qual","spec","Qualifier setups","World Cup group-stage ideas & signals · speculative, review-only",QUALIFIER.length,
+    makeTable(qCols,QUALIFIER,(q)=>{const tr=el("tr");tr.innerHTML=
+      `<td><span class="chip info">${q.sport}</span></td><td class="name-main">${q.team}</td><td>${q.setup}</td>`+
+      `<td class="r">${q.qy}</td><td class="r">${q.cost}</td><td class="r pos">${q.cheaper}</td><td class="r">${q.roi.toFixed(1)}</td>`+
+      `<td><span class="chip grey">${q.quote}</span></td><td><span class="chip ${q.rev==='Speculative'?'warn':'grey'}">${q.rev}</span></td>`;return tr;}),true));
+
+  // Bounded-Loss (promoted open)
+  const bCols=[["Sport","s"],["Participant","n"],["Setup","st"],["Cost / $1 ¢","c",1],["Worst ¢","w",1],["Best ¢","b",1],["Quote","q"]];
+  host.appendChild(section("bound","spec","Bounded-Loss Bets","capped downside, convex upside",BOUNDED.length,
+    makeTable(bCols,BOUNDED,(b)=>{const tr=el("tr");tr.innerHTML=
+      `<td><span class="chip info">${b.sport}</span></td><td class="name-main">${b.name}</td><td>${b.setup}</td>`+
+      `<td class="r">${b.cost}</td><td class="r neg">${b.worst}</td><td class="r pos">+${b.best}</td><td><span class="chip grey">${b.quote}</span></td>`;return tr;}),false));
+
+  // Overround
+  const oCols=[["Sport","s"],["Field","n"],["Gap ¢","g",1],["Note","nt"],["Quote","q"]];
+  host.appendChild(section("over","spec","Overround Books","flat guaranteed loss, watch-only",OVERROUND.length,
+    makeTable(oCols,OVERROUND,(o)=>{const tr=el("tr");tr.innerHTML=
+      `<td><span class="chip info">${o.sport}</span></td><td class="name-main">${o.name}</td><td class="r neg">${o.gap}</td>`+
+      `<td style="color:var(--tx-2)">${o.note}</td><td><span class="chip grey">${o.quote}</span></td>`;return tr;}),true));
+
+  // Recently actionable
+  const rCols=[["Sport","s"],["Participant / match","n"],["Last seen","ls"],["Peak edge ¢","e",1],["Lifetime","lf"]];
+  host.appendChild(section("recent","spec","Recently actionable","left Actionable within the backlog window",RECENT.length,
+    makeTable(rCols,RECENT,(r)=>{const tr=el("tr");tr.innerHTML=
+      `<td><span class="chip info">${r.sport}</span></td><td class="name-main">${r.name}</td><td>${r.lastSeen}</td>`+
+      `<td class="r">${r.edge}</td><td>${r.life}</td>`;return tr;}),true));
+
+  $("#tabcount").textContent=act.length+rev.length;
+}
+
+/* ===================================================== RIGHT RAIL ===================================================== */
+function renderRail(){
+  const w=$("#watch");w.innerHTML="";
+  WATCH.forEach(it=>{const d=el("div","watch-item");
+    d.innerHTML=`<span class="led ${it.cls==='pos'?'':it.cls==='warn'?'warn':it.cls==='neg'?'neg':''}"></span>
+      <div class="nm"><div class="t">${it.t}</div><div class="d">${it.d}</div></div>
+      <span class="dist chip ${it.cls}">${it.dist}</span>`;w.appendChild(d);});
+  $("#watchCnt").textContent=WATCH.length;
+  const m=$("#movers");m.innerHTML="";
+  OPPS.filter(o=>o.change==="up"||o.change==="down"||o.change==="returned").forEach(o=>{
+    const d=el("div","watch-item");
+    const arr=o.change==="up"?'<span class="delta up">▲</span>':o.change==="down"?'<span class="delta down">▼</span>':'<span class="delta ret">↺</span>';
+    d.innerHTML=`${arr}<div class="nm"><div class="t">${o.name}</div><div class="d">${o.sport} · ${o.setup}</div></div><span class="dist">${o.edge}¢</span>`;
+    m.appendChild(d);});
+}
+
+/* ===================================================== TRADE CARD DRAWER ===================================================== */
+function confRow(lbl,v){return `<div class="row"><span style="color:var(--tx-2)">${lbl}</span><div class="track"><div class="fill" style="width:${v}%"></div></div><span class="mono">${v}</span></div>`;}
+function openCard(o){
+  const mult=state.basis; const sign=mult===100?"$":"¢"; const f=(c)=>mult===100?(c).toFixed(2):c; // c is already per-$1 ¢ or $ profit
+  const d=$("#drawer");
+  const legs=o.legs.map(l=>`<div class="legrow"><span class="legtag ${l[0]==='YES'?'yes':'no'}">${l[0]}</span><span style="flex:1">${l[1]}</span><span class="mono">${l[2]}</span><span class="mono" style="color:var(--tx-3)">×${l[3]}</span></div>`).join("");
+  const conf=o.conf;
+  d.innerHTML=`
+   <div class="dh">
+     <div>
+       <div style="display:flex;align-items:center;gap:8px">
+         <span class="chip sport ${o.sportc}">${o.sport}</span>
+         <span class="chip ${o.bucket==='actionable'?'pos':o.bucket==='review'?'warn':'neg'}">${o.bucket}</span>
+         <span class="chip grey">${o.setup}</span>
+       </div>
+       <div style="font-size:16px;font-weight:700;margin-top:6px">${o.name}</div>
+       <div style="color:var(--tx-3);font-size:12px">${o.sub}</div>
+     </div>
+     <div class="basis-toggle x" id="basisTog">
+       <button data-b="1" aria-pressed="${mult===1}">$1</button>
+       <button data-b="100" aria-pressed="${mult===100}">$100</button>
+     </div>
+     <button class="iconbtn" id="closeDrawer" style="margin-left:8px">✕</button>
+   </div>
+   <div class="dbody">
+     <div class="cardsec"><div class="t">Buy-only plan (legs)</div><div class="c">${legs}
+        <div class="kv" style="margin-top:8px">
+          <span class="lbl">Cost per $1</span><span class="val">${o.cost}¢</span>
+          <span class="lbl">Payout floor</span><span class="val">${o.floor}¢</span>
+          <span class="lbl">Worst / best case</span><span class="val">${o.worst}¢ / +${o.best}¢</span>
+          <span class="lbl">Break-even prob</span><span class="val">${(o.be*100).toFixed(0)}%</span>
+          <span class="lbl">Fillable units (top-of-book)</span><span class="val">${o.fill}</span>
+          <span class="lbl">Gross ROI</span><span class="val">${o.roi?o.roi.toFixed(1):'—'}%</span>
+        </div></div></div>
+
+     <div class="cardsec conf"><div class="t">Decomposed confidence — 9 dimensions</div><div class="c">
+        ${confRow("Data",conf.data)}${confRow("Quote",conf.quote)}${confRow("Liquidity",conf.liquidity)}
+        ${confRow("Execution",conf.execution)}${confRow("Settlement",conf.settlement)}${confRow("Strategy/proof",conf.strategy)}
+        ${confRow("Model",conf.model)}${confRow("Comparability",conf.comparability)}${confRow("Complexity",conf.complexity)}
+     </div></div>
+
+     <div class="cardsec"><div class="t">Depth ladder (top-of-book → derived)</div><div class="c">
+        <div class="depth">
+          <div><div class="h">YES bids</div><div class="lvl yes"><span>${o.legs[0][2]}</span><span>${o.fill}</span></div><div class="lvl yes"><span>−1¢</span><span>${Math.round(o.fill*1.8)}</span></div><div class="lvl yes"><span>−2¢</span><span>${Math.round(o.fill*3)}</span></div></div>
+          <div><div class="h">NO asks (derived)</div><div class="lvl no"><span>${o.legs[o.legs.length-1][2]}</span><span>${o.fill}</span></div><div class="lvl no"><span>+1¢</span><span>${Math.round(o.fill*1.5)}</span></div><div class="lvl no"><span>+2¢</span><span>${Math.round(o.fill*2.4)}</span></div></div>
+        </div>
+        <div class="note" style="margin-top:8px">Effective fill at 50 units ≈ ${o.cost+1}¢ · max fill at current edge ${o.fill}. Asks derived from opposing bids (parity is data-quality only).</div>
+     </div></div>
+
+     <div class="cardsec"><div class="t">Tape (recent trades)</div><div class="c tape">
+        <div class="tr"><span class="pos">YES</span><span>${o.legs[0][2]}</span><span style="color:var(--tx-3)">taker buy</span><span>14s</span></div>
+        <div class="tr"><span class="neg">NO</span><span>${o.legs[o.legs.length-1][2]}</span><span style="color:var(--tx-3)">taker buy</span><span>41s</span></div>
+        <div class="tr"><span class="pos">YES</span><span>${o.legs[0][2]}</span><span style="color:var(--tx-3)">sweep</span><span>2m</span></div>
+     </div></div>
+
+     <div class="cardsec"><div class="t">Scenario payoff (per contract)</div><div class="c"><table class="scen"><thead><tr><th>Terminal state</th><th class="r">P&L ¢</th></tr></thead><tbody>
+        <tr><td>Broader settles YES, deeper NO</td><td class="r pos">+${o.best}</td></tr>
+        <tr><td>Both settle the same</td><td class="r neg">${o.worst}</td></tr>
+        <tr><td>Abnormal resolution (retire/void)</td><td class="r warn">rule-dependent</td></tr>
+     </tbody></table></div></div>
+
+     <div class="cardsec"><div class="t">Why flagged · why ranked · what would improve · what can go wrong</div><div class="c note">
+        <p><b>Why flagged:</b> ${o.why}</p>
+        <p><b>Why ranked here:</b> ${o.rank}</p>
+        <p><b>What would improve it:</b> ${o.improve}</p>
+        <p><b>What can go wrong:</b> ${o.wrong}</p>
+     </div></div>
+
+     <div class="cardsec"><div class="t">EvidencePack</div><div class="c kv">
+        <span class="lbl">Scan id</span><span class="val">scan_8841</span>
+        <span class="lbl">Quote / book timestamp</span><span class="val">12s ago</span>
+        <span class="lbl">Source endpoints</span><span class="val">/markets /events</span>
+        <span class="lbl">Rules version</span><span class="val">r3</span>
+        <span class="lbl">Identity ids</span><span class="val">${o.legs[0][1].split('·')[1]||'—'}</span>
+        <span class="lbl">Template</span><span class="val">${o.setup}</span>
+     </div></div>
+   </div>`;
+  d.classList.add("on");$("#scrim").classList.add("on");
+  $("#closeDrawer").onclick=closeDrawer;
+  $$("#basisTog button").forEach(b=>b.onclick=()=>{state.basis=+b.dataset.b;openCard(o);});
+}
+function closeDrawer(){$("#drawer").classList.remove("on");$("#scrim").classList.remove("on");}
+
+/* ===================================================== RESEARCH CHARTS ===================================================== */
+function bars(host,data,color){
+  const max=Math.max(...data.map(d=>d[1]));
+  let h=`<svg width="100%" height="150" viewBox="0 0 320 150" preserveAspectRatio="none">`;
+  const bw=300/data.length;
+  data.forEach((d,i)=>{const bh=(d[1]/max)*120;h+=`<rect x="${10+i*bw}" y="${130-bh}" width="${bw-4}" height="${bh}" fill="${i===0?color:'var(--bg-3)'}" rx="2"/>`;});
+  h+=`</svg><div style="display:flex;justify-content:space-between;font-size:9.5px;color:var(--tx-3)">${data.map(d=>`<span>${d[0]}</span>`).join("")}</div>`;
+  host.innerHTML=h;
+}
+function lineChart(host,pts,color){
+  const w=320,h=150,min=Math.min(...pts),max=Math.max(...pts),rng=(max-min)||1,step=w/(pts.length-1);
+  const d=pts.map((p,i)=>`${i?'L':'M'}${(i*step).toFixed(0)},${(h-10-((p-min)/rng)*(h-30)).toFixed(0)}`).join(' ');
+  host.innerHTML=`<svg width="100%" height="150" viewBox="0 0 ${w} ${h}"><path d="${d}" fill="none" stroke="${color}" stroke-width="2"/></svg>`;
+}
+function calChart(host){
+  const w=320,h=150;let s=`<svg width="100%" height="150" viewBox="0 0 ${w} ${h}">`;
+  s+=`<line x1="20" y1="130" x2="300" y2="10" stroke="var(--line-2)" stroke-dasharray="4"/>`;
+  const pts=[[20,128],[80,108],[140,72],[200,55],[260,28],[300,14]];
+  s+=`<path d="${pts.map((p,i)=>`${i?'L':'M'}${p[0]},${p[1]}`).join(' ')}" fill="none" stroke="var(--accent-2)" stroke-width="2"/>`;
+  pts.forEach(p=>s+=`<circle cx="${p[0]}" cy="${p[1]}" r="3" fill="var(--accent-2)"/>`);
+  s+=`</svg><div style="font-size:10px;color:var(--tx-3)">Dashed = perfect calibration · points = realized vs implied.</div>`;
+  host.innerHTML=s;
+}
+function renderResearch(){
+  const acc=getComputedStyle(document.documentElement).getPropertyValue('--accent-2');
+  bars($("#rDist"),[["Win",34],["SF",22],["QF",16],["R16",12],["R32",9],["Out",7]],acc);
+  lineChart($("#rTerm"),[31,38,46,52,57,61],getComputedStyle(document.documentElement).getPropertyValue('--accent'));
+  calChart($("#rCal"));
+}
+
+/* ===================================================== COMMAND PALETTE ===================================================== */
+const CMDS=[
+ {t:"Lens: Blended",k:"lens",fn:()=>setLens("blended")},
+ {t:"Lens: Per-unit edge ¢",k:"lens",fn:()=>setLens("edge")},
+ {t:"Lens: Spread upside",k:"lens",fn:()=>setLens("spread_upside")},
+ {t:"Lens: Implied EV",k:"lens",fn:()=>setLens("implied_ev")},
+ {t:"Surface: Opportunity",k:"go",fn:()=>setSurface("opp")},
+ {t:"Surface: Research Lab",k:"go",fn:()=>setSurface("research")},
+ {t:"Surface: Operations",k:"go",fn:()=>setSurface("ops")},
+ {t:"Jump: Actionable",k:"g a",fn:()=>jump("act")},
+ {t:"Jump: Review",k:"g r",fn:()=>jump("rev")},
+ {t:"Jump: Blocked",k:"g b",fn:()=>jump("blk")},
+ {t:"Market: J. Sinner — Reach Final ⊇ Win",k:"open",fn:()=>{setSurface("opp");openCard(OPPS[0]);}},
+ {t:"Market: Brazil vs Serbia 3-way",k:"open",fn:()=>{setSurface("opp");openCard(OPPS[1]);}},
+ {t:"View: Liquidity-first",k:"view",fn:()=>{}},
+ {t:"Toggle theme",k:"t",fn:toggleTheme},
+ {t:"Simulate scan",k:"demo",fn:simulateScan},
+];
+let cmdHi=0;
+function openPalette(){$("#cmdOverlay").classList.add("on");$("#cmdInput").value="";cmdHi=0;renderCmd("");setTimeout(()=>$("#cmdInput").focus(),30);}
+function closePalette(){$("#cmdOverlay").classList.remove("on");}
+function renderCmd(q){
+  const r=$("#cmdResults");r.innerHTML="";
+  const list=CMDS.filter(c=>c.t.toLowerCase().includes(q.toLowerCase()));
+  list.forEach((c,i)=>{const d=el("div","res"+(i===cmdHi?" hi":""));
+    d.innerHTML=`<span>${c.t}</span><span class="k">${c.k}</span>`;
+    d.onclick=()=>{c.fn();closePalette();};r.appendChild(d);});
+  r._list=list;
+}
+
+/* ===================================================== CONTROLLERS ===================================================== */
+function setLens(l){state.lens=l;$$("#lens button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.lens===l));renderSections();}
+function setSurface(s){
+  $$(".tab").forEach(t=>t.setAttribute("aria-selected",t.dataset.surface===s));
+  $$(".view").forEach(v=>v.classList.toggle("active",v.id==="view-"+s));
+  if(s==="research") renderResearch();
+}
+function jump(id){setSurface("opp");const s=$("#sec-"+id);if(s){s.classList.remove("collapsed");s.scrollIntoView({behavior:"smooth",block:"start"});}}
+function toggleTheme(){const h=document.documentElement;h.dataset.theme=h.dataset.theme==="dark"?"light":"dark";renderSections();renderRail();if($("#view-research").classList.contains("active"))renderResearch();}
+function toggleDensity(){const h=document.documentElement;h.dataset.density=h.dataset.density==="dense"?"comfortable":"dense";}
+function simulateScan(){
+  document.body.classList.add("scanning");
+  $("#scanLed").className="led scan";$("#scanState").textContent="Scanning";$("#scanPhase").textContent="· fetching markets…";
+  setTimeout(()=>{$("#scanPhase").textContent="· detecting (7 builders)…";},900);
+  setTimeout(()=>{
+    document.body.classList.remove("scanning");
+    $("#scanLed").className="led";$("#scanState").textContent="Idle";$("#scanPhase").textContent="· last scan just now";$("#dataAge").textContent="0s";
+    OPPS.forEach(o=>o.flash=false);OPPS[0].flash=true;OPPS[4].flash=true; // replay new-row flash
+    renderSections();
+    setTimeout(()=>{OPPS.forEach(o=>o.flash=false);},2000);
+  },1900);
+}
+function renderAll(){renderTiles();renderSections();renderRail();}
+
+/* ===================================================== WIRE EVENTS ===================================================== */
+function init(){
+  // filter selects
+  const ss=$("#fSport");SPORTS.forEach(s=>ss.appendChild(el("option",null,s)).value=s);
+  const ts=$("#fTour");TOURS.forEach(t=>ts.appendChild(el("option",null,t)).value=t);
+  ss.onchange=e=>{state.sport=e.target.value;renderSections();};
+  ts.onchange=e=>{state.tour=e.target.value;renderSections();};
+  $("#fPart").oninput=e=>{state.part=e.target.value;renderSections();};
+  $("#fSize").oninput=e=>{state.size=+e.target.value||0;renderSections();};
+  $("#fSearch").oninput=e=>{state.search=e.target.value;renderSections();};
+  $("#lens").onclick=e=>{if(e.target.dataset.lens)setLens(e.target.dataset.lens);};
+  $("#tgActive").onclick=function(){this.classList.toggle("on");state.active=this.classList.contains("on");};
+  $("#tgMarginal").onclick=function(){this.classList.toggle("on");state.marginal=this.classList.contains("on");renderSections();};
+
+  // appbar
+  $$(".tab").forEach(t=>t.onclick=()=>setSurface(t.dataset.surface));
+  $("#themeBtn").onclick=toggleTheme;
+  $("#densityBtn").onclick=toggleDensity;
+  $("#simScan").onclick=simulateScan;
+  $("#cmdBtn").onclick=openPalette;
+  $("#helpBtn").onclick=()=>$("#helpOverlay").classList.add("on");
+  $("#bellBtn").onclick=()=>$("#alertFly").classList.toggle("on");
+  $("#scrim").onclick=closeDrawer;
+  $$(".overlay").forEach(o=>o.onclick=e=>{if(e.target===o)o.classList.remove("on");});
+
+  // command palette
+  $("#cmdInput").oninput=e=>{cmdHi=0;renderCmd(e.target.value);};
+  $("#cmdInput").onkeydown=e=>{
+    const list=$("#cmdResults")._list||[];
+    if(e.key==="ArrowDown"){cmdHi=Math.min(cmdHi+1,list.length-1);renderCmd($("#cmdInput").value);e.preventDefault();}
+    if(e.key==="ArrowUp"){cmdHi=Math.max(cmdHi-1,0);renderCmd($("#cmdInput").value);e.preventDefault();}
+    if(e.key==="Enter"&&list[cmdHi]){list[cmdHi].fn();closePalette();}
+  };
+
+  // keyboard layer
+  let gPending=false;
+  document.addEventListener("keydown",e=>{
+    if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="k"){e.preventDefault();openPalette();return;}
+    if(e.target.tagName==="INPUT"||e.target.tagName==="SELECT"){
+      if(e.key==="Escape")e.target.blur();return;}
+    if(e.key==="Escape"){closeDrawer();closePalette();$("#helpOverlay").classList.remove("on");$("#alertFly").classList.remove("on");return;}
+    if(e.key==="?"){$("#helpOverlay").classList.add("on");return;}
+    if(e.key==="/"){e.preventDefault();$("#fSearch").focus();return;}
+    if(e.key==="t"){toggleTheme();return;}
+    if(gPending){gPending=false;if(e.key==="a")jump("act");if(e.key==="r")jump("rev");if(e.key==="b")jump("blk");return;}
+    if(e.key==="g"){gPending=true;setTimeout(()=>gPending=false,800);return;}
+    if(e.key==="j"||e.key==="k"){
+      const list=visibleOpps().filter(o=>o.bucket===state.selBucket);
+      if(!list.length)return;
+      state.selIdx=Math.max(0,Math.min(list.length-1,state.selIdx+(e.key==="j"?1:-1)));
+      renderSections();const sel=$("#sec-"+(state.selBucket==="actionable"?"act":state.selBucket==="review"?"rev":"blk")+" tr.sel");
+      if(sel)sel.scrollIntoView({block:"nearest"});e.preventDefault();
+    }
+    if(e.key==="Enter"){const list=visibleOpps().filter(o=>o.bucket===state.selBucket);if(list[state.selIdx])openCard(list[state.selIdx]);}
+  });
+
+  renderAll();
+}
+document.addEventListener("DOMContentLoaded",init);
+</script>
+</body>
+</html>

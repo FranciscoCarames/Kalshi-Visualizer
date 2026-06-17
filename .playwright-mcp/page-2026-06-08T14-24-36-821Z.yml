@@ -1,0 +1,498 @@
+- main [ref=e5]:
+  - generic [ref=e6]:
+    - generic [ref=e7]: Kalshi Opportunity Engine — Cross-Sport
+    - generic [ref=e8]: Opportunities across all sports, ranked best→worst. Core series, gross of fees — NOT all of Kalshi.
+    - generic [ref=e9]:
+      - generic [ref=e12] [cursor=pointer]:
+        - generic [ref=e13]:
+          - generic: Sport
+          - generic "Filter by sport" [ref=e14]:
+            - combobox "Sport" [ref=e15]
+        - generic [ref=e17]: arrow_drop_down
+      - generic [ref=e20] [cursor=pointer]:
+        - generic [ref=e21]:
+          - generic: Tournament
+          - generic "Filter by tournament" [ref=e22]:
+            - combobox "Tournament" [ref=e23]
+        - generic [ref=e25]: arrow_drop_down
+      - generic [ref=e28]:
+        - generic [ref=e29]:
+          - generic: Players / matches
+          - combobox "Filter by players or matches" [ref=e31]
+        - generic [ref=e33] [cursor=pointer]: arrow_drop_down
+      - generic [ref=e37]:
+        - generic: Min size
+        - spinbutton "Minimum tradable size" [ref=e38]
+      - button "Refresh snapshot" [ref=e39] [cursor=pointer]:
+        - generic [ref=e41]: Refresh snapshot
+      - button "Clear all filters" [ref=e42] [cursor=pointer]:
+        - generic [ref=e44]: Clear filters
+      - button "Open settings" [ref=e45] [cursor=pointer]:
+        - img [ref=e47]: settings
+    - generic [ref=e48]: Data 15:23:32 WEST · age 61s · 1,242 opportunities · 89 series · 0 failed · 2,523 contracts scanned · 977 checks tested · 214 Kalshi requests
+    - generic [ref=e49]: "Actionable: 10 shown · Speculative: 235 shown · Near-miss: 204 shown · Qualifier setups: 51 shown"
+    - separator [ref=e50]
+    - generic [ref=e51]:
+      - generic [ref=e52]: Actionable — executable gross edges
+      - button [ref=e53] [cursor=pointer]:
+        - img [ref=e55]: view_column
+    - generic [ref=e56]: Firm, sized, currently-tradable gross pricing discrepancies. Gross of fees.
+    - generic "Actionable opportunities" [ref=e57]:
+      - table [ref=e59]:
+        - rowgroup [ref=e60]:
+          - row "Sport Participant / match Detail Action plan Gross edge ¢ ROI % Max units Max gross profit Tradable Caveat" [ref=e61]:
+            - columnheader [ref=e62]
+            - columnheader [ref=e63]
+            - columnheader "Sport" [ref=e64] [cursor=pointer]:
+              - text: Sport
+              - generic [ref=e65]: arrow_upward
+            - columnheader "Participant / match" [ref=e66] [cursor=pointer]:
+              - text: Participant / match
+              - generic [ref=e67]: arrow_upward
+            - columnheader "Detail" [ref=e68]
+            - columnheader "Action plan" [ref=e69]
+            - columnheader "Gross edge ¢" [ref=e70] [cursor=pointer]:
+              - text: Gross edge ¢
+              - generic [ref=e71]: arrow_upward
+            - columnheader "ROI %" [ref=e72] [cursor=pointer]:
+              - text: ROI %
+              - generic [ref=e73]: arrow_upward
+            - columnheader "Max units" [ref=e74] [cursor=pointer]:
+              - text: Max units
+              - generic [ref=e75]: arrow_upward
+            - columnheader "Max gross profit" [ref=e76] [cursor=pointer]:
+              - text: Max gross profit
+              - generic [ref=e77]: arrow_upward
+            - columnheader "Tradable" [ref=e78]
+            - columnheader "Caveat" [ref=e79]
+        - rowgroup [ref=e80]:
+          - row "MLB Chicago C vs Colorado overround Buy NO — Chicago C @ 42¢ + Buy NO — Colorado @ 55¢ 3 3.1 814 24.42 Yes" [ref=e81]:
+            - cell [ref=e82]:
+              - checkbox [ref=e83] [cursor=pointer]:
+                - img [ref=e86]
+            - cell [ref=e88]
+            - cell "MLB" [ref=e89]
+            - cell "Chicago C vs Colorado" [ref=e90]
+            - cell "overround" [ref=e91]
+            - cell "Buy NO — Chicago C @ 42¢ + Buy NO — Colorado @ 55¢" [ref=e92]
+            - cell "3" [ref=e93]:
+              - generic [ref=e94]: "3"
+            - cell "3.1" [ref=e95]
+            - cell "814" [ref=e96]
+            - cell "24.42" [ref=e97]
+            - cell "Yes" [ref=e98]
+            - cell [ref=e99]:
+              - status [ref=e100]: Settlement caveat
+          - row "MLB Washington vs San Francisco overround Buy NO — Washington @ 55¢ + Buy NO — San Francisco @ 44¢ 1 1 1 0.01 Yes" [ref=e101]:
+            - cell [ref=e102]:
+              - checkbox [ref=e103] [cursor=pointer]:
+                - img [ref=e106]
+            - cell [ref=e108]
+            - cell "MLB" [ref=e109]
+            - cell "Washington vs San Francisco" [ref=e110]
+            - cell "overround" [ref=e111]
+            - cell "Buy NO — Washington @ 55¢ + Buy NO — San Francisco @ 44¢" [ref=e112]
+            - cell "1" [ref=e113]:
+              - generic [ref=e114]: "1"
+            - cell "1" [ref=e115]
+            - cell "1" [ref=e116]
+            - cell "0.01" [ref=e117]
+            - cell "Yes" [ref=e118]
+            - cell [ref=e119]:
+              - status [ref=e120]: Settlement caveat
+          - row "MLB Atlanta vs Chicago WS overround Buy NO — Atlanta @ 38¢ + Buy NO — Chicago WS @ 61¢ 1 1 10 0.1 Yes" [ref=e121]:
+            - cell [ref=e122]:
+              - checkbox [ref=e123] [cursor=pointer]:
+                - img [ref=e126]
+            - cell [ref=e128]
+            - cell "MLB" [ref=e129]
+            - cell "Atlanta vs Chicago WS" [ref=e130]
+            - cell "overround" [ref=e131]
+            - cell "Buy NO — Atlanta @ 38¢ + Buy NO — Chicago WS @ 61¢" [ref=e132]
+            - cell "1" [ref=e133]:
+              - generic [ref=e134]: "1"
+            - cell "1" [ref=e135]
+            - cell "10" [ref=e136]
+            - cell "0.1" [ref=e137]
+            - cell "Yes" [ref=e138]
+            - cell [ref=e139]:
+              - status [ref=e140]: Settlement caveat
+          - row "MLB Milwaukee vs A's overround Buy NO — Milwaukee @ 45¢ + Buy NO — A's @ 54¢ 1 1 25 0.25 Yes" [ref=e141]:
+            - cell [ref=e142]:
+              - checkbox [ref=e143] [cursor=pointer]:
+                - img [ref=e146]
+            - cell [ref=e148]
+            - cell "MLB" [ref=e149]
+            - cell "Milwaukee vs A's" [ref=e150]
+            - cell "overround" [ref=e151]
+            - cell "Buy NO — Milwaukee @ 45¢ + Buy NO — A's @ 54¢" [ref=e152]
+            - cell "1" [ref=e153]:
+              - generic [ref=e154]: "1"
+            - cell "1" [ref=e155]
+            - cell "25" [ref=e156]
+            - cell "0.25" [ref=e157]
+            - cell "Yes" [ref=e158]
+            - cell [ref=e159]:
+              - status [ref=e160]: Settlement caveat
+          - row "Esports BetBoom vs Monte underround Buy YES — BetBoom @ 67¢ + Buy YES — Monte @ 32¢ 1 1 1,046.19 10.46 Yes" [ref=e161]:
+            - cell [ref=e162]:
+              - checkbox [ref=e163] [cursor=pointer]:
+                - img [ref=e166]
+            - cell [ref=e168]
+            - cell "Esports" [ref=e169]
+            - cell "BetBoom vs Monte" [ref=e170]
+            - cell "underround" [ref=e171]
+            - cell "Buy YES — BetBoom @ 67¢ + Buy YES — Monte @ 32¢" [ref=e172]
+            - cell "1" [ref=e173]:
+              - generic [ref=e174]: "1"
+            - cell "1" [ref=e175]
+            - cell "1,046.19" [ref=e176]
+            - cell "10.46" [ref=e177]
+            - cell "Yes" [ref=e178]
+            - cell [ref=e179]:
+              - status [ref=e180]: Settlement caveat
+          - row "Esports Legacy vs M80 underround Buy YES — Legacy @ 77¢ + Buy YES — M80 @ 22¢ 1 1 427.55 4.28 Yes" [ref=e181]:
+            - cell [ref=e182]:
+              - checkbox [ref=e183] [cursor=pointer]:
+                - img [ref=e186]
+            - cell [ref=e188]
+            - cell "Esports" [ref=e189]
+            - cell "Legacy vs M80" [ref=e190]
+            - cell "underround" [ref=e191]
+            - cell "Buy YES — Legacy @ 77¢ + Buy YES — M80 @ 22¢" [ref=e192]
+            - cell "1" [ref=e193]:
+              - generic [ref=e194]: "1"
+            - cell "1" [ref=e195]
+            - cell "427.55" [ref=e196]
+            - cell "4.28" [ref=e197]
+            - cell "Yes" [ref=e198]
+            - cell [ref=e199]:
+              - status [ref=e200]: Settlement caveat
+          - row "Tennis Laura Siegemund vs Francesca Jones overround Buy NO — Laura Siegemund @ 30¢ + Buy NO — Francesca Jones @ 69¢ 1 1 7 0.07 Yes" [ref=e201]:
+            - cell [ref=e202]:
+              - checkbox [ref=e203] [cursor=pointer]:
+                - img [ref=e206]
+            - cell [ref=e208]
+            - cell "Tennis" [ref=e209]
+            - cell "Laura Siegemund vs Francesca Jones" [ref=e210]
+            - cell "overround" [ref=e211]
+            - cell "Buy NO — Laura Siegemund @ 30¢ + Buy NO — Francesca Jones @ 69¢" [ref=e212]
+            - cell "1" [ref=e213]:
+              - generic [ref=e214]: "1"
+            - cell "1" [ref=e215]
+            - cell "7" [ref=e216]
+            - cell "0.07" [ref=e217]
+            - cell "Yes" [ref=e218]
+            - cell [ref=e219]
+          - row "MLB Houston vs Los Angeles A underround Buy YES — Houston @ 49¢ + Buy YES — Los Angeles A @ 50¢ 1 1 17 0.17 Yes" [ref=e220]:
+            - cell [ref=e221]:
+              - checkbox [ref=e222] [cursor=pointer]:
+                - img [ref=e225]
+            - cell [ref=e227]
+            - cell "MLB" [ref=e228]
+            - cell "Houston vs Los Angeles A" [ref=e229]
+            - cell "underround" [ref=e230]
+            - cell "Buy YES — Houston @ 49¢ + Buy YES — Los Angeles A @ 50¢" [ref=e231]
+            - cell "1" [ref=e232]:
+              - generic [ref=e233]: "1"
+            - cell "1" [ref=e234]
+            - cell "17" [ref=e235]
+            - cell "0.17" [ref=e236]
+            - cell "Yes" [ref=e237]
+            - cell [ref=e238]:
+              - status [ref=e239]: Settlement caveat
+          - row "Esports BIG vs G2 overround Buy NO — BIG @ 63¢ + Buy NO — G2 @ 36¢ 1 1 1 0.01 Yes" [ref=e240]:
+            - cell [ref=e241]:
+              - checkbox [ref=e242] [cursor=pointer]:
+                - img [ref=e245]
+            - cell [ref=e247]
+            - cell "Esports" [ref=e248]
+            - cell "BIG vs G2" [ref=e249]
+            - cell "overround" [ref=e250]
+            - cell "Buy NO — BIG @ 63¢ + Buy NO — G2 @ 36¢" [ref=e251]
+            - cell "1" [ref=e252]:
+              - generic [ref=e253]: "1"
+            - cell "1" [ref=e254]
+            - cell "1" [ref=e255]
+            - cell "0.01" [ref=e256]
+            - cell "Yes" [ref=e257]
+            - cell [ref=e258]:
+              - status [ref=e259]: Settlement caveat
+          - row "Tennis Ugo Humbert vs Elias Ymer overround Buy NO — Ugo Humbert @ 17¢ + Buy NO — Elias Ymer @ 82¢ 1 1 4,891.94 48.92 Yes" [ref=e260]:
+            - cell [ref=e261]:
+              - checkbox [ref=e262] [cursor=pointer]:
+                - img [ref=e265]
+            - cell [ref=e267]
+            - cell "Tennis" [ref=e268]
+            - cell "Ugo Humbert vs Elias Ymer" [ref=e269]
+            - cell "overround" [ref=e270]
+            - cell "Buy NO — Ugo Humbert @ 17¢ + Buy NO — Elias Ymer @ 82¢" [ref=e271]
+            - cell "1" [ref=e272]:
+              - generic [ref=e273]: "1"
+            - cell "1" [ref=e274]
+            - cell "4,891.94" [ref=e275]
+            - cell "48.92" [ref=e276]
+            - cell "Yes" [ref=e277]
+            - cell [ref=e278]
+      - generic [ref=e279]:
+        - generic [ref=e280]:
+          - generic [ref=e281]: "Records per page:"
+          - generic [ref=e284] [cursor=pointer]:
+            - generic [ref=e286]:
+              - generic [ref=e287]: "15"
+              - combobox "15" [ref=e288]
+            - generic [ref=e290]: arrow_drop_down
+        - generic [ref=e292]: 1-10 of 10
+    - generic [ref=e293]:
+      - generic [ref=e294]: Review Required — settlement-dependent
+      - button [ref=e295] [cursor=pointer]:
+        - img [ref=e297]: view_column
+    - generic [ref=e298]: Real, executable-looking edges whose legs may not settle together (e.g. an exact-score bundle vs the match winner) — verify the settlement rules first; never auto-tradable.
+    - generic "Review-required opportunities" [ref=e299]:
+      - table [ref=e301]:
+        - rowgroup [ref=e302]:
+          - row "Sport Participant / match Detail Action plan Gross edge ¢ ROI % Max units Max gross profit Tradable Caveat" [ref=e303]:
+            - columnheader [ref=e304]
+            - columnheader [ref=e305]
+            - columnheader "Sport" [ref=e306] [cursor=pointer]:
+              - text: Sport
+              - generic [ref=e307]: arrow_upward
+            - columnheader "Participant / match" [ref=e308] [cursor=pointer]:
+              - text: Participant / match
+              - generic [ref=e309]: arrow_upward
+            - columnheader "Detail" [ref=e310]
+            - columnheader "Action plan" [ref=e311]
+            - columnheader "Gross edge ¢" [ref=e312] [cursor=pointer]:
+              - text: Gross edge ¢
+              - generic [ref=e313]: arrow_upward
+            - columnheader "ROI %" [ref=e314] [cursor=pointer]:
+              - text: ROI %
+              - generic [ref=e315]: arrow_upward
+            - columnheader "Max units" [ref=e316] [cursor=pointer]:
+              - text: Max units
+              - generic [ref=e317]: arrow_upward
+            - columnheader "Max gross profit" [ref=e318] [cursor=pointer]:
+              - text: Max gross profit
+              - generic [ref=e319]: arrow_upward
+            - columnheader "Tradable" [ref=e320]
+            - columnheader "Caveat" [ref=e321]
+        - rowgroup
+      - generic [ref=e322]:
+        - generic [ref=e323]: warning
+        - text: No review-required opportunities in the current filters.
+    - generic [ref=e324]: Discrepancies that exist but aren't tradable now (no firm size / an inactive leg).
+    - generic [ref=e325]:
+      - generic [ref=e326]: Qualifier setups — World Cup group-stage diagnostics
+      - button [ref=e327] [cursor=pointer]:
+        - img [ref=e329]: view_column
+    - generic [ref=e330]: Heuristic, gross, top-of-book, settlement-unverified signals — NOT arbitrage and never executable.
+    - generic "Qualifier setup diagnostics" [ref=e331]:
+      - table [ref=e333]:
+        - rowgroup [ref=e334]:
+          - row "Sport Team Setup Qualify YES ¢ Top-two premium ¢ (proxy) Support score ¢ Legs Note" [ref=e335]:
+            - columnheader [ref=e336]
+            - columnheader [ref=e337]
+            - columnheader "Sport" [ref=e338] [cursor=pointer]:
+              - text: Sport
+              - generic [ref=e339]: arrow_upward
+            - columnheader "Team" [ref=e340] [cursor=pointer]:
+              - text: Team
+              - generic [ref=e341]: arrow_upward
+            - columnheader "Setup" [ref=e342] [cursor=pointer]:
+              - text: Setup
+              - generic [ref=e343]: arrow_upward
+            - columnheader "Qualify YES ¢" [ref=e344] [cursor=pointer]:
+              - text: Qualify YES ¢
+              - generic [ref=e345]: arrow_upward
+            - columnheader "Top-two premium ¢ (proxy)" [ref=e346] [cursor=pointer]:
+              - text: Top-two premium ¢ (proxy)
+              - generic [ref=e347]: arrow_upward
+            - columnheader "Support score ¢" [ref=e348] [cursor=pointer]:
+              - text: Support score ¢
+              - generic [ref=e349]: arrow_upward
+            - columnheader "Legs" [ref=e350] [cursor=pointer]:
+              - text: Legs
+              - generic [ref=e351]: arrow_upward
+            - columnheader "Note" [ref=e352]
+        - rowgroup [ref=e353]:
+          - 'row "Soccer (World Cup) Korea Republic Exact-order top-two (proxy) 72 15 13 diagnostic PROXY only: the qualifier YES ask minus the cost of a 12-leg exact-order top-two bundle. Summing one side of a 24-way book carries an OVERROUND bias (the legs sum above fair), so the proxy is typically negative and is NOT a clean best-third value. Gross, top-of-book, fees not modeled; 12-leg execution with thin / stale exact-order quotes; settlement not verified — not arbitrage, never executable" [ref=e354]':
+            - cell [ref=e355]:
+              - checkbox [ref=e356] [cursor=pointer]:
+                - img [ref=e359]
+            - cell [ref=e361]
+            - cell "Soccer (World Cup)" [ref=e362]
+            - cell "Korea Republic" [ref=e363]
+            - cell "Exact-order top-two (proxy)" [ref=e364]
+            - cell "72" [ref=e365]
+            - cell "15" [ref=e366]
+            - cell [ref=e367]
+            - cell "13" [ref=e368]
+            - 'cell "diagnostic PROXY only: the qualifier YES ask minus the cost of a 12-leg exact-order top-two bundle. Summing one side of a 24-way book carries an OVERROUND bias (the legs sum above fair), so the proxy is typically negative and is NOT a clean best-third value. Gross, top-of-book, fees not modeled; 12-leg execution with thin / stale exact-order quotes; settlement not verified — not arbitrage, never executable" [ref=e369]'
+          - 'row "Soccer (World Cup) Tunisia Exact-order top-two (proxy) 37 14 13 diagnostic PROXY only: the qualifier YES ask minus the cost of a 12-leg exact-order top-two bundle. Summing one side of a 24-way book carries an OVERROUND bias (the legs sum above fair), so the proxy is typically negative and is NOT a clean best-third value. Gross, top-of-book, fees not modeled; 12-leg execution with thin / stale exact-order quotes; settlement not verified — not arbitrage, never executable" [ref=e370]':
+            - cell [ref=e371]:
+              - checkbox [ref=e372] [cursor=pointer]:
+                - img [ref=e375]
+            - cell [ref=e377]
+            - cell "Soccer (World Cup)" [ref=e378]
+            - cell "Tunisia" [ref=e379]
+            - cell "Exact-order top-two (proxy)" [ref=e380]
+            - cell "37" [ref=e381]
+            - cell "14" [ref=e382]
+            - cell [ref=e383]
+            - cell "13" [ref=e384]
+            - 'cell "diagnostic PROXY only: the qualifier YES ask minus the cost of a 12-leg exact-order top-two bundle. Summing one side of a 24-way book carries an OVERROUND bias (the legs sum above fair), so the proxy is typically negative and is NOT a clean best-third value. Gross, top-of-book, fees not modeled; 12-leg execution with thin / stale exact-order quotes; settlement not verified — not arbitrage, never executable" [ref=e385]'
+          - 'row "Soccer (World Cup) Saudi Arabia Exact-order top-two (proxy) 35 14 13 diagnostic PROXY only: the qualifier YES ask minus the cost of a 12-leg exact-order top-two bundle. Summing one side of a 24-way book carries an OVERROUND bias (the legs sum above fair), so the proxy is typically negative and is NOT a clean best-third value. Gross, top-of-book, fees not modeled; 12-leg execution with thin / stale exact-order quotes; settlement not verified — not arbitrage, never executable" [ref=e386]':
+            - cell [ref=e387]:
+              - checkbox [ref=e388] [cursor=pointer]:
+                - img [ref=e391]
+            - cell [ref=e393]
+            - cell "Soccer (World Cup)" [ref=e394]
+            - cell "Saudi Arabia" [ref=e395]
+            - cell "Exact-order top-two (proxy)" [ref=e396]
+            - cell "35" [ref=e397]
+            - cell "14" [ref=e398]
+            - cell [ref=e399]
+            - cell "13" [ref=e400]
+            - 'cell "diagnostic PROXY only: the qualifier YES ask minus the cost of a 12-leg exact-order top-two bundle. Summing one side of a 24-way book carries an OVERROUND bias (the legs sum above fair), so the proxy is typically negative and is NOT a clean best-third value. Gross, top-of-book, fees not modeled; 12-leg execution with thin / stale exact-order quotes; settlement not verified — not arbitrage, never executable" [ref=e401]'
+          - 'row "Soccer (World Cup) Curacao Exact-order top-two (proxy) 8 -117 13 diagnostic PROXY only: the qualifier YES ask minus the cost of a 12-leg exact-order top-two bundle. Summing one side of a 24-way book carries an OVERROUND bias (the legs sum above fair), so the proxy is typically negative and is NOT a clean best-third value. Gross, top-of-book, fees not modeled; 12-leg execution with thin / stale exact-order quotes; settlement not verified — not arbitrage, never executable" [ref=e402]':
+            - cell [ref=e403]:
+              - checkbox [ref=e404] [cursor=pointer]:
+                - img [ref=e407]
+            - cell [ref=e409]
+            - cell "Soccer (World Cup)" [ref=e410]
+            - cell "Curacao" [ref=e411]
+            - cell "Exact-order top-two (proxy)" [ref=e412]
+            - cell "8" [ref=e413]
+            - cell "-117" [ref=e414]
+            - cell [ref=e415]
+            - cell "13" [ref=e416]
+            - 'cell "diagnostic PROXY only: the qualifier YES ask minus the cost of a 12-leg exact-order top-two bundle. Summing one side of a 24-way book carries an OVERROUND bias (the legs sum above fair), so the proxy is typically negative and is NOT a clean best-third value. Gross, top-of-book, fees not modeled; 12-leg execution with thin / stale exact-order quotes; settlement not verified — not arbitrage, never executable" [ref=e417]'
+          - 'row "Soccer (World Cup) Korea Republic Game support (heuristic) 72 413 3 ask-implied SUPPORT SCORE, NOT expected points and NOT a probability: 3·win_ask + draw_ask summed over a team''s 3 group games. Top-of-book asks are vig-biased UPWARD (win+draw+lose > 100¢), so the score overstates — it is a heuristic ranking signal only, gross, fees not modeled, never an edge and never executable" [ref=e418]':
+            - cell [ref=e419]:
+              - checkbox [ref=e420] [cursor=pointer]:
+                - img [ref=e423]
+            - cell [ref=e425]
+            - cell "Soccer (World Cup)" [ref=e426]
+            - cell "Korea Republic" [ref=e427]
+            - cell "Game support (heuristic)" [ref=e428]
+            - cell "72" [ref=e429]
+            - cell [ref=e430]
+            - cell "413" [ref=e431]
+            - cell "3" [ref=e432]
+            - 'cell "ask-implied SUPPORT SCORE, NOT expected points and NOT a probability: 3·win_ask + draw_ask summed over a team''s 3 group games. Top-of-book asks are vig-biased UPWARD (win+draw+lose > 100¢), so the score overstates — it is a heuristic ranking signal only, gross, fees not modeled, never an edge and never executable" [ref=e433]'
+          - 'row "Soccer (World Cup) Iraq Exact-order top-two (proxy) 14 -14 13 diagnostic PROXY only: the qualifier YES ask minus the cost of a 12-leg exact-order top-two bundle. Summing one side of a 24-way book carries an OVERROUND bias (the legs sum above fair), so the proxy is typically negative and is NOT a clean best-third value. Gross, top-of-book, fees not modeled; 12-leg execution with thin / stale exact-order quotes; settlement not verified — not arbitrage, never executable" [ref=e434]':
+            - cell [ref=e435]:
+              - checkbox [ref=e436] [cursor=pointer]:
+                - img [ref=e439]
+            - cell [ref=e441]
+            - cell "Soccer (World Cup)" [ref=e442]
+            - cell "Iraq" [ref=e443]
+            - cell "Exact-order top-two (proxy)" [ref=e444]
+            - cell "14" [ref=e445]
+            - cell "-14" [ref=e446]
+            - cell [ref=e447]
+            - cell "13" [ref=e448]
+            - 'cell "diagnostic PROXY only: the qualifier YES ask minus the cost of a 12-leg exact-order top-two bundle. Summing one side of a 24-way book carries an OVERROUND bias (the legs sum above fair), so the proxy is typically negative and is NOT a clean best-third value. Gross, top-of-book, fees not modeled; 12-leg execution with thin / stale exact-order quotes; settlement not verified — not arbitrage, never executable" [ref=e449]'
+          - 'row "Soccer (World Cup) Japan Game support (heuristic) 79 470 3 ask-implied SUPPORT SCORE, NOT expected points and NOT a probability: 3·win_ask + draw_ask summed over a team''s 3 group games. Top-of-book asks are vig-biased UPWARD (win+draw+lose > 100¢), so the score overstates — it is a heuristic ranking signal only, gross, fees not modeled, never an edge and never executable" [ref=e450]':
+            - cell [ref=e451]:
+              - checkbox [ref=e452] [cursor=pointer]:
+                - img [ref=e455]
+            - cell [ref=e457]
+            - cell "Soccer (World Cup)" [ref=e458]
+            - cell "Japan" [ref=e459]
+            - cell "Game support (heuristic)" [ref=e460]
+            - cell "79" [ref=e461]
+            - cell [ref=e462]
+            - cell "470" [ref=e463]
+            - cell "3" [ref=e464]
+            - 'cell "ask-implied SUPPORT SCORE, NOT expected points and NOT a probability: 3·win_ask + draw_ask summed over a team''s 3 group games. Top-of-book asks are vig-biased UPWARD (win+draw+lose > 100¢), so the score overstates — it is a heuristic ranking signal only, gross, fees not modeled, never an edge and never executable" [ref=e465]'
+          - 'row "Soccer (World Cup) Ivory Coast Exact-order top-two (proxy) 79 -53 13 diagnostic PROXY only: the qualifier YES ask minus the cost of a 12-leg exact-order top-two bundle. Summing one side of a 24-way book carries an OVERROUND bias (the legs sum above fair), so the proxy is typically negative and is NOT a clean best-third value. Gross, top-of-book, fees not modeled; 12-leg execution with thin / stale exact-order quotes; settlement not verified — not arbitrage, never executable" [ref=e466]':
+            - cell [ref=e467]:
+              - checkbox [ref=e468] [cursor=pointer]:
+                - img [ref=e471]
+            - cell [ref=e473]
+            - cell "Soccer (World Cup)" [ref=e474]
+            - cell "Ivory Coast" [ref=e475]
+            - cell "Exact-order top-two (proxy)" [ref=e476]
+            - cell "79" [ref=e477]
+            - cell "-53" [ref=e478]
+            - cell [ref=e479]
+            - cell "13" [ref=e480]
+            - 'cell "diagnostic PROXY only: the qualifier YES ask minus the cost of a 12-leg exact-order top-two bundle. Summing one side of a 24-way book carries an OVERROUND bias (the legs sum above fair), so the proxy is typically negative and is NOT a clean best-third value. Gross, top-of-book, fees not modeled; 12-leg execution with thin / stale exact-order quotes; settlement not verified — not arbitrage, never executable" [ref=e481]'
+          - 'row "Soccer (World Cup) Morocco Exact-order top-two (proxy) 87 -46 13 diagnostic PROXY only: the qualifier YES ask minus the cost of a 12-leg exact-order top-two bundle. Summing one side of a 24-way book carries an OVERROUND bias (the legs sum above fair), so the proxy is typically negative and is NOT a clean best-third value. Gross, top-of-book, fees not modeled; 12-leg execution with thin / stale exact-order quotes; settlement not verified — not arbitrage, never executable" [ref=e482]':
+            - cell [ref=e483]:
+              - checkbox [ref=e484] [cursor=pointer]:
+                - img [ref=e487]
+            - cell [ref=e489]
+            - cell "Soccer (World Cup)" [ref=e490]
+            - cell "Morocco" [ref=e491]
+            - cell "Exact-order top-two (proxy)" [ref=e492]
+            - cell "87" [ref=e493]
+            - cell "-46" [ref=e494]
+            - cell [ref=e495]
+            - cell "13" [ref=e496]
+            - 'cell "diagnostic PROXY only: the qualifier YES ask minus the cost of a 12-leg exact-order top-two bundle. Summing one side of a 24-way book carries an OVERROUND bias (the legs sum above fair), so the proxy is typically negative and is NOT a clean best-third value. Gross, top-of-book, fees not modeled; 12-leg execution with thin / stale exact-order quotes; settlement not verified — not arbitrage, never executable" [ref=e497]'
+          - 'row "Soccer (World Cup) South Africa Exact-order top-two (proxy) 39 10 13 diagnostic PROXY only: the qualifier YES ask minus the cost of a 12-leg exact-order top-two bundle. Summing one side of a 24-way book carries an OVERROUND bias (the legs sum above fair), so the proxy is typically negative and is NOT a clean best-third value. Gross, top-of-book, fees not modeled; 12-leg execution with thin / stale exact-order quotes; settlement not verified — not arbitrage, never executable" [ref=e498]':
+            - cell [ref=e499]:
+              - checkbox [ref=e500] [cursor=pointer]:
+                - img [ref=e503]
+            - cell [ref=e505]
+            - cell "Soccer (World Cup)" [ref=e506]
+            - cell "South Africa" [ref=e507]
+            - cell "Exact-order top-two (proxy)" [ref=e508]
+            - cell "39" [ref=e509]
+            - cell "10" [ref=e510]
+            - cell [ref=e511]
+            - cell "13" [ref=e512]
+            - 'cell "diagnostic PROXY only: the qualifier YES ask minus the cost of a 12-leg exact-order top-two bundle. Summing one side of a 24-way book carries an OVERROUND bias (the legs sum above fair), so the proxy is typically negative and is NOT a clean best-third value. Gross, top-of-book, fees not modeled; 12-leg execution with thin / stale exact-order quotes; settlement not verified — not arbitrage, never executable" [ref=e513]'
+      - generic [ref=e514]:
+        - generic [ref=e515]:
+          - generic [ref=e516]: "Records per page:"
+          - generic [ref=e519] [cursor=pointer]:
+            - generic [ref=e521]:
+              - generic [ref=e522]: "10"
+              - combobox "10" [ref=e523]
+            - generic [ref=e525]: arrow_drop_down
+        - generic [ref=e526]:
+          - generic [ref=e527]: 1-10 of 51
+          - button "First page" [disabled] [ref=e528]:
+            - img [ref=e530]: first_page
+          - button "Previous page" [disabled] [ref=e531]:
+            - img [ref=e533]: chevron_left
+          - button "Next page" [ref=e534] [cursor=pointer]:
+            - img [ref=e536]: chevron_right
+          - button "Last page" [ref=e537] [cursor=pointer]:
+            - img [ref=e539]: last_page
+    - generic "Bounded-loss bets section" [ref=e540]:
+      - button "Expand" [ref=e542] [cursor=pointer]:
+        - generic [ref=e543]:
+          - generic [ref=e544]: unfold_more
+          - generic [ref=e545]: Bounded-Loss Bets — capped downside, convex upside (22)
+          - button [ref=e547]:
+            - img [ref=e549]: view_column
+        - generic [ref=e551]: keyboard_arrow_down
+    - generic "Overpriced books section" [ref=e552]:
+      - button "Expand" [ref=e554] [cursor=pointer]:
+        - generic [ref=e555]:
+          - generic [ref=e556]: unfold_more
+          - generic [ref=e557]: Overpriced Books — flat guaranteed loss, watch-only (185)
+          - button [ref=e559]:
+            - img [ref=e561]: view_column
+        - generic [ref=e563]: keyboard_arrow_down
+    - button "Expand \"Recently Actionable — recently left the set\"" [ref=e566] [cursor=pointer]:
+      - generic [ref=e568]: Recently Actionable — recently left the set
+      - generic [ref=e570]: keyboard_arrow_down
+    - button "Expand \"Durable backlog (last 7 days) — survives restarts\"" [ref=e573] [cursor=pointer]:
+      - generic [ref=e575]: Durable backlog (last 7 days) — survives restarts
+      - generic [ref=e577]: keyboard_arrow_down
+    - button "Expand \"Market Telemetry — Liquidity & Volatility (context, not signals)\"" [ref=e580] [cursor=pointer]:
+      - generic [ref=e582]: Market Telemetry — Liquidity & Volatility (context, not signals)
+      - generic [ref=e584]: keyboard_arrow_down
+    - generic "Selected detail" [ref=e585]:
+      - button "Expand \"Selected Detail — click a row\"" [ref=e587] [cursor=pointer]:
+        - generic [ref=e589]: Selected Detail — click a row
+        - generic [ref=e591]: keyboard_arrow_down
+    - generic "Diagnostics and debug" [ref=e592]:
+      - button "Expand \"Diagnostics & Debug\"" [ref=e594] [cursor=pointer]:
+        - generic [ref=e596]: Diagnostics & Debug
+        - generic [ref=e598]: keyboard_arrow_down

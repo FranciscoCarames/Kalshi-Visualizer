@@ -1,0 +1,6 @@
+{
+  "tests/test_webui.py::test_watchlist_row_merges_buckets_with_type_and_nonimperative_structure": true,
+  "tests/test_webui.py::test_watchlist_view_orders_bounded_loss_first_and_respects_include_flags": true,
+  "tests/test_webui.py::test_liquidity_panel_aggregates_by_sport_and_ranks": true,
+  "tests/test_sports.py::test_soccer_winner_rung_dormant_outright": true
+}

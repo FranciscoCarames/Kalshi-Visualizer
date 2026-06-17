@@ -1,0 +1,320 @@
+- generic [ref=e1]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - generic [ref=e5]:
+        - generic [ref=e6] [cursor=pointer]: OPP
+        - generic [ref=e7] [cursor=pointer]: RES
+        - generic [ref=e8] [cursor=pointer]: OPS
+        - generic [ref=e9] [cursor=pointer]: ALRT
+      - generic [ref=e10]:
+        - generic [ref=e11]: ">"
+        - textbox "FUNCTION OR TICKER, THEN <GO>" [ref=e12]
+        - button "<GO>" [ref=e13] [cursor=pointer]
+      - generic [ref=e14]: KALSHI<WS>
+    - generic [ref=e15]:
+      - generic [ref=e16]:
+        - generic [ref=e17]: ●
+        - text: SCAN IDLE · 12s
+      - generic [ref=e18]:
+        - text: Contracts
+        - generic [ref=e19]: 1,204
+      - generic [ref=e20]:
+        - text: Checks
+        - generic [ref=e21]: "747"
+      - generic [ref=e22]:
+        - text: Req
+        - generic [ref=e23]: "49"
+      - generic [ref=e24]:
+        - generic [ref=e25]: ●
+        - text: Exchange Open
+      - generic [ref=e26]:
+        - text: Auto-scan
+        - generic [ref=e27]: on · 30s
+      - generic [ref=e28]:
+        - generic [ref=e29]: ●
+        - text: Failed
+        - generic [ref=e30]: "1"
+      - generic [ref=e31]:
+        - text: DB
+        - generic [ref=e32]: 42 MB
+      - generic [ref=e33]: GROSS · TOP-OF-BOOK · $1 BASIS · READ-ONLY · NO ORDER ENTRY · NOT RISKLESS
+    - generic [ref=e34]:
+      - generic [ref=e35] [cursor=pointer]:
+        - generic [ref=e36]: 1)
+        - text: OPP
+      - generic [ref=e37] [cursor=pointer]:
+        - generic [ref=e38]: 2)
+        - text: RES
+      - generic [ref=e39] [cursor=pointer]:
+        - generic [ref=e40]: 3)
+        - text: OPS
+      - generic [ref=e42]: CANVAS GRID · GLIDE
+    - generic [ref=e43]:
+      - button "ACT-NOW 4 executable" [ref=e44] [cursor=pointer]:
+        - generic [ref=e45]: ACT-NOW
+        - generic [ref=e46]: "4"
+        - generic [ref=e47]: executable
+      - button "REVIEW 2 settlement" [ref=e48] [cursor=pointer]:
+        - generic [ref=e49]: REVIEW
+        - generic [ref=e50]: "2"
+        - generic [ref=e51]: settlement
+      - button "NEW 2 this scan" [ref=e52] [cursor=pointer]:
+        - generic [ref=e53]: NEW
+        - generic [ref=e54]: "2"
+        - generic [ref=e55]: this scan
+      - button "MOVERS 3 edge moved" [ref=e56] [cursor=pointer]:
+        - generic [ref=e57]: MOVERS
+        - generic [ref=e58]: "3"
+        - generic [ref=e59]: edge moved
+      - button "STALE 1 one-sided" [ref=e60] [cursor=pointer]:
+        - generic [ref=e61]: STALE
+        - generic [ref=e62]: "1"
+        - generic [ref=e63]: one-sided
+      - button "FAILED 1 KXMOTOGP" [ref=e64] [cursor=pointer]:
+        - generic [ref=e65]: FAILED
+        - generic [ref=e66]: "1"
+        - generic [ref=e67]: KXMOTOGP
+      - button "TOP LENS +7¢ Sinner" [ref=e68] [cursor=pointer]:
+        - generic [ref=e69]: TOP LENS
+        - generic [ref=e70]: +7¢
+        - generic [ref=e71]: Sinner
+    - generic [ref=e72]:
+      - generic [ref=e73]:
+        - generic [ref=e74]:
+          - generic [ref=e75]: "1"
+          - heading "BLOTTER · CANVAS (GLIDE)" [level=3] [ref=e76]
+          - generic [ref=e77]: virtualized canvas · updateCells on stream
+        - generic [ref=e78]:
+          - generic [ref=e79] [cursor=pointer]: ACTIONABLE
+          - generic [ref=e80] [cursor=pointer]: REVIEW
+          - generic [ref=e81] [cursor=pointer]: BLOCKED
+          - generic [ref=e82] [cursor=pointer]: RESEARCH
+      - generic [ref=e90]:
+        - generic [ref=e91]:
+          - generic [ref=e92]: "2"
+          - heading "DES — TRADE CARD" [level=3] [ref=e93]
+        - generic [ref=e95]:
+          - generic [ref=e96]:
+            - generic [ref=e97]:
+              - generic [ref=e98]: ACT
+              - generic [ref=e99]: J. Sinner
+              - generic [ref=e100]:
+                - button "$1" [ref=e101] [cursor=pointer]
+                - button "$100" [ref=e102] [cursor=pointer]
+            - generic [ref=e103]: Reach Final ⊇ Win · Containment
+            - generic [ref=e104]: BUY-ONLY PLAN (LEGS)
+            - generic [ref=e105]:
+              - generic [ref=e106]: "YES"
+              - generic [ref=e107]: Reach Final · KXATPADVANCE
+              - generic [ref=e108]: 38¢
+              - generic [ref=e109]: ×140
+            - generic [ref=e110]:
+              - generic [ref=e111]: "NO"
+              - generic [ref=e112]: Win · KXFOMEN
+              - generic [ref=e113]: 55¢
+              - generic [ref=e114]: ×140
+            - generic [ref=e115]:
+              - generic [ref=e116]: Cost / unit
+              - generic [ref=e117]: 93¢
+              - generic [ref=e118]: Payout floor
+              - generic [ref=e119]: 100¢
+              - generic [ref=e120]: Worst / best
+              - generic [ref=e121]: "-7¢ / +7¢"
+              - generic [ref=e122]: Break-even
+              - generic [ref=e123]: 93%
+              - generic [ref=e124]: Fillable
+              - generic [ref=e125]: "140"
+            - generic [ref=e126]: EVIDENCEPACK
+            - generic [ref=e127]:
+              - generic [ref=e128]: Scan
+              - generic [ref=e129]: scan_8841
+              - generic [ref=e130]: Quote ts
+              - generic [ref=e131]: 12s
+              - generic [ref=e132]: Rules
+              - generic [ref=e133]: r3
+          - generic [ref=e134]:
+            - generic [ref=e135]: DECOMPOSED CONFIDENCE — 9 DIM
+            - generic [ref=e136]:
+              - generic [ref=e137]: Data
+              - generic [ref=e140]: "95"
+            - generic [ref=e141]:
+              - generic [ref=e142]: Quote
+              - generic [ref=e145]: "92"
+            - generic [ref=e146]:
+              - generic [ref=e147]: Liquidity
+              - generic [ref=e150]: "78"
+            - generic [ref=e151]:
+              - generic [ref=e152]: Execution
+              - generic [ref=e155]: "80"
+            - generic [ref=e156]:
+              - generic [ref=e157]: Settlement
+              - generic [ref=e160]: "88"
+            - generic [ref=e161]:
+              - generic [ref=e162]: Strategy
+              - generic [ref=e165]: "96"
+            - generic [ref=e166]:
+              - generic [ref=e167]: Model
+              - generic [ref=e170]: "60"
+            - generic [ref=e171]:
+              - generic [ref=e172]: Comparability
+              - generic [ref=e175]: "84"
+            - generic [ref=e176]:
+              - generic [ref=e177]: Complexity
+              - generic [ref=e180]: "90"
+            - generic [ref=e181]: WHY FLAGGED
+            - generic [ref=e182]: Firm child bid exceeds parent ask — a deeper outcome priced above the broader one that contains it. Gross, top-of-book; fees & full depth not modeled.
+      - generic [ref=e183]:
+        - generic [ref=e184]:
+          - generic [ref=e185]: "3"
+          - heading "MD LADDER" [level=3] [ref=e186]
+        - generic [ref=e187]: READ-ONLY DEPTH VIEW — NO ORDERS
+        - generic [ref=e188]:
+          - generic [ref=e189]:
+            - text: J. Sinner
+            - generic [ref=e190]: · Tennis
+          - generic [ref=e191]: Reach Final · KXATPADVANCE
+        - table [ref=e193]:
+          - rowgroup [ref=e194]:
+            - row "Bid size Px¢ Ask size" [ref=e195]:
+              - columnheader "Bid size" [ref=e196]
+              - columnheader "Px¢" [ref=e197]
+              - columnheader "Ask size" [ref=e198]
+          - rowgroup [ref=e199]:
+            - row "70 560" [ref=e344]:
+              - cell [ref=e345]
+              - cell "70" [ref=e346]
+              - cell "560" [ref=e347]: "560"
+            - row "69 476" [ref=e349]:
+              - cell [ref=e350]
+              - cell "69" [ref=e351]
+              - cell "476" [ref=e352]: "476"
+            - row "68 392" [ref=e354]:
+              - cell [ref=e355]
+              - cell "68" [ref=e356]
+              - cell "392" [ref=e357]: "392"
+            - row "67 ◀ watch 308" [ref=e359]:
+              - cell [ref=e360]
+              - cell "67 ◀ watch" [ref=e361]:
+                - text: "67"
+                - generic [ref=e362]: ◀ watch
+              - cell "308" [ref=e363]: "308"
+            - row "66 224" [ref=e365]:
+              - cell [ref=e366]
+              - cell "66" [ref=e367]
+              - cell "224" [ref=e368]: "224"
+            - row "140 65 140" [ref=e370]:
+              - cell "140" [ref=e371]: "140"
+              - cell "65" [ref=e373]
+              - cell "140" [ref=e374]: "140"
+            - row "238 64" [ref=e376]:
+              - cell "238" [ref=e377]: "238"
+              - cell "64" [ref=e379]
+              - cell [ref=e380]
+            - row "336 63" [ref=e381]:
+              - cell "336" [ref=e382]: "336"
+              - cell "63" [ref=e384]
+              - cell [ref=e385]
+            - row "434 62" [ref=e386]:
+              - cell "434" [ref=e387]: "434"
+              - cell "62" [ref=e389]
+              - cell [ref=e390]
+            - row "532 61" [ref=e391]:
+              - cell "532" [ref=e392]: "532"
+              - cell "61" [ref=e394]
+              - cell [ref=e395]
+            - row "630 60" [ref=e396]:
+              - cell "630" [ref=e397]: "630"
+              - cell "60" [ref=e399]
+              - cell [ref=e400]
+        - generic [ref=e257]:
+          - generic [ref=e258]: Touch 65¢ · eff fill@50 ≈ 94¢
+          - generic [ref=e259]: max fill 140
+      - generic [ref=e260]:
+        - generic [ref=e261]:
+          - generic [ref=e262]: ★
+          - heading "WATCH · MOVERS" [level=3] [ref=e263]
+        - generic [ref=e264]:
+          - generic [ref=e265] [cursor=pointer]:
+            - generic [ref=e266]: ●
+            - generic [ref=e267]:
+              - text: Sinner — Reach Final ⊇ Win
+              - generic [ref=e268]: Tennis · executable
+            - generic [ref=e269]: live
+          - generic [ref=e270] [cursor=pointer]:
+            - generic [ref=e271]: ●
+            - generic [ref=e272]:
+              - text: Celtics — SF ≡ Win Conf
+              - generic [ref=e273]: NBA · rule-check
+            - generic [ref=e274]: +1¢
+          - generic [ref=e275] [cursor=pointer]:
+            - generic [ref=e276]: ●
+            - generic [ref=e277]:
+              - text: CS2 Map 1 dutch
+              - generic [ref=e278]: Esports · watching
+            - generic [ref=e279]: +2¢
+          - generic [ref=e280] [cursor=pointer]:
+            - generic [ref=e281]: ●
+            - generic [ref=e282]:
+              - text: Dodgers — WS ladder
+              - generic [ref=e283]: MLB · needs size
+            - generic [ref=e284]: size 0
+      - generic [ref=e285]:
+        - generic [ref=e286]:
+          - generic [ref=e287]: "!"
+          - heading "ALERTS" [level=3] [ref=e288]
+        - generic [ref=e289]:
+          - generic [ref=e290]:
+            - generic [ref=e291]: ●
+            - generic [ref=e292]:
+              - generic [ref=e293]: became executable — Sinner Reach Final ⊇ Win
+              - generic [ref=e294]: 2m · firm both legs
+          - generic [ref=e295]:
+            - generic [ref=e296]: ●
+            - generic [ref=e297]:
+              - generic [ref=e298]: bucket changed — Celtics → Review
+              - generic [ref=e299]: 7m · rule-check
+          - generic [ref=e300]:
+            - generic [ref=e301]: ●
+            - generic [ref=e302]:
+              - generic [ref=e303]: watched moved — CS2 Map 1 +3¢
+              - generic [ref=e304]: 9m
+          - generic [ref=e305]:
+            - generic [ref=e306]: ●
+            - generic [ref=e307]:
+              - generic [ref=e308]: series failed — KXMOTOGP not fetched
+              - generic [ref=e309]: 12m
+    - generic [ref=e310]:
+      - generic [ref=e311]: 7-REACT + GLIDE (CANVAS)
+      - generic [ref=e312]: canvas grid — the no-lag ceiling vs DOM AG Grid · stress it in the PERF overlay →
+  - generic [ref=e313]:
+    - generic [ref=e314]:
+      - text: PERF React + Glide (canvas)
+      - generic [ref=e315]: 60 fps
+    - generic [ref=e316]:
+      - generic [ref=e317]: frame
+      - generic [ref=e318]: 16.7 ms
+      - generic [ref=e319]: apply p50
+      - generic [ref=e320]: 0.5 ms
+      - generic [ref=e321]: apply p95
+      - generic [ref=e322]: 1.2 ms
+      - generic [ref=e323]: dropped/s
+      - generic [ref=e324]: "0"
+      - generic [ref=e325]: batches
+      - generic [ref=e326]: 111/s
+      - generic [ref=e327]: rows×rate
+      - generic [ref=e328]: 10000×240
+    - generic [ref=e329]:
+      - generic [ref=e330]: ROWS
+      - button "100" [ref=e331] [cursor=pointer]
+      - button "1k" [ref=e332] [cursor=pointer]
+      - button "10k" [ref=e333] [cursor=pointer]
+    - generic [ref=e334]:
+      - generic [ref=e335]: UPDATES/SEC
+      - button "1" [ref=e336] [cursor=pointer]
+      - button "10" [ref=e337] [cursor=pointer]
+      - button "60" [ref=e338] [cursor=pointer]
+      - button "240" [active] [ref=e339] [cursor=pointer]
+    - generic [ref=e340]:
+      - generic [ref=e341]: SOURCE
+      - button "synthetic" [ref=e342] [cursor=pointer]
+      - button "real (poll)" [ref=e343] [cursor=pointer]

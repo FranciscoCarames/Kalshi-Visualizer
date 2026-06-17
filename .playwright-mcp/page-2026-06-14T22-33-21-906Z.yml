@@ -1,0 +1,442 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6] [cursor=pointer]: OPP
+      - generic [ref=e7] [cursor=pointer]: RES
+      - generic [ref=e8] [cursor=pointer]: OPS
+      - generic [ref=e9] [cursor=pointer]: ALRT
+    - generic [ref=e10]:
+      - generic [ref=e11]: ">"
+      - textbox "SEARCH — functions · participants · lenses · layouts (Ctrl-K or /)" [ref=e12]:
+        - /placeholder: SEARCH — functions · participants · lenses · layouts   (Ctrl-K or /)
+      - generic [ref=e13]: Ctrl K
+      - button "<GO>" [ref=e14] [cursor=pointer]
+    - generic [ref=e15]: 5361s · KALSHI
+  - generic [ref=e16]:
+    - generic [ref=e17]:
+      - generic [ref=e18]: ●
+      - text: "SNAPSHOT #2545 · 5361s ago"
+    - generic [ref=e19]:
+      - text: Opps
+      - generic [ref=e20]: 2,370
+    - generic [ref=e21]:
+      - text: Contracts
+      - generic [ref=e22]: 3,778
+    - generic [ref=e23]:
+      - text: Checks
+      - generic [ref=e24]: 1,574
+    - generic [ref=e25]:
+      - text: Requests
+      - generic [ref=e26]: "188"
+    - generic [ref=e27]:
+      - text: Sports
+      - generic [ref=e28]: "10"
+    - generic [ref=e29]:
+      - generic [ref=e30]: ●
+      - text: Failed
+      - generic [ref=e31]: "0"
+    - generic [ref=e32]: GROSS · TOP-OF-BOOK · $1 BASIS · READ-ONLY · NO ORDER ENTRY · NOT RISKLESS
+  - generic [ref=e33]:
+    - generic [ref=e34] [cursor=pointer]:
+      - generic [ref=e35]: 1)
+      - text: OPP
+    - generic [ref=e36] [cursor=pointer]:
+      - generic [ref=e37]: 2)
+      - text: RES
+    - generic [ref=e38] [cursor=pointer]:
+      - generic [ref=e39]: 3)
+      - text: OPS
+    - generic [ref=e40]:
+      - generic [ref=e41]: LENS
+      - generic [ref=e42]:
+        - button "BLENDED" [ref=e43] [cursor=pointer]
+        - button "EDGE¢" [ref=e44] [cursor=pointer]
+        - button "SPREAD" [ref=e45] [cursor=pointer]
+        - button "OUTRIGHT+SPREAD" [ref=e46] [cursor=pointer]
+        - button "IMPLIED EV" [ref=e47] [cursor=pointer]
+        - button "RIPENESS" [ref=e48] [cursor=pointer]
+      - generic [ref=e49]: engine order
+      - button "◐" [ref=e50] [cursor=pointer]
+  - generic [ref=e51]:
+    - button "ACTIONABLE 12 executable now" [active] [ref=e280] [cursor=pointer]:
+      - generic [ref=e53]: ACTIONABLE
+      - generic [ref=e54]: "12"
+      - generic [ref=e55]: executable now
+    - button "REVIEW 29 settlement-dep" [ref=e281] [cursor=pointer]:
+      - generic [ref=e57]: REVIEW
+      - generic [ref=e58]: "29"
+      - generic [ref=e59]: settlement-dep
+    - button "BLOCKED 13 not fillable" [ref=e282] [cursor=pointer]:
+      - generic [ref=e61]: BLOCKED
+      - generic [ref=e62]: "13"
+      - generic [ref=e63]: not fillable
+    - button "BOUNDED-LOSS 231 can lose money" [ref=e283] [cursor=pointer]:
+      - generic [ref=e65]: BOUNDED-LOSS
+      - generic [ref=e66]: "231"
+      - generic [ref=e67]: can lose money
+    - button "NEAR-MISS 205 watchlist" [ref=e284] [cursor=pointer]:
+      - generic [ref=e69]: NEAR-MISS
+      - generic [ref=e70]: "205"
+      - generic [ref=e71]: watchlist
+    - button "QUALIFIER 50 WC setups" [ref=e285] [cursor=pointer]:
+      - generic [ref=e73]: QUALIFIER
+      - generic [ref=e74]: "50"
+      - generic [ref=e75]: WC setups
+    - button "CHEAP-NO 488 NO fades" [ref=e286] [cursor=pointer]:
+      - generic [ref=e77]: CHEAP-NO
+      - generic [ref=e78]: "488"
+      - generic [ref=e79]: NO fades
+    - button "DATA-QUALITY 1,342 diagnostic" [ref=e287] [cursor=pointer]:
+      - generic [ref=e81]: DATA-QUALITY
+      - generic [ref=e82]: 1,342
+      - generic [ref=e83]: diagnostic
+  - generic [ref=e84]:
+    - generic [ref=e85]: SPORT
+    - combobox [ref=e86]:
+      - option "All" [selected]
+      - option "Esports"
+      - option "Golf"
+      - option "MLB"
+      - option "Motorsport"
+      - option "NBA"
+      - option "NFL"
+      - option "NHL"
+      - option "Soccer (World Cup)"
+      - option "Tennis"
+      - option "WNBA"
+    - generic [ref=e87]: PARTICIPANT
+    - textbox "contains…" [ref=e88]
+    - generic [ref=e89] [cursor=pointer]:
+      - checkbox "Net of fees (est.)" [ref=e90]
+      - text: Net of fees (est.)
+    - generic [ref=e91] [cursor=pointer]: clear
+  - generic [ref=e93]:
+    - generic [ref=e94]:
+      - generic [ref=e95]: LAYOUT
+      - combobox [ref=e96]:
+        - option "Default" [selected]
+        - option "Inspect"
+        - option "Research"
+        - option "Triage"
+        - option "Blotter full"
+      - button "⧉ POP" [ref=e97] [cursor=pointer]
+      - button "↺" [ref=e98] [cursor=pointer]
+      - generic [ref=e99]: drag tabs to rearrange · drag splitters to resize · ⧉ to pop out
+    - generic [ref=e123]:
+      - generic [ref=e130]:
+        - generic [ref=e132]:
+          - generic [ref=e137] [cursor=pointer]:
+            - generic [ref=e138]: BLOTTER
+            - img [ref=e140]
+          - generic [ref=e145]:
+            - generic [ref=e146]:
+              - generic [ref=e147] [cursor=pointer]: EXECUTABLE 12 firm · gross edge
+              - generic [ref=e148] [cursor=pointer]: SPECULATIVE 231 bounded-loss · can lose money
+              - generic [ref=e149] [cursor=pointer]: DIAGNOSTIC 1,342 review-only · data quality
+            - generic [ref=e150]:
+              - generic [ref=e1038] [cursor=pointer]: ACTIONABLE12
+              - generic [ref=e1039] [cursor=pointer]: REVIEW29
+              - generic [ref=e1040] [cursor=pointer]: BLOCKED13
+              - generic [ref=e154]: Showing 12 · 8 cols · ⚙ columns ▾
+            - generic [ref=e157]:
+              - generic [ref=e158]: Press SPACE to deselect this row
+              - grid [ref=e159]:
+                - rowgroup [ref=e161]:
+                  - row "ROI % Max units Max gross profit Tradable Caveat" [ref=e1041]:
+                    - columnheader "ROI %" [ref=e1042]:
+                      - text: 
+                      - generic [ref=e1044] [cursor=pointer]: ROI %
+                      - text: 
+                      - generic:    
+                    - columnheader "Max units" [ref=e1045]:
+                      - text: 
+                      - generic [ref=e1047] [cursor=pointer]: Max units
+                      - text: 
+                      - generic:    
+                    - columnheader "Max gross profit" [ref=e1048]:
+                      - text: 
+                      - generic [ref=e1050] [cursor=pointer]: Max gross profit
+                      - text: 
+                      - generic:    
+                    - columnheader "Tradable" [ref=e1051]:
+                      - text: 
+                      - generic [ref=e1053] [cursor=pointer]: Tradable
+                      - text: 
+                      - generic:    
+                    - columnheader "Caveat" [ref=e1054]:
+                      - text: 
+                      - generic [ref=e1056] [cursor=pointer]: Caveat
+                      - text: 
+                      - generic:    
+                - rowgroup [ref=e175]:
+                  - 'row "0.2% 10.7 $0.43 Yes One-winner-field overround: this buys NO on the priceable subset of a mutually-exclusive field (exactly one winner), not every entrant — safe because an untraded or unlisted winner only pays more. Gross, top-of-book; many legs are illiquid so the position is often only partly fillable." [ref=e1057]':
+                    - gridcell "0.2%" [ref=e1058]
+                    - gridcell "10.7" [ref=e1059]
+                    - gridcell "$0.43" [ref=e1060]
+                    - gridcell "Yes" [ref=e1061]
+                    - 'gridcell "One-winner-field overround: this buys NO on the priceable subset of a mutually-exclusive field (exactly one winner), not every entrant — safe because an untraded or unlisted winner only pays more. Gross, top-of-book; many legs are illiquid so the position is often only partly fillable." [ref=e1062]'
+                  - row "0.7% 1.5 $0.06 Yes" [ref=e1063]:
+                    - gridcell "0.7%" [ref=e1064]
+                    - gridcell "1.5" [ref=e1065]
+                    - gridcell "$0.06" [ref=e1066]
+                    - gridcell "Yes" [ref=e1067]
+                    - gridcell [ref=e1068]
+                  - row "0.5% 1 $0.03 Yes" [ref=e1069]:
+                    - gridcell "0.5%" [ref=e1070]
+                    - gridcell "1" [ref=e1071]
+                    - gridcell "$0.03" [ref=e1072]
+                    - gridcell "Yes" [ref=e1073]
+                    - gridcell [ref=e1074]
+                  - 'row "2% 138 $2.76 Yes Per-game settlement risk: if the game is postponed, delayed past its scheduled start window, abandoned, ruled no-contest, or not played as originally scheduled (some leagues then resolve to a fair market price), the legs may not settle together and the gross gap need not hold — review the settlement rules before trading." [ref=e1075]':
+                    - gridcell "2%" [ref=e1076]
+                    - gridcell "138" [ref=e1077]
+                    - gridcell "$2.76" [ref=e1078]
+                    - gridcell "Yes" [ref=e1079]
+                    - 'gridcell "Per-game settlement risk: if the game is postponed, delayed past its scheduled start window, abandoned, ruled no-contest, or not played as originally scheduled (some leagues then resolve to a fair market price), the legs may not settle together and the gross gap need not hold — review the settlement rules before trading." [ref=e1080]'
+                  - 'row "2% 4 $0.08 Yes Per-game settlement risk: if the game is postponed, delayed past its scheduled start window, abandoned, ruled no-contest, or not played as originally scheduled (some leagues then resolve to a fair market price), the legs may not settle together and the gross gap need not hold — review the settlement rules before trading." [ref=e1081]':
+                    - gridcell "2%" [ref=e1082]
+                    - gridcell "4" [ref=e1083]
+                    - gridcell "$0.08" [ref=e1084]
+                    - gridcell "Yes" [ref=e1085]
+                    - 'gridcell "Per-game settlement risk: if the game is postponed, delayed past its scheduled start window, abandoned, ruled no-contest, or not played as originally scheduled (some leagues then resolve to a fair market price), the legs may not settle together and the gross gap need not hold — review the settlement rules before trading." [ref=e1086]'
+                  - 'row "1% 63.7 $1.27 Yes Per-game settlement risk: if the game is postponed, delayed past its scheduled start window, abandoned, ruled no-contest, or not played as originally scheduled (some leagues then resolve to a fair market price), the legs may not settle together and the gross gap need not hold — review the settlement rules before trading." [ref=e1087]':
+                    - gridcell "1%" [ref=e1088]
+                    - gridcell "63.7" [ref=e1089]
+                    - gridcell "$1.27" [ref=e1090]
+                    - gridcell "Yes" [ref=e1091]
+                    - 'gridcell "Per-game settlement risk: if the game is postponed, delayed past its scheduled start window, abandoned, ruled no-contest, or not played as originally scheduled (some leagues then resolve to a fair market price), the legs may not settle together and the gross gap need not hold — review the settlement rules before trading." [ref=e1092]'
+                  - row "1% 3 $0.03 Yes" [ref=e1093]:
+                    - gridcell "1%" [ref=e1094]
+                    - gridcell "3" [ref=e1095]
+                    - gridcell "$0.03" [ref=e1096]
+                    - gridcell "Yes" [ref=e1097]
+                    - gridcell [ref=e1098]
+                  - 'row "1% 608.2 $6.08 Yes Per-game settlement risk: if the game is postponed, delayed past its scheduled start window, abandoned, ruled no-contest, or not played as originally scheduled (some leagues then resolve to a fair market price), the legs may not settle together and the gross gap need not hold — review the settlement rules before trading." [ref=e1099]':
+                    - gridcell "1%" [ref=e1100]
+                    - gridcell "608.2" [ref=e1101]
+                    - gridcell "$6.08" [ref=e1102]
+                    - gridcell "Yes" [ref=e1103]
+                    - 'gridcell "Per-game settlement risk: if the game is postponed, delayed past its scheduled start window, abandoned, ruled no-contest, or not played as originally scheduled (some leagues then resolve to a fair market price), the legs may not settle together and the gross gap need not hold — review the settlement rules before trading." [ref=e1104]'
+                  - 'row "0.3% 8 $0.08 Yes One-winner-field overround: this buys NO on the priceable subset of a mutually-exclusive field (exactly one winner), not every entrant — safe because an untraded or unlisted winner only pays more. Gross, top-of-book; many legs are illiquid so the position is often only partly fillable." [ref=e1105]':
+                    - gridcell "0.3%" [ref=e1106]
+                    - gridcell "8" [ref=e1107]
+                    - gridcell "$0.08" [ref=e1108]
+                    - gridcell "Yes" [ref=e1109]
+                    - 'gridcell "One-winner-field overround: this buys NO on the priceable subset of a mutually-exclusive field (exactly one winner), not every entrant — safe because an untraded or unlisted winner only pays more. Gross, top-of-book; many legs are illiquid so the position is often only partly fillable." [ref=e1110]'
+                  - row "1% 1 $0.01 Yes" [ref=e1111]:
+                    - gridcell "1%" [ref=e1112]
+                    - gridcell "1" [ref=e1113]
+                    - gridcell "$0.01" [ref=e1114]
+                    - gridcell "Yes" [ref=e1115]
+                    - gridcell [ref=e1116]
+                  - row "1% 34 $0.34 Yes" [ref=e1117]:
+                    - gridcell "1%" [ref=e1118]
+                    - gridcell "34" [ref=e1119]
+                    - gridcell "$0.34" [ref=e1120]
+                    - gridcell "Yes" [ref=e1121]
+                    - gridcell [ref=e1122]
+                  - 'row "0.5% 103 $1.03 Yes Per-game settlement risk: if the game is postponed, delayed past its scheduled start window, abandoned, ruled no-contest, or not played as originally scheduled (some leagues then resolve to a fair market price), the legs may not settle together and the gross gap need not hold — review the settlement rules before trading." [ref=e1123]':
+                    - gridcell "0.5%" [ref=e1124]
+                    - gridcell "103" [ref=e1125]
+                    - gridcell "$1.03" [ref=e1126]
+                    - gridcell "Yes" [ref=e1127]
+                    - 'gridcell "Per-game settlement risk: if the game is postponed, delayed past its scheduled start window, abandoned, ruled no-contest, or not played as originally scheduled (some leagues then resolve to a fair market price), the legs may not settle together and the gross gap need not hold — review the settlement rules before trading." [ref=e1128]'
+                - rowgroup
+                - rowgroup [ref=e178]
+                - rowgroup
+              - text:    
+        - generic [ref=e182]:
+          - generic [ref=e187] [cursor=pointer]:
+            - generic [ref=e188]: MD LADDER
+            - img [ref=e190]
+          - generic [ref=e195]:
+            - generic [ref=e196]: READ-ONLY DEPTH VIEW — NO ORDERS · TOP-OF-BOOK + DERIVED
+            - generic [ref=e197]:
+              - generic [ref=e894]:
+                - text: Pittsburgh
+                - generic [ref=e895]: · 2 contracts
+              - combobox [ref=e896]:
+                - option "NO · leg 1 @ 3¢" [selected]
+                - option "NO · leg 2 @ 99¢"
+            - table [ref=e898]:
+              - rowgroup [ref=e899]:
+                - row "Bid size Px¢ Ask size" [ref=e900]:
+                  - columnheader "Bid size" [ref=e901]
+                  - columnheader "Px¢" [ref=e902]
+                  - columnheader "Ask size" [ref=e903]
+              - rowgroup [ref=e904]:
+                - row "9 184" [ref=e905]:
+                  - cell [ref=e906]
+                  - cell "9" [ref=e907]
+                  - cell "184" [ref=e908]: "184"
+                - row "8 160" [ref=e910]:
+                  - cell [ref=e911]
+                  - cell "8" [ref=e912]
+                  - cell "160" [ref=e913]: "160"
+                - row "7 136" [ref=e915]:
+                  - cell [ref=e916]
+                  - cell "7" [ref=e917]
+                  - cell "136" [ref=e918]: "136"
+                - row "6 112" [ref=e920]:
+                  - cell [ref=e921]
+                  - cell "6" [ref=e922]
+                  - cell "112" [ref=e923]: "112"
+                - row "5 88" [ref=e925]:
+                  - cell [ref=e926]
+                  - cell "5" [ref=e927]
+                  - cell "88" [ref=e928]: "88"
+                - row "4 64" [ref=e930]:
+                  - cell [ref=e931]
+                  - cell "4" [ref=e932]
+                  - cell "64" [ref=e933]: "64"
+                - row "40 3 40" [ref=e935]:
+                  - cell "40" [ref=e936]: "40"
+                  - cell "3" [ref=e938]
+                  - cell "40" [ref=e939]: "40"
+                - row "68 2" [ref=e941]:
+                  - cell "68" [ref=e942]: "68"
+                  - cell "2" [ref=e944]
+                  - cell [ref=e945]
+                - row "96 1" [ref=e946]:
+                  - cell "96" [ref=e947]: "96"
+                  - cell "1" [ref=e949]
+                  - cell [ref=e950]
+            - generic [ref=e951]:
+              - generic [ref=e952]: Touch 3¢
+              - generic [ref=e953]: top size 40 · derived depth
+        - generic [ref=e203]:
+          - generic [ref=e205]:
+            - generic [ref=e210] [cursor=pointer]:
+              - generic [ref=e211]: RECENTLY ACTIONABLE
+              - img [ref=e213]
+            - generic [ref=e218]:
+              - generic [ref=e516] [cursor=pointer]:
+                - generic [ref=e517]: ●
+                - generic [ref=e518]:
+                  - text: Pro Basketball (M) · 27 winner field
+                  - generic [ref=e519]: NBA · overround
+                - generic [ref=e520]: 4¢
+              - generic [ref=e521] [cursor=pointer]:
+                - generic [ref=e522]: ●
+                - generic [ref=e523]:
+                  - text: Group Stage — stage of elimination
+                  - generic [ref=e524]: Soccer (World Cup) · overround
+                - generic [ref=e525]: 4¢
+              - generic [ref=e526] [cursor=pointer]:
+                - generic [ref=e527]: ●
+                - generic [ref=e528]:
+                  - text: Group Stage — stage of elimination
+                  - generic [ref=e529]: Soccer (World Cup) · overround
+                - generic [ref=e530]: 3¢
+              - generic [ref=e531] [cursor=pointer]:
+                - generic [ref=e532]: ●
+                - generic [ref=e533]:
+                  - text: Carolina Royal Ravens vs Riyadh Falcons
+                  - generic [ref=e534]: Esports · underround
+                - generic [ref=e535]: 2¢
+              - generic [ref=e536] [cursor=pointer]:
+                - generic [ref=e537]: ●
+                - generic [ref=e538]:
+                  - text: ODDIK vs paiN Academy
+                  - generic [ref=e539]: Esports · overround
+                - generic [ref=e540]: 2¢
+              - generic [ref=e541] [cursor=pointer]:
+                - generic [ref=e542]: ●
+                - generic [ref=e543]:
+                  - text: Scotland vs Morocco
+                  - generic [ref=e544]: Soccer (World Cup) · overround
+                - generic [ref=e545]: 2¢
+              - generic [ref=e546] [cursor=pointer]:
+                - generic [ref=e547]: ●
+                - generic [ref=e548]:
+                  - text: Cape Verde
+                  - generic [ref=e549]: Soccer (World Cup) · Reach Semifinals ≤ Reach Quarterfinals
+                - generic [ref=e550]: 1¢
+              - generic [ref=e220] [cursor=pointer]: REVIEW MOVERS
+              - generic [ref=e551] [cursor=pointer]:
+                - generic [ref=e552]: ◐
+                - generic [ref=e553]:
+                  - text: Round of 32 — Reach Round of 32 (synthetic vs advance)
+                  - generic [ref=e554]: Soccer (World Cup) · rule-dep
+              - generic [ref=e555] [cursor=pointer]:
+                - generic [ref=e556]: ◐
+                - generic [ref=e557]:
+                  - text: Quarterfinals — Reach Quarterfinals (synthetic vs advance)
+                  - generic [ref=e558]: Soccer (World Cup) · rule-dep
+              - generic [ref=e559] [cursor=pointer]:
+                - generic [ref=e560]: ◐
+                - generic [ref=e561]:
+                  - text: Round of 16 — Reach Round of 16 (synthetic vs advance)
+                  - generic [ref=e562]: Soccer (World Cup) · rule-dep
+              - generic [ref=e563] [cursor=pointer]:
+                - generic [ref=e564]: ◐
+                - generic [ref=e565]:
+                  - text: Round of 16 — Reach Round of 16 (synthetic vs advance)
+                  - generic [ref=e566]: Soccer (World Cup) · rule-dep
+          - generic [ref=e222]:
+            - generic [ref=e227] [cursor=pointer]:
+              - generic [ref=e228]: ALERTS
+              - img [ref=e230]
+            - generic [ref=e235]:
+              - generic [ref=e236]:
+                - generic [ref=e237]: ●
+                - generic [ref=e238]:
+                  - generic [ref=e239]: became executable — Pro Basketball (M) · 27 winner field
+                  - generic [ref=e240]: firm both legs
+              - generic [ref=e241]:
+                - generic [ref=e242]: ●
+                - generic [ref=e243]:
+                  - generic [ref=e244]: bucket changed — → Review · rule-check
+                  - generic [ref=e245]: settlement check
+              - generic [ref=e246]:
+                - generic [ref=e247]: ●
+                - generic [ref=e248]:
+                  - generic [ref=e249]: series failed — 0 series
+                  - generic [ref=e250]: coverage partial
+              - generic [ref=e251]:
+                - generic [ref=e252]: ●
+                - generic [ref=e253]:
+                  - generic [ref=e254]: new bounded-loss — Pittsburgh
+                  - generic [ref=e255]: watchlist
+      - generic [ref=e257]:
+        - generic [ref=e262] [cursor=pointer]:
+          - generic [ref=e263]: INSPECTOR
+          - img [ref=e265]
+        - generic [ref=e270]:
+          - generic [ref=e271]:
+            - generic [ref=e272] [cursor=pointer]: TRADE CARD
+            - generic [ref=e273] [cursor=pointer]: PARTICIPANT DETAIL
+            - generic [ref=e274] [cursor=pointer]: FORMULAS
+          - generic [ref=e1009]:
+            - generic [ref=e1010]:
+              - generic [ref=e1011]: SPECULATIVE
+              - generic [ref=e1012]: Pittsburgh
+            - generic [ref=e1013]: Pro Football · 27 · participant detail
+            - generic [ref=e1014]:
+              - text: CONDITIONAL PROBABILITY
+              - generic [ref=e1015]: UNCALIBRATED · DISPLAY-ONLY
+            - table [ref=e1016]:
+              - rowgroup [ref=e1017]:
+                - row "Stage raw field-impl. est." [ref=e1018]:
+                  - columnheader "Stage" [ref=e1019]
+                  - columnheader "raw" [ref=e1020]
+                  - columnheader "field-impl. est." [ref=e1021]
+                - row "Win Conference 1¢ —" [ref=e1022]:
+                  - cell "Win Conference" [ref=e1023]
+                  - cell "1¢" [ref=e1024]
+                  - cell "—" [ref=e1025]
+                - row "Deeper given reached 200% field de-vig*" [ref=e1026]:
+                  - cell "Deeper given reached" [ref=e1027]
+                  - cell "200%" [ref=e1028]
+                  - cell "field de-vig*" [ref=e1029]
+                - row "Success given reached -100% field de-vig*" [ref=e1030]:
+                  - cell "Success given reached" [ref=e1031]
+                  - cell "-100%" [ref=e1032]
+                  - cell "field de-vig*" [ref=e1033]
+            - generic [ref=e1034]: P(deeper│reached) = price(deeper) ÷ price(parent) = 2/1 = 200%
+            - generic [ref=e1035]: "*The field-implied de-vig column needs the per-participant field frames — a future /api/terminal/detail endpoint (consistency.devig_field_by_node). Raw = market price ratio; not fair value; uses_fees=false, uses_depth=false."
+            - generic [ref=e1036]: CONTAINMENT LADDER (illustrative)
+            - generic [ref=e1037]: Win Conference ⊇ Win Super Bowl — a deeper outcome must price ≤ the broader one that contains it.
+  - generic [ref=e277]:
+    - generic [ref=e278]: TERMINAL PRO · Phase C
+    - generic [ref=e279]: OPP / RES / OPS surfaces · inspector tabs (trade card · participant detail · formulas) · net-of-fees toggle (display-only)

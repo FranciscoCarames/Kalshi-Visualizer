@@ -1,0 +1,109 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e4]: Kalshi Trading Workstation · UI exploration
+    - heading "Six ways to build the same workstation" [level=1] [ref=e5]
+    - paragraph [ref=e6]: "One shared dataset, one roadmap (MASTER_BACKLOG §9), six paradigms. Three are anchored in the tools traders already live in — Bloomberg Terminal, Trading Technologies, Excel. Two are fully innovative. Every option hosts the full roadmap: three surfaces, a status/trust strip, the standardized trade card with 9-dimension confidence + EvidencePack, lenses, alerts, and a watchlist. Open each, then tell me which direction to build for real."
+  - generic [ref=e7]:
+    - generic [ref=e8]: ◆ Anchored in a trader tool
+    - generic [ref=e9]: ✦ Fully innovative
+    - generic [ref=e10]: Shared sample data · dark+light where noted · self-contained HTML
+  - generic [ref=e11]:
+    - generic [ref=e12]:
+      - generic [ref=e13]:
+        - generic [ref=e14]: "1"
+        - img "Hybrid Dashboard" [ref=e15]
+      - generic [ref=e16]:
+        - heading "Hybrid Dashboard" [level=2] [ref=e17]
+        - generic [ref=e18]: ◆ Anchored — modern workstation
+        - generic [ref=e19]: "The baseline you already liked: a single dense+polished page — landing tiles, status strip, restructured grids, lens switcher, trade-card drawer. The safe, familiar evolution of today's app."
+        - generic [ref=e20]:
+          - generic [ref=e21]: 3 surfaces
+          - generic [ref=e22]: status strip
+          - generic [ref=e23]: trade-card drawer
+          - generic [ref=e24]: command palette
+          - generic [ref=e25]: dark+light
+        - link "Open Hybrid Dashboard →" [ref=e26] [cursor=pointer]:
+          - /url: ui-redesign-mockup.html
+    - generic [ref=e27]:
+      - generic [ref=e28]:
+        - generic [ref=e29]: "2"
+        - img "Terminal" [ref=e30]
+      - generic [ref=e31]:
+        - heading "Terminal" [level=2] [ref=e32]
+        - generic [ref=e33]: ◆ Anchored — Bloomberg Terminal
+        - generic [ref=e34]:
+          - text: Function-code command line (OPP / RES / OPS /
+          - generic [ref=e35]: ), amber-on-black, maximum density, monospace everything, DES-style trade-card screen. Pure muscle-memory for a Bloomberg user.
+        - generic [ref=e36]:
+          - generic [ref=e37]: command line
+          - generic [ref=e38]: function codes
+          - generic [ref=e39]: amber CRT
+          - generic [ref=e40]: DES card
+          - generic [ref=e41]: keyboard-first
+        - link "Open Terminal →" [ref=e42] [cursor=pointer]:
+          - /url: ui-mockup-2-terminal.html
+    - generic [ref=e43]:
+      - generic [ref=e44]:
+        - generic [ref=e45]: "3"
+        - img "Workspace" [ref=e46]
+      - generic [ref=e47]:
+        - heading "Workspace" [level=2] [ref=e48]
+        - generic [ref=e49]: ◆ Anchored — Trading Technologies
+        - generic [ref=e50]: Dockable panels with tab strips and workspaces, centered on an MD-Trader-style price ladder (read-only depth DOM). The trading-platform layout traders expect from X_TRADER.
+        - generic [ref=e51]:
+          - generic [ref=e52]: dockable panels
+          - generic [ref=e53]: MD ladder / DOM
+          - generic [ref=e54]: workspaces
+          - generic [ref=e55]: analysis ticket
+          - generic [ref=e56]: depth
+        - link "Open Workspace →" [ref=e57] [cursor=pointer]:
+          - /url: ui-mockup-3-workspace.html
+    - generic [ref=e58]:
+      - generic [ref=e59]:
+        - generic [ref=e60]: "4"
+        - img "Workbook" [ref=e61]
+      - generic [ref=e62]:
+        - heading "Workbook" [level=2] [ref=e63]
+        - generic [ref=e64]: ◆ Anchored — Excel
+        - generic [ref=e65]: "A live spreadsheet: row/column headers, a formula bar that shows each cell's basis/provenance, conditional-format heatmaps, sheet tabs (Opportunities · Research · Ops · Watchlist · Journal), export everywhere."
+        - generic [ref=e66]:
+          - generic [ref=e67]: sheet tabs
+          - generic [ref=e68]: formula/provenance bar
+          - generic [ref=e69]: heatmaps
+          - generic [ref=e70]: frozen panes
+          - generic [ref=e71]: light default
+        - link "Open Workbook →" [ref=e72] [cursor=pointer]:
+          - /url: ui-mockup-4-workbook.html
+    - generic [ref=e73]:
+      - generic [ref=e74]:
+        - generic [ref=e75]: "5"
+        - img "Triage" [ref=e76]
+      - generic [ref=e77]:
+        - heading "Triage" [level=2] [ref=e78]
+        - generic [ref=e79]: ✦ Innovative — attention-first
+        - generic [ref=e80]: "Answers \"what deserves attention now?\" literally: a prioritized card feed + a large focus pane with decision actions (Watch / Alert / Snooze / Dismiss). Keyboard triage, inbox-zero for opportunities."
+        - generic [ref=e81]:
+          - generic [ref=e82]: card feed
+          - generic [ref=e83]: focus pane
+          - generic [ref=e84]: confidence rings
+          - generic [ref=e85]: keyboard triage
+          - generic [ref=e86]: workflow primitives
+        - link "Open Triage →" [ref=e87] [cursor=pointer]:
+          - /url: ui-mockup-5-triage.html
+    - generic [ref=e88]:
+      - generic [ref=e89]:
+        - generic [ref=e90]: "6"
+        - img "Radar" [ref=e91]
+      - generic [ref=e92]:
+        - heading "Radar" [level=2] [ref=e93]
+        - generic [ref=e94]: ✦ Innovative — spatial analytics
+        - generic [ref=e95]: "The opportunity space as an interactive scatter/quadrant: edge vs confidence, bubble size = liquidity, color = bucket. The lens remaps the axes; click a node for its card. Built for spotting clusters and outliers."
+        - generic [ref=e96]:
+          - generic [ref=e97]: scatter canvas
+          - generic [ref=e98]: quadrants
+          - generic [ref=e99]: lens remaps axes
+          - generic [ref=e100]: synced list
+          - generic [ref=e101]: analytics-first
+        - link "Open Radar →" [ref=e102] [cursor=pointer]:
+          - /url: ui-mockup-6-radar.html
+  - generic [ref=e103]: "How to use: click Open on each. The mockups are throwaway previews — the one you pick becomes the spec for the real NiceGUI rebuild (branch-only, current app untouched). Mix-and-match welcome (e.g. \"Triage feed + a Workbook export sheet\")."

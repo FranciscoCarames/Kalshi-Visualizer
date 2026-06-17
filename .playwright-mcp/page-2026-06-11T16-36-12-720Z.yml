@@ -1,0 +1,901 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - generic [ref=e5]:
+        - generic [ref=e6] [cursor=pointer]: OPP
+        - generic [ref=e7] [cursor=pointer]: RES
+        - generic [ref=e8] [cursor=pointer]: OPS
+        - generic [ref=e9] [cursor=pointer]: ALRT
+      - generic [ref=e10]:
+        - generic [ref=e11]: ">"
+        - textbox "FUNCTION OR TICKER, THEN <GO>" [ref=e12]
+        - button "<GO>" [ref=e13] [cursor=pointer]
+      - generic [ref=e14]: KALSHI<WS>
+    - generic [ref=e15]:
+      - generic [ref=e16]:
+        - generic [ref=e17]: ●
+        - text: SCAN IDLE · 12s
+      - generic [ref=e18]:
+        - text: Contracts
+        - generic [ref=e19]: 1,204
+      - generic [ref=e20]:
+        - text: Checks
+        - generic [ref=e21]: "747"
+      - generic [ref=e22]:
+        - text: Req
+        - generic [ref=e23]: "49"
+      - generic [ref=e24]:
+        - generic [ref=e25]: ●
+        - text: Exchange Open
+      - generic [ref=e26]:
+        - text: Auto-scan
+        - generic [ref=e27]: on · 30s
+      - generic [ref=e28]:
+        - generic [ref=e29]: ●
+        - text: Failed
+        - generic [ref=e30]: "1"
+      - generic [ref=e31]:
+        - text: DB
+        - generic [ref=e32]: 42 MB
+      - generic [ref=e33]: GROSS · TOP-OF-BOOK · $1 BASIS · READ-ONLY · NO ORDER ENTRY · NOT RISKLESS
+    - generic [ref=e34]:
+      - generic [ref=e35] [cursor=pointer]:
+        - generic [ref=e36]: 1)
+        - text: OPP
+      - generic [ref=e37] [cursor=pointer]:
+        - generic [ref=e38]: 2)
+        - text: RES
+      - generic [ref=e39] [cursor=pointer]:
+        - generic [ref=e40]: 3)
+        - text: OPS
+      - generic [ref=e41]:
+        - generic [ref=e42]: LENS
+        - generic [ref=e43]:
+          - button "BLENDED" [ref=e44] [cursor=pointer]
+          - button "EDGE" [ref=e45] [cursor=pointer]
+          - button "ROI" [ref=e46] [cursor=pointer]
+          - button "IMPLIED EV" [ref=e47] [cursor=pointer]
+    - generic [ref=e48]:
+      - button "ACT-NOW 4 executable" [ref=e49] [cursor=pointer]:
+        - generic [ref=e50]: ACT-NOW
+        - generic [ref=e51]: "4"
+        - generic [ref=e52]: executable
+      - button "REVIEW 2 settlement" [ref=e53] [cursor=pointer]:
+        - generic [ref=e54]: REVIEW
+        - generic [ref=e55]: "2"
+        - generic [ref=e56]: settlement
+      - button "NEW 2 this scan" [ref=e57] [cursor=pointer]:
+        - generic [ref=e58]: NEW
+        - generic [ref=e59]: "2"
+        - generic [ref=e60]: this scan
+      - button "MOVERS 3 edge moved" [ref=e61] [cursor=pointer]:
+        - generic [ref=e62]: MOVERS
+        - generic [ref=e63]: "3"
+        - generic [ref=e64]: edge moved
+      - button "STALE 1 one-sided" [ref=e65] [cursor=pointer]:
+        - generic [ref=e66]: STALE
+        - generic [ref=e67]: "1"
+        - generic [ref=e68]: one-sided
+      - button "FAILED 1 KXMOTOGP" [ref=e69] [cursor=pointer]:
+        - generic [ref=e70]: FAILED
+        - generic [ref=e71]: "1"
+        - generic [ref=e72]: KXMOTOGP
+      - button "TOP LENS +7¢ Sinner" [ref=e73] [cursor=pointer]:
+        - generic [ref=e74]: TOP LENS
+        - generic [ref=e75]: +7¢
+        - generic [ref=e76]: Sinner
+    - generic [ref=e77]:
+      - generic [ref=e78]:
+        - generic [ref=e79]:
+          - generic [ref=e80]: "1"
+          - heading "BLOTTER" [level=3] [ref=e81]
+          - generic [ref=e82]: streaming · click row → DES + ladder
+        - generic [ref=e83]:
+          - generic [ref=e84] [cursor=pointer]: ACTIONABLE
+          - generic [ref=e85] [cursor=pointer]: REVIEW
+          - generic [ref=e86] [cursor=pointer]: BLOCKED
+          - generic [ref=e87] [cursor=pointer]: RESEARCH
+        - generic [ref=e90]:
+          - grid [ref=e92]:
+            - rowgroup [ref=e94]:
+              - row "SPT Participant / match Setup Edge¢ ROI% Units Profit$ Tradable Caveat" [ref=e95]:
+                - columnheader [ref=e96]:
+                  - text: 
+                  - text: 
+                  - generic:    
+                - columnheader "SPT" [ref=e98]:
+                  - text: 
+                  - generic [ref=e100] [cursor=pointer]: SPT
+                  - text: 
+                  - generic:    
+                - columnheader "Participant / match" [ref=e101]:
+                  - text: 
+                  - generic [ref=e103] [cursor=pointer]: Participant / match
+                  - text: 
+                  - generic:    
+                - columnheader "Setup" [ref=e104]:
+                  - text: 
+                  - generic [ref=e106] [cursor=pointer]: Setup
+                  - text: 
+                  - generic:    
+                - columnheader "Edge¢" [ref=e107]:
+                  - text: 
+                  - generic [ref=e109] [cursor=pointer]: Edge¢
+                  - text: 
+                  - generic [ref=e110] [cursor=pointer]:
+                    - text: 
+                    - generic [ref=e111]: 
+                    - text:  
+                - columnheader "ROI%" [ref=e112]:
+                  - text: 
+                  - generic [ref=e114] [cursor=pointer]: ROI%
+                  - text: 
+                  - generic:    
+                - columnheader "Units" [ref=e115]:
+                  - text: 
+                  - generic [ref=e117] [cursor=pointer]: Units
+                  - text: 
+                  - generic:    
+                - columnheader "Profit$" [ref=e118]:
+                  - text: 
+                  - generic [ref=e120] [cursor=pointer]: Profit$
+                  - text: 
+                  - generic:    
+                - columnheader "Tradable" [ref=e121]:
+                  - text: 
+                  - generic [ref=e123] [cursor=pointer]: Tradable
+                  - text: 
+                  - generic:    
+                - columnheader "Caveat" [ref=e124]:
+                  - text: 
+                  - generic [ref=e126] [cursor=pointer]: Caveat
+                  - text: 
+                  - generic:    
+            - rowgroup [ref=e127]:
+              - row "NEW Tennis J. Sinner Reach Final ⊇ Win Containment 1 11.0 140 9.80 Yes —" [ref=e128]:
+                - gridcell "NEW" [ref=e129]
+                - gridcell "Tennis" [ref=e130]
+                - gridcell "J. Sinner Reach Final ⊇ Win" [ref=e131]:
+                  - generic [ref=e132]: J. Sinner Reach Final ⊇ Win
+                - gridcell "Containment" [ref=e133]
+                - gridcell "1" [ref=e134]
+                - gridcell "11.0" [ref=e135]
+                - gridcell "140" [ref=e136]
+                - gridcell "9.80" [ref=e137]
+                - gridcell "Yes" [ref=e138]
+                - gridcell "—" [ref=e139]
+              - row "▲ Soccer Brazil v Serbia Home/Away/Tie 3-way Dutch overround 17 7.5 90 9.90 Yes Game postpone" [ref=e140]:
+                - gridcell "▲" [ref=e141]
+                - gridcell "Soccer" [ref=e142]
+                - gridcell "Brazil v Serbia Home/Away/Tie 3-way" [ref=e143]:
+                  - generic [ref=e144]: Brazil v Serbia Home/Away/Tie 3-way
+                - gridcell "Dutch overround" [ref=e145]
+                - gridcell "17" [ref=e146]
+                - gridcell "7.5" [ref=e147]
+                - gridcell "90" [ref=e148]
+                - gridcell "9.90" [ref=e149]
+                - gridcell "Yes" [ref=e150]
+                - gridcell "Game postpone" [ref=e151]
+              - row "NHL Oilers @ Panthers Head-to-head game Game dutch 9 4.0 200 8.00 Yes —" [ref=e152]:
+                - gridcell [ref=e153]
+                - gridcell "NHL" [ref=e154]
+                - gridcell "Oilers @ Panthers Head-to-head game" [ref=e155]:
+                  - generic [ref=e156]: Oilers @ Panthers Head-to-head game
+                - gridcell "Game dutch" [ref=e157]
+                - gridcell "9" [ref=e158]
+                - gridcell "4.0" [ref=e159]
+                - gridcell "200" [ref=e160]
+                - gridcell "8.00" [ref=e161]
+                - gridcell "Yes" [ref=e162]
+                - gridcell "—" [ref=e163]
+              - row "↺ Esports FaZe v Vitality Map-1 draw-free Map dutch 7 1.0 60 1.80 Yes —" [ref=e164]:
+                - gridcell "↺" [ref=e165]
+                - gridcell "Esports" [ref=e166]
+                - gridcell "FaZe v Vitality Map-1 draw-free" [ref=e167]:
+                  - generic [ref=e168]: FaZe v Vitality Map-1 draw-free
+                - gridcell "Map dutch" [ref=e169]
+                - gridcell "7" [ref=e170]
+                - gridcell "1.0" [ref=e171]
+                - gridcell "60" [ref=e172]
+                - gridcell "1.80" [ref=e173]
+                - gridcell "Yes" [ref=e174]
+                - gridcell "—" [ref=e175]
+              - 'row "NEW WNBA J. Sinner #8 Reach Final ⊇ Win Containment 6 16.0 140 9.80 Yes —" [ref=e176]':
+                - gridcell "NEW" [ref=e177]
+                - gridcell "WNBA" [ref=e178]
+                - 'gridcell "J. Sinner #8 Reach Final ⊇ Win" [ref=e179]':
+                  - generic [ref=e180]: "J. Sinner #8 Reach Final ⊇ Win"
+                - gridcell "Containment" [ref=e181]
+                - gridcell "6" [ref=e182]
+                - gridcell "16.0" [ref=e183]
+                - gridcell "140" [ref=e184]
+                - gridcell "9.80" [ref=e185]
+                - gridcell "Yes" [ref=e186]
+                - gridcell "—" [ref=e187]
+              - 'row "▲ Motorsport Brazil v Serbia #9 Home/Away/Tie 3-way Dutch overround 16 6.5 90 9.90 Yes Game postpone" [ref=e188]':
+                - gridcell "▲" [ref=e189]
+                - gridcell "Motorsport" [ref=e190]
+                - 'gridcell "Brazil v Serbia #9 Home/Away/Tie 3-way" [ref=e191]':
+                  - generic [ref=e192]: "Brazil v Serbia #9 Home/Away/Tie 3-way"
+                - gridcell "Dutch overround" [ref=e193]
+                - gridcell "16" [ref=e194]
+                - gridcell "6.5" [ref=e195]
+                - gridcell "90" [ref=e196]
+                - gridcell "9.90" [ref=e197]
+                - gridcell "Yes" [ref=e198]
+                - gridcell "Game postpone" [ref=e199]
+              - 'row "Tennis Oilers @ Panthers #10 Head-to-head game Game dutch 8 3.0 200 8.00 Yes —" [ref=e200]':
+                - gridcell [ref=e201]
+                - gridcell "Tennis" [ref=e202]
+                - 'gridcell "Oilers @ Panthers #10 Head-to-head game" [ref=e203]':
+                  - generic [ref=e204]: "Oilers @ Panthers #10 Head-to-head game"
+                - gridcell "Game dutch" [ref=e205]
+                - gridcell "8" [ref=e206]
+                - gridcell "3.0" [ref=e207]
+                - gridcell "200" [ref=e208]
+                - gridcell "8.00" [ref=e209]
+                - gridcell "Yes" [ref=e210]
+                - gridcell "—" [ref=e211]
+              - 'row "↺ Soccer FaZe v Vitality #11 Map-1 draw-free Map dutch 6 — 60 1.80 Yes —" [ref=e212]':
+                - gridcell "↺" [ref=e213]
+                - gridcell "Soccer" [ref=e214]
+                - 'gridcell "FaZe v Vitality #11 Map-1 draw-free" [ref=e215]':
+                  - generic [ref=e216]: "FaZe v Vitality #11 Map-1 draw-free"
+                - gridcell "Map dutch" [ref=e217]
+                - gridcell "6" [ref=e218]
+                - gridcell "—" [ref=e219]
+                - gridcell "60" [ref=e220]
+                - gridcell "1.80" [ref=e221]
+                - gridcell "Yes" [ref=e222]
+                - gridcell "—" [ref=e223]
+              - 'row "NEW Golf J. Sinner #16 Reach Final ⊇ Win Containment 5 15.0 140 9.80 Yes —" [ref=e224]':
+                - gridcell "NEW" [ref=e225]
+                - gridcell "Golf" [ref=e226]
+                - 'gridcell "J. Sinner #16 Reach Final ⊇ Win" [ref=e227]':
+                  - generic [ref=e228]: "J. Sinner #16 Reach Final ⊇ Win"
+                - gridcell "Containment" [ref=e229]
+                - gridcell "5" [ref=e230]
+                - gridcell "15.0" [ref=e231]
+                - gridcell "140" [ref=e232]
+                - gridcell "9.80" [ref=e233]
+                - gridcell "Yes" [ref=e234]
+                - gridcell "—" [ref=e235]
+              - 'row "▲ NFL Brazil v Serbia #17 Home/Away/Tie 3-way Dutch overround 15 5.5 90 9.90 Yes Game postpone" [ref=e236]':
+                - gridcell "▲" [ref=e237]
+                - gridcell "NFL" [ref=e238]
+                - 'gridcell "Brazil v Serbia #17 Home/Away/Tie 3-way" [ref=e239]':
+                  - generic [ref=e240]: "Brazil v Serbia #17 Home/Away/Tie 3-way"
+                - gridcell "Dutch overround" [ref=e241]
+                - gridcell "15" [ref=e242]
+                - gridcell "5.5" [ref=e243]
+                - gridcell "90" [ref=e244]
+                - gridcell "9.90" [ref=e245]
+                - gridcell "Yes" [ref=e246]
+                - gridcell "Game postpone" [ref=e247]
+              - 'row "WNBA Oilers @ Panthers #18 Head-to-head game Game dutch 7 2.0 200 8.00 Yes —" [ref=e248]':
+                - gridcell [ref=e249]
+                - gridcell "WNBA" [ref=e250]
+                - 'gridcell "Oilers @ Panthers #18 Head-to-head game" [ref=e251]':
+                  - generic [ref=e252]: "Oilers @ Panthers #18 Head-to-head game"
+                - gridcell "Game dutch" [ref=e253]
+                - gridcell "7" [ref=e254]
+                - gridcell "2.0" [ref=e255]
+                - gridcell "200" [ref=e256]
+                - gridcell "8.00" [ref=e257]
+                - gridcell "Yes" [ref=e258]
+                - gridcell "—" [ref=e259]
+              - 'row "↺ Motorsport FaZe v Vitality #19 Map-1 draw-free Map dutch 5 6.0 60 1.80 Yes —" [ref=e260]':
+                - gridcell "↺" [ref=e261]
+                - gridcell "Motorsport" [ref=e262]
+                - 'gridcell "FaZe v Vitality #19 Map-1 draw-free" [ref=e263]':
+                  - generic [ref=e264]: "FaZe v Vitality #19 Map-1 draw-free"
+                - gridcell "Map dutch" [ref=e265]
+                - gridcell "5" [ref=e266]
+                - gridcell "6.0" [ref=e267]
+                - gridcell "60" [ref=e268]
+                - gridcell "1.80" [ref=e269]
+                - gridcell "Yes" [ref=e270]
+                - gridcell "—" [ref=e271]
+              - 'row "NEW NBA J. Sinner #24 Reach Final ⊇ Win Containment 4 14.0 140 9.80 Yes —" [ref=e272]':
+                - gridcell "NEW" [ref=e273]
+                - gridcell "NBA" [ref=e274]
+                - 'gridcell "J. Sinner #24 Reach Final ⊇ Win" [ref=e275]':
+                  - generic [ref=e276]: "J. Sinner #24 Reach Final ⊇ Win"
+                - gridcell "Containment" [ref=e277]
+                - gridcell "4" [ref=e278]
+                - gridcell "14.0" [ref=e279]
+                - gridcell "140" [ref=e280]
+                - gridcell "9.80" [ref=e281]
+                - gridcell "Yes" [ref=e282]
+                - gridcell "—" [ref=e283]
+              - 'row "▼ MLB Brazil v Serbia #25 Home/Away/Tie 3-way Dutch overround 13 4.5 90 9.90 Yes Game postpone" [ref=e284]':
+                - gridcell "▼" [ref=e285]
+                - gridcell "MLB" [ref=e286]
+                - 'gridcell "Brazil v Serbia #25 Home/Away/Tie 3-way" [ref=e287]':
+                  - generic [ref=e288]: "Brazil v Serbia #25 Home/Away/Tie 3-way"
+                - gridcell "Dutch overround" [ref=e289]
+                - gridcell "13" [ref=e290]
+                - gridcell "4.5" [ref=e291]
+                - gridcell "90" [ref=e292]
+                - gridcell "9.90" [ref=e293]
+                - gridcell "Yes" [ref=e294]
+                - gridcell "Game postpone" [ref=e295]
+              - 'row "Golf Oilers @ Panthers #26 Head-to-head game Game dutch 6 1.0 200 8.00 Yes —" [ref=e296]':
+                - gridcell [ref=e297]
+                - gridcell "Golf" [ref=e298]
+                - 'gridcell "Oilers @ Panthers #26 Head-to-head game" [ref=e299]':
+                  - generic [ref=e300]: "Oilers @ Panthers #26 Head-to-head game"
+                - gridcell "Game dutch" [ref=e301]
+                - gridcell "6" [ref=e302]
+                - gridcell "1.0" [ref=e303]
+                - gridcell "200" [ref=e304]
+                - gridcell "8.00" [ref=e305]
+                - gridcell "Yes" [ref=e306]
+                - gridcell "—" [ref=e307]
+              - 'row "↺ NFL FaZe v Vitality #27 Map-1 draw-free Map dutch 4 5.0 60 1.80 Yes —" [ref=e308]':
+                - gridcell "↺" [ref=e309]
+                - gridcell "NFL" [ref=e310]
+                - 'gridcell "FaZe v Vitality #27 Map-1 draw-free" [ref=e311]':
+                  - generic [ref=e312]: "FaZe v Vitality #27 Map-1 draw-free"
+                - gridcell "Map dutch" [ref=e313]
+                - gridcell "4" [ref=e314]
+                - gridcell "5.0" [ref=e315]
+                - gridcell "60" [ref=e316]
+                - gridcell "1.80" [ref=e317]
+                - gridcell "Yes" [ref=e318]
+                - gridcell "—" [ref=e319]
+              - 'row "NEW NHL J. Sinner #32 Reach Final ⊇ Win Containment 3 13.0 140 9.80 Yes —" [ref=e320]':
+                - gridcell "NEW" [ref=e321]
+                - gridcell "NHL" [ref=e322]
+                - 'gridcell "J. Sinner #32 Reach Final ⊇ Win" [ref=e323]':
+                  - generic [ref=e324]: "J. Sinner #32 Reach Final ⊇ Win"
+                - gridcell "Containment" [ref=e325]
+                - gridcell "3" [ref=e326]
+                - gridcell "13.0" [ref=e327]
+                - gridcell "140" [ref=e328]
+                - gridcell "9.80" [ref=e329]
+                - gridcell "Yes" [ref=e330]
+                - gridcell "—" [ref=e331]
+              - 'row "▲ Esports Brazil v Serbia #33 Home/Away/Tie 3-way Dutch overround 13 3.5 90 9.90 Yes Game postpone" [ref=e332]':
+                - gridcell "▲" [ref=e333]
+                - gridcell "Esports" [ref=e334]
+                - 'gridcell "Brazil v Serbia #33 Home/Away/Tie 3-way" [ref=e335]':
+                  - generic [ref=e336]: "Brazil v Serbia #33 Home/Away/Tie 3-way"
+                - gridcell "Dutch overround" [ref=e337]
+                - gridcell "13" [ref=e338]
+                - gridcell "3.5" [ref=e339]
+                - gridcell "90" [ref=e340]
+                - gridcell "9.90" [ref=e341]
+                - gridcell "Yes" [ref=e342]
+                - gridcell "Game postpone" [ref=e343]
+              - 'row "NBA Oilers @ Panthers #34 Head-to-head game Game dutch 5 7.0 200 8.00 Yes —" [ref=e344]':
+                - gridcell [ref=e345]
+                - gridcell "NBA" [ref=e346]
+                - 'gridcell "Oilers @ Panthers #34 Head-to-head game" [ref=e347]':
+                  - generic [ref=e348]: "Oilers @ Panthers #34 Head-to-head game"
+                - gridcell "Game dutch" [ref=e349]
+                - gridcell "5" [ref=e350]
+                - gridcell "7.0" [ref=e351]
+                - gridcell "200" [ref=e352]
+                - gridcell "8.00" [ref=e353]
+                - gridcell "Yes" [ref=e354]
+                - gridcell "—" [ref=e355]
+              - 'row "↺ MLB FaZe v Vitality #35 Map-1 draw-free Map dutch 3 4.0 60 1.80 Yes —" [ref=e356]':
+                - gridcell "↺" [ref=e357]
+                - gridcell "MLB" [ref=e358]
+                - 'gridcell "FaZe v Vitality #35 Map-1 draw-free" [ref=e359]':
+                  - generic [ref=e360]: "FaZe v Vitality #35 Map-1 draw-free"
+                - gridcell "Map dutch" [ref=e361]
+                - gridcell "3" [ref=e362]
+                - gridcell "4.0" [ref=e363]
+                - gridcell "60" [ref=e364]
+                - gridcell "1.80" [ref=e365]
+                - gridcell "Yes" [ref=e366]
+                - gridcell "—" [ref=e367]
+              - 'row "NEW Tennis J. Sinner #40 Reach Final ⊇ Win Containment 2 12.0 140 9.80 Yes —" [ref=e368]':
+                - gridcell "NEW" [ref=e369]
+                - gridcell "Tennis" [ref=e370]
+                - 'gridcell "J. Sinner #40 Reach Final ⊇ Win" [ref=e371]':
+                  - generic [ref=e372]: "J. Sinner #40 Reach Final ⊇ Win"
+                - gridcell "Containment" [ref=e373]
+                - gridcell "2" [ref=e374]
+                - gridcell "12.0" [ref=e375]
+                - gridcell "140" [ref=e376]
+                - gridcell "9.80" [ref=e377]
+                - gridcell "Yes" [ref=e378]
+                - gridcell "—" [ref=e379]
+              - 'row "▲ Soccer Brazil v Serbia #41 Home/Away/Tie 3-way Dutch overround 12 2.5 90 9.90 Yes Game postpone" [ref=e380]':
+                - gridcell "▲" [ref=e381]
+                - gridcell "Soccer" [ref=e382]
+                - 'gridcell "Brazil v Serbia #41 Home/Away/Tie 3-way" [ref=e383]':
+                  - generic [ref=e384]: "Brazil v Serbia #41 Home/Away/Tie 3-way"
+                - gridcell "Dutch overround" [ref=e385]
+                - gridcell "12" [ref=e386]
+                - gridcell "2.5" [ref=e387]
+                - gridcell "90" [ref=e388]
+                - gridcell "9.90" [ref=e389]
+                - gridcell "Yes" [ref=e390]
+                - gridcell "Game postpone" [ref=e391]
+              - 'row "NHL Oilers @ Panthers #42 Head-to-head game Game dutch 4 6.0 200 8.00 Yes —" [ref=e392]':
+                - gridcell [ref=e393]
+                - gridcell "NHL" [ref=e394]
+                - 'gridcell "Oilers @ Panthers #42 Head-to-head game" [ref=e395]':
+                  - generic [ref=e396]: "Oilers @ Panthers #42 Head-to-head game"
+                - gridcell "Game dutch" [ref=e397]
+                - gridcell "4" [ref=e398]
+                - gridcell "6.0" [ref=e399]
+                - gridcell "200" [ref=e400]
+                - gridcell "8.00" [ref=e401]
+                - gridcell "Yes" [ref=e402]
+                - gridcell "—" [ref=e403]
+              - 'row "↺ Esports FaZe v Vitality #43 Map-1 draw-free Map dutch 2 3.0 60 1.80 Yes —" [ref=e404]':
+                - gridcell "↺" [ref=e405]
+                - gridcell "Esports" [ref=e406]
+                - 'gridcell "FaZe v Vitality #43 Map-1 draw-free" [ref=e407]':
+                  - generic [ref=e408]: "FaZe v Vitality #43 Map-1 draw-free"
+                - gridcell "Map dutch" [ref=e409]
+                - gridcell "2" [ref=e410]
+                - gridcell "3.0" [ref=e411]
+                - gridcell "60" [ref=e412]
+                - gridcell "1.80" [ref=e413]
+                - gridcell "Yes" [ref=e414]
+                - gridcell "—" [ref=e415]
+              - 'row "NEW WNBA J. Sinner #48 Reach Final ⊇ Win Containment 1 11.0 140 9.80 Yes —" [ref=e416]':
+                - gridcell "NEW" [ref=e417]
+                - gridcell "WNBA" [ref=e418]
+                - 'gridcell "J. Sinner #48 Reach Final ⊇ Win" [ref=e419]':
+                  - generic [ref=e420]: "J. Sinner #48 Reach Final ⊇ Win"
+                - gridcell "Containment" [ref=e421]
+                - gridcell "1" [ref=e422]
+                - gridcell "11.0" [ref=e423]
+                - gridcell "140" [ref=e424]
+                - gridcell "9.80" [ref=e425]
+                - gridcell "Yes" [ref=e426]
+                - gridcell "—" [ref=e427]
+              - 'row "▲ Esports Brazil v Serbia #153 Home/Away/Tie 3-way Dutch overround 17 8.5 90 9.90 Yes Game postpone" [ref=e428]':
+                - gridcell "▲" [ref=e429]
+                - gridcell "Esports" [ref=e430]
+                - 'gridcell "Brazil v Serbia #153 Home/Away/Tie 3-way" [ref=e431]':
+                  - generic [ref=e432]: "Brazil v Serbia #153 Home/Away/Tie 3-way"
+                - gridcell "Dutch overround" [ref=e433]
+                - gridcell "17" [ref=e434]
+                - gridcell "8.5" [ref=e435]
+                - gridcell "90" [ref=e436]
+                - gridcell "9.90" [ref=e437]
+                - gridcell "Yes" [ref=e438]
+                - gridcell "Game postpone" [ref=e439]
+              - 'row "▼ Soccer Brazil v Serbia #161 Home/Away/Tie 3-way Dutch overround 15 7.5 90 9.90 Yes Game postpone" [ref=e440]':
+                - gridcell "▼" [ref=e441]
+                - gridcell "Soccer" [ref=e442]
+                - 'gridcell "Brazil v Serbia #161 Home/Away/Tie 3-way" [ref=e443]':
+                  - generic [ref=e444]: "Brazil v Serbia #161 Home/Away/Tie 3-way"
+                - gridcell "Dutch overround" [ref=e445]
+                - gridcell "15" [ref=e446]
+                - gridcell "7.5" [ref=e447]
+                - gridcell "90" [ref=e448]
+                - gridcell "9.90" [ref=e449]
+                - gridcell "Yes" [ref=e450]
+                - gridcell "Game postpone" [ref=e451]
+              - 'row "▲ Motorsport Brazil v Serbia #169 Home/Away/Tie 3-way Dutch overround 15 6.5 90 9.90 Yes Game postpone" [ref=e452]':
+                - gridcell "▲" [ref=e453]
+                - gridcell "Motorsport" [ref=e454]
+                - 'gridcell "Brazil v Serbia #169 Home/Away/Tie 3-way" [ref=e455]':
+                  - generic [ref=e456]: "Brazil v Serbia #169 Home/Away/Tie 3-way"
+                - gridcell "Dutch overround" [ref=e457]
+                - gridcell "15" [ref=e458]
+                - gridcell "6.5" [ref=e459]
+                - gridcell "90" [ref=e460]
+                - gridcell "9.90" [ref=e461]
+                - gridcell "Yes" [ref=e462]
+                - gridcell "Game postpone" [ref=e463]
+              - 'row "▲ NFL Brazil v Serbia #177 Home/Away/Tie 3-way Dutch overround 14 5.5 90 9.90 Yes Game postpone" [ref=e464]':
+                - gridcell "▲" [ref=e465]
+                - gridcell "NFL" [ref=e466]
+                - 'gridcell "Brazil v Serbia #177 Home/Away/Tie 3-way" [ref=e467]':
+                  - generic [ref=e468]: "Brazil v Serbia #177 Home/Away/Tie 3-way"
+                - gridcell "Dutch overround" [ref=e469]
+                - gridcell "14" [ref=e470]
+                - gridcell "5.5" [ref=e471]
+                - gridcell "90" [ref=e472]
+                - gridcell "9.90" [ref=e473]
+                - gridcell "Yes" [ref=e474]
+                - gridcell "Game postpone" [ref=e475]
+              - 'row "NEW Golf J. Sinner #56 Reach Final ⊇ Win Containment 13 17.0 140 9.80 Yes —" [ref=e476]':
+                - gridcell "NEW" [ref=e477]
+                - gridcell "Golf" [ref=e478]
+                - 'gridcell "J. Sinner #56 Reach Final ⊇ Win" [ref=e479]':
+                  - generic [ref=e480]: "J. Sinner #56 Reach Final ⊇ Win"
+                - gridcell "Containment" [ref=e481]
+                - gridcell "13" [ref=e482]
+                - gridcell "17.0" [ref=e483]
+                - gridcell "140" [ref=e484]
+                - gridcell "9.80" [ref=e485]
+                - gridcell "Yes" [ref=e486]
+                - gridcell "—" [ref=e487]
+              - 'row "NEW Tennis J. Sinner #160 Reach Final ⊇ Win Containment 13 11.0 140 9.80 Yes —" [ref=e488]':
+                - gridcell "NEW" [ref=e489]
+                - gridcell "Tennis" [ref=e490]
+                - 'gridcell "J. Sinner #160 Reach Final ⊇ Win" [ref=e491]':
+                  - generic [ref=e492]: "J. Sinner #160 Reach Final ⊇ Win"
+                - gridcell "Containment" [ref=e493]
+                - gridcell "13" [ref=e494]
+                - gridcell "11.0" [ref=e495]
+                - gridcell "140" [ref=e496]
+                - gridcell "9.80" [ref=e497]
+                - gridcell "Yes" [ref=e498]
+                - gridcell "—" [ref=e499]
+              - 'row "▲ MLB Brazil v Serbia #185 Home/Away/Tie 3-way Dutch overround 13 4.5 90 9.90 Yes Game postpone" [ref=e500]':
+                - gridcell "▲" [ref=e501]
+                - gridcell "MLB" [ref=e502]
+                - 'gridcell "Brazil v Serbia #185 Home/Away/Tie 3-way" [ref=e503]':
+                  - generic [ref=e504]: "Brazil v Serbia #185 Home/Away/Tie 3-way"
+                - gridcell "Dutch overround" [ref=e505]
+                - gridcell "13" [ref=e506]
+                - gridcell "4.5" [ref=e507]
+                - gridcell "90" [ref=e508]
+                - gridcell "9.90" [ref=e509]
+                - gridcell "Yes" [ref=e510]
+                - gridcell "Game postpone" [ref=e511]
+              - 'row "▲ NBA J. Sinner #64 Reach Final ⊇ Win Containment 13 16.0 140 9.80 Yes —" [ref=e512]':
+                - gridcell "▲" [ref=e513]
+                - gridcell "NBA" [ref=e514]
+                - 'gridcell "J. Sinner #64 Reach Final ⊇ Win" [ref=e515]':
+                  - generic [ref=e516]: "J. Sinner #64 Reach Final ⊇ Win"
+                - gridcell "Containment" [ref=e517]
+                - gridcell "13" [ref=e518]
+                - gridcell "16.0" [ref=e519]
+                - gridcell "140" [ref=e520]
+                - gridcell "9.80" [ref=e521]
+                - gridcell "Yes" [ref=e522]
+                - gridcell "—" [ref=e523]
+              - 'row "NEW WNBA J. Sinner #168 Reach Final ⊇ Win Containment 12 17.0 140 9.80 Yes —" [ref=e524]':
+                - gridcell "NEW" [ref=e525]
+                - gridcell "WNBA" [ref=e526]
+                - 'gridcell "J. Sinner #168 Reach Final ⊇ Win" [ref=e527]':
+                  - generic [ref=e528]: "J. Sinner #168 Reach Final ⊇ Win"
+                - gridcell "Containment" [ref=e529]
+                - gridcell "12" [ref=e530]
+                - gridcell "17.0" [ref=e531]
+                - gridcell "140" [ref=e532]
+                - gridcell "9.80" [ref=e533]
+                - gridcell "Yes" [ref=e534]
+                - gridcell "—" [ref=e535]
+              - 'row "▲ Esports Brazil v Serbia #193 Home/Away/Tie 3-way Dutch overround 12 3.5 90 9.90 Yes Game postpone" [ref=e536]':
+                - gridcell "▲" [ref=e537]
+                - gridcell "Esports" [ref=e538]
+                - 'gridcell "Brazil v Serbia #193 Home/Away/Tie 3-way" [ref=e539]':
+                  - generic [ref=e540]: "Brazil v Serbia #193 Home/Away/Tie 3-way"
+                - gridcell "Dutch overround" [ref=e541]
+                - gridcell "12" [ref=e542]
+                - gridcell "3.5" [ref=e543]
+                - gridcell "90" [ref=e544]
+                - gridcell "9.90" [ref=e545]
+                - gridcell "Yes" [ref=e546]
+                - gridcell "Game postpone" [ref=e547]
+              - 'row "▲ Motorsport Brazil v Serbia #49 Home/Away/Tie 3-way Dutch overround 11 8.5 90 9.90 Yes Game postpone" [ref=e548]':
+                - gridcell "▲" [ref=e549]
+                - gridcell "Motorsport" [ref=e550]
+                - 'gridcell "Brazil v Serbia #49 Home/Away/Tie 3-way" [ref=e551]':
+                  - generic [ref=e552]: "Brazil v Serbia #49 Home/Away/Tie 3-way"
+                - gridcell "Dutch overround" [ref=e553]
+                - gridcell "11" [ref=e554]
+                - gridcell "8.5" [ref=e555]
+                - gridcell "90" [ref=e556]
+                - gridcell "9.90" [ref=e557]
+                - gridcell "Yes" [ref=e558]
+                - gridcell "Game postpone" [ref=e559]
+              - 'row "NEW NHL J. Sinner #72 Reach Final ⊇ Win Containment 11 15.0 140 9.80 Yes —" [ref=e560]':
+                - gridcell "NEW" [ref=e561]
+                - gridcell "NHL" [ref=e562]
+                - 'gridcell "J. Sinner #72 Reach Final ⊇ Win" [ref=e563]':
+                  - generic [ref=e564]: "J. Sinner #72 Reach Final ⊇ Win"
+                - gridcell "Containment" [ref=e565]
+                - gridcell "11" [ref=e566]
+                - gridcell "15.0" [ref=e567]
+                - gridcell "140" [ref=e568]
+                - gridcell "9.80" [ref=e569]
+                - gridcell "Yes" [ref=e570]
+                - gridcell "—" [ref=e571]
+              - 'row "NEW Golf J. Sinner #176 Reach Final ⊇ Win Containment 11 16.0 140 9.80 Yes —" [ref=e572]':
+                - gridcell "NEW" [ref=e573]
+                - gridcell "Golf" [ref=e574]
+                - 'gridcell "J. Sinner #176 Reach Final ⊇ Win" [ref=e575]':
+                  - generic [ref=e576]: "J. Sinner #176 Reach Final ⊇ Win"
+                - gridcell "Containment" [ref=e577]
+                - gridcell "11" [ref=e578]
+                - gridcell "16.0" [ref=e579]
+                - gridcell "140" [ref=e580]
+                - gridcell "9.80" [ref=e581]
+                - gridcell "Yes" [ref=e582]
+                - gridcell "—" [ref=e583]
+              - 'row "▲ NFL Brazil v Serbia #57 Home/Away/Tie 3-way Dutch overround 10 7.5 90 9.90 Yes Game postpone" [ref=e584]':
+                - gridcell "▲" [ref=e585]
+                - gridcell "NFL" [ref=e586]
+                - 'gridcell "Brazil v Serbia #57 Home/Away/Tie 3-way" [ref=e587]':
+                  - generic [ref=e588]: "Brazil v Serbia #57 Home/Away/Tie 3-way"
+                - gridcell "Dutch overround" [ref=e589]
+                - gridcell "10" [ref=e590]
+                - gridcell "7.5" [ref=e591]
+                - gridcell "90" [ref=e592]
+                - gridcell "9.90" [ref=e593]
+                - gridcell "Yes" [ref=e594]
+                - gridcell "Game postpone" [ref=e595]
+              - 'row "NEW Tennis J. Sinner #80 Reach Final ⊇ Win Containment 10 14.0 140 9.80 Yes —" [ref=e596]':
+                - gridcell "NEW" [ref=e597]
+                - gridcell "Tennis" [ref=e598]
+                - 'gridcell "J. Sinner #80 Reach Final ⊇ Win" [ref=e599]':
+                  - generic [ref=e600]: "J. Sinner #80 Reach Final ⊇ Win"
+                - gridcell "Containment" [ref=e601]
+                - gridcell "10" [ref=e602]
+                - gridcell "14.0" [ref=e603]
+                - gridcell "140" [ref=e604]
+                - gridcell "9.80" [ref=e605]
+                - gridcell "Yes" [ref=e606]
+                - gridcell "—" [ref=e607]
+              - 'row "WNBA Oilers @ Panthers #98 Head-to-head game Game dutch 10 6.0 200 8.00 Yes —" [ref=e608]':
+                - gridcell [ref=e609]
+                - gridcell "WNBA" [ref=e610]
+                - 'gridcell "Oilers @ Panthers #98 Head-to-head game" [ref=e611]':
+                  - generic [ref=e612]: "Oilers @ Panthers #98 Head-to-head game"
+                - gridcell "Game dutch" [ref=e613]
+                - gridcell "10" [ref=e614]
+                - gridcell "6.0" [ref=e615]
+                - gridcell "200" [ref=e616]
+                - gridcell "8.00" [ref=e617]
+                - gridcell "Yes" [ref=e618]
+                - gridcell "—" [ref=e619]
+              - 'row "▲ MLB Brazil v Serbia #105 Home/Away/Tie 3-way Dutch overround 10 7.5 90 9.90 Yes Game postpone" [ref=e620]':
+                - gridcell "▲" [ref=e621]
+                - gridcell "MLB" [ref=e622]
+                - 'gridcell "Brazil v Serbia #105 Home/Away/Tie 3-way" [ref=e623]':
+                  - generic [ref=e624]: "Brazil v Serbia #105 Home/Away/Tie 3-way"
+                - gridcell "Dutch overround" [ref=e625]
+                - gridcell "10" [ref=e626]
+                - gridcell "7.5" [ref=e627]
+                - gridcell "90" [ref=e628]
+                - gridcell "9.90" [ref=e629]
+                - gridcell "Yes" [ref=e630]
+                - gridcell "Game postpone" [ref=e631]
+              - 'row "NEW NBA J. Sinner #184 Reach Final ⊇ Win Containment 10 15.0 140 9.80 Yes —" [ref=e632]':
+                - gridcell "NEW" [ref=e633]
+                - gridcell "NBA" [ref=e634]
+                - 'gridcell "J. Sinner #184 Reach Final ⊇ Win" [ref=e635]':
+                  - generic [ref=e636]: "J. Sinner #184 Reach Final ⊇ Win"
+                - gridcell "Containment" [ref=e637]
+                - gridcell "10" [ref=e638]
+                - gridcell "15.0" [ref=e639]
+                - gridcell "140" [ref=e640]
+                - gridcell "9.80" [ref=e641]
+                - gridcell "Yes" [ref=e642]
+                - gridcell "—" [ref=e643]
+            - rowgroup
+            - rowgroup [ref=e647]
+            - rowgroup
+          - text:    
+      - generic [ref=e652]:
+        - generic [ref=e653]:
+          - generic [ref=e654]: "2"
+          - heading "DES — TRADE CARD" [level=3] [ref=e655]
+        - generic [ref=e657]:
+          - generic [ref=e658]:
+            - generic [ref=e659]:
+              - generic [ref=e660]: ACT
+              - generic [ref=e661]: J. Sinner
+              - generic [ref=e662]:
+                - button "$1" [ref=e663] [cursor=pointer]
+                - button "$100" [ref=e664] [cursor=pointer]
+            - generic [ref=e665]: Reach Final ⊇ Win · Containment
+            - generic [ref=e666]: BUY-ONLY PLAN (LEGS)
+            - generic [ref=e667]:
+              - generic [ref=e668]: "YES"
+              - generic [ref=e669]: Reach Final · KXATPADVANCE
+              - generic [ref=e670]: 38¢
+              - generic [ref=e671]: ×140
+            - generic [ref=e672]:
+              - generic [ref=e673]: "NO"
+              - generic [ref=e674]: Win · KXFOMEN
+              - generic [ref=e675]: 55¢
+              - generic [ref=e676]: ×140
+            - generic [ref=e677]:
+              - generic [ref=e678]: Cost / unit
+              - generic [ref=e679]: 93¢
+              - generic [ref=e680]: Payout floor
+              - generic [ref=e681]: 100¢
+              - generic [ref=e682]: Worst / best
+              - generic [ref=e683]: "-7¢ / +7¢"
+              - generic [ref=e684]: Break-even
+              - generic [ref=e685]: 93%
+              - generic [ref=e686]: Fillable
+              - generic [ref=e687]: "140"
+            - generic [ref=e688]: EVIDENCEPACK
+            - generic [ref=e689]:
+              - generic [ref=e690]: Scan
+              - generic [ref=e691]: scan_8841
+              - generic [ref=e692]: Quote ts
+              - generic [ref=e693]: 12s
+              - generic [ref=e694]: Rules
+              - generic [ref=e695]: r3
+          - generic [ref=e696]:
+            - generic [ref=e697]: DECOMPOSED CONFIDENCE — 9 DIM
+            - generic [ref=e698]:
+              - generic [ref=e699]: Data
+              - generic [ref=e702]: "95"
+            - generic [ref=e703]:
+              - generic [ref=e704]: Quote
+              - generic [ref=e707]: "92"
+            - generic [ref=e708]:
+              - generic [ref=e709]: Liquidity
+              - generic [ref=e712]: "78"
+            - generic [ref=e713]:
+              - generic [ref=e714]: Execution
+              - generic [ref=e717]: "80"
+            - generic [ref=e718]:
+              - generic [ref=e719]: Settlement
+              - generic [ref=e722]: "88"
+            - generic [ref=e723]:
+              - generic [ref=e724]: Strategy
+              - generic [ref=e727]: "96"
+            - generic [ref=e728]:
+              - generic [ref=e729]: Model
+              - generic [ref=e732]: "60"
+            - generic [ref=e733]:
+              - generic [ref=e734]: Comparability
+              - generic [ref=e737]: "84"
+            - generic [ref=e738]:
+              - generic [ref=e739]: Complexity
+              - generic [ref=e742]: "90"
+            - generic [ref=e743]: WHY FLAGGED
+            - generic [ref=e744]: Firm child bid exceeds parent ask — a deeper outcome priced above the broader one that contains it. Gross, top-of-book; fees & full depth not modeled.
+      - generic [ref=e745]:
+        - generic [ref=e746]:
+          - generic [ref=e747]: "3"
+          - heading "MD LADDER" [level=3] [ref=e748]
+        - generic [ref=e749]: READ-ONLY DEPTH VIEW — NO ORDERS
+        - generic [ref=e750]:
+          - generic [ref=e751]: J. Sinner · Tennis
+          - generic [ref=e752]: Reach Final · KXATPADVANCE
+        - table [ref=e754]:
+          - rowgroup [ref=e755]:
+            - row "Bid size Px¢ Ask size" [ref=e756]:
+              - columnheader "Bid size" [ref=e757]
+              - columnheader "Px¢" [ref=e758]
+              - columnheader "Ask size" [ref=e759]
+          - rowgroup [ref=e760]:
+            - row "38 560" [ref=e761]:
+              - cell [ref=e762]
+              - cell "38" [ref=e763]
+              - cell "560" [ref=e764]: "560"
+            - row "37 476" [ref=e766]:
+              - cell [ref=e767]
+              - cell "37" [ref=e768]
+              - cell "476" [ref=e769]: "476"
+            - row "36 392" [ref=e771]:
+              - cell [ref=e772]
+              - cell "36" [ref=e773]
+              - cell "392" [ref=e774]: "392"
+            - row "35 ◀ watch 308" [ref=e776]:
+              - cell [ref=e777]
+              - cell "35 ◀ watch" [ref=e778]:
+                - text: "35"
+                - generic [ref=e779]: ◀ watch
+              - cell "308" [ref=e780]: "308"
+            - row "34 224" [ref=e782]:
+              - cell [ref=e783]
+              - cell "34" [ref=e784]
+              - cell "224" [ref=e785]: "224"
+            - row "140 33 140" [ref=e787]:
+              - cell "140" [ref=e788]: "140"
+              - cell "33" [ref=e790]
+              - cell "140" [ref=e791]: "140"
+            - row "238 32" [ref=e793]:
+              - cell "238" [ref=e794]: "238"
+              - cell "32" [ref=e796]
+              - cell [ref=e797]
+            - row "336 31" [ref=e798]:
+              - cell "336" [ref=e799]: "336"
+              - cell "31" [ref=e801]
+              - cell [ref=e802]
+            - row "434 30" [ref=e803]:
+              - cell "434" [ref=e804]: "434"
+              - cell "30" [ref=e806]
+              - cell [ref=e807]
+            - row "532 29" [ref=e808]:
+              - cell "532" [ref=e809]: "532"
+              - cell "29" [ref=e811]
+              - cell [ref=e812]
+            - row "630 28" [ref=e813]:
+              - cell "630" [ref=e814]: "630"
+              - cell "28" [ref=e816]
+              - cell [ref=e817]
+        - generic [ref=e818]:
+          - generic [ref=e819]: Touch 33¢ · eff fill@50 ≈ 94¢
+          - generic [ref=e820]: max fill 140
+      - generic [ref=e821]:
+        - generic [ref=e822]:
+          - generic [ref=e823]: ★
+          - heading "WATCH · MOVERS" [level=3] [ref=e824]
+        - generic [ref=e825]:
+          - generic [ref=e826] [cursor=pointer]:
+            - generic [ref=e827]: ●
+            - generic [ref=e828]:
+              - text: Sinner — Reach Final ⊇ Win
+              - generic [ref=e829]: Tennis · executable
+            - generic [ref=e830]: live
+          - generic [ref=e831] [cursor=pointer]:
+            - generic [ref=e832]: ●
+            - generic [ref=e833]:
+              - text: Celtics — SF ≡ Win Conf
+              - generic [ref=e834]: NBA · rule-check
+            - generic [ref=e835]: +1¢
+          - generic [ref=e836] [cursor=pointer]:
+            - generic [ref=e837]: ●
+            - generic [ref=e838]:
+              - text: CS2 Map 1 dutch
+              - generic [ref=e839]: Esports · watching
+            - generic [ref=e840]: +2¢
+          - generic [ref=e841] [cursor=pointer]:
+            - generic [ref=e842]: ●
+            - generic [ref=e843]:
+              - text: Dodgers — WS ladder
+              - generic [ref=e844]: MLB · needs size
+            - generic [ref=e845]: size 0
+      - generic [ref=e846]:
+        - generic [ref=e847]:
+          - generic [ref=e848]: "!"
+          - heading "ALERTS" [level=3] [ref=e849]
+        - generic [ref=e850]:
+          - generic [ref=e851]:
+            - generic [ref=e852]: ●
+            - generic [ref=e853]:
+              - generic [ref=e854]: became executable — Sinner Reach Final ⊇ Win
+              - generic [ref=e855]: 2m · firm both legs
+          - generic [ref=e856]:
+            - generic [ref=e857]: ●
+            - generic [ref=e858]:
+              - generic [ref=e859]: bucket changed — Celtics → Review
+              - generic [ref=e860]: 7m · rule-check
+          - generic [ref=e861]:
+            - generic [ref=e862]: ●
+            - generic [ref=e863]:
+              - generic [ref=e864]: watched moved — CS2 Map 1 +3¢
+              - generic [ref=e865]: 9m
+          - generic [ref=e866]:
+            - generic [ref=e867]: ●
+            - generic [ref=e868]:
+              - generic [ref=e869]: series failed — KXMOTOGP not fetched
+              - generic [ref=e870]: 12m
+    - generic [ref=e871]:
+      - generic [ref=e872]: 7-VUE + AG GRID
+      - generic [ref=e873]: proxy reactivity (Quasar/NiceGUI lineage) · same AG Grid engine · stress it in the PERF overlay →
+  - generic [ref=e874]:
+    - generic [ref=e875]:
+      - text: PERF Vue + AG Grid
+      - generic [ref=e876]: – fps
+    - generic [ref=e877]:
+      - generic [ref=e878]: frame
+      - generic [ref=e879]: –
+      - generic [ref=e880]: apply p50
+      - generic [ref=e881]: –
+      - generic [ref=e882]: apply p95
+      - generic [ref=e883]: –
+      - generic [ref=e884]: dropped/s
+      - generic [ref=e885]: –
+      - generic [ref=e886]: batches
+      - generic [ref=e887]: –
+      - generic [ref=e888]: rows×rate
+      - generic [ref=e889]: 200×30
+    - generic [ref=e890]:
+      - generic [ref=e891]: ROWS
+      - button "100" [ref=e892] [cursor=pointer]
+      - button "1k" [ref=e893] [cursor=pointer]
+      - button "10k" [ref=e894] [cursor=pointer]
+    - generic [ref=e895]:
+      - generic [ref=e896]: UPDATES/SEC
+      - button "1" [ref=e897] [cursor=pointer]
+      - button "10" [ref=e898] [cursor=pointer]
+      - button "60" [ref=e899] [cursor=pointer]
+      - button "240" [ref=e900] [cursor=pointer]
+    - generic [ref=e901]:
+      - generic [ref=e902]: SOURCE
+      - button "synthetic" [ref=e903] [cursor=pointer]
+      - button "real (poll)" [ref=e904] [cursor=pointer]

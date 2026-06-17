@@ -1,0 +1,2 @@
+[   79700ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:8137/_nicegui_ws/socket.io/?client_id=a7558436-6135-4857-8a10-114764c7c54a&next_message_id=0&implicit_handshake=true&document_id=215c284d-b3d6-436e-a01e-1c85b85e4b4e&tab_id=2b6da6ca-1e04-4486-bcbb-ed39fe63f591&old_tab_id=null&EIO=4&transport=websocket' failed:  @ http://127.0.0.1:8137/_nicegui/3.12.1/static/socket.io.min.js:5
+[   83265ms] [LOG] reloading because implicit handshake failed for clientId a7558436-6135-4857-8a10-114764c7c54a @ http://127.0.0.1:8137/_nicegui/3.12.1/static/nicegui.js:467

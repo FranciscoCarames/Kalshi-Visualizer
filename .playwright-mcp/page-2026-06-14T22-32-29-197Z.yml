@@ -1,0 +1,484 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6] [cursor=pointer]: OPP
+      - generic [ref=e7] [cursor=pointer]: RES
+      - generic [ref=e8] [cursor=pointer]: OPS
+      - generic [ref=e9] [cursor=pointer]: ALRT
+    - generic [ref=e10]:
+      - generic [ref=e11]: ">"
+      - textbox "SEARCH — functions · participants · lenses · layouts (Ctrl-K or /)" [ref=e12]:
+        - /placeholder: SEARCH — functions · participants · lenses · layouts   (Ctrl-K or /)
+      - generic [ref=e13]: Ctrl K
+      - button "<GO>" [ref=e14] [cursor=pointer]
+    - generic [ref=e15]: 5309s · KALSHI
+  - generic [ref=e16]:
+    - generic [ref=e17]:
+      - generic [ref=e18]: ●
+      - text: "SNAPSHOT #2545 · 5309s ago"
+    - generic [ref=e19]:
+      - text: Opps
+      - generic [ref=e20]: 2,370
+    - generic [ref=e21]:
+      - text: Contracts
+      - generic [ref=e22]: 3,778
+    - generic [ref=e23]:
+      - text: Checks
+      - generic [ref=e24]: 1,574
+    - generic [ref=e25]:
+      - text: Requests
+      - generic [ref=e26]: "188"
+    - generic [ref=e27]:
+      - text: Sports
+      - generic [ref=e28]: "10"
+    - generic [ref=e29]:
+      - generic [ref=e30]: ●
+      - text: Failed
+      - generic [ref=e31]: "0"
+    - generic [ref=e32]: GROSS · TOP-OF-BOOK · $1 BASIS · READ-ONLY · NO ORDER ENTRY · NOT RISKLESS
+  - generic [ref=e33]:
+    - generic [ref=e34] [cursor=pointer]:
+      - generic [ref=e35]: 1)
+      - text: OPP
+    - generic [ref=e36] [cursor=pointer]:
+      - generic [ref=e37]: 2)
+      - text: RES
+    - generic [ref=e38] [cursor=pointer]:
+      - generic [ref=e39]: 3)
+      - text: OPS
+    - generic [ref=e40]:
+      - generic [ref=e41]: LENS
+      - generic [ref=e42]:
+        - button "BLENDED" [ref=e43] [cursor=pointer]
+        - button "EDGE¢" [ref=e44] [cursor=pointer]
+        - button "SPREAD" [ref=e45] [cursor=pointer]
+        - button "OUTRIGHT+SPREAD" [ref=e46] [cursor=pointer]
+        - button "IMPLIED EV" [ref=e47] [cursor=pointer]
+        - button "RIPENESS" [ref=e48] [cursor=pointer]
+      - generic [ref=e49]: engine order
+      - button "◐" [ref=e50] [cursor=pointer]
+  - generic [ref=e51]:
+    - button "ACTIONABLE 12 executable now" [ref=e280] [cursor=pointer]:
+      - generic [ref=e53]: ACTIONABLE
+      - generic [ref=e54]: "12"
+      - generic [ref=e55]: executable now
+    - button "REVIEW 29 settlement-dep" [ref=e281] [cursor=pointer]:
+      - generic [ref=e57]: REVIEW
+      - generic [ref=e58]: "29"
+      - generic [ref=e59]: settlement-dep
+    - button "BLOCKED 13 not fillable" [ref=e282] [cursor=pointer]:
+      - generic [ref=e61]: BLOCKED
+      - generic [ref=e62]: "13"
+      - generic [ref=e63]: not fillable
+    - button "BOUNDED-LOSS 231 can lose money" [active] [ref=e283] [cursor=pointer]:
+      - generic [ref=e65]: BOUNDED-LOSS
+      - generic [ref=e66]: "231"
+      - generic [ref=e67]: can lose money
+    - button "NEAR-MISS 205 watchlist" [ref=e284] [cursor=pointer]:
+      - generic [ref=e69]: NEAR-MISS
+      - generic [ref=e70]: "205"
+      - generic [ref=e71]: watchlist
+    - button "QUALIFIER 50 WC setups" [ref=e285] [cursor=pointer]:
+      - generic [ref=e73]: QUALIFIER
+      - generic [ref=e74]: "50"
+      - generic [ref=e75]: WC setups
+    - button "CHEAP-NO 488 NO fades" [ref=e286] [cursor=pointer]:
+      - generic [ref=e77]: CHEAP-NO
+      - generic [ref=e78]: "488"
+      - generic [ref=e79]: NO fades
+    - button "DATA-QUALITY 1,342 diagnostic" [ref=e287] [cursor=pointer]:
+      - generic [ref=e81]: DATA-QUALITY
+      - generic [ref=e82]: 1,342
+      - generic [ref=e83]: diagnostic
+  - generic [ref=e84]:
+    - generic [ref=e85]: SPORT
+    - combobox [ref=e86]:
+      - option "All" [selected]
+      - option "Esports"
+      - option "Golf"
+      - option "MLB"
+      - option "Motorsport"
+      - option "NBA"
+      - option "NFL"
+      - option "NHL"
+      - option "Soccer (World Cup)"
+      - option "Tennis"
+      - option "WNBA"
+    - generic [ref=e87]: PARTICIPANT
+    - textbox "contains…" [ref=e88]
+    - generic [ref=e89] [cursor=pointer]:
+      - checkbox "Net of fees (est.)" [ref=e90]
+      - text: Net of fees (est.)
+    - generic [ref=e91] [cursor=pointer]: clear
+  - generic [ref=e93]:
+    - generic [ref=e94]:
+      - generic [ref=e95]: LAYOUT
+      - combobox [ref=e96]:
+        - option "Default" [selected]
+        - option "Inspect"
+        - option "Research"
+        - option "Triage"
+        - option "Blotter full"
+      - button "⧉ POP" [ref=e97] [cursor=pointer]
+      - button "↺" [ref=e98] [cursor=pointer]
+      - generic [ref=e99]: drag tabs to rearrange · drag splitters to resize · ⧉ to pop out
+    - generic [ref=e123]:
+      - generic [ref=e130]:
+        - generic [ref=e132]:
+          - generic [ref=e137] [cursor=pointer]:
+            - generic [ref=e138]: BLOTTER
+            - img [ref=e140]
+          - generic [ref=e145]:
+            - generic [ref=e146]:
+              - generic [ref=e147] [cursor=pointer]: EXECUTABLE 12 firm · gross edge
+              - generic [ref=e148] [cursor=pointer]: SPECULATIVE 231 bounded-loss · can lose money
+              - generic [ref=e149] [cursor=pointer]: DIAGNOSTIC 1,342 review-only · data quality
+            - generic [ref=e150]:
+              - generic [ref=e567] [cursor=pointer]: BOUNDED-LOSS231
+              - generic [ref=e568] [cursor=pointer]: NEAR-MISS205
+              - generic [ref=e569] [cursor=pointer]: QUALIFIER50
+              - generic [ref=e570] [cursor=pointer]: CHEAP-NO488
+              - generic [ref=e154]: Showing 231 · 21 cols · ⚙ columns ▾
+            - generic [ref=e157]:
+              - grid [ref=e159]:
+                - rowgroup [ref=e161]:
+                  - row "Participant / match Sport Signal Flags Kind Cheap vs peers Wins if… Max loss ¢" [ref=e571]:
+                    - columnheader "Participant / match" [ref=e163]:
+                      - text: 
+                      - generic [ref=e165] [cursor=pointer]: Participant / match
+                      - text: 
+                      - generic:    
+                    - columnheader "Sport" [ref=e166]:
+                      - text: 
+                      - generic [ref=e168] [cursor=pointer]: Sport
+                      - text: 
+                      - generic:    
+                    - columnheader "Signal" [ref=e572]:
+                      - text: 
+                      - generic [ref=e574] [cursor=pointer]: Signal
+                      - text: 
+                      - generic:    
+                    - columnheader "Flags" [ref=e575]:
+                      - text: 
+                      - generic [ref=e577] [cursor=pointer]: Flags
+                      - text: 
+                      - generic:    
+                    - columnheader "Kind" [ref=e578]:
+                      - text: 
+                      - generic [ref=e580] [cursor=pointer]: Kind
+                      - text: 
+                      - generic:    
+                    - columnheader "Cheap vs peers" [ref=e581]:
+                      - text: 
+                      - generic [ref=e583] [cursor=pointer]: Cheap vs peers
+                      - text: 
+                      - generic:    
+                    - columnheader "Wins if…" [ref=e584]:
+                      - text: 
+                      - generic [ref=e586] [cursor=pointer]: Wins if…
+                      - text: 
+                      - generic:    
+                    - columnheader "Max loss ¢" [ref=e587]:
+                      - text: 
+                      - generic [ref=e589] [cursor=pointer]: Max loss ¢
+                      - text: 
+                      - generic:    
+                - rowgroup [ref=e175]:
+                  - row "Negative proxy Calendar NFL Pittsburgh Pro Football · 27 Win Conference but not Win Super Bowl 2¢" [ref=e590]:
+                    - gridcell "Negative proxy" [ref=e591]
+                    - gridcell [ref=e592]
+                    - gridcell "Calendar" [ref=e593]
+                    - gridcell [ref=e594]
+                    - gridcell "NFL" [ref=e595]
+                    - gridcell "Pittsburgh Pro Football · 27" [ref=e596]:
+                      - generic [ref=e597]: Pittsburgh Pro Football · 27
+                    - gridcell "Win Conference but not Win Super Bowl" [ref=e598]
+                    - gridcell "2¢" [ref=e599]
+                  - row "Negative proxy Calendar NFL Atlanta Pro Football · 27 Win Conference but not Win Super Bowl 2¢" [ref=e600]:
+                    - gridcell "Negative proxy" [ref=e601]
+                    - gridcell [ref=e602]
+                    - gridcell "Calendar" [ref=e603]
+                    - gridcell [ref=e604]
+                    - gridcell "NFL" [ref=e605]
+                    - gridcell "Atlanta Pro Football · 27" [ref=e606]:
+                      - generic [ref=e607]: Atlanta Pro Football · 27
+                    - gridcell "Win Conference but not Win Super Bowl" [ref=e608]
+                    - gridcell "2¢" [ref=e609]
+                  - row "Negative proxy Calendar NFL Tampa Bay Pro Football · 27 Win Conference but not Win Super Bowl 2¢" [ref=e610]:
+                    - gridcell "Negative proxy" [ref=e611]
+                    - gridcell [ref=e612]
+                    - gridcell "Calendar" [ref=e613]
+                    - gridcell [ref=e614]
+                    - gridcell "NFL" [ref=e615]
+                    - gridcell "Tampa Bay Pro Football · 27" [ref=e616]:
+                      - generic [ref=e617]: Tampa Bay Pro Football · 27
+                    - gridcell "Win Conference but not Win Super Bowl" [ref=e618]
+                    - gridcell "2¢" [ref=e619]
+                  - row "Negative proxy Calendar NFL Minnesota Pro Football · 27 Win Conference but not Win Super Bowl 3¢" [ref=e620]:
+                    - gridcell "Negative proxy" [ref=e621]
+                    - gridcell [ref=e622]
+                    - gridcell "Calendar" [ref=e623]
+                    - gridcell [ref=e624]
+                    - gridcell "NFL" [ref=e625]
+                    - gridcell "Minnesota Pro Football · 27" [ref=e626]:
+                      - generic [ref=e627]: Minnesota Pro Football · 27
+                    - gridcell "Win Conference but not Win Super Bowl" [ref=e628]
+                    - gridcell "3¢" [ref=e629]
+                  - row "Negative proxy Calendar NFL Indianapolis Pro Football · 27 Win Conference but not Win Super Bowl 3¢" [ref=e630]:
+                    - gridcell "Negative proxy" [ref=e631]
+                    - gridcell [ref=e632]
+                    - gridcell "Calendar" [ref=e633]
+                    - gridcell [ref=e634]
+                    - gridcell "NFL" [ref=e635]
+                    - gridcell "Indianapolis Pro Football · 27" [ref=e636]:
+                      - generic [ref=e637]: Indianapolis Pro Football · 27
+                    - gridcell "Win Conference but not Win Super Bowl" [ref=e638]
+                    - gridcell "3¢" [ref=e639]
+                  - row "Negative proxy Calendar NFL Washington Pro Football · 27 Win Conference but not Win Super Bowl 3¢" [ref=e640]:
+                    - gridcell "Negative proxy" [ref=e641]
+                    - gridcell [ref=e642]
+                    - gridcell "Calendar" [ref=e643]
+                    - gridcell [ref=e644]
+                    - gridcell "NFL" [ref=e645]
+                    - gridcell "Washington Pro Football · 27" [ref=e646]:
+                      - generic [ref=e647]: Washington Pro Football · 27
+                    - gridcell "Win Conference but not Win Super Bowl" [ref=e648]
+                    - gridcell "3¢" [ref=e649]
+                  - row "Negative proxy Calendar Soccer (World Cup) Ghana FIFA World Cup · 26 Reach Quarterfinals but not Reach Semifinals 3¢" [ref=e650]:
+                    - gridcell "Negative proxy" [ref=e651]
+                    - gridcell [ref=e652]
+                    - gridcell "Calendar" [ref=e653]
+                    - gridcell [ref=e654]
+                    - gridcell "Soccer (World Cup)" [ref=e655]
+                    - gridcell "Ghana FIFA World Cup · 26" [ref=e656]:
+                      - generic [ref=e657]: Ghana FIFA World Cup · 26
+                    - gridcell "Reach Quarterfinals but not Reach Semifinals" [ref=e658]
+                    - gridcell "3¢" [ref=e659]
+                  - row "Breakeven Calendar NFL San Francisco Pro Football · 27 Win Conference but not Win Super Bowl 4¢" [ref=e660]:
+                    - gridcell "Breakeven" [ref=e661]
+                    - gridcell [ref=e662]
+                    - gridcell "Calendar" [ref=e663]
+                    - gridcell [ref=e664]
+                    - gridcell "NFL" [ref=e665]
+                    - gridcell "San Francisco Pro Football · 27" [ref=e666]:
+                      - generic [ref=e667]: San Francisco Pro Football · 27
+                    - gridcell "Win Conference but not Win Super Bowl" [ref=e668]
+                    - gridcell "4¢" [ref=e669]
+                  - row "Negative proxy Calendar NFL New York G Pro Football · 27 Win Conference but not Win Super Bowl 4¢" [ref=e670]:
+                    - gridcell "Negative proxy" [ref=e671]
+                    - gridcell [ref=e672]
+                    - gridcell "Calendar" [ref=e673]
+                    - gridcell [ref=e674]
+                    - gridcell "NFL" [ref=e675]
+                    - gridcell "New York G Pro Football · 27" [ref=e676]:
+                      - generic [ref=e677]: New York G Pro Football · 27
+                    - gridcell "Win Conference but not Win Super Bowl" [ref=e678]
+                    - gridcell "4¢" [ref=e679]
+                  - row "Negative proxy Midpoint-only Calendar Soccer (World Cup) Bosnia and Herzegovina FIFA World Cup · 26 Reach Quarterfinals but not Reach Semifinals 4¢" [ref=e680]:
+                    - gridcell "Negative proxy" [ref=e681]
+                    - gridcell "Midpoint-only" [ref=e682]
+                    - gridcell "Calendar" [ref=e683]
+                    - gridcell [ref=e684]
+                    - gridcell "Soccer (World Cup)" [ref=e685]
+                    - gridcell "Bosnia and Herzegovina FIFA World Cup · 26" [ref=e686]:
+                      - generic [ref=e687]: Bosnia and Herzegovina FIFA World Cup · 26
+                    - gridcell "Reach Quarterfinals but not Reach Semifinals" [ref=e688]
+                    - gridcell "4¢" [ref=e689]
+                  - row "Negative proxy Calendar NFL Philadelphia Pro Football · 27 Win Conference but not Win Super Bowl 5¢" [ref=e690]:
+                    - gridcell "Negative proxy" [ref=e691]
+                    - gridcell [ref=e692]
+                    - gridcell "Calendar" [ref=e693]
+                    - gridcell [ref=e694]
+                    - gridcell "NFL" [ref=e695]
+                    - gridcell "Philadelphia Pro Football · 27" [ref=e696]:
+                      - generic [ref=e697]: Philadelphia Pro Football · 27
+                    - gridcell "Win Conference but not Win Super Bowl" [ref=e698]
+                    - gridcell "5¢" [ref=e699]
+                  - row "Negative proxy Calendar Soccer (World Cup) Czechia FIFA World Cup · 26 Reach Quarterfinals but not Reach Semifinals 5¢" [ref=e700]:
+                    - gridcell "Negative proxy" [ref=e701]
+                    - gridcell [ref=e702]
+                    - gridcell "Calendar" [ref=e703]
+                    - gridcell [ref=e704]
+                    - gridcell "Soccer (World Cup)" [ref=e705]
+                    - gridcell "Czechia FIFA World Cup · 26" [ref=e706]:
+                      - generic [ref=e707]: Czechia FIFA World Cup · 26
+                    - gridcell "Reach Quarterfinals but not Reach Semifinals" [ref=e708]
+                    - gridcell "5¢" [ref=e709]
+                  - row "Negative proxy Calendar Soccer (World Cup) Ecuador FIFA World Cup · 26 Reach Semifinals but not Reach Finals 5¢" [ref=e710]:
+                    - gridcell "Negative proxy" [ref=e711]
+                    - gridcell [ref=e712]
+                    - gridcell "Calendar" [ref=e713]
+                    - gridcell [ref=e714]
+                    - gridcell "Soccer (World Cup)" [ref=e715]
+                    - gridcell "Ecuador FIFA World Cup · 26" [ref=e716]:
+                      - generic [ref=e717]: Ecuador FIFA World Cup · 26
+                    - gridcell "Reach Semifinals but not Reach Finals" [ref=e718]
+                    - gridcell "5¢" [ref=e719]
+                  - row "Negative proxy Calendar NFL Houston Pro Football · 27 Win Conference but not Win Super Bowl 5¢" [ref=e720]:
+                    - gridcell "Negative proxy" [ref=e721]
+                    - gridcell [ref=e722]
+                    - gridcell "Calendar" [ref=e723]
+                    - gridcell [ref=e724]
+                    - gridcell "NFL" [ref=e725]
+                    - gridcell "Houston Pro Football · 27" [ref=e726]:
+                      - generic [ref=e727]: Houston Pro Football · 27
+                    - gridcell "Win Conference but not Win Super Bowl" [ref=e728]
+                    - gridcell "5¢" [ref=e729]
+                  - row "Negative proxy Midpoint-only Vertical Golf Akshay Bhatia U.S. Open Top 10 but not Top 5 5¢" [ref=e730]:
+                    - gridcell "Negative proxy" [ref=e731]
+                    - gridcell "Midpoint-only" [ref=e732]
+                    - gridcell "Vertical" [ref=e733]
+                    - gridcell [ref=e734]
+                    - gridcell "Golf" [ref=e735]
+                    - gridcell "Akshay Bhatia U.S. Open" [ref=e736]:
+                      - generic [ref=e737]: Akshay Bhatia U.S. Open
+                    - gridcell "Top 10 but not Top 5" [ref=e738]
+                    - gridcell "5¢" [ref=e739]
+                  - row "Negative proxy Calendar NFL Detroit Pro Football · 27 Win Conference but not Win Super Bowl 5¢" [ref=e740]:
+                    - gridcell "Negative proxy" [ref=e741]
+                    - gridcell [ref=e742]
+                    - gridcell "Calendar" [ref=e743]
+                    - gridcell [ref=e744]
+                    - gridcell "NFL" [ref=e745]
+                    - gridcell "Detroit Pro Football · 27" [ref=e746]:
+                      - generic [ref=e747]: Detroit Pro Football · 27
+                    - gridcell "Win Conference but not Win Super Bowl" [ref=e748]
+                    - gridcell "5¢" [ref=e749]
+                  - row "Negative proxy Calendar NFL New England Pro Football · 27 Win Conference but not Win Super Bowl 5¢" [ref=e750]:
+                    - gridcell "Negative proxy" [ref=e751]
+                    - gridcell [ref=e752]
+                    - gridcell "Calendar" [ref=e753]
+                    - gridcell [ref=e754]
+                    - gridcell "NFL" [ref=e755]
+                    - gridcell "New England Pro Football · 27" [ref=e756]:
+                      - generic [ref=e757]: New England Pro Football · 27
+                    - gridcell "Win Conference but not Win Super Bowl" [ref=e758]
+                    - gridcell "5¢" [ref=e759]
+                  - row "Negative proxy Calendar Soccer (World Cup) Turkiye FIFA World Cup · 26 Reach Quarterfinals but not Reach Semifinals 6¢" [ref=e760]:
+                    - gridcell "Negative proxy" [ref=e761]
+                    - gridcell [ref=e762]
+                    - gridcell "Calendar" [ref=e763]
+                    - gridcell [ref=e764]
+                    - gridcell "Soccer (World Cup)" [ref=e765]
+                    - gridcell "Turkiye FIFA World Cup · 26" [ref=e766]:
+                      - generic [ref=e767]: Turkiye FIFA World Cup · 26
+                    - gridcell "Reach Quarterfinals but not Reach Semifinals" [ref=e768]
+                    - gridcell "6¢" [ref=e769]
+                - rowgroup
+                - rowgroup [ref=e178]
+                - rowgroup
+              - text:    
+        - generic [ref=e182]:
+          - generic [ref=e187] [cursor=pointer]:
+            - generic [ref=e188]: MD LADDER
+            - img [ref=e190]
+          - generic [ref=e195]:
+            - generic [ref=e196]: READ-ONLY DEPTH VIEW — NO ORDERS · TOP-OF-BOOK + DERIVED
+            - generic [ref=e197]: —
+        - generic [ref=e203]:
+          - generic [ref=e205]:
+            - generic [ref=e210] [cursor=pointer]:
+              - generic [ref=e211]: RECENTLY ACTIONABLE
+              - img [ref=e213]
+            - generic [ref=e218]:
+              - generic [ref=e516] [cursor=pointer]:
+                - generic [ref=e517]: ●
+                - generic [ref=e518]:
+                  - text: Pro Basketball (M) · 27 winner field
+                  - generic [ref=e519]: NBA · overround
+                - generic [ref=e520]: 4¢
+              - generic [ref=e521] [cursor=pointer]:
+                - generic [ref=e522]: ●
+                - generic [ref=e523]:
+                  - text: Group Stage — stage of elimination
+                  - generic [ref=e524]: Soccer (World Cup) · overround
+                - generic [ref=e525]: 4¢
+              - generic [ref=e526] [cursor=pointer]:
+                - generic [ref=e527]: ●
+                - generic [ref=e528]:
+                  - text: Group Stage — stage of elimination
+                  - generic [ref=e529]: Soccer (World Cup) · overround
+                - generic [ref=e530]: 3¢
+              - generic [ref=e531] [cursor=pointer]:
+                - generic [ref=e532]: ●
+                - generic [ref=e533]:
+                  - text: Carolina Royal Ravens vs Riyadh Falcons
+                  - generic [ref=e534]: Esports · underround
+                - generic [ref=e535]: 2¢
+              - generic [ref=e536] [cursor=pointer]:
+                - generic [ref=e537]: ●
+                - generic [ref=e538]:
+                  - text: ODDIK vs paiN Academy
+                  - generic [ref=e539]: Esports · overround
+                - generic [ref=e540]: 2¢
+              - generic [ref=e541] [cursor=pointer]:
+                - generic [ref=e542]: ●
+                - generic [ref=e543]:
+                  - text: Scotland vs Morocco
+                  - generic [ref=e544]: Soccer (World Cup) · overround
+                - generic [ref=e545]: 2¢
+              - generic [ref=e546] [cursor=pointer]:
+                - generic [ref=e547]: ●
+                - generic [ref=e548]:
+                  - text: Cape Verde
+                  - generic [ref=e549]: Soccer (World Cup) · Reach Semifinals ≤ Reach Quarterfinals
+                - generic [ref=e550]: 1¢
+              - generic [ref=e220] [cursor=pointer]: REVIEW MOVERS
+              - generic [ref=e551] [cursor=pointer]:
+                - generic [ref=e552]: ◐
+                - generic [ref=e553]:
+                  - text: Round of 32 — Reach Round of 32 (synthetic vs advance)
+                  - generic [ref=e554]: Soccer (World Cup) · rule-dep
+              - generic [ref=e555] [cursor=pointer]:
+                - generic [ref=e556]: ◐
+                - generic [ref=e557]:
+                  - text: Quarterfinals — Reach Quarterfinals (synthetic vs advance)
+                  - generic [ref=e558]: Soccer (World Cup) · rule-dep
+              - generic [ref=e559] [cursor=pointer]:
+                - generic [ref=e560]: ◐
+                - generic [ref=e561]:
+                  - text: Round of 16 — Reach Round of 16 (synthetic vs advance)
+                  - generic [ref=e562]: Soccer (World Cup) · rule-dep
+              - generic [ref=e563] [cursor=pointer]:
+                - generic [ref=e564]: ◐
+                - generic [ref=e565]:
+                  - text: Round of 16 — Reach Round of 16 (synthetic vs advance)
+                  - generic [ref=e566]: Soccer (World Cup) · rule-dep
+          - generic [ref=e222]:
+            - generic [ref=e227] [cursor=pointer]:
+              - generic [ref=e228]: ALERTS
+              - img [ref=e230]
+            - generic [ref=e235]:
+              - generic [ref=e236]:
+                - generic [ref=e237]: ●
+                - generic [ref=e238]:
+                  - generic [ref=e239]: became executable — Pro Basketball (M) · 27 winner field
+                  - generic [ref=e240]: firm both legs
+              - generic [ref=e241]:
+                - generic [ref=e242]: ●
+                - generic [ref=e243]:
+                  - generic [ref=e244]: bucket changed — → Review · rule-check
+                  - generic [ref=e245]: settlement check
+              - generic [ref=e246]:
+                - generic [ref=e247]: ●
+                - generic [ref=e248]:
+                  - generic [ref=e249]: series failed — 0 series
+                  - generic [ref=e250]: coverage partial
+              - generic [ref=e251]:
+                - generic [ref=e252]: ●
+                - generic [ref=e253]:
+                  - generic [ref=e254]: new bounded-loss — Pittsburgh
+                  - generic [ref=e255]: watchlist
+      - generic [ref=e257]:
+        - generic [ref=e262] [cursor=pointer]:
+          - generic [ref=e263]: INSPECTOR
+          - img [ref=e265]
+        - generic [ref=e270]:
+          - generic [ref=e271]:
+            - generic [ref=e272] [cursor=pointer]: TRADE CARD
+            - generic [ref=e273] [cursor=pointer]: PARTICIPANT DETAIL
+            - generic [ref=e274] [cursor=pointer]: FORMULAS
+          - generic [ref=e276]: Click a blotter row to load the trade card — legs · economics · evidence.
+  - generic [ref=e277]:
+    - generic [ref=e278]: TERMINAL PRO · Phase C
+    - generic [ref=e279]: OPP / RES / OPS surfaces · inspector tabs (trade card · participant detail · formulas) · net-of-fees toggle (display-only)

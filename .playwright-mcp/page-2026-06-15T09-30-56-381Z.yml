@@ -1,0 +1,922 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6] [cursor=pointer]: OPP
+      - generic [ref=e7] [cursor=pointer]: RES
+      - generic [ref=e8] [cursor=pointer]: OPS
+      - generic [ref=e9] [cursor=pointer]: ALRT
+    - generic [ref=e10]:
+      - generic [ref=e11]: ">"
+      - textbox "SEARCH — functions · participants · lenses · layouts (Ctrl-K or /)" [ref=e12]:
+        - /placeholder: SEARCH — functions · participants · lenses · layouts   (Ctrl-K or /)
+      - generic [ref=e13]: Ctrl K
+      - button "<GO>" [ref=e14] [cursor=pointer]
+    - generic [ref=e15]: 44816s · KALSHI
+  - generic [ref=e16]:
+    - generic [ref=e17]:
+      - generic [ref=e18]: ●
+      - text: "SNAPSHOT #2545 · 44816s ago"
+    - generic [ref=e19]:
+      - text: Opps
+      - generic [ref=e20]: 2,370
+    - generic [ref=e21]:
+      - text: Contracts
+      - generic [ref=e22]: 3,778
+    - generic [ref=e23]:
+      - text: Checks
+      - generic [ref=e24]: 1,574
+    - generic [ref=e25]:
+      - text: Requests
+      - generic [ref=e26]: "188"
+    - generic [ref=e27]:
+      - text: Sports
+      - generic [ref=e28]: "10"
+    - generic [ref=e29]:
+      - generic [ref=e30]: ●
+      - text: Failed
+      - generic [ref=e31]: "0"
+    - generic [ref=e32]: GROSS · TOP-OF-BOOK · $1 BASIS · READ-ONLY · NO ORDER ENTRY · NOT RISKLESS
+  - generic [ref=e33]:
+    - generic [ref=e34] [cursor=pointer]:
+      - generic [ref=e35]: 1)
+      - text: OPP
+    - generic [ref=e36] [cursor=pointer]:
+      - generic [ref=e37]: 2)
+      - text: RES
+    - generic [ref=e38] [cursor=pointer]:
+      - generic [ref=e39]: 3)
+      - text: OPS
+    - generic [ref=e40]:
+      - generic [ref=e41]: LENS
+      - generic [ref=e42]:
+        - button "BLENDED" [ref=e43] [cursor=pointer]
+        - button "EDGE¢" [ref=e44] [cursor=pointer]
+        - button "SPREAD" [ref=e45] [cursor=pointer]
+        - button "OUTRIGHT+SPREAD" [ref=e46] [cursor=pointer]
+        - button "IMPLIED EV" [ref=e47] [cursor=pointer]
+        - button "RIPENESS" [ref=e48] [cursor=pointer]
+      - generic [ref=e49]: engine order
+      - button "◐" [ref=e50] [cursor=pointer]
+  - generic [ref=e51]:
+    - button "ACTIONABLE 12 executable now" [ref=e287] [cursor=pointer]:
+      - generic [ref=e53]: ACTIONABLE
+      - generic [ref=e54]: "12"
+      - generic [ref=e55]: executable now
+    - button "REVIEW 29 settlement-dep" [ref=e288] [cursor=pointer]:
+      - generic [ref=e57]: REVIEW
+      - generic [ref=e58]: "29"
+      - generic [ref=e59]: settlement-dep
+    - button "BLOCKED 13 not fillable" [ref=e289] [cursor=pointer]:
+      - generic [ref=e61]: BLOCKED
+      - generic [ref=e62]: "13"
+      - generic [ref=e63]: not fillable
+    - button "BOUNDED-LOSS 231 can lose money" [ref=e290] [cursor=pointer]:
+      - generic [ref=e65]: BOUNDED-LOSS
+      - generic [ref=e66]: "231"
+      - generic [ref=e67]: can lose money
+    - button "NEAR-MISS 205 watchlist" [ref=e291] [cursor=pointer]:
+      - generic [ref=e69]: NEAR-MISS
+      - generic [ref=e70]: "205"
+      - generic [ref=e71]: watchlist
+    - button "QUALIFIER 50 WC setups" [ref=e292] [cursor=pointer]:
+      - generic [ref=e73]: QUALIFIER
+      - generic [ref=e74]: "50"
+      - generic [ref=e75]: WC setups
+    - button "CHEAP-NO 488 NO fades" [ref=e293] [cursor=pointer]:
+      - generic [ref=e77]: CHEAP-NO
+      - generic [ref=e78]: "488"
+      - generic [ref=e79]: NO fades
+    - button "DATA-QUALITY 1,342 diagnostic" [ref=e294] [cursor=pointer]:
+      - generic [ref=e81]: DATA-QUALITY
+      - generic [ref=e82]: 1,342
+      - generic [ref=e83]: diagnostic
+  - generic [ref=e84]:
+    - generic [ref=e85]: SPORT
+    - 'button "Sport: All ▾" [ref=e87] [cursor=pointer]'
+    - generic [ref=e88]: TOURNAMENT
+    - 'button "Tournament: All ▾" [ref=e90] [cursor=pointer]'
+    - generic [ref=e91]: PARTICIPANT
+    - textbox "contains…" [ref=e92]
+    - generic [ref=e93]: MIN SIZE
+    - spinbutton [ref=e94]
+    - generic [ref=e95] [cursor=pointer]:
+      - checkbox "Tradable-only" [ref=e96]
+      - text: Tradable-only
+    - button "⬇ CSV" [ref=e97] [cursor=pointer]
+    - generic [ref=e98] [cursor=pointer]: clear
+  - generic [ref=e100]:
+    - generic [ref=e101]:
+      - generic [ref=e102]: LAYOUT
+      - combobox [ref=e103]:
+        - option "Default" [selected]
+        - option "Inspect"
+        - option "Research"
+        - option "Triage"
+        - option "Blotter full"
+      - button "⧉ POP" [ref=e104] [cursor=pointer]
+      - button "↺" [ref=e105] [cursor=pointer]
+      - generic [ref=e106]: drag tabs to rearrange · drag splitters to resize · ⧉ to pop out
+    - generic [ref=e130]:
+      - generic [ref=e137]:
+        - generic [ref=e139]:
+          - generic [ref=e144] [cursor=pointer]:
+            - generic [ref=e145]: BLOTTER
+            - img [ref=e147]
+          - generic [ref=e152]:
+            - generic [ref=e153]:
+              - generic [ref=e154] [cursor=pointer]: EXECUTABLE 12 firm · gross edge
+              - generic [ref=e155] [cursor=pointer]: SPECULATIVE 231 bounded-loss · can lose money
+              - generic [ref=e156] [cursor=pointer]: DIAGNOSTIC 1,342 review-only · data quality
+            - generic [ref=e157]:
+              - generic [ref=e422] [cursor=pointer]: BOUNDED-LOSS231
+              - generic [ref=e423] [cursor=pointer]: NEAR-MISS205
+              - generic [ref=e424] [cursor=pointer]: QUALIFIER50
+              - generic [ref=e425] [cursor=pointer]: CHEAP-NO488
+              - generic [ref=e161]: Showing 231 · 21 cols · ⚙ columns ▾
+            - generic [ref=e164]:
+              - generic [ref=e165]: Press SPACE to deselect this row
+              - grid [ref=e166]:
+                - rowgroup [ref=e168]:
+                  - row "Participant / match Sport Signal Flags Kind Cheap vs peers Wins if… Max loss ¢" [ref=e426]:
+                    - columnheader "Participant / match" [ref=e170]:
+                      - text: 
+                      - generic [ref=e172] [cursor=pointer]: Participant / match
+                      - text: 
+                      - generic:    
+                    - columnheader "Sport" [ref=e173]:
+                      - text: 
+                      - generic [ref=e175] [cursor=pointer]: Sport
+                      - text: 
+                      - generic:    
+                    - columnheader "Signal" [ref=e427]:
+                      - text: 
+                      - generic [ref=e429] [cursor=pointer]: Signal
+                      - text: 
+                      - generic:    
+                    - columnheader "Flags" [ref=e430]:
+                      - text: 
+                      - generic [ref=e432] [cursor=pointer]: Flags
+                      - text: 
+                      - generic:    
+                    - columnheader "Kind" [ref=e433]:
+                      - text: 
+                      - generic [ref=e435] [cursor=pointer]: Kind
+                      - text: 
+                      - generic:    
+                    - columnheader "Cheap vs peers" [ref=e436]:
+                      - text: 
+                      - generic [ref=e438] [cursor=pointer]: Cheap vs peers
+                      - text: 
+                      - generic:    
+                    - columnheader "Wins if…" [ref=e439]:
+                      - text: 
+                      - generic [ref=e441] [cursor=pointer]: Wins if…
+                      - text: 
+                      - generic:    
+                    - columnheader "Max loss ¢" [ref=e442]:
+                      - text: 
+                      - generic [ref=e444] [cursor=pointer]: Max loss ¢
+                      - text: 
+                      - generic:    
+                - rowgroup [ref=e182]:
+                  - row "Negative proxy Calendar NFL Pittsburgh Pro Football · 27 Win Conference but not Win Super Bowl 2¢" [ref=e445]:
+                    - gridcell "Negative proxy" [ref=e446]
+                    - gridcell [ref=e447]
+                    - gridcell "Calendar" [ref=e448]
+                    - gridcell [ref=e449]
+                    - gridcell "NFL" [ref=e450]
+                    - gridcell "Pittsburgh Pro Football · 27" [ref=e451]:
+                      - generic [ref=e452]: Pittsburgh Pro Football · 27
+                    - gridcell "Win Conference but not Win Super Bowl" [ref=e453]
+                    - gridcell "2¢" [ref=e454]
+                  - row "Negative proxy Calendar NFL Atlanta Pro Football · 27 Win Conference but not Win Super Bowl 2¢" [ref=e455]:
+                    - gridcell "Negative proxy" [ref=e456]
+                    - gridcell [ref=e457]
+                    - gridcell "Calendar" [ref=e458]
+                    - gridcell [ref=e459]
+                    - gridcell "NFL" [ref=e460]
+                    - gridcell "Atlanta Pro Football · 27" [ref=e461]:
+                      - generic [ref=e462]: Atlanta Pro Football · 27
+                    - gridcell "Win Conference but not Win Super Bowl" [ref=e463]
+                    - gridcell "2¢" [ref=e464]
+                  - row "Negative proxy Calendar NFL Tampa Bay Pro Football · 27 Win Conference but not Win Super Bowl 2¢" [ref=e465]:
+                    - gridcell "Negative proxy" [ref=e466]
+                    - gridcell [ref=e467]
+                    - gridcell "Calendar" [ref=e468]
+                    - gridcell [ref=e469]
+                    - gridcell "NFL" [ref=e470]
+                    - gridcell "Tampa Bay Pro Football · 27" [ref=e471]:
+                      - generic [ref=e472]: Tampa Bay Pro Football · 27
+                    - gridcell "Win Conference but not Win Super Bowl" [ref=e473]
+                    - gridcell "2¢" [ref=e474]
+                  - row "Negative proxy Calendar NFL Minnesota Pro Football · 27 Win Conference but not Win Super Bowl 3¢" [ref=e475]:
+                    - gridcell "Negative proxy" [ref=e476]
+                    - gridcell [ref=e477]
+                    - gridcell "Calendar" [ref=e478]
+                    - gridcell [ref=e479]
+                    - gridcell "NFL" [ref=e480]
+                    - gridcell "Minnesota Pro Football · 27" [ref=e481]:
+                      - generic [ref=e482]: Minnesota Pro Football · 27
+                    - gridcell "Win Conference but not Win Super Bowl" [ref=e483]
+                    - gridcell "3¢" [ref=e484]
+                  - row "Negative proxy Calendar NFL Indianapolis Pro Football · 27 Win Conference but not Win Super Bowl 3¢" [ref=e485]:
+                    - gridcell "Negative proxy" [ref=e486]
+                    - gridcell [ref=e487]
+                    - gridcell "Calendar" [ref=e488]
+                    - gridcell [ref=e489]
+                    - gridcell "NFL" [ref=e490]
+                    - gridcell "Indianapolis Pro Football · 27" [ref=e491]:
+                      - generic [ref=e492]: Indianapolis Pro Football · 27
+                    - gridcell "Win Conference but not Win Super Bowl" [ref=e493]
+                    - gridcell "3¢" [ref=e494]
+                  - row "Negative proxy Calendar NFL Washington Pro Football · 27 Win Conference but not Win Super Bowl 3¢" [ref=e495]:
+                    - gridcell "Negative proxy" [ref=e496]
+                    - gridcell [ref=e497]
+                    - gridcell "Calendar" [ref=e498]
+                    - gridcell [ref=e499]
+                    - gridcell "NFL" [ref=e500]
+                    - gridcell "Washington Pro Football · 27" [ref=e501]:
+                      - generic [ref=e502]: Washington Pro Football · 27
+                    - gridcell "Win Conference but not Win Super Bowl" [ref=e503]
+                    - gridcell "3¢" [ref=e504]
+                  - row "Negative proxy Calendar Soccer (World Cup) Ghana FIFA World Cup · 26 Reach Quarterfinals but not Reach Semifinals 3¢" [selected] [ref=e505]:
+                    - gridcell "Negative proxy" [ref=e506]
+                    - gridcell [ref=e507]
+                    - gridcell "Calendar" [ref=e508]
+                    - gridcell [ref=e509]
+                    - gridcell "Soccer (World Cup)" [ref=e510]
+                    - gridcell "Ghana FIFA World Cup · 26" [ref=e511]:
+                      - generic [ref=e512]: Ghana FIFA World Cup · 26
+                    - gridcell "Reach Quarterfinals but not Reach Semifinals" [ref=e513]
+                    - gridcell "3¢" [ref=e514]
+                  - row "Breakeven Calendar NFL San Francisco Pro Football · 27 Win Conference but not Win Super Bowl 4¢" [ref=e515]:
+                    - gridcell "Breakeven" [ref=e516]
+                    - gridcell [ref=e517]
+                    - gridcell "Calendar" [ref=e518]
+                    - gridcell [ref=e519]
+                    - gridcell "NFL" [ref=e520]
+                    - gridcell "San Francisco Pro Football · 27" [ref=e521]:
+                      - generic [ref=e522]: San Francisco Pro Football · 27
+                    - gridcell "Win Conference but not Win Super Bowl" [ref=e523]
+                    - gridcell "4¢" [ref=e524]
+                  - row "Negative proxy Calendar NFL New York G Pro Football · 27 Win Conference but not Win Super Bowl 4¢" [ref=e525]:
+                    - gridcell "Negative proxy" [ref=e526]
+                    - gridcell [ref=e527]
+                    - gridcell "Calendar" [ref=e528]
+                    - gridcell [ref=e529]
+                    - gridcell "NFL" [ref=e530]
+                    - gridcell "New York G Pro Football · 27" [ref=e531]:
+                      - generic [ref=e532]: New York G Pro Football · 27
+                    - gridcell "Win Conference but not Win Super Bowl" [ref=e533]
+                    - gridcell "4¢" [ref=e534]
+                  - row "Negative proxy Midpoint-only Calendar Soccer (World Cup) Bosnia and Herzegovina FIFA World Cup · 26 Reach Quarterfinals but not Reach Semifinals 4¢" [ref=e535]:
+                    - gridcell "Negative proxy" [ref=e536]
+                    - gridcell "Midpoint-only" [ref=e537]
+                    - gridcell "Calendar" [ref=e538]
+                    - gridcell [ref=e539]
+                    - gridcell "Soccer (World Cup)" [ref=e540]
+                    - gridcell "Bosnia and Herzegovina FIFA World Cup · 26" [ref=e541]:
+                      - generic [ref=e542]: Bosnia and Herzegovina FIFA World Cup · 26
+                    - gridcell "Reach Quarterfinals but not Reach Semifinals" [ref=e543]
+                    - gridcell "4¢" [ref=e544]
+                  - row "Negative proxy Calendar NFL Philadelphia Pro Football · 27 Win Conference but not Win Super Bowl 5¢" [ref=e545]:
+                    - gridcell "Negative proxy" [ref=e546]
+                    - gridcell [ref=e547]
+                    - gridcell "Calendar" [ref=e548]
+                    - gridcell [ref=e549]
+                    - gridcell "NFL" [ref=e550]
+                    - gridcell "Philadelphia Pro Football · 27" [ref=e551]:
+                      - generic [ref=e552]: Philadelphia Pro Football · 27
+                    - gridcell "Win Conference but not Win Super Bowl" [ref=e553]
+                    - gridcell "5¢" [ref=e554]
+                  - row "Negative proxy Calendar Soccer (World Cup) Czechia FIFA World Cup · 26 Reach Quarterfinals but not Reach Semifinals 5¢" [ref=e555]:
+                    - gridcell "Negative proxy" [ref=e556]
+                    - gridcell [ref=e557]
+                    - gridcell "Calendar" [ref=e558]
+                    - gridcell [ref=e559]
+                    - gridcell "Soccer (World Cup)" [ref=e560]
+                    - gridcell "Czechia FIFA World Cup · 26" [ref=e561]:
+                      - generic [ref=e562]: Czechia FIFA World Cup · 26
+                    - gridcell "Reach Quarterfinals but not Reach Semifinals" [ref=e563]
+                    - gridcell "5¢" [ref=e564]
+                  - row "Negative proxy Calendar Soccer (World Cup) Ecuador FIFA World Cup · 26 Reach Semifinals but not Reach Finals 5¢" [ref=e565]:
+                    - gridcell "Negative proxy" [ref=e566]
+                    - gridcell [ref=e567]
+                    - gridcell "Calendar" [ref=e568]
+                    - gridcell [ref=e569]
+                    - gridcell "Soccer (World Cup)" [ref=e570]
+                    - gridcell "Ecuador FIFA World Cup · 26" [ref=e571]:
+                      - generic [ref=e572]: Ecuador FIFA World Cup · 26
+                    - gridcell "Reach Semifinals but not Reach Finals" [ref=e573]
+                    - gridcell "5¢" [ref=e574]
+                  - row "Negative proxy Calendar NFL Houston Pro Football · 27 Win Conference but not Win Super Bowl 5¢" [ref=e575]:
+                    - gridcell "Negative proxy" [ref=e576]
+                    - gridcell [ref=e577]
+                    - gridcell "Calendar" [ref=e578]
+                    - gridcell [ref=e579]
+                    - gridcell "NFL" [ref=e580]
+                    - gridcell "Houston Pro Football · 27" [ref=e581]:
+                      - generic [ref=e582]: Houston Pro Football · 27
+                    - gridcell "Win Conference but not Win Super Bowl" [ref=e583]
+                    - gridcell "5¢" [ref=e584]
+                  - row "Negative proxy Midpoint-only Vertical Golf Akshay Bhatia U.S. Open Top 10 but not Top 5 5¢" [ref=e585]:
+                    - gridcell "Negative proxy" [ref=e586]
+                    - gridcell "Midpoint-only" [ref=e587]
+                    - gridcell "Vertical" [ref=e588]
+                    - gridcell [ref=e589]
+                    - gridcell "Golf" [ref=e590]
+                    - gridcell "Akshay Bhatia U.S. Open" [ref=e591]:
+                      - generic [ref=e592]: Akshay Bhatia U.S. Open
+                    - gridcell "Top 10 but not Top 5" [ref=e593]
+                    - gridcell "5¢" [ref=e594]
+                  - row "Negative proxy Calendar NFL Detroit Pro Football · 27 Win Conference but not Win Super Bowl 5¢" [ref=e595]:
+                    - gridcell "Negative proxy" [ref=e596]
+                    - gridcell [ref=e597]
+                    - gridcell "Calendar" [ref=e598]
+                    - gridcell [ref=e599]
+                    - gridcell "NFL" [ref=e600]
+                    - gridcell "Detroit Pro Football · 27" [ref=e601]:
+                      - generic [ref=e602]: Detroit Pro Football · 27
+                    - gridcell "Win Conference but not Win Super Bowl" [ref=e603]
+                    - gridcell "5¢" [ref=e604]
+                  - row "Negative proxy Calendar NFL New England Pro Football · 27 Win Conference but not Win Super Bowl 5¢" [ref=e605]:
+                    - gridcell "Negative proxy" [ref=e606]
+                    - gridcell [ref=e607]
+                    - gridcell "Calendar" [ref=e608]
+                    - gridcell [ref=e609]
+                    - gridcell "NFL" [ref=e610]
+                    - gridcell "New England Pro Football · 27" [ref=e611]:
+                      - generic [ref=e612]: New England Pro Football · 27
+                    - gridcell "Win Conference but not Win Super Bowl" [ref=e613]
+                    - gridcell "5¢" [ref=e614]
+                  - row "Negative proxy Calendar Soccer (World Cup) Turkiye FIFA World Cup · 26 Reach Quarterfinals but not Reach Semifinals 6¢" [ref=e615]:
+                    - gridcell "Negative proxy" [ref=e616]
+                    - gridcell [ref=e617]
+                    - gridcell "Calendar" [ref=e618]
+                    - gridcell [ref=e619]
+                    - gridcell "Soccer (World Cup)" [ref=e620]
+                    - gridcell "Turkiye FIFA World Cup · 26" [ref=e621]:
+                      - generic [ref=e622]: Turkiye FIFA World Cup · 26
+                    - gridcell "Reach Quarterfinals but not Reach Semifinals" [ref=e623]
+                    - gridcell "6¢" [ref=e624]
+                  - row "Breakeven Calendar NFL Seattle Pro Football · 27 Win Conference but not Win Super Bowl 6¢" [ref=e625]:
+                    - gridcell "Breakeven" [ref=e626]
+                    - gridcell [ref=e627]
+                    - gridcell "Calendar" [ref=e628]
+                    - gridcell [ref=e629]
+                    - gridcell "NFL" [ref=e630]
+                    - gridcell "Seattle Pro Football · 27" [ref=e631]:
+                      - generic [ref=e632]: Seattle Pro Football · 27
+                    - gridcell "Win Conference but not Win Super Bowl" [ref=e633]
+                    - gridcell "6¢" [ref=e634]
+                  - row "Negative proxy Calendar NFL Green Bay Pro Football · 27 Win Conference but not Win Super Bowl 6¢" [ref=e635]:
+                    - gridcell "Negative proxy" [ref=e636]
+                    - gridcell [ref=e637]
+                    - gridcell "Calendar" [ref=e638]
+                    - gridcell [ref=e639]
+                    - gridcell "NFL" [ref=e640]
+                    - gridcell "Green Bay Pro Football · 27" [ref=e641]:
+                      - generic [ref=e642]: Green Bay Pro Football · 27
+                    - gridcell "Win Conference but not Win Super Bowl" [ref=e643]
+                    - gridcell "6¢" [ref=e644]
+                - rowgroup
+                - rowgroup [ref=e185]
+                - rowgroup
+              - text:    
+        - generic [ref=e189]:
+          - generic [ref=e194] [cursor=pointer]:
+            - generic [ref=e195]: MD LADDER
+            - img [ref=e197]
+          - generic [ref=e202]:
+            - generic [ref=e203]: READ-ONLY DEPTH VIEW — NO ORDERS · TOP-OF-BOOK + DERIVED
+            - generic [ref=e204]:
+              - generic [ref=e645]:
+                - text: Ghana
+                - generic [ref=e646]: · 2 contracts
+              - combobox [ref=e647]:
+                - option "NO · leg 1 @ 7¢" [selected]
+                - option "NO · leg 2 @ 96¢"
+            - table [ref=e649]:
+              - rowgroup [ref=e650]:
+                - row "Bid size Px¢ Ask size" [ref=e651]:
+                  - columnheader "Bid size" [ref=e652]
+                  - columnheader "Px¢" [ref=e653]
+                  - columnheader "Ask size" [ref=e654]
+              - rowgroup [ref=e655]:
+                - row "13 184" [ref=e656]:
+                  - cell [ref=e657]
+                  - cell "13" [ref=e658]
+                  - cell "184" [ref=e659]: "184"
+                - row "12 160" [ref=e661]:
+                  - cell [ref=e662]
+                  - cell "12" [ref=e663]
+                  - cell "160" [ref=e664]: "160"
+                - row "11 136" [ref=e666]:
+                  - cell [ref=e667]
+                  - cell "11" [ref=e668]
+                  - cell "136" [ref=e669]: "136"
+                - row "10 112" [ref=e671]:
+                  - cell [ref=e672]
+                  - cell "10" [ref=e673]
+                  - cell "112" [ref=e674]: "112"
+                - row "9 88" [ref=e676]:
+                  - cell [ref=e677]
+                  - cell "9" [ref=e678]
+                  - cell "88" [ref=e679]: "88"
+                - row "8 64" [ref=e681]:
+                  - cell [ref=e682]
+                  - cell "8" [ref=e683]
+                  - cell "64" [ref=e684]: "64"
+                - row "40 7 40" [ref=e686]:
+                  - cell "40" [ref=e687]: "40"
+                  - cell "7" [ref=e689]
+                  - cell "40" [ref=e690]: "40"
+                - row "68 6" [ref=e692]:
+                  - cell "68" [ref=e693]: "68"
+                  - cell "6" [ref=e695]
+                  - cell [ref=e696]
+                - row "96 5" [ref=e697]:
+                  - cell "96" [ref=e698]: "96"
+                  - cell "5" [ref=e700]
+                  - cell [ref=e701]
+                - row "124 4" [ref=e702]:
+                  - cell "124" [ref=e703]: "124"
+                  - cell "4" [ref=e705]
+                  - cell [ref=e706]
+                - row "152 3" [ref=e707]:
+                  - cell "152" [ref=e708]: "152"
+                  - cell "3" [ref=e710]
+                  - cell [ref=e711]
+                - row "180 2" [ref=e712]:
+                  - cell "180" [ref=e713]: "180"
+                  - cell "2" [ref=e715]
+                  - cell [ref=e716]
+                - row "208 1" [ref=e717]:
+                  - cell "208" [ref=e718]: "208"
+                  - cell "1" [ref=e720]
+                  - cell [ref=e721]
+            - generic [ref=e722]:
+              - generic [ref=e723]: Touch 7¢
+              - generic [ref=e724]: top size 40 · derived depth
+        - generic [ref=e210]:
+          - generic [ref=e212]:
+            - generic [ref=e217] [cursor=pointer]:
+              - generic [ref=e218]: RECENTLY ACTIONABLE
+              - img [ref=e220]
+            - generic [ref=e225]:
+              - generic [ref=e370] [cursor=pointer]:
+                - generic [ref=e371]: ●
+                - generic [ref=e372]:
+                  - text: Pro Basketball (M) · 27 winner field
+                  - generic [ref=e373]: NBA · overround
+                - generic [ref=e374]: 4¢
+              - generic [ref=e375] [cursor=pointer]:
+                - generic [ref=e376]: ●
+                - generic [ref=e377]:
+                  - text: Group Stage — stage of elimination
+                  - generic [ref=e378]: Soccer (World Cup) · overround
+                - generic [ref=e379]: 4¢
+              - generic [ref=e380] [cursor=pointer]:
+                - generic [ref=e381]: ●
+                - generic [ref=e382]:
+                  - text: Group Stage — stage of elimination
+                  - generic [ref=e383]: Soccer (World Cup) · overround
+                - generic [ref=e384]: 3¢
+              - generic [ref=e385] [cursor=pointer]:
+                - generic [ref=e386]: ●
+                - generic [ref=e387]:
+                  - text: Carolina Royal Ravens vs Riyadh Falcons
+                  - generic [ref=e388]: Esports · underround
+                - generic [ref=e389]: 2¢
+              - generic [ref=e390] [cursor=pointer]:
+                - generic [ref=e391]: ●
+                - generic [ref=e392]:
+                  - text: ODDIK vs paiN Academy
+                  - generic [ref=e393]: Esports · overround
+                - generic [ref=e394]: 2¢
+              - generic [ref=e395] [cursor=pointer]:
+                - generic [ref=e396]: ●
+                - generic [ref=e397]:
+                  - text: Scotland vs Morocco
+                  - generic [ref=e398]: Soccer (World Cup) · overround
+                - generic [ref=e399]: 2¢
+              - generic [ref=e400] [cursor=pointer]:
+                - generic [ref=e401]: ●
+                - generic [ref=e402]:
+                  - text: Cape Verde
+                  - generic [ref=e403]: Soccer (World Cup) · Reach Semifinals ≤ Reach Quarterfinals
+                - generic [ref=e404]: 1¢
+              - generic [ref=e227] [cursor=pointer]: REVIEW MOVERS
+              - generic [ref=e405] [cursor=pointer]:
+                - generic [ref=e406]: ◐
+                - generic [ref=e407]:
+                  - text: Round of 32 — Reach Round of 32 (synthetic vs advance)
+                  - generic [ref=e408]: Soccer (World Cup) · rule-dep
+              - generic [ref=e409] [cursor=pointer]:
+                - generic [ref=e410]: ◐
+                - generic [ref=e411]:
+                  - text: Quarterfinals — Reach Quarterfinals (synthetic vs advance)
+                  - generic [ref=e412]: Soccer (World Cup) · rule-dep
+              - generic [ref=e413] [cursor=pointer]:
+                - generic [ref=e414]: ◐
+                - generic [ref=e415]:
+                  - text: Round of 16 — Reach Round of 16 (synthetic vs advance)
+                  - generic [ref=e416]: Soccer (World Cup) · rule-dep
+              - generic [ref=e417] [cursor=pointer]:
+                - generic [ref=e418]: ◐
+                - generic [ref=e419]:
+                  - text: Round of 16 — Reach Round of 16 (synthetic vs advance)
+                  - generic [ref=e420]: Soccer (World Cup) · rule-dep
+          - generic [ref=e229]:
+            - generic [ref=e234] [cursor=pointer]:
+              - generic [ref=e235]: ALERTS
+              - img [ref=e237]
+            - generic [ref=e242]:
+              - generic [ref=e243]:
+                - generic [ref=e244]: ●
+                - generic [ref=e245]:
+                  - generic [ref=e246]: became executable — Pro Basketball (M) · 27 winner field
+                  - generic [ref=e247]: firm both legs
+              - generic [ref=e248]:
+                - generic [ref=e249]: ●
+                - generic [ref=e250]:
+                  - generic [ref=e251]: bucket changed — → Review · rule-check
+                  - generic [ref=e252]: settlement check
+              - generic [ref=e253]:
+                - generic [ref=e254]: ●
+                - generic [ref=e255]:
+                  - generic [ref=e256]: series failed — 0 series
+                  - generic [ref=e257]: coverage partial
+              - generic [ref=e258]:
+                - generic [ref=e259]: ●
+                - generic [ref=e260]:
+                  - generic [ref=e261]: new bounded-loss — Pittsburgh
+                  - generic [ref=e262]: watchlist
+      - generic [ref=e264]:
+        - generic [ref=e269] [cursor=pointer]:
+          - generic [ref=e270]: INSPECTOR
+          - img [ref=e272]
+        - generic [ref=e277]:
+          - generic [ref=e278]:
+            - generic [ref=e279] [cursor=pointer]: TRADE CARD
+            - generic [ref=e280] [cursor=pointer]: PARTICIPANT DETAIL
+            - generic [ref=e281] [cursor=pointer]: FORMULAS
+          - generic [ref=e741]:
+            - generic [ref=e742]:
+              - generic [ref=e743]: SPECULATIVE
+              - generic [ref=e744]: Ghana
+            - generic [ref=e745]: FIFA World Cup · 26 · Soccer (World Cup) · participant detail
+            - generic [ref=e746]:
+              - text: CONDITIONAL PROBABILITY
+              - generic [ref=e747]: UNCALIBRATED · DISPLAY-ONLY · NOT FAIR VALUE
+            - table [ref=e748]:
+              - rowgroup [ref=e749]:
+                - row "Stage raw (price ratio)" [ref=e750]:
+                  - columnheader "Stage" [ref=e751]
+                  - columnheader "raw (price ratio)" [ref=e752]
+                - row "Reach Quarterfinals 6¢" [ref=e753]:
+                  - cell "Reach Quarterfinals" [ref=e754]
+                  - cell "6¢" [ref=e755]
+                - row "Deeper given reached 83.3%" [ref=e756]:
+                  - cell "Deeper given reached" [ref=e757]
+                  - cell "83.3%" [ref=e758]
+                - row "Success given reached 16.7%" [ref=e759]:
+                  - cell "Success given reached" [ref=e760]
+                  - cell "16.7%" [ref=e761]
+            - generic [ref=e762]: P(deeper│reached) = price(deeper) ÷ price(parent) = 5/6 = 83.3%
+            - generic [ref=e763]:
+              - text: DERIVED MARKET-IMPLIED INDICATORS
+              - generic [ref=e764]: DISPLAY-ONLY BOUND
+            - generic [ref=e765]: In contention (Reach Round of 32) ≈ 47.5% market-implied chance of being in the running; gross, top-of-book, Uncalibrated
+            - generic [ref=e766]: P(Reach Round of 16 | Reach Round of 32) ≈ 26.3% derived conditional estimate; assumes a consistent ladder; gross, top-of-book, Uncalibrated — NOT a fair value
+            - generic [ref=e767]: P(Reach Quarterfinals | Reach Round of 16) ≈ 52% derived conditional estimate; assumes a consistent ladder; gross, top-of-book, Uncalibrated — NOT a fair value
+            - generic [ref=e768]: P(Reach Semifinals | Reach Quarterfinals) ≈ 69.2% derived conditional estimate; assumes a consistent ladder; gross, top-of-book, Uncalibrated — NOT a fair value
+            - generic [ref=e769]: P(Reach Finals | Reach Semifinals) ≈ 11.1% derived conditional estimate; assumes a consistent ladder; gross, top-of-book, Uncalibrated — NOT a fair value
+            - generic [ref=e770]: P(Win the World Cup | Reach Finals) ≈ 20% derived conditional estimate; assumes a consistent ladder; gross, top-of-book, Uncalibrated — NOT a fair value
+            - generic [ref=e771]: CONTAINMENT CHAIN (BROAD → DEEP)
+            - table [ref=e772]:
+              - rowgroup [ref=e773]:
+                - row "Layer Source Disp % Bid % Ask % Quote" [ref=e774]:
+                  - columnheader "Layer" [ref=e775]
+                  - columnheader "Source" [ref=e776]
+                  - columnheader "Disp %" [ref=e777]
+                  - columnheader "Bid %" [ref=e778]
+                  - columnheader "Ask %" [ref=e779]
+                  - columnheader "Quote" [ref=e780]
+                - row "Reach Round of 32 advance/winner 47.5 47 48 Tight" [ref=e781]:
+                  - cell "Reach Round of 32" [ref=e782]
+                  - cell "advance/winner" [ref=e783]
+                  - cell "47.5" [ref=e784]
+                  - cell "47" [ref=e785]
+                  - cell "48" [ref=e786]
+                  - cell "Tight" [ref=e787]
+                - row "Reach Round of 16 advance/winner 12.5 12 13 Tight" [ref=e788]:
+                  - cell "Reach Round of 16" [ref=e789]
+                  - cell "advance/winner" [ref=e790]
+                  - cell "12.5" [ref=e791]
+                  - cell "12" [ref=e792]
+                  - cell "13" [ref=e793]
+                  - cell "Tight" [ref=e794]
+                - row "Reach Quarterfinals advance/winner 6.5 6 7 Tight" [ref=e795]:
+                  - cell "Reach Quarterfinals" [ref=e796]
+                  - cell "advance/winner" [ref=e797]
+                  - cell "6.5" [ref=e798]
+                  - cell "6" [ref=e799]
+                  - cell "7" [ref=e800]
+                  - cell "Tight" [ref=e801]
+                - row "Reach Semifinals advance/winner 4.5 4 5 Tight" [ref=e802]:
+                  - cell "Reach Semifinals" [ref=e803]
+                  - cell "advance/winner" [ref=e804]
+                  - cell "4.5" [ref=e805]
+                  - cell "4" [ref=e806]
+                  - cell "5" [ref=e807]
+                  - cell "Tight" [ref=e808]
+                - row "Reach Finals advance/winner 0.5 0 1 Tight" [ref=e809]:
+                  - cell "Reach Finals" [ref=e810]
+                  - cell "advance/winner" [ref=e811]
+                  - cell "0.5" [ref=e812]
+                  - cell "0" [ref=e813]
+                  - cell "1" [ref=e814]
+                  - cell "Tight" [ref=e815]
+                - row "Win the World Cup advance/winner 0.1 0.1 0.2 Tight" [ref=e816]:
+                  - cell "Win the World Cup" [ref=e817]
+                  - cell "advance/winner" [ref=e818]
+                  - cell "0.1" [ref=e819]
+                  - cell "0.1" [ref=e820]
+                  - cell "0.2" [ref=e821]
+                  - cell "Tight" [ref=e822]
+            - img [ref=e823]:
+              - generic [ref=e824]:
+                - generic [ref=e825]: Reach Round of 32
+                - generic [ref=e827]: 48%
+              - generic [ref=e828]:
+                - generic [ref=e829]: Reach Round of 16
+                - generic [ref=e831]: 13%
+              - generic [ref=e832]:
+                - generic [ref=e833]: Reach Quarterfina
+                - generic [ref=e835]: 7%
+              - generic [ref=e836]:
+                - generic [ref=e837]: Reach Semifinals
+                - generic [ref=e839]: 5%
+              - generic [ref=e840]:
+                - generic [ref=e841]: Reach Finals
+                - generic [ref=e843]: 1%
+              - generic [ref=e844]:
+                - generic [ref=e845]: Win the World Cup
+                - generic [ref=e847]: 0%
+            - generic [ref=e848]:
+              - text: PER-UNIT PAYOFF BY SCENARIO
+              - generic [ref=e849]: GROSS
+            - img [ref=e850]:
+              - generic [ref=e851]: cost 103¢
+              - generic [ref=e854]: Reach S
+              - generic [ref=e857]: Reach Q
+              - generic [ref=e860]: Not Rea
+            - generic [ref=e861]: RAW STAGE-LADDER SPREADS
+            - table [ref=e862]:
+              - rowgroup [ref=e863]:
+                - row "From To Spread pp Spread ¢ Quote" [ref=e864]:
+                  - columnheader "From" [ref=e865]
+                  - columnheader "To" [ref=e866]
+                  - columnheader "Spread pp" [ref=e867]
+                  - columnheader "Spread ¢" [ref=e868]
+                  - columnheader "Quote" [ref=e869]
+                - row "Reach Round of 32 Reach Round of 16 35 36 Tight" [ref=e870]:
+                  - cell "Reach Round of 32" [ref=e871]
+                  - cell "Reach Round of 16" [ref=e872]
+                  - cell "35" [ref=e873]
+                  - cell "36" [ref=e874]
+                  - cell "Tight" [ref=e875]
+                - row "Reach Round of 16 Reach Quarterfinals 6 6 Tight" [ref=e876]:
+                  - cell "Reach Round of 16" [ref=e877]
+                  - cell "Reach Quarterfinals" [ref=e878]
+                  - cell "6" [ref=e879]
+                  - cell "6" [ref=e880]
+                  - cell "Tight" [ref=e881]
+                - row "Reach Quarterfinals Reach Semifinals 2 2 Tight" [ref=e882]:
+                  - cell "Reach Quarterfinals" [ref=e883]
+                  - cell "Reach Semifinals" [ref=e884]
+                  - cell "2" [ref=e885]
+                  - cell "2" [ref=e886]
+                  - cell "Tight" [ref=e887]
+                - row "Reach Semifinals Reach Finals 4 4 Tight" [ref=e888]:
+                  - cell "Reach Semifinals" [ref=e889]
+                  - cell "Reach Finals" [ref=e890]
+                  - cell "4" [ref=e891]
+                  - cell "4" [ref=e892]
+                  - cell "Tight" [ref=e893]
+                - row "Reach Finals Win the World Cup 0.4 0 Tight" [ref=e894]:
+                  - cell "Reach Finals" [ref=e895]
+                  - cell "Win the World Cup" [ref=e896]
+                  - cell "0.4" [ref=e897]
+                  - cell "0" [ref=e898]
+                  - cell "Tight" [ref=e899]
+            - generic [ref=e900]: EXPECTED VS FOUND
+            - table [ref=e901]:
+              - rowgroup [ref=e902]:
+                - row "Layer Found Source" [ref=e903]:
+                  - columnheader "Layer" [ref=e904]
+                  - columnheader "Found" [ref=e905]
+                  - columnheader "Source" [ref=e906]
+                - row "Reach Round of 32 true market" [ref=e907]:
+                  - cell "Reach Round of 32" [ref=e908]
+                  - cell "true" [ref=e909]
+                  - cell "market" [ref=e910]
+                - row "Reach Round of 16 true market" [ref=e911]:
+                  - cell "Reach Round of 16" [ref=e912]
+                  - cell "true" [ref=e913]
+                  - cell "market" [ref=e914]
+                - row "Reach Quarterfinals true market" [ref=e915]:
+                  - cell "Reach Quarterfinals" [ref=e916]
+                  - cell "true" [ref=e917]
+                  - cell "market" [ref=e918]
+                - row "Reach Semifinals true market" [ref=e919]:
+                  - cell "Reach Semifinals" [ref=e920]
+                  - cell "true" [ref=e921]
+                  - cell "market" [ref=e922]
+                - row "Reach Finals true market" [ref=e923]:
+                  - cell "Reach Finals" [ref=e924]
+                  - cell "true" [ref=e925]
+                  - cell "market" [ref=e926]
+                - row "Win the World Cup true market" [ref=e927]:
+                  - cell "Win the World Cup" [ref=e928]
+                  - cell "true" [ref=e929]
+                  - cell "market" [ref=e930]
+            - generic [ref=e931]: ALL CONTRACTS (18)
+            - table [ref=e932]:
+              - rowgroup [ref=e933]:
+                - row "Contract Stage Disp % Bid % Ask % Quote Status" [ref=e934]:
+                  - columnheader "Contract" [ref=e935]
+                  - columnheader "Stage" [ref=e936]
+                  - columnheader "Disp %" [ref=e937]
+                  - columnheader "Bid %" [ref=e938]
+                  - columnheader "Ask %" [ref=e939]
+                  - columnheader "Quote" [ref=e940]
+                  - columnheader "Status" [ref=e941]
+                - row "Win the World Cup — 0.1 0.1 0.2 Tight active" [ref=e942]:
+                  - cell "Win the World Cup" [ref=e943]
+                  - cell "—" [ref=e944]
+                  - cell "0.1" [ref=e945]
+                  - cell "0.1" [ref=e946]
+                  - cell "0.2" [ref=e947]
+                  - cell "Tight" [ref=e948]
+                  - cell "active" [ref=e949]
+                - row "Croatia vs Ghana Winner — 16.5 16 17 Tight active" [ref=e950]:
+                  - cell "Croatia vs Ghana Winner" [ref=e951]
+                  - cell "—" [ref=e952]
+                  - cell "16.5" [ref=e953]
+                  - cell "16" [ref=e954]
+                  - cell "17" [ref=e955]
+                  - cell "Tight" [ref=e956]
+                  - cell "active" [ref=e957]
+                - row "England vs Ghana Winner — 9.5 9 10 Tight active" [ref=e958]:
+                  - cell "England vs Ghana Winner" [ref=e959]
+                  - cell "—" [ref=e960]
+                  - cell "9.5" [ref=e961]
+                  - cell "9" [ref=e962]
+                  - cell "10" [ref=e963]
+                  - cell "Tight" [ref=e964]
+                  - cell "active" [ref=e965]
+                - row "Ghana vs Panama Winner — 43.5 43 44 Tight active" [ref=e966]:
+                  - cell "Ghana vs Panama Winner" [ref=e967]
+                  - cell "—" [ref=e968]
+                  - cell "43.5" [ref=e969]
+                  - cell "43" [ref=e970]
+                  - cell "44" [ref=e971]
+                  - cell "Tight" [ref=e972]
+                  - cell "active" [ref=e973]
+                - row "Ghana finish bottom of Group L in the 2026 Men's FIFA World Cup — 36.5 36 37 Tight active" [ref=e974]:
+                  - cell "Ghana finish bottom of Group L in the 2026 Men's FIFA World Cup" [ref=e975]
+                  - cell "—" [ref=e976]
+                  - cell "36.5" [ref=e977]
+                  - cell "36" [ref=e978]
+                  - cell "37" [ref=e979]
+                  - cell "Tight" [ref=e980]
+                  - cell "active" [ref=e981]
+                - 'row "Ghana get eliminated in the Group Stage in the 2026 Men''s FIFA World Cup Eliminated: Group Stage 52.5 51 54 Tight active" [ref=e982]':
+                  - cell "Ghana get eliminated in the Group Stage in the 2026 Men's FIFA World Cup" [ref=e983]
+                  - 'cell "Eliminated: Group Stage" [ref=e984]'
+                  - cell "52.5" [ref=e985]
+                  - cell "51" [ref=e986]
+                  - cell "54" [ref=e987]
+                  - cell "Tight" [ref=e988]
+                  - cell "active" [ref=e989]
+                - 'row "Ghana get eliminated in the Round of 32 in the 2026 Men''s FIFA World Cup Eliminated: Round of 32 37 35 39 Tight active" [ref=e990]':
+                  - cell "Ghana get eliminated in the Round of 32 in the 2026 Men's FIFA World Cup" [ref=e991]
+                  - 'cell "Eliminated: Round of 32" [ref=e992]'
+                  - cell "37" [ref=e993]
+                  - cell "35" [ref=e994]
+                  - cell "39" [ref=e995]
+                  - cell "Tight" [ref=e996]
+                  - cell "active" [ref=e997]
+                - 'row "Ghana get eliminated in the Round of 16 in the 2026 Men''s FIFA World Cup Eliminated: Round of 16 9.5 4 15 OK active" [ref=e998]':
+                  - cell "Ghana get eliminated in the Round of 16 in the 2026 Men's FIFA World Cup" [ref=e999]
+                  - 'cell "Eliminated: Round of 16" [ref=e1000]'
+                  - cell "9.5" [ref=e1001]
+                  - cell "4" [ref=e1002]
+                  - cell "15" [ref=e1003]
+                  - cell "OK" [ref=e1004]
+                  - cell "active" [ref=e1005]
+                - 'row "Ghana get eliminated in the Quarterfinals of the 2026 Men''s FIFA World Cup Eliminated: Quarterfinals 5.5 2 9 OK active" [ref=e1006]':
+                  - cell "Ghana get eliminated in the Quarterfinals of the 2026 Men's FIFA World Cup" [ref=e1007]
+                  - 'cell "Eliminated: Quarterfinals" [ref=e1008]'
+                  - cell "5.5" [ref=e1009]
+                  - cell "2" [ref=e1010]
+                  - cell "9" [ref=e1011]
+                  - cell "OK" [ref=e1012]
+                  - cell "active" [ref=e1013]
+                - 'row "Ghana get eliminated in the Semifinals of the 2026 Men''s FIFA World Cup Eliminated: Semifinals 2 1 3 Tight active" [ref=e1014]':
+                  - cell "Ghana get eliminated in the Semifinals of the 2026 Men's FIFA World Cup" [ref=e1015]
+                  - 'cell "Eliminated: Semifinals" [ref=e1016]'
+                  - cell "2" [ref=e1017]
+                  - cell "1" [ref=e1018]
+                  - cell "3" [ref=e1019]
+                  - cell "Tight" [ref=e1020]
+                  - cell "active" [ref=e1021]
+                - row "Ghana get eliminated in the Final of the 2026 Men's FIFA World Cup Runner-up (lost Final) 8 0 16 Wide active" [ref=e1022]:
+                  - cell "Ghana get eliminated in the Final of the 2026 Men's FIFA World Cup" [ref=e1023]
+                  - cell "Runner-up (lost Final)" [ref=e1024]
+                  - cell "8" [ref=e1025]
+                  - cell "0" [ref=e1026]
+                  - cell "16" [ref=e1027]
+                  - cell "Wide" [ref=e1028]
+                  - cell "active" [ref=e1029]
+                - row "Ghana win the Final of the 2026 Men's FIFA World Cup Winner 7 0 14 OK active" [ref=e1030]:
+                  - cell "Ghana win the Final of the 2026 Men's FIFA World Cup" [ref=e1031]
+                  - cell "Winner" [ref=e1032]
+                  - cell "7" [ref=e1033]
+                  - cell "0" [ref=e1034]
+                  - cell "14" [ref=e1035]
+                  - cell "OK" [ref=e1036]
+                  - cell "active" [ref=e1037]
+                - row "Ghana finish first in World Cup Group L — 4.5 4 5 Tight active" [ref=e1038]:
+                  - cell "Ghana finish first in World Cup Group L" [ref=e1039]
+                  - cell "—" [ref=e1040]
+                  - cell "4.5" [ref=e1041]
+                  - cell "4" [ref=e1042]
+                  - cell "5" [ref=e1043]
+                  - cell "Tight" [ref=e1044]
+                  - cell "active" [ref=e1045]
+                - row "Reach Round of 32 Round of 32 47.5 47 48 Tight active" [ref=e1046]:
+                  - cell "Reach Round of 32" [ref=e1047]
+                  - cell "Round of 32" [ref=e1048]
+                  - cell "47.5" [ref=e1049]
+                  - cell "47" [ref=e1050]
+                  - cell "48" [ref=e1051]
+                  - cell "Tight" [ref=e1052]
+                  - cell "active" [ref=e1053]
+                - row "Reach Round of 16 Round of 16 12.5 12 13 Tight active" [ref=e1054]:
+                  - cell "Reach Round of 16" [ref=e1055]
+                  - cell "Round of 16" [ref=e1056]
+                  - cell "12.5" [ref=e1057]
+                  - cell "12" [ref=e1058]
+                  - cell "13" [ref=e1059]
+                  - cell "Tight" [ref=e1060]
+                  - cell "active" [ref=e1061]
+                - row "Reach Quarterfinals Quarterfinals 6.5 6 7 Tight active" [ref=e1062]:
+                  - cell "Reach Quarterfinals" [ref=e1063]
+                  - cell "Quarterfinals" [ref=e1064]
+                  - cell "6.5" [ref=e1065]
+                  - cell "6" [ref=e1066]
+                  - cell "7" [ref=e1067]
+                  - cell "Tight" [ref=e1068]
+                  - cell "active" [ref=e1069]
+                - row "Reach Semifinals Semifinals 4.5 4 5 Tight active" [ref=e1070]:
+                  - cell "Reach Semifinals" [ref=e1071]
+                  - cell "Semifinals" [ref=e1072]
+                  - cell "4.5" [ref=e1073]
+                  - cell "4" [ref=e1074]
+                  - cell "5" [ref=e1075]
+                  - cell "Tight" [ref=e1076]
+                  - cell "active" [ref=e1077]
+                - row "Reach Finals Finals 0.5 0 1 Tight active" [ref=e1078]:
+                  - cell "Reach Finals" [ref=e1079]
+                  - cell "Finals" [ref=e1080]
+                  - cell "0.5" [ref=e1081]
+                  - cell "0" [ref=e1082]
+                  - cell "1" [ref=e1083]
+                  - cell "Tight" [ref=e1084]
+                  - cell "active" [ref=e1085]
+            - generic [ref=e1086]: RESOLUTION CRITERIA (SETTLEMENT RULES)
+            - generic [ref=e1087]: Win the World Cup — If Ghana wins the 2026 Men's World Cup, then the market resolves to Yes.
+            - generic [ref=e1088]: Croatia vs Ghana Winner — If Ghana wins the Croatia vs Ghana professional FIFA World Cup soccer game originally scheduled for Jun 27, 2026 after 90 minutes plus stoppage time (does not include extra time or penalties), then the market resolves to Yes.
+            - generic [ref=e1089]: England vs Ghana Winner — If Ghana wins the England vs Ghana professional FIFA World Cup soccer game originally scheduled for Jun 23, 2026 after 90 minutes plus stoppage time (does not include extra time or penalties), then the market resolves to Yes.
+            - generic [ref=e1090]: Ghana vs Panama Winner — If Ghana wins the Ghana vs Panama professional FIFA World Cup soccer game originally scheduled for Jun 17, 2026 after 90 minutes plus stoppage time (does not include extra time or penalties), then the market resolves to Yes.
+            - generic [ref=e1091]: Ghana finish bottom of Group L in the 2026 Men's FIFA World Cup — If Ghana is the team to finish bottom of Group L in the 2026 Men's FIFA World Cup, then the market resolves to Yes.
+            - generic [ref=e1092]: Reach Semifinals — If Ghana is one of the teams to qualify for the Semifinals in the 2026 FIFA World Cup, then the market resolves to Yes.
+            - generic [ref=e1093]: Reach Quarterfinals — If Ghana is one of the teams to qualify for the Quarterfinals in the 2026 FIFA World Cup, then the market resolves to Yes.
+            - generic [ref=e1094]: Reach Finals — If Ghana is one of the teams to qualify for the Final in the 2026 FIFA World Cup, then the market resolves to Yes.
+            - generic [ref=e1095]: Reach Round of 16 — If Ghana is one of the teams to qualify for the Round of 16 in the 2026 FIFA World Cup, then the market resolves to Yes.
+            - generic [ref=e1096]: Ghana get eliminated in the Group Stage in the 2026 Men's FIFA World Cup — If Ghana is eliminated in the Group Stage in the 2026 Men's FIFA World Cup, then the market resolves to Yes.
+            - generic [ref=e1097]: Ghana get eliminated in the Round of 32 in the 2026 Men's FIFA World Cup — If Ghana is eliminated in the Round of 32 in the 2026 Men's FIFA World Cup, then the market resolves to Yes.
+            - generic [ref=e1098]: Ghana get eliminated in the Round of 16 in the 2026 Men's FIFA World Cup — If Ghana is eliminated in the Round of 16 in the 2026 Men's FIFA World Cup, then the market resolves to Yes.
+            - generic [ref=e1099]: Ghana get eliminated in the Quarterfinals of the 2026 Men's FIFA World Cup — If Ghana is eliminated in the Quarterfinals in the 2026 Men's FIFA World Cup, then the market resolves to Yes.
+            - generic [ref=e1100]: Ghana get eliminated in the Semifinals of the 2026 Men's FIFA World Cup — If Ghana is eliminated in the Semifinals in the 2026 Men's FIFA World Cup, then the market resolves to Yes.
+            - generic [ref=e1101]: Ghana get eliminated in the Final of the 2026 Men's FIFA World Cup — If Ghana is eliminated in the Final in the 2026 Men's FIFA World Cup, then the market resolves to Yes.
+            - generic [ref=e1102]: Ghana win the Final of the 2026 Men's FIFA World Cup — If Ghana wins the Final in the 2026 Men's FIFA World Cup, then the market resolves to Yes.
+            - generic [ref=e1103]: Ghana finish first in World Cup Group L — If Ghana finish first in Group L in the 2026 FIFA World Cup, then the market resolves to Yes.
+            - generic [ref=e1104]: Reach Round of 32 — If Ghana is one of the teams to qualify from Group L for the Round of 32 in the 2026 FIFA World Cup, then the market resolves to Yes.
+            - generic [ref=e1105] [cursor=pointer]: RAW FIELDS · IDS & CODES ▸
+  - generic [ref=e284]:
+    - generic [ref=e285]: TERMINAL PRO · Phase C
+    - generic [ref=e286]: OPP / RES / OPS surfaces · inspector tabs (trade card · participant detail · formulas) · net-of-fees toggle (display-only)

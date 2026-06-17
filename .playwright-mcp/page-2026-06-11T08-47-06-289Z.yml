@@ -1,0 +1,198 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e4] [cursor=pointer]: OPP
+      - generic [ref=e5] [cursor=pointer]: RES
+      - generic [ref=e6] [cursor=pointer]: OPS
+      - generic [ref=e7] [cursor=pointer]: ALRT
+    - generic [ref=e8]:
+      - generic [ref=e9]: ">"
+      - 'textbox "TYPE FUNCTION: OPP / RES / OPS / ALRT / SINNER THEN <GO>" [ref=e10]':
+        - /placeholder: "TYPE FUNCTION: OPP / RES / OPS / ALRT / SINNER  THEN  <GO>"
+      - button "<GO>" [ref=e11] [cursor=pointer]
+    - generic [ref=e12]: KALSHI<EQUITY>
+  - generic [ref=e13]:
+    - generic [ref=e14]: ● SCAN IDLE · 12S
+    - generic [ref=e15]:
+      - text: CONTRACTS
+      - generic [ref=e16]: "1204"
+    - generic [ref=e17]:
+      - text: CHECKS
+      - generic [ref=e18]: "747"
+    - generic [ref=e19]:
+      - text: REQ
+      - generic [ref=e20]: "49"
+    - generic [ref=e21]: ● EXCHANGE OPEN
+    - generic [ref=e22]:
+      - text: AUTO-SCAN
+      - generic [ref=e23]: ON·30S
+    - generic [ref=e24]: ● FAIL SERIES 1
+    - generic [ref=e25]:
+      - text: DB
+      - generic [ref=e26]: 42MB
+    - generic [ref=e27]: ● ALRT 4
+    - generic [ref=e28]: GROSS · TOP-OF-BOOK · $1 · READ-ONLY · NEVER "ARBITRAGE"
+  - generic [ref=e29]:
+    - generic [ref=e30] [cursor=pointer]: 1)OPP <GO>
+    - generic [ref=e31] [cursor=pointer]: 2)RES <GO>
+    - generic [ref=e32] [cursor=pointer]: 3)OPS <GO>
+  - generic [ref=e34]:
+    - generic [ref=e35]:
+      - generic [ref=e36]:
+        - generic [ref=e37]:
+          - generic [ref=e38]: "1"
+          - heading "ACTIONABLE — EXECUTABLE GROSS EDGES" [level=3] [ref=e39]
+          - generic [ref=e40]: "LENS: BLENDED · click row → DES · J/K + ENTER"
+        - table [ref=e43]:
+          - rowgroup [ref=e44]:
+            - row "BKT SPT NAME SETUP EDGE ROI UNITS PROFIT TRAD CAVEAT" [ref=e45]:
+              - columnheader [ref=e46]
+              - columnheader "BKT" [ref=e47]
+              - columnheader "SPT" [ref=e48]
+              - columnheader "NAME" [ref=e49]
+              - columnheader "SETUP" [ref=e50]
+              - columnheader "EDGE" [ref=e51]
+              - columnheader "ROI" [ref=e52]
+              - columnheader "UNITS" [ref=e53]
+              - columnheader "PROFIT" [ref=e54]
+              - columnheader "TRAD" [ref=e55]
+              - columnheader "CAVEAT" [ref=e56]
+          - rowgroup [ref=e57]:
+            - row "NEW ACT TEN J. SINNER REACH FINAL ⊇ WIN CONTAINMENT 7 14.0 140 9.80 YES —" [ref=e58] [cursor=pointer]:
+              - cell "NEW" [ref=e59]
+              - cell "ACT" [ref=e60]
+              - cell "TEN" [ref=e61]
+              - cell "J. SINNER REACH FINAL ⊇ WIN" [ref=e62]
+              - cell "CONTAINMENT" [ref=e63]
+              - cell "7" [ref=e64]
+              - cell "14.0" [ref=e65]
+              - cell "140" [ref=e66]
+              - cell "9.80" [ref=e67]
+              - cell "YES" [ref=e68]
+              - cell "—" [ref=e69]
+            - row "▲ ACT SOC BRAZIL v SERBIA HOME/AWAY/TIE 3-WAY DUTCH (OVERROUND) 11 5.5 90 9.90 YES GAME POSTPONE" [ref=e70] [cursor=pointer]:
+              - cell "▲" [ref=e71]:
+                - generic [ref=e72]: ▲
+              - cell "ACT" [ref=e73]
+              - cell "SOC" [ref=e74]
+              - cell "BRAZIL v SERBIA HOME/AWAY/TIE 3-WAY" [ref=e75]
+              - cell "DUTCH (OVERROUND)" [ref=e76]
+              - cell "11" [ref=e77]
+              - cell "5.5" [ref=e78]
+              - cell "90" [ref=e79]
+              - cell "9.90" [ref=e80]
+              - cell "YES" [ref=e81]
+              - cell "GAME POSTPONE" [ref=e82]
+            - row "ACT NHL OILERS @ PANTHERS HEAD-TO-HEAD GAME DUTCH 4 4.0 200 8.00 YES —" [ref=e83] [cursor=pointer]:
+              - cell [ref=e84]
+              - cell "ACT" [ref=e85]
+              - cell "NHL" [ref=e86]
+              - cell "OILERS @ PANTHERS HEAD-TO-HEAD" [ref=e87]
+              - cell "GAME DUTCH" [ref=e88]
+              - cell "4" [ref=e89]
+              - cell "4.0" [ref=e90]
+              - cell "200" [ref=e91]
+              - cell "8.00" [ref=e92]
+              - cell "YES" [ref=e93]
+              - cell "—" [ref=e94]
+            - row "↺ ACT ESP FAZE v VITALITY MAP-1 (DRAW-FREE) MAP DUTCH 3 3.0 60 1.80 YES —" [ref=e95] [cursor=pointer]:
+              - cell "↺" [ref=e96]
+              - cell "ACT" [ref=e97]
+              - cell "ESP" [ref=e98]
+              - cell "FAZE v VITALITY MAP-1 (DRAW-FREE)" [ref=e99]
+              - cell "MAP DUTCH" [ref=e100]
+              - cell "3" [ref=e101]
+              - cell "3.0" [ref=e102]
+              - cell "60" [ref=e103]
+              - cell "1.80" [ref=e104]
+              - cell "YES" [ref=e105]
+              - cell "—" [ref=e106]
+      - generic [ref=e107]:
+        - generic [ref=e108]:
+          - generic [ref=e109]: "2"
+          - heading "REVIEW / BLOCKED" [level=3] [ref=e110]
+          - generic [ref=e111]: SETTLEMENT-DEP
+        - table [ref=e114]:
+          - rowgroup [ref=e115]:
+            - row "BKT SPT NAME SETUP EDGE ROI UNITS PROFIT TRAD CAVEAT" [ref=e116]:
+              - columnheader [ref=e117]
+              - columnheader "BKT" [ref=e118]
+              - columnheader "SPT" [ref=e119]
+              - columnheader "NAME" [ref=e120]
+              - columnheader "SETUP" [ref=e121]
+              - columnheader "EDGE" [ref=e122]
+              - columnheader "ROI" [ref=e123]
+              - columnheader "UNITS" [ref=e124]
+              - columnheader "PROFIT" [ref=e125]
+              - columnheader "TRAD" [ref=e126]
+              - columnheader "CAVEAT" [ref=e127]
+          - rowgroup [ref=e128]:
+            - row "NEW REV NBA BOSTON CELTICS REACH SF ≡ WIN CONF EQUIVALENCE 4 6.0 50 2.00 RULE RULE_CHECK_REQ" [ref=e129] [cursor=pointer]:
+              - cell "NEW" [ref=e130]
+              - cell "REV" [ref=e131]
+              - cell "NBA" [ref=e132]
+              - cell "BOSTON CELTICS REACH SF ≡ WIN CONF" [ref=e133]
+              - cell "EQUIVALENCE" [ref=e134]
+              - cell "4" [ref=e135]
+              - cell "6.0" [ref=e136]
+              - cell "50" [ref=e137]
+              - cell "2.00" [ref=e138]
+              - cell "RULE" [ref=e139]
+              - cell "RULE_CHECK_REQ" [ref=e140]
+            - row "REV TEN C. ALCARAZ SCORE BUNDLE ≡ WIN SYNTHETIC 5 5.0 40 2.00 REVIEW SETTLE_CHECK_REQ" [ref=e141] [cursor=pointer]:
+              - cell [ref=e142]
+              - cell "REV" [ref=e143]
+              - cell "TEN" [ref=e144]
+              - cell "C. ALCARAZ SCORE BUNDLE ≡ WIN" [ref=e145]
+              - cell "SYNTHETIC" [ref=e146]
+              - cell "5" [ref=e147]
+              - cell "5.0" [ref=e148]
+              - cell "40" [ref=e149]
+              - cell "2.00" [ref=e150]
+              - cell "REVIEW" [ref=e151]
+              - cell "SETTLE_CHECK_REQ" [ref=e152]
+            - row "BLK MLB LA DODGERS PLAYOFFS ⊇ WIN WS CONTAINMENT 6 — — — NO BLOCKED:NO SIZE" [ref=e153] [cursor=pointer]:
+              - cell [ref=e154]
+              - cell "BLK" [ref=e155]
+              - cell "MLB" [ref=e156]
+              - cell "LA DODGERS PLAYOFFS ⊇ WIN WS" [ref=e157]
+              - cell "CONTAINMENT" [ref=e158]
+              - cell "6" [ref=e159]
+              - cell "—" [ref=e160]
+              - cell "—" [ref=e161]
+              - cell "—" [ref=e162]
+              - cell "NO" [ref=e163]
+              - cell "BLOCKED:NO SIZE" [ref=e164]
+      - generic [ref=e165]:
+        - generic [ref=e166]:
+          - generic [ref=e167]: "3"
+          - heading "WATCH / MOVERS" [level=3] [ref=e168]
+        - table [ref=e171]:
+          - rowgroup [ref=e172]:
+            - row "J. SINNER TEN ● 7¢" [ref=e173] [cursor=pointer]:
+              - cell "J. SINNER" [ref=e174]
+              - cell "TEN" [ref=e175]
+              - cell "● 7¢" [ref=e176]
+            - row "BRAZIL v SERBIA SOC ▲ 11¢" [ref=e177] [cursor=pointer]:
+              - cell "BRAZIL v SERBIA" [ref=e178]
+              - cell "SOC" [ref=e179]
+              - cell "▲ 11¢" [ref=e180]
+            - row "FAZE v VITALITY ESP ↺ 3¢" [ref=e181] [cursor=pointer]:
+              - cell "FAZE v VITALITY" [ref=e182]
+              - cell "ESP" [ref=e183]
+              - cell "↺ 3¢" [ref=e184]
+            - row "BOSTON CELTICS NBA ● 4¢" [ref=e185] [cursor=pointer]:
+              - cell "BOSTON CELTICS" [ref=e186]
+              - cell "NBA" [ref=e187]
+              - cell "● 4¢" [ref=e188]
+    - generic [ref=e189]:
+      - generic [ref=e190]: "FUNCTIONS:"
+      - generic [ref=e191]: OPP opportunities
+      - generic [ref=e192]: RES research
+      - generic [ref=e193]: OPS operations
+      - generic [ref=e194]: ALRT alerts
+      - generic [ref=e195]: <ticker> open DES card
+      - generic [ref=e196]: 1/2/3 lens
+      - generic [ref=e197]: J/K rows
+      - generic [ref=e198]: ENTER open
+    - generic [ref=e199]: "BLUEPRINT: status line → §14 data-quality · DES card + EVIDENCE → §8/§3 · 9-dim confidence gauges → §7 · RES function → §5/§6/§11 · OPS function → §1/§13 · ALRT blink → §10 · WATCH panel → §9.3. Function codes scale to every future detector family."

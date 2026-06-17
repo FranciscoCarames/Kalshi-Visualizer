@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kalshi Workstation — Option 5 · TRIAGE</title>
+<style>
+/* ===== ATTENTION-FIRST TRIAGE: prioritized card feed + focus pane, keyboard triage (Linear/Superhuman energy) ===== */
+:root{
+  --bg:#0e1014; --bg1:#14171d; --bg2:#1a1e26; --bg3:#222732; --line:#262b35; --line2:#333a47;
+  --tx:#e8eaf0; --tx2:#9aa3b2; --tx3:#646d7e;
+  --coral:#ff6a5a; --coral-d:#c8442f; --teal:#37d3b5; --gold:#f4c152; --violet:#9b8cff;
+  --pos:#37d3a0; --neg:#ff6a5a; --warn:#f4c152;
+  --serif:'Iowan Old Style','Palatino Linotype','Georgia',serif;
+  --sans:'Segoe UI',system-ui,-apple-system,sans-serif; --mono:'SF Mono','Consolas',monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--tx);font-family:var(--sans);font-size:13px;height:100vh;overflow:hidden;display:flex;flex-direction:column;
+  background-image:radial-gradient(1200px 500px at 80% -10%,rgba(255,106,90,.06),transparent),radial-gradient(900px 500px at -10% 110%,rgba(55,211,181,.05),transparent)}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+::-webkit-scrollbar{width:8px}::-webkit-scrollbar-thumb{background:var(--line2);border-radius:5px}
+.pos{color:var(--pos)}.neg{color:var(--neg)}.warn{color:var(--warn)}.dim{color:var(--tx3)}
+
+/* header */
+.head{display:flex;align-items:center;gap:16px;padding:14px 22px 10px;flex:0 0 auto}
+.q{font-family:var(--serif);font-size:21px;font-weight:600;letter-spacing:.2px}
+.q em{color:var(--coral);font-style:normal}
+.surf{display:flex;gap:4px;margin-left:8px}
+.surf button{width:34px;height:30px;border-radius:8px;border:1px solid var(--line);background:var(--bg1);color:var(--tx3);cursor:pointer;font-size:15px}
+.surf button.on{color:var(--coral);border-color:var(--coral-d);background:rgba(255,106,90,.08)}
+.spacer{flex:1}
+.lenspick{display:flex;background:var(--bg1);border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.lenspick button{padding:6px 11px;font-size:11.5px;background:transparent;border:none;color:var(--tx2);cursor:pointer}
+.lenspick button.on{background:var(--coral);color:#1a0b08;font-weight:700}
+.ministat{display:flex;gap:8px;font-size:11px;color:var(--tx3);align-items:center}
+.ministat .led{width:7px;height:7px;border-radius:50%;background:var(--pos);box-shadow:0 0 6px var(--pos)}
+
+/* body two-pane */
+.main{flex:1;min-height:0;display:grid;grid-template-columns:380px 1fr;gap:0}
+.feed{border-right:1px solid var(--line);overflow:auto;padding:10px 12px}
+.feedgrp{font-size:10.5px;text-transform:uppercase;letter-spacing:1px;color:var(--tx3);margin:14px 4px 8px;display:flex;align-items:center;gap:8px}
+.feedgrp .ct{margin-left:auto;background:var(--bg2);border:1px solid var(--line);border-radius:20px;padding:0 8px;font-family:var(--mono)}
+.fcard{display:flex;gap:11px;padding:11px 12px;border:1px solid var(--line);background:var(--bg1);border-radius:12px;margin-bottom:8px;cursor:pointer;position:relative;transition:.12s}
+.fcard:hover{border-color:var(--line2);background:var(--bg2)}
+.fcard.cur{border-color:var(--coral);box-shadow:0 0 0 1px var(--coral-d),0 8px 24px rgba(0,0,0,.35)}
+.fcard.done{opacity:.4}
+.fcard.research{border-style:dashed;border-color:var(--violet)}
+.ring{flex:0 0 auto;width:42px;height:42px;position:relative}
+.ring .pct{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:var(--mono)}
+.fc-main{flex:1;min-width:0}
+.fc-top{display:flex;align-items:center;gap:7px;margin-bottom:2px}
+.sport{font-size:9.5px;color:var(--tx2);background:var(--bg3);padding:1px 6px;border-radius:5px}
+.fc-name{font-weight:700;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fc-sub{font-size:11px;color:var(--tx3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fc-stats{display:flex;gap:12px;margin-top:5px;font-size:11px}
+.fc-stats b{font-family:var(--mono)}
+.bchip{font-size:9px;font-weight:800;padding:1px 6px;border-radius:5px;letter-spacing:.3px}
+.b-act{background:rgba(55,211,160,.16);color:var(--pos)}.b-rev{background:rgba(244,193,82,.16);color:var(--warn)}.b-blk{background:rgba(255,106,90,.16);color:var(--neg)}.b-res{background:rgba(155,140,255,.16);color:var(--violet)}
+.statetag{position:absolute;top:9px;right:10px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:1px 6px;border-radius:5px}
+.s-watch{background:rgba(55,211,181,.18);color:var(--teal)}.s-dismiss{background:var(--bg3);color:var(--tx3)}.s-alert{background:rgba(244,193,82,.18);color:var(--gold)}.s-snooze{background:rgba(155,140,255,.18);color:var(--violet)}
+
+/* focus pane */
+.focus{overflow:auto;padding:22px 26px}
+.f-head{display:flex;align-items:flex-start;gap:14px;border-bottom:1px solid var(--line);padding-bottom:16px;margin-bottom:16px}
+.f-title{font-family:var(--serif);font-size:24px;font-weight:600}
+.f-sub{color:var(--tx2);font-size:13px;margin-top:2px}
+.actions{display:flex;gap:8px;margin-left:auto}
+.abtn{display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 12px;border:1px solid var(--line2);background:var(--bg1);border-radius:10px;cursor:pointer;color:var(--tx2);min-width:62px}
+.abtn:hover{color:var(--tx);border-color:var(--coral-d)}
+.abtn .ic{font-size:16px}.abtn .k{font-size:9px;color:var(--tx3);font-family:var(--mono)}
+.abtn.watch:hover{color:var(--teal)}.abtn.alert:hover{color:var(--gold)}.abtn.dismiss:hover{color:var(--neg)}.abtn.snooze:hover{color:var(--violet)}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.block{}
+.blabel{font-size:10.5px;text-transform:uppercase;letter-spacing:1px;color:var(--tx3);margin-bottom:8px;font-weight:700}
+.leg{display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px solid var(--line);font-size:13px}
+.leg .t{font-weight:800;font-size:10px;padding:2px 7px;border-radius:6px}.leg .t.y{background:rgba(55,211,160,.16);color:var(--pos)}.leg .t.n{background:rgba(255,106,90,.16);color:var(--neg)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:13px}.kv .l{color:var(--tx2)}.kv .v{text-align:right;font-family:var(--mono)}
+.cf{display:grid;grid-template-columns:96px 1fr 30px;gap:9px;align-items:center;font-size:11.5px;margin:6px 0}
+.cf .tr{height:8px;border-radius:5px;background:var(--bg3);overflow:hidden}.cf .fi{height:100%;border-radius:5px;background:linear-gradient(90deg,var(--coral),var(--gold))}
+.note{font-size:13px;color:var(--tx2);line-height:1.6}.note b{color:var(--tx)}
+.bigedge{font-family:var(--serif);font-size:40px;line-height:1;color:var(--coral)}
+.pill{display:inline-block;font-size:11px;padding:2px 9px;border-radius:20px;border:1px solid var(--line2);color:var(--tx2)}
+.kbar{flex:0 0 auto;display:flex;gap:18px;padding:8px 22px;border-top:1px solid var(--line);font-size:11px;color:var(--tx3);background:var(--bg1)}
+.kbar b{color:var(--tx2);font-family:var(--mono);background:var(--bg3);border:1px solid var(--line2);border-radius:4px;padding:0 5px}
+.bp{font-size:10.5px;color:var(--tx3);margin-top:18px;border-top:1px dashed var(--line2);padding-top:10px}
+.bp b{color:var(--tx2)}
+</style>
+</head>
+<body>
+<div class="head">
+  <div class="q">What deserves <em>attention</em> now?</div>
+  <div class="surf"><button class="on" title="Opportunity">◎</button><button title="Research Lab">📈</button><button title="Operations">⚙</button></div>
+  <div class="spacer"></div>
+  <div class="lenspick" id="lens">
+    <button class="on" data-l="blended">Blended</button><button data-l="conf">Confidence</button><button data-l="edge">Edge</button><button data-l="immediacy">Immediacy</button>
+  </div>
+  <div class="ministat"><span class="led"></span> scan 12s · <span class="pos">4 act</span> · <span class="warn">2 rev</span> · 1 failed</div>
+</div>
+
+<div class="main">
+  <div class="feed" id="feed"></div>
+  <div class="focus" id="focus"></div>
+</div>
+
+<div class="kbar">
+  <span><b>J</b> <b>K</b> move</span><span><b>↵</b> focus</span><span><b>E</b> watch</span><span><b>X</b> dismiss</span><span><b>A</b> alert</span><span><b>S</b> snooze</span>
+  <span style="margin-left:auto">Triage like an inbox — every opportunity gets a decision · read-only</span>
+</div>
+
+<script>
+"use strict";
+const OPPS=[
+ {id:1,b:"act",sport:"Tennis",name:"J. Sinner",sub:"Reach Final ⊇ Win Tournament",setup:"Containment ladder",edge:7,roi:14.0,units:140,profit:9.80,trad:"Yes",q:"Tight",cost:93,floor:100,worst:-7,best:7,be:93,fill:140,legs:[["YES","Reach Final · KXATPADVANCE","38¢",140],["NO","Win · KXFOMEN","55¢",140]],why:"Firm child bid (Reach Final) exceeds parent ask (Win) by 7¢ — a deeper outcome priced above the broader one that contains it.",improve:"Already executable; more size if the Win ask deepens.",wrong:"Walkover advances without a match win — light rules check.",conf:{Data:95,Quote:92,Liquidity:78,Execution:80,Settlement:88,Strategy:96,Model:60,Comparability:84,Complexity:90}},
+ {id:3,b:"act",sport:"NHL",name:"Oilers @ Panthers",sub:"Head-to-head game book",setup:"Game dutch book",edge:4,roi:4.0,units:200,profit:8.00,trad:"Yes",q:"Tight",cost:96,floor:100,worst:-4,best:4,be:96,fill:200,legs:[["YES","Oilers · KXNHLGAME","47¢",200],["YES","Panthers · KXNHLGAME","49¢",200]],why:"Underround: Σ yes-ask 96¢ < 100¢ on a draw-free 2-way game.",improve:"Executable now.",wrong:"None material; draw-free.",conf:{Data:96,Quote:94,Liquidity:88,Execution:86,Settlement:90,Strategy:96,Model:62,Comparability:85,Complexity:92}},
+ {id:2,b:"act",sport:"Soccer",name:"Brazil v Serbia",sub:"Home / Away / Tie 3-way",setup:"Dutch book (overround)",edge:11,roi:5.5,units:90,profit:9.90,trad:"Yes",q:"OK",cost:211,floor:200,worst:-11,best:11,be:106,fill:90,legs:[["NO","Home · KXWCGAME","61¢",90],["NO","Away · KXWCGAME","78¢",90],["NO","Tie · KXWCGAME","72¢",90]],why:"Σ no-ask across the 3 outcomes is 11¢ below the (n−1)×100¢ floor.",improve:"Tighter Away quote adds size.",wrong:"Postponement caveat is advisory.",conf:{Data:94,Quote:80,Liquidity:70,Execution:74,Settlement:82,Strategy:95,Model:55,Comparability:80,Complexity:78}},
+ {id:4,b:"act",sport:"Esports",name:"FaZe v Vitality",sub:"Map-1 (draw-free)",setup:"Map dutch book",edge:3,roi:3.0,units:60,profit:1.80,trad:"Yes",q:"OK",cost:97,floor:100,worst:-3,best:3,be:97,fill:60,legs:[["YES","FaZe · KXCS2MAP","52¢",60],["YES","Vitality · KXCS2MAP","45¢",60]],why:"Underround on a 2-way draw-free map (97¢ < 100¢).",improve:"Thin size — more depth helps.",wrong:"Allow-list maintained.",conf:{Data:90,Quote:78,Liquidity:60,Execution:66,Settlement:86,Strategy:94,Model:50,Comparability:70,Complexity:88}},
+ {id:5,b:"rev",sport:"NBA",name:"Boston Celtics",sub:"Reach SF ≡ Win Conference",setup:"Match-alignment equivalence",edge:4,roi:6.0,units:50,profit:2.00,trad:"Rule-dependent",q:"OK",cost:104,floor:100,worst:-4,best:4,be:104,fill:50,legs:[["YES","Reach SF","71¢",50],["NO","Win Conf","33¢",50]],why:"Equivalence implies a cross, but settlement wording differs by a token.",improve:"Confirm settlement rules align → could promote.",wrong:"RULE_MISMATCH on a light token diff.",conf:{Data:88,Quote:76,Liquidity:64,Execution:60,Settlement:55,Strategy:80,Model:48,Comparability:72,Complexity:70}},
+ {id:6,b:"res",sport:"Tennis",name:"Alcaraz vs Sinner",sub:"Pairs divergence z = −2.3",setup:"Research signal",edge:0,roi:0,units:0,profit:0,trad:"Research",q:"—",cost:0,floor:0,worst:0,best:0,be:0,fill:0,legs:[],why:"Co-movement baseline broke: Alcaraz Win richening vs Sinner — a relative-value hypothesis, not a trade.",improve:"Needs calibration before promotion (§0.4).",wrong:"Research only — never a trade instruction.",conf:{Data:70,Quote:50,Liquidity:55,Execution:0,Settlement:0,Strategy:40,Model:62,Comparability:58,Complexity:50}},
+ {id:7,b:"blk",sport:"MLB",name:"LA Dodgers",sub:"Reach Playoffs ⊇ Win WS",setup:"Containment ladder",edge:6,roi:0,units:0,profit:0,trad:"No",q:"One-sided",cost:0,floor:100,worst:0,best:0,be:0,fill:0,legs:[["YES","Reach Playoffs","—",0],["NO","Win WS","—",0]],why:"Display cross exists but the firm side has zero resting size.",improve:"Resting size on the NO leg unblocks it.",wrong:"No fill possible at top-of-book.",conf:{Data:80,Quote:30,Liquidity:10,Execution:15,Settlement:78,Strategy:82,Model:40,Comparability:55,Complexity:75}},
+];
+const $=(s,r=document)=>r.querySelector(s);
+const avg=o=>Math.round(Object.values(o.conf).reduce((a,b)=>a+b,0)/Object.values(o.conf).length);
+let lens="blended",cur=0,states={};
+const lv=o=>lens==="conf"?avg(o):lens==="edge"?o.edge:lens==="immediacy"?(o.trad==="Yes"?100:0)+o.edge:o.edge*.35+o.roi*.45+avg(o)*.2;
+function order(){return [...OPPS].sort((a,b)=>lv(b)-lv(a));}
+function ring(pct,color){const r=18,c=2*Math.PI*r,off=c*(1-pct/100);
+  return `<svg class="ring" viewBox="0 0 42 42"><circle cx="21" cy="21" r="${r}" fill="none" stroke="#2a2f3a" stroke-width="4"/>
+  <circle cx="21" cy="21" r="${r}" fill="none" stroke="${color}" stroke-width="4" stroke-linecap="round" stroke-dasharray="${c}" stroke-dashoffset="${off}" transform="rotate(-90 21 21)"/></svg><div class="ring" style="position:relative;margin-top:-42px"><span class="pct">${pct}</span></div>`;}
+function feed(){
+  const list=order();const groups={"Act now":[],"Review":[],"Research":[],"Blocked":[]};
+  list.forEach(o=>{groups[o.b==="act"?"Act now":o.b==="rev"?"Review":o.b==="res"?"Research":"Blocked"].push(o);});
+  let h="";let flat=[];
+  Object.entries(groups).forEach(([g,arr])=>{if(!arr.length)return;
+    h+=`<div class="feedgrp">${g}<span class="ct">${arr.length}</span></div>`;
+    arr.forEach(o=>{flat.push(o.id);const i=flat.length-1;const a=avg(o);const col=a>=80?'#37d3a0':a>=60?'#f4c152':'#ff6a5a';
+      const st=states[o.id];
+      h+=`<div class="fcard ${o.b==='res'?'research':''} ${i===cur?'cur':''} ${st?'done':''}" data-i="${i}" data-id="${o.id}">
+        ${ring(a,col)}
+        <div class="fc-main"><div class="fc-top"><span class="sport">${o.sport}</span><span class="bchip b-${o.b}">${o.b==='res'?'RESEARCH':o.b.toUpperCase()}</span></div>
+          <div class="fc-name">${o.name}</div><div class="fc-sub">${o.sub}</div>
+          <div class="fc-stats">${o.edge?`<span>edge <b class="pos">${o.edge}¢</b></span><span>ROI <b>${o.roi.toFixed(1)}%</b></span><span>size <b>${o.units}</b></span>`:`<span class="dim">${o.setup}</span>`}</div></div>
+        ${st?`<span class="statetag s-${st}">${st}</span>`:''}</div>`;
+    });
+  });
+  $("#feed").innerHTML=h;window._flat=flat;
+  document.querySelectorAll('.fcard').forEach(c=>c.onclick=()=>{cur=+c.dataset.i;feed();focus();});
+}
+function focus(){
+  const id=window._flat[cur];const o=OPPS.find(x=>x.id===id);if(!o)return;
+  const a=avg(o);
+  const legs=o.legs.length?o.legs.map(l=>`<div class="leg"><span class="t ${l[0]==='YES'?'y':'n'}">${l[0]}</span><span style="flex:1">${l[1]}</span><span class="mono">${l[2]}</span><span class="dim mono">×${l[3]}</span></div>`).join(""):'<div class="note dim">No executable legs — research signal (attaches to candidate cards as evidence).</div>';
+  const cf=Object.entries(o.conf).map(([k,v])=>`<div class="cf"><span style="color:var(--tx2)">${k}</span><div class="tr"><div class="fi" style="width:${v}%"></div></div><span class="mono" style="text-align:right">${v||'—'}</span></div>`).join("");
+  $("#focus").innerHTML=`
+    <div class="f-head">
+      <div><div style="display:flex;gap:8px;align-items:center"><span class="bchip b-${o.b}">${o.b==='res'?'RESEARCH':o.b.toUpperCase()}</span><span class="pill">${o.setup}</span><span class="pill">${o.sport}</span></div>
+        <div class="f-title">${o.name}</div><div class="f-sub">${o.sub}</div></div>
+      <div class="actions">
+        <button class="abtn watch" data-act="watch"><span class="ic">★</span>Watch<span class="k">E</span></button>
+        <button class="abtn alert" data-act="alert"><span class="ic">🔔</span>Alert<span class="k">A</span></button>
+        <button class="abtn snooze" data-act="snooze"><span class="ic">⏱</span>Snooze<span class="k">S</span></button>
+        <button class="abtn dismiss" data-act="dismiss"><span class="ic">✕</span>Dismiss<span class="k">X</span></button>
+      </div></div>
+    <div class="fgrid">
+      <div class="block">
+        ${o.edge?`<div class="blabel">Gross edge</div><div class="bigedge">${o.edge}¢</div><div class="note" style="margin:6px 0 14px">ROI ${o.roi.toFixed(1)}% · ${o.units} units · max $${o.profit.toFixed(2)} · ${o.trad}</div>`:`<div class="blabel">Signal</div><div class="note" style="margin-bottom:14px">${o.setup} — confidence ${a}.</div>`}
+        <div class="blabel">Buy-only plan</div>${legs}
+        ${o.cost?`<div class="kv" style="margin-top:10px"><span class="l">Cost / $1</span><span class="v">${o.cost}¢</span><span class="l">Payout floor</span><span class="v">${o.floor}¢</span><span class="l">Worst / best</span><span class="v">${o.worst} / +${o.best}¢</span><span class="l">Break-even</span><span class="v">${o.be}%</span><span class="l">Fillable</span><span class="v">${o.fill}</span></div>`:''}
+      </div>
+      <div class="block">
+        <div class="blabel">Confidence — 9 dimensions (agg ${a})</div>${cf}
+        <div class="blabel" style="margin-top:16px">Why flagged</div><div class="note">${o.why}</div>
+        <div class="blabel" style="margin-top:14px">What would improve · what can go wrong</div>
+        <div class="note"><b>Improve:</b> ${o.improve}<br><b>Risk:</b> ${o.wrong}</div>
+        <div class="blabel" style="margin-top:14px">EvidencePack</div>
+        <div class="kv"><span class="l">Scan</span><span class="v">scan_8841</span><span class="l">Quote ts</span><span class="v">12s</span><span class="l">Rules</span><span class="v">r3</span></div>
+      </div>
+    </div>
+    <div class="bp"><b>Blueprint:</b> the feed = ranked candidates under a lens (§7); cards = standardized TradeCard + 9-dim confidence + EvidencePack (§8/§3); decision buttons = §15 workflow primitives (watch/alert/snooze/dismiss → journal); research cards visually distinct (§5). Surfaces switch top-left.</div>`;
+  document.querySelectorAll('.abtn').forEach(b=>b.onclick=()=>triage(b.dataset.act));
+}
+function triage(act){const id=window._flat[cur];states[id]=act;feed();
+  // advance to next untriaged
+  if(cur<window._flat.length-1)cur++;feed();focus();}
+function init(){feed();focus();
+  document.querySelectorAll('#lens button').forEach(b=>b.onclick=()=>{lens=b.dataset.l;document.querySelectorAll('#lens button').forEach(x=>x.classList.toggle('on',x===b));cur=0;feed();focus();});
+  document.querySelectorAll('.surf button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.surf button').forEach(x=>x.classList.remove('on'));b.classList.add('on');});
+  document.addEventListener('keydown',e=>{
+    if(e.key==="j"){cur=Math.min(cur+1,window._flat.length-1);feed();focus();}
+    if(e.key==="k"){cur=Math.max(cur-1,0);feed();focus();}
+    if(e.key==="Enter"){focus();$("#focus").scrollTop=0;}
+    if(e.key==="e")triage("watch");if(e.key==="x")triage("dismiss");if(e.key==="a")triage("alert");if(e.key==="s")triage("snooze");
+  });
+}
+document.addEventListener('DOMContentLoaded',init);
+</script>
+</body>
+</html>

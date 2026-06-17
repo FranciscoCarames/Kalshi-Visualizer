@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kalshi Workstation — Option 4 · WORKBOOK</title>
+<style>
+/* ===== EXCEL / SPREADSHEET WORKBOOK: gridlines, row/col headers, formula bar, sheet tabs, heatmaps ===== */
+:root{
+  --green:#217346; --green-d:#1a5c38; --green-l:#e6f2ec; --sel:#217346; --selbg:#d8ebe1;
+  --bg:#ffffff; --chrome:#f3f2f1; --chrome2:#e7e6e5; --grid:#d4d4d4; --grid2:#c0c0c0;
+  --hdr:#f5f5f5; --hdrsel:#cfe8dc; --tx:#1f1f1f; --tx2:#5a5a5a; --tx3:#8a8a8a;
+  --pos:#107c41; --neg:#c00000; --warn:#bf8f00;
+  --sans:'Calibri','Segoe UI',system-ui,sans-serif; --mono:'Consolas',monospace;
+}
+html[data-dark]{--bg:#1b1b1b;--chrome:#2b2b2b;--chrome2:#333;--grid:#3a3a3a;--grid2:#444;--hdr:#262626;--hdrsel:#173a29;--tx:#e6e6e6;--tx2:#aaa;--tx3:#777;--green-l:#16301f;--selbg:#173a29;}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--tx);font-family:var(--sans);font-size:13px;height:100vh;overflow:hidden;display:flex;flex-direction:column}
+.mono{font-family:var(--mono)}
+::-webkit-scrollbar{width:12px;height:12px}::-webkit-scrollbar-thumb{background:var(--grid2);border:2px solid var(--bg)}
+
+/* ribbon */
+.ribbon{background:var(--green);color:#fff;display:flex;align-items:center;gap:0;height:30px;flex:0 0 auto}
+.ribbon .title{padding:0 14px;font-weight:700;font-size:13px;letter-spacing:.3px}
+.ribbon .menu{display:flex;height:100%}
+.ribbon .menu span{padding:0 12px;display:flex;align-items:center;font-size:12.5px;cursor:pointer;opacity:.92}
+.ribbon .menu span:hover{background:rgba(255,255,255,.15)}
+.ribbon .right{margin-left:auto;display:flex;height:100%}
+.ribbon .right button{background:transparent;border:none;color:#fff;padding:0 12px;font-size:12px;cursor:pointer}
+.ribbon .right button:hover{background:rgba(255,255,255,.15)}
+
+/* toolbar */
+.toolbar{background:var(--chrome);border-bottom:1px solid var(--grid);display:flex;align-items:center;gap:6px;padding:4px 8px;font-size:12px;flex:0 0 auto}
+.tbtn{background:var(--bg);border:1px solid var(--grid);border-radius:3px;padding:3px 9px;cursor:pointer;color:var(--tx)}
+.tbtn:hover{background:var(--green-l)}
+.toolbar .sep{width:1px;height:18px;background:var(--grid);margin:0 3px}
+
+/* formula bar */
+.fbar{display:flex;align-items:stretch;border-bottom:1px solid var(--grid);background:var(--bg);flex:0 0 auto;height:26px}
+.namebox{width:120px;border-right:1px solid var(--grid);display:flex;align-items:center;padding:0 10px;font-weight:700;font-size:12px;font-family:var(--mono);background:var(--chrome)}
+.fx{width:28px;display:flex;align-items:center;justify-content:center;color:var(--tx3);font-style:italic;border-right:1px solid var(--grid)}
+.formula{flex:1;display:flex;align-items:center;padding:0 10px;font-family:var(--mono);font-size:12px;color:var(--tx);white-space:nowrap;overflow:hidden}
+.formula .prov{color:var(--green);margin-left:8px}
+
+/* status strip */
+.status{display:flex;gap:6px;align-items:center;background:var(--chrome);border-bottom:1px solid var(--grid);padding:3px 10px;font-size:11px;color:var(--tx2);flex:0 0 auto}
+.st{display:inline-flex;align-items:center;gap:4px}.st b{color:var(--tx)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--pos)}.dot.w{background:var(--warn)}
+
+/* grid */
+.gridwrap{flex:1;min-height:0;overflow:auto;position:relative}
+table.sheet{border-collapse:collapse;font-size:12.5px;table-layout:fixed}
+.sheet th,.sheet td{border:1px solid var(--grid);padding:2px 7px;height:23px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sheet thead th{position:sticky;top:0;z-index:3;background:var(--hdr);color:var(--tx2);font-weight:600;text-align:center;font-size:11px}
+.sheet .colhead{font-weight:400;color:var(--tx3)}
+.sheet .rownum{position:sticky;left:0;z-index:2;background:var(--hdr);color:var(--tx3);text-align:center;width:34px;font-size:11px;font-weight:400}
+.sheet thead .corner{position:sticky;left:0;z-index:4;width:34px}
+.sheet tbody tr:hover .rownum{background:var(--hdrsel)}
+.sheet td{cursor:cell}
+.sheet td.selcell{outline:2px solid var(--sel);outline-offset:-2px;font-weight:600}
+.sheet tr.selrow td{background:var(--selbg)}
+.sheet tr.selrow .rownum{background:var(--green);color:#fff}
+.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
+.afilter{float:right;color:var(--tx3);cursor:pointer;font-size:9px}
+.bdg{font-size:10px;font-weight:700;padding:0 5px;border-radius:3px}
+.b-act{background:#d6efe0;color:var(--pos)}.b-rev{background:#fbf0d2;color:var(--warn)}.b-blk{background:#f6d6d6;color:var(--neg)}
+html[data-dark] .b-act{background:#12381f}html[data-dark] .b-rev{background:#3a300f}html[data-dark] .b-blk{background:#3a1414}
+
+/* sheet tabs */
+.tabs{display:flex;align-items:center;background:var(--chrome2);border-top:1px solid var(--grid);height:28px;flex:0 0 auto;padding-left:6px}
+.tab{padding:0 14px;height:100%;display:flex;align-items:center;font-size:12px;color:var(--tx2);cursor:pointer;border-right:1px solid var(--grid)}
+.tab.on{background:var(--bg);color:var(--green);font-weight:700;border-top:2px solid var(--green);margin-top:-1px}
+.tabs .add{padding:0 10px;color:var(--tx3);cursor:pointer}
+.tabs .sumbar{margin-left:auto;padding:0 14px;font-size:11px;color:var(--tx2);font-family:var(--mono)}
+
+/* details task pane */
+.pane{position:fixed;top:86px;right:0;bottom:28px;width:330px;background:var(--bg);border-left:1px solid var(--grid2);box-shadow:-4px 0 12px rgba(0,0,0,.08);transform:translateX(100%);transition:.18s;z-index:20;display:flex;flex-direction:column;overflow:auto}
+.pane.on{transform:none}
+.pane .ph{background:var(--green);color:#fff;padding:7px 12px;font-weight:700;font-size:12.5px;display:flex;align-items:center}
+.pane .ph .x{margin-left:auto;cursor:pointer}
+.pane .pc{padding:12px;font-size:12px}
+.psec{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--tx3);font-weight:700;margin:10px 0 4px;border-bottom:1px solid var(--grid);padding-bottom:2px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:2px 10px}.kv .l{color:var(--tx2)}.kv .v{text-align:right;font-family:var(--mono)}
+.leg{display:flex;gap:6px;font-size:11.5px;padding:2px 0;align-items:center}.leg .t{font-weight:700;font-size:9.5px;padding:0 5px;border-radius:3px}
+.leg .t.y{background:#d6efe0;color:var(--pos)}.leg .t.n{background:#f6d6d6;color:var(--neg)}
+.cf{display:grid;grid-template-columns:60px 1fr 26px;gap:5px;align-items:center;font-size:10.5px;margin:2px 0}
+.cf .tr{height:8px;background:var(--chrome2);border:1px solid var(--grid)}.cf .fi{height:100%;background:var(--green)}
+.note{font-size:11.5px;color:var(--tx2);line-height:1.5}
+.bp{font-size:10px;color:var(--tx3);padding:8px 12px;border-top:1px solid var(--grid)}
+</style>
+</head>
+<body>
+<div class="ribbon">
+  <div class="title">📗 Kalshi_Opportunities.xlsx</div>
+  <div class="menu"><span>File</span><span>Home</span><span>Data</span><span>Formulas</span><span>View</span></div>
+  <div class="right"><button id="cardBtn">▦ Trade card</button><button id="lensBtn">Lens: Blended ▾</button><button id="darkBtn">◐ Theme</button></div>
+</div>
+
+<div class="toolbar">
+  <button class="tbtn">▼ Export CSV</button><button class="tbtn">▼ Export XLSX</button>
+  <span class="sep"></span>
+  <button class="tbtn">Σ AutoSum</button><button class="tbtn">⏷ Filter</button><button class="tbtn">⇅ Sort</button><button class="tbtn">▦ PivotTable</button>
+  <span class="sep"></span>
+  <button class="tbtn">🎨 Conditional formatting</button><button class="tbtn">❄ Freeze panes</button>
+  <span style="margin-left:auto;color:var(--tx3);font-size:11px">Gross · top-of-book · $1 basis · read-only</span>
+</div>
+
+<div class="fbar">
+  <div class="namebox" id="nameBox">A1</div>
+  <div class="fx">fx</div>
+  <div class="formula" id="formula"><span>Select a cell — the formula bar shows the value <i>and its provenance/basis</i>.</span></div>
+</div>
+
+<div class="status">
+  <span class="st"><span class="dot"></span> Scan <b>idle · 12s</b></span>
+  <span class="st">Contracts <b>1,204</b></span><span class="st">Checks <b>747</b></span><span class="st">Req <b>49</b></span>
+  <span class="st"><span class="dot"></span> Exchange <b>Open</b></span><span class="st">Auto-scan <b>on · 30s</b></span>
+  <span class="st"><span class="dot w"></span> Failed <b>1</b></span><span class="st">DB <b>42 MB</b></span>
+</div>
+
+<div class="gridwrap"><div id="sheet"></div></div>
+
+<div class="tabs" id="tabs"></div>
+
+<!-- details pane -->
+<div class="pane" id="pane">
+  <div class="ph">Trade card <span class="x" id="paneX">✕</span></div>
+  <div class="pc" id="paneBody"></div>
+  <div class="bp"><b>Blueprint:</b> sheets = surfaces (§9.1) · formula bar = basis/provenance (§6) · heatmaps = at-a-glance ranking · this pane = TradeCard + 9-dim confidence + EvidencePack (§8/§7/§3) · Journal sheet = §15.</div>
+</div>
+
+<script>
+"use strict";
+const OPPS=[
+ {id:1,b:"act",sport:"Tennis",name:"J. Sinner",sub:"Reach Final ⊇ Win",setup:"Containment",edge:7,roi:14.0,units:140,profit:9.80,trad:"Yes",cav:"—",q:"Tight",cost:93,floor:100,worst:-7,best:7,be:93,fill:140,childbid:45,parentask:38,legs:[["YES","Reach Final · KXATPADVANCE","38¢",140],["NO","Win · KXFOMEN","55¢",140]],why:"Firm child bid (Reach Final) exceeds parent ask (Win) by 7¢.",conf:{Data:95,Quote:92,Liq:78,Exec:80,Settle:88,Strat:96,Model:60,Compar:84,Cplx:90}},
+ {id:2,b:"act",sport:"Soccer",name:"Brazil v Serbia",sub:"Home/Away/Tie 3-way",setup:"Dutch overround",edge:11,roi:5.5,units:90,profit:9.90,trad:"Yes",cav:"Game postpone",q:"OK",cost:211,floor:200,worst:-11,best:11,be:106,fill:90,childbid:0,parentask:0,legs:[["NO","Home","61¢",90],["NO","Away","78¢",90],["NO","Tie","72¢",90]],why:"Σ no-ask 11¢ below (n-1)·100 floor.",conf:{Data:94,Quote:80,Liq:70,Exec:74,Settle:82,Strat:95,Model:55,Compar:80,Cplx:78}},
+ {id:3,b:"act",sport:"NHL",name:"Oilers @ Panthers",sub:"Head-to-head",setup:"Game dutch",edge:4,roi:4.0,units:200,profit:8.00,trad:"Yes",cav:"—",q:"Tight",cost:96,floor:100,worst:-4,best:4,be:96,fill:200,childbid:0,parentask:0,legs:[["YES","Oilers","47¢",200],["YES","Panthers","49¢",200]],why:"Underround Σ yes-ask 96¢ < 100¢ draw-free.",conf:{Data:96,Quote:94,Liq:88,Exec:86,Settle:90,Strat:96,Model:62,Compar:85,Cplx:92}},
+ {id:4,b:"act",sport:"Esports",name:"FaZe v Vitality",sub:"Map-1 draw-free",setup:"Map dutch",edge:3,roi:3.0,units:60,profit:1.80,trad:"Yes",cav:"—",q:"OK",cost:97,floor:100,worst:-3,best:3,be:97,fill:60,childbid:0,parentask:0,legs:[["YES","FaZe","52¢",60],["YES","Vitality","45¢",60]],why:"Underround 2-way map 97¢ < 100¢.",conf:{Data:90,Quote:78,Liq:60,Exec:66,Settle:86,Strat:94,Model:50,Compar:70,Cplx:88}},
+ {id:5,b:"rev",sport:"NBA",name:"Boston Celtics",sub:"Reach SF ≡ Win Conf",setup:"Equivalence",edge:4,roi:6.0,units:50,profit:2.00,trad:"Rule",cav:"Rule-check req",q:"OK",cost:104,floor:100,worst:-4,best:4,be:104,fill:50,childbid:0,parentask:0,legs:[["YES","Reach SF","71¢",50],["NO","Win Conf","33¢",50]],why:"Equivalence cross — settlement wording differs by a token.",conf:{Data:88,Quote:76,Liq:64,Exec:60,Settle:55,Strat:80,Model:48,Compar:72,Cplx:70}},
+ {id:6,b:"rev",sport:"Tennis",name:"C. Alcaraz",sub:"Score bundle ≡ Win",setup:"Synthetic",edge:5,roi:5.0,units:40,profit:2.00,trad:"Review",cav:"Settle-check req",q:"Wide",cost:95,floor:100,worst:-5,best:5,be:95,fill:40,childbid:0,parentask:0,legs:[["YES","3-0","12¢",40],["YES","3-1","18¢",40],["YES","3-2","21¢",40],["NO","Match","54¢",40]],why:"MECE scoreline bundle replicates Win; 5¢ under hedge.",conf:{Data:84,Quote:58,Liq:50,Exec:48,Settle:45,Strat:78,Model:42,Compar:60,Cplx:55}},
+ {id:7,b:"blk",sport:"MLB",name:"LA Dodgers",sub:"Playoffs ⊇ Win WS",setup:"Containment",edge:6,roi:0,units:0,profit:0,trad:"No",cav:"Blocked: no size",q:"1-sided",cost:0,floor:100,worst:0,best:0,be:0,fill:0,childbid:0,parentask:0,legs:[["YES","Reach Playoffs","—",0],["NO","Win WS","—",0]],why:"Display cross but zero resting size.",conf:{Data:80,Quote:30,Liq:10,Exec:15,Settle:78,Strat:82,Model:40,Compar:55,Cplx:75}},
+];
+const $=(s,r=document)=>r.querySelector(s);
+const SHEETS=["Opportunities","Review","Blocked","Research","Operations","Watchlist","Journal"];
+let sheet="Opportunities",lens="blended",selRow=null,selCol=null;
+const COLS=[["A","Sport","sport",10],["B","Participant / match","name",20],["C","Setup","setup",16],["D","Gross edge ¢","edge",11,1],["E","ROI %","roi",9,1],["F","Max units","units",9,1],["G","Max profit $","profit",10,1],["H","Tradable","trad",9],["I","Caveat","cav",16],["J","Bucket","b",8]];
+const lv=o=>lens==="edge"?o.edge:lens==="roi"?o.roi:o.edge*.35+o.roi*.45+(o.best-o.worst)*.2;
+function heat(col,v,max){if(!v)return"";const t=Math.min(1,v/max);
+  if(col==="edge")return `background:rgba(16,124,65,${.12+t*.5});color:${t>.6?'#fff':'inherit'}`;
+  if(col==="roi")return `background:rgba(33,115,70,${.10+t*.45})`;
+  if(col==="profit")return `background:rgba(16,124,65,${.08+t*.4})`;
+  return"";}
+function dataFor(s){if(s==="Review")return OPPS.filter(o=>o.b==="rev");if(s==="Blocked")return OPPS.filter(o=>o.b==="blk");return OPPS.filter(o=>o.b==="act");}
+function buildGrid(){
+  if(["Research","Operations","Watchlist","Journal"].includes(sheet)){renderOther();return;}
+  const rows=[...dataFor(sheet)].sort((a,b)=>lv(b)-lv(a));
+  const maxE=Math.max(...OPPS.map(o=>o.edge)),maxR=Math.max(...OPPS.map(o=>o.roi)),maxP=Math.max(...OPPS.map(o=>o.profit));
+  let h='<table class="sheet"><thead><tr><th class="corner"></th>';
+  COLS.forEach(c=>h+=`<th class="colhead" style="min-width:${c[3]}ch">${c[0]}</th>`);
+  h+='</tr><tr><th class="corner">1</th>';
+  COLS.forEach(c=>h+=`<th>${c[1]}<span class="afilter">▼</span></th>`);
+  h+='</tr></thead><tbody>';
+  rows.forEach((o,i)=>{
+    h+=`<tr data-id="${o.id}" class="${selRow===o.id?'selrow':''}"><td class="rownum">${i+2}</td>`;
+    COLS.forEach(c=>{
+      const f=c[2];let val=o[f],cls=c[4]?'num':'',style='';
+      if(f==="edge"){val=o.edge||'';style=heat("edge",o.edge,maxE);}
+      else if(f==="roi"){val=o.roi?o.roi.toFixed(1):'';style=heat("roi",o.roi,maxR);}
+      else if(f==="profit"){val=o.profit?o.profit.toFixed(2):'';style=heat("profit",o.profit,maxP);}
+      else if(f==="units")val=o.units||'';
+      else if(f==="b")val=`<span class="bdg b-${o.b}">${o.b.toUpperCase()}</span>`;
+      else if(f==="trad")val=`<span style="color:${o.trad==='Yes'?'var(--pos)':o.trad==='No'?'var(--tx3)':'var(--warn)'}">${o.trad}</span>`;
+      const selc=(selRow===o.id&&selCol===c[0])?' selcell':'';
+      h+=`<td class="${cls}${selc}" data-col="${c[0]}" data-field="${f}" style="${style}">${val}</td>`;
+    });
+    h+='</tr>';
+  });
+  $("#sheet").innerHTML=h+'</tbody></table>';
+  document.querySelectorAll('#sheet td[data-col]').forEach(td=>td.onclick=()=>selectCell(+td.closest('tr').dataset.id,td.dataset.col,td.dataset.field));
+}
+function selectCell(id,col,field){
+  selRow=id;selCol=col;const o=OPPS.find(x=>x.id===id);
+  const rowIdx=[...dataFor(sheet)].sort((a,b)=>lv(b)-lv(a)).findIndex(x=>x.id===id)+2;
+  $("#nameBox").textContent=col+rowIdx;
+  let f="";const prov=(p)=>` <span class="prov">▸ ${p}</span>`;
+  if(field==="edge"){f=`=CHILD_BID − PARENT_ASK = ${(o.childbid/100||0).toFixed(2)} − ${(o.parentask/100||0).toFixed(2)} = ${(o.edge/100).toFixed(2)}`+prov("firm quotes @12s · gross, top-of-book");}
+  else if(field==="roi"){f=`=EDGE / COST = ${o.edge}¢ / ${o.cost}¢`+prov("derived; gross ROI");}
+  else if(field==="profit"){f=`=EDGE × MAX_UNITS / 100 = ${o.edge} × ${o.units} / 100`+prov("max gross, fillable at top-of-book");}
+  else if(field==="units"){f=`=MIN(LEG_SIZES) = ${o.units}`+prov("top-of-book resting size");}
+  else if(field==="trad"){f=`"${o.trad}"`+prov(o.trad==='Yes'?'firm both legs · active · no rule flag':'rule-dependent');}
+  else if(field==="name"){f=`"${o.name}"`+prov("identity: custom_strike UUID");}
+  else f=`"${String(o[field]).replace(/<[^>]+>/g,'')}"`;
+  $("#formula").innerHTML=f;
+  buildGrid();
+}
+function renderOther(){
+  let h='';
+  if(sheet==="Research"){h=`<div style="padding:16px"><h3 style="color:var(--green);margin:0 0 10px">Research Lab (sheet)</h3>
+    <table class="sheet" style="max-width:560px"><thead><tr><th class="corner"></th><th class="colhead">A</th><th class="colhead">B</th><th class="colhead">C</th></tr>
+    <tr><th class="corner">1</th><th>Signal</th><th>Metric</th><th>Status</th></tr></thead><tbody>
+    <tr><td class="rownum">2</td><td>Implied distribution (NBA field)</td><td class="num">skew +0.3</td><td>research</td></tr>
+    <tr><td class="rownum">3</td><td>Fav–longshot calibration</td><td class="num">Brier 0.071</td><td>research</td></tr>
+    <tr><td class="rownum">4</td><td>Pairs: Alcaraz/Sinner</td><td class="num">z −2.3</td><td>divergence</td></tr>
+    <tr><td class="rownum">5</td><td>Term structure SF→Win</td><td class="num">+30pp</td><td>research</td></tr>
+    </tbody></table><p class="note" style="margin-top:10px">Research signals — never trade instructions; attach to cards as evidence (§5/§6/§11).</p></div>`;}
+  else if(sheet==="Operations"){h=`<div style="padding:16px"><h3 style="color:var(--green);margin:0 0 10px">Operations (sheet)</h3>
+    <table class="sheet" style="max-width:600px"><thead><tr><th class="corner"></th><th class="colhead">A</th><th class="colhead">B</th><th class="colhead">C</th><th class="colhead">D</th></tr>
+    <tr><th class="corner">1</th><th>Capability</th><th>Auth</th><th>Probe</th><th>Status</th></tr></thead><tbody>
+    <tr><td class="rownum">2</td><td>/markets</td><td>public</td><td>12s</td><td style="color:var(--pos)">healthy</td></tr>
+    <tr><td class="rownum">3</td><td>/orderbook</td><td>conflicted</td><td>1h</td><td style="color:var(--warn)">probe-req</td></tr>
+    <tr><td class="rownum">4</td><td>/candlesticks</td><td>public</td><td>1h</td><td>selective</td></tr>
+    </tbody></table></div>`;}
+  else if(sheet==="Watchlist"){h=`<div style="padding:16px"><h3 style="color:var(--green);margin:0 0 10px">Watchlist (sheet)</h3>
+    <table class="sheet" style="max-width:520px"><thead><tr><th class="corner"></th><th class="colhead">A</th><th class="colhead">B</th><th class="colhead">C</th></tr>
+    <tr><th class="corner">1</th><th>Market</th><th>Status</th><th>Dist-to-trigger</th></tr></thead><tbody>
+    <tr><td class="rownum">2</td><td>Sinner Reach Final ⊇ Win</td><td style="color:var(--pos)">live</td><td class="num">0¢</td></tr>
+    <tr><td class="rownum">3</td><td>Celtics SF ≡ Win Conf</td><td style="color:var(--warn)">rule-check</td><td class="num">+1¢</td></tr>
+    <tr><td class="rownum">4</td><td>CS2 Map 1 dutch</td><td>watching</td><td class="num">+2¢</td></tr>
+    </tbody></table></div>`;}
+  else h=`<div style="padding:16px"><h3 style="color:var(--green);margin:0 0 10px">Journal (sheet)</h3>
+    <table class="sheet" style="max-width:620px"><thead><tr><th class="corner"></th><th class="colhead">A</th><th class="colhead">B</th><th class="colhead">C</th><th class="colhead">D</th></tr>
+    <tr><th class="corner">1</th><th>Date</th><th>Market</th><th>Action</th><th>Note</th></tr></thead><tbody>
+    <tr><td class="rownum">2</td><td>2026-06-11</td><td>Sinner ladder</td><td>watched</td><td>waiting for size on Win leg</td></tr>
+    <tr><td class="rownum">3</td><td>2026-06-10</td><td>Oilers game book</td><td>passed</td><td>edge too thin net of fees</td></tr>
+    </tbody></table><p class="note" style="margin-top:10px">Per-user action journal (§15) — feeds calibration + per-user views.</p></div>`;
+  $("#sheet").innerHTML=h;
+}
+function openCard(o){
+  const legs=o.legs.map(l=>`<div class="leg"><span class="t ${l[0]==='YES'?'y':'n'}">${l[0]}</span><span style="flex:1">${l[1]}</span><span class="mono">${l[2]}</span></div>`).join("");
+  const cf=Object.entries(o.conf).map(([k,v])=>`<div class="cf"><span style="color:var(--tx2)">${k}</span><div class="tr"><div class="fi" style="width:${v}%"></div></div><span class="mono" style="text-align:right">${v}</span></div>`).join("");
+  $("#paneBody").innerHTML=`<div style="display:flex;align-items:center;gap:8px"><span class="bdg b-${o.b}">${o.b.toUpperCase()}</span><b style="font-size:14px">${o.name}</b></div>
+    <div style="color:var(--tx2);font-size:11.5px">${o.sub} · ${o.setup}</div>
+    <div class="psec">Buy-only plan</div>${legs}
+    <div class="kv" style="margin-top:6px"><span class="l">Cost / $1</span><span class="v">${o.cost}¢</span><span class="l">Floor</span><span class="v">${o.floor}¢</span>
+      <span class="l">Worst / best</span><span class="v">${o.worst} / +${o.best}¢</span><span class="l">Break-even</span><span class="v">${o.be}%</span><span class="l">Fillable</span><span class="v">${o.fill}</span></div>
+    <div class="psec">Decomposed confidence — 9 dim</div>${cf}
+    <div class="psec">Why flagged</div><div class="note">${o.why}</div>
+    <div class="psec">EvidencePack</div><div class="kv"><span class="l">Scan</span><span class="v">scan_8841</span><span class="l">Quote ts</span><span class="v">12s</span><span class="l">Rules</span><span class="v">r3</span></div>`;
+  $("#pane").classList.add("on");
+}
+function tabs(){$("#tabs").innerHTML=SHEETS.map(s=>`<div class="tab ${s===sheet?'on':''}" data-s="${s}">${s}</div>`).join("")+'<span class="add">+</span><span class="sumbar" id="sumbar"></span>';
+  document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{sheet=t.dataset.s;selRow=selCol=null;tabs();buildGrid();sumbar();});}
+function sumbar(){const d=dataFor(sheet);if(!["Opportunities","Review","Blocked"].includes(sheet)){$("#sumbar").textContent="";return;}
+  const avg=(d.reduce((s,o)=>s+o.edge,0)/d.length||0).toFixed(1);const sum=d.reduce((s,o)=>s+o.profit,0).toFixed(2);
+  $("#sumbar").textContent=`Count: ${d.length}   Avg edge: ${avg}¢   Sum profit: $${sum}`;}
+function init(){tabs();buildGrid();sumbar();
+  $("#cardBtn").onclick=()=>{const o=OPPS.find(x=>x.id===(selRow||1));openCard(o);};
+  $("#paneX").onclick=()=>$("#pane").classList.remove("on");
+  $("#lensBtn").onclick=()=>{lens=lens==="blended"?"edge":lens==="edge"?"roi":"blended";$("#lensBtn").textContent="Lens: "+lens[0].toUpperCase()+lens.slice(1)+" ▾";buildGrid();};
+  $("#darkBtn").onclick=()=>{document.documentElement.toggleAttribute("data-dark");};
+}
+document.addEventListener('DOMContentLoaded',init);
+</script>
+</body>
+</html>

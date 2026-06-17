@@ -1,0 +1,287 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e3]: Kalshi ◆ Workstation
+    - tablist [ref=e4]:
+      - tab "Opportunity 6" [ref=e5] [cursor=pointer]:
+        - text: Opportunity
+        - generic [ref=e6]: "6"
+      - tab "Research Lab" [selected] [ref=e7] [cursor=pointer]
+      - tab "Operations" [ref=e8] [cursor=pointer]
+    - button "▷ Simulate scan" [ref=e9] [cursor=pointer]
+    - button "⌘ Command Ctrl K" [ref=e10] [cursor=pointer]:
+      - text: ⌘ Command
+      - generic [ref=e11]: Ctrl K
+    - button "⊟ Density" [ref=e12] [cursor=pointer]
+    - button "◐ Theme" [active] [ref=e13] [cursor=pointer]
+    - button "🔔 4" [ref=e14] [cursor=pointer]:
+      - text: 🔔
+      - generic [ref=e15]: "4"
+    - button "?" [ref=e16] [cursor=pointer]:
+      - generic [ref=e17]: "?"
+  - generic [ref=e18]:
+    - generic [ref=e19]:
+      - generic [ref=e21]: Idle
+      - generic [ref=e22]: · last scan 12s ago
+    - generic [ref=e23]:
+      - text: Data age
+      - generic [ref=e24]: 12s
+    - generic [ref=e25]:
+      - text: Contracts
+      - generic [ref=e26]: 1,204
+    - generic [ref=e27]:
+      - text: Checks
+      - generic [ref=e28]: "747"
+    - generic [ref=e29]:
+      - text: Kalshi req
+      - generic [ref=e30]: "49"
+    - generic [ref=e31]:
+      - text: Exchange
+      - generic [ref=e33]: Open
+    - generic [ref=e34]:
+      - text: Auto-scan
+      - generic [ref=e36]: on · 30s
+    - generic [ref=e37]:
+      - text: Failed series
+      - generic [ref=e39]: "1"
+    - generic [ref=e40]:
+      - text: DB
+      - generic [ref=e41]: 42 MB
+    - generic [ref=e42]: Gross & top-of-book · $1 payout basis · read-only · never "arbitrage"
+  - tabpanel [ref=e786]:
+    - generic [ref=e787]: Research Lab — hypotheses & analytics, visually separated from executable rows. Signals carry a research signal badge, never a trade instruction, and attach to cards as evidence (§5/§6/§11).
+    - generic [ref=e788]:
+      - generic [ref=e789]:
+        - generic [ref=e790]:
+          - heading "Implied distribution — NBA champion field" [level=3] [ref=e791]
+          - generic [ref=e792]: research
+        - generic [ref=e793]:
+          - img [ref=e887]
+          - generic [ref=e894]:
+            - generic [ref=e895]: Win
+            - generic [ref=e896]: SF
+            - generic [ref=e897]: QF
+            - generic [ref=e898]: R16
+            - generic [ref=e899]: R32
+            - generic [ref=e900]: Out
+      - generic [ref=e808]:
+        - generic [ref=e809]:
+          - heading "Probability term structure — Reach SF → Win" [level=3] [ref=e810]
+          - generic [ref=e811]: research
+        - img [ref=e901]
+      - generic [ref=e815]:
+        - generic [ref=e816]:
+          - heading "Favorite–longshot calibration" [level=3] [ref=e817]
+          - generic [ref=e818]: research
+        - generic [ref=e819]:
+          - img [ref=e903]
+          - generic [ref=e912]: Dashed = perfect calibration · points = realized vs implied.
+      - generic [ref=e830]:
+        - generic [ref=e831]:
+          - heading "Binary \"Greeks\" — Sinner Win" [level=3] [ref=e832]
+          - generic [ref=e833]: research
+        - generic [ref=e834]:
+          - generic [ref=e835]:
+            - generic [ref=e836]: Δ (implied probability)
+            - generic [ref=e837]: "0.41"
+            - generic [ref=e838]: Event-time gamma proxy
+            - generic [ref=e839]: high
+            - generic [ref=e840]: θ analog (drift to 0/1)
+            - generic [ref=e841]: −0.6/day
+            - generic [ref=e842]: Capital duration
+            - generic [ref=e843]: 9 days
+          - generic [ref=e844]: Display/education layer. Δ ≡ implied probability; never feeds strict classification (§0.1).
+      - generic [ref=e845]:
+        - generic [ref=e846]:
+          - heading "Pairs / dispersion watch" [level=3] [ref=e847]
+          - generic [ref=e848]: research
+        - table [ref=e850]:
+          - rowgroup [ref=e851]:
+            - row "Pair z-score Signal" [ref=e852]:
+              - columnheader "Pair" [ref=e853] [cursor=pointer]
+              - columnheader "z-score" [ref=e854] [cursor=pointer]
+              - columnheader "Signal" [ref=e855] [cursor=pointer]
+          - rowgroup [ref=e856]:
+            - row "Alcaraz vs Sinner (Win) −2.3 divergence" [ref=e857] [cursor=pointer]:
+              - cell "Alcaraz vs Sinner (Win)" [ref=e858]
+              - cell "−2.3" [ref=e859]
+              - cell "divergence" [ref=e860]:
+                - generic [ref=e861]: divergence
+            - row "Celtics outright vs path-implied +1.8 rich path" [ref=e862] [cursor=pointer]:
+              - cell "Celtics outright vs path-implied" [ref=e863]
+              - cell "+1.8" [ref=e864]
+              - cell "rich path" [ref=e865]:
+                - generic [ref=e866]: rich path
+            - row "CS2 map1 vs match implied 0.4 in line" [ref=e867] [cursor=pointer]:
+              - cell "CS2 map1 vs match implied" [ref=e868]
+              - cell "0.4" [ref=e869]
+              - cell "in line" [ref=e870]:
+                - generic [ref=e871]: in line
+      - generic [ref=e872]:
+        - generic [ref=e873]:
+          - heading "Backtest / calibration dashboard" [level=3] [ref=e874]
+          - generic [ref=e875]: research
+        - generic [ref=e876]:
+          - generic [ref=e877]:
+            - generic [ref=e878]: Brier (dutch-book, 90d)
+            - generic [ref=e879]: "0.071"
+            - generic [ref=e880]: Log score
+            - generic [ref=e881]: −0.21
+            - generic [ref=e882]: Actionable rows graded
+            - generic [ref=e883]: "318"
+            - generic [ref=e884]: "\"Doing nothing was better\""
+            - generic [ref=e885]: 12%
+          - generic [ref=e886]: Backfilled = reconstructed, not observed — forward-validated before any promotion (§0.4).
+  - complementary "Trade card detail" [ref=e394]:
+    - generic [ref=e614]:
+      - generic [ref=e615]:
+        - generic [ref=e616]:
+          - generic [ref=e617]: Tennis
+          - generic [ref=e618]: actionable
+          - generic [ref=e619]: Containment ladder
+        - generic [ref=e620]: J. Sinner
+        - generic [ref=e621]: Reach Final ⊇ Win Tournament
+      - generic [ref=e622]:
+        - button "$1" [pressed] [ref=e623] [cursor=pointer]
+        - button "$100" [ref=e624] [cursor=pointer]
+      - button "✕" [ref=e625] [cursor=pointer]
+    - generic [ref=e626]:
+      - generic [ref=e627]:
+        - generic [ref=e628]: Buy-only plan (legs)
+        - generic [ref=e629]:
+          - generic [ref=e630]:
+            - generic [ref=e631]: "YES"
+            - generic [ref=e632]: Reach Final · KXATPADVANCE
+            - generic [ref=e633]: 38¢
+            - generic [ref=e634]: ×140
+          - generic [ref=e635]:
+            - generic [ref=e636]: "NO"
+            - generic [ref=e637]: Win Tournament · KXFOMEN
+            - generic [ref=e638]: 55¢
+            - generic [ref=e639]: ×140
+          - generic [ref=e640]:
+            - generic [ref=e641]: Cost per $1
+            - generic [ref=e642]: 93¢
+            - generic [ref=e643]: Payout floor
+            - generic [ref=e644]: 100¢
+            - generic [ref=e645]: Worst / best case
+            - generic [ref=e646]: "-7¢ / +7¢"
+            - generic [ref=e647]: Break-even prob
+            - generic [ref=e648]: 93%
+            - generic [ref=e649]: Fillable units (top-of-book)
+            - generic [ref=e650]: "140"
+            - generic [ref=e651]: Gross ROI
+            - generic [ref=e652]: 14.0%
+      - generic [ref=e653]:
+        - generic [ref=e654]: Decomposed confidence — 9 dimensions
+        - generic [ref=e655]:
+          - generic [ref=e656]:
+            - generic [ref=e657]: Data
+            - generic [ref=e660]: "95"
+          - generic [ref=e661]:
+            - generic [ref=e662]: Quote
+            - generic [ref=e665]: "92"
+          - generic [ref=e666]:
+            - generic [ref=e667]: Liquidity
+            - generic [ref=e670]: "78"
+          - generic [ref=e671]:
+            - generic [ref=e672]: Execution
+            - generic [ref=e675]: "80"
+          - generic [ref=e676]:
+            - generic [ref=e677]: Settlement
+            - generic [ref=e680]: "88"
+          - generic [ref=e681]:
+            - generic [ref=e682]: Strategy/proof
+            - generic [ref=e685]: "96"
+          - generic [ref=e686]:
+            - generic [ref=e687]: Model
+            - generic [ref=e690]: "60"
+          - generic [ref=e691]:
+            - generic [ref=e692]: Comparability
+            - generic [ref=e695]: "84"
+          - generic [ref=e696]:
+            - generic [ref=e697]: Complexity
+            - generic [ref=e700]: "90"
+      - generic [ref=e701]:
+        - generic [ref=e702]: Depth ladder (top-of-book → derived)
+        - generic [ref=e703]:
+          - generic [ref=e704]:
+            - generic [ref=e705]:
+              - generic [ref=e706]: YES bids
+              - generic [ref=e707]:
+                - generic [ref=e708]: 38¢
+                - generic [ref=e709]: "140"
+              - generic [ref=e710]:
+                - generic [ref=e711]: −1¢
+                - generic [ref=e712]: "252"
+              - generic [ref=e713]:
+                - generic [ref=e714]: −2¢
+                - generic [ref=e715]: "420"
+            - generic [ref=e716]:
+              - generic [ref=e717]: NO asks (derived)
+              - generic [ref=e718]:
+                - generic [ref=e719]: 55¢
+                - generic [ref=e720]: "140"
+              - generic [ref=e721]:
+                - generic [ref=e722]: +1¢
+                - generic [ref=e723]: "210"
+              - generic [ref=e724]:
+                - generic [ref=e725]: +2¢
+                - generic [ref=e726]: "336"
+          - generic [ref=e727]: Effective fill at 50 units ≈ 94¢ · max fill at current edge 140. Asks derived from opposing bids (parity is data-quality only).
+      - generic [ref=e728]:
+        - generic [ref=e729]: Tape (recent trades)
+        - generic [ref=e730]:
+          - generic [ref=e731]:
+            - generic [ref=e732]: "YES"
+            - generic [ref=e733]: 38¢
+            - generic [ref=e734]: taker buy
+            - generic [ref=e735]: 14s
+          - generic [ref=e736]:
+            - generic [ref=e737]: "NO"
+            - generic [ref=e738]: 55¢
+            - generic [ref=e739]: taker buy
+            - generic [ref=e740]: 41s
+          - generic [ref=e741]:
+            - generic [ref=e742]: "YES"
+            - generic [ref=e743]: 38¢
+            - generic [ref=e744]: sweep
+            - generic [ref=e745]: 2m
+      - generic [ref=e746]:
+        - generic [ref=e747]: Scenario payoff (per contract)
+        - table [ref=e749]:
+          - rowgroup [ref=e750]:
+            - row "Terminal state P&L ¢" [ref=e751]:
+              - columnheader "Terminal state" [ref=e752] [cursor=pointer]
+              - columnheader "P&L ¢" [ref=e753] [cursor=pointer]
+          - rowgroup [ref=e754]:
+            - row "Broader settles YES, deeper NO +7" [ref=e755] [cursor=pointer]:
+              - cell "Broader settles YES, deeper NO" [ref=e756]
+              - cell "+7" [ref=e757]
+            - row "Both settle the same -7" [ref=e758] [cursor=pointer]:
+              - cell "Both settle the same" [ref=e759]
+              - cell "-7" [ref=e760]
+            - row "Abnormal resolution (retire/void) rule-dependent" [ref=e761] [cursor=pointer]:
+              - cell "Abnormal resolution (retire/void)" [ref=e762]
+              - cell "rule-dependent" [ref=e763]
+      - generic [ref=e764]:
+        - generic [ref=e765]: Why flagged · why ranked · what would improve · what can go wrong
+        - generic [ref=e766]:
+          - paragraph [ref=e767]: "Why flagged: Firm child bid (Reach Final) exceeds parent ask (Win) by 7¢ — a deeper outcome priced above the broader one that contains it."
+          - paragraph [ref=e768]: "Why ranked here: Top under Blended: high ROI, tight quotes, size 140."
+          - paragraph [ref=e769]: "What would improve it: Already executable. More size would arrive if Win ask deepens."
+          - paragraph [ref=e770]: "What can go wrong: Settlement rules auto-checked light only; a walkover advances without a match win."
+      - generic [ref=e771]:
+        - generic [ref=e772]: EvidencePack
+        - generic [ref=e773]:
+          - generic [ref=e774]: Scan id
+          - generic [ref=e775]: scan_8841
+          - generic [ref=e776]: Quote / book timestamp
+          - generic [ref=e777]: 12s ago
+          - generic [ref=e778]: Source endpoints
+          - generic [ref=e779]: /markets /events
+          - generic [ref=e780]: Rules version
+          - generic [ref=e781]: r3
+          - generic [ref=e782]: Identity ids
+          - generic [ref=e783]: KXATPADVANCE
+          - generic [ref=e784]: Template
+          - generic [ref=e785]: Containment ladder

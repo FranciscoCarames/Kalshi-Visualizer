@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kalshi Workstation — Option 2 · TERMINAL</title>
+<style>
+/* ===== BLOOMBERG-TERMINAL HOMAGE: amber-on-black, function codes, max density ===== */
+:root{
+  --bg:#000000; --bg1:#080806; --bg2:#0e0d0a; --panel:#0a0a08; --line:#1c1a12; --line2:#2a2618;
+  --amber:#ffb000; --amber-d:#7a5500; --orange:#ff7b00; --green:#33ff66; --red:#ff3b30; --cyan:#3fd0ff;
+  --tx:#e8c878; --tx2:#b79a52; --tx3:#7a6a3a; --white:#f5efe0;
+  --mono:'Consolas','SF Mono','DejaVu Sans Mono','Liberation Mono',monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--tx);font-family:var(--mono);font-size:12.5px;line-height:1.35;
+  height:100vh;overflow:hidden;display:flex;flex-direction:column;
+  background-image:repeating-linear-gradient(0deg,rgba(255,176,0,.025) 0 1px,transparent 1px 3px)}
+::-webkit-scrollbar{width:9px;height:9px}::-webkit-scrollbar-thumb{background:var(--line2)}
+.amber{color:var(--amber)}.green{color:var(--green)}.red{color:var(--red)}.cyan{color:var(--cyan)}.white{color:var(--white)}
+.dim{color:var(--tx3)}
+
+/* command line */
+.cmdline{display:flex;align-items:center;gap:0;background:var(--bg1);border-bottom:2px solid var(--amber-d);height:34px;flex:0 0 auto}
+.fkeys{display:flex;height:100%}
+.fkey{display:flex;align-items:center;padding:0 9px;font-weight:700;font-size:11px;border-right:1px solid var(--line);cursor:pointer;color:#04130a}
+.fkey.y{background:var(--amber)} .fkey.g{background:var(--green)} .fkey.r{background:var(--red);color:#1a0000} .fkey.c{background:var(--cyan)}
+.fkey:hover{filter:brightness(1.15)}
+.cmdinput{flex:1;display:flex;align-items:center;gap:8px;padding:0 10px}
+.cmdinput .prompt{color:var(--amber);font-weight:700}
+.cmdinput input{flex:1;background:transparent;border:none;color:var(--white);font-family:var(--mono);font-size:13px;
+  letter-spacing:1px;text-transform:uppercase;outline:none}
+.go{background:var(--amber);color:#000;font-weight:800;padding:2px 12px;border:none;cursor:pointer;letter-spacing:1px}
+.clock{padding:0 12px;color:var(--green);font-size:11px;border-left:1px solid var(--line)}
+
+/* status line */
+.statline{display:flex;gap:0;background:var(--bg2);border-bottom:1px solid var(--line);font-size:11px;height:22px;flex:0 0 auto;align-items:center}
+.statline .s{padding:0 10px;border-right:1px solid var(--line);white-space:nowrap;height:100%;display:flex;align-items:center;gap:5px}
+.blink{animation:bk 1s steps(1) infinite}@keyframes bk{50%{opacity:0}}
+
+/* function tabs */
+.ftabs{display:flex;background:var(--bg1);border-bottom:1px solid var(--line2);flex:0 0 auto}
+.ftab{padding:5px 14px;font-size:11px;font-weight:700;letter-spacing:1px;cursor:pointer;color:var(--tx3);border-right:1px solid var(--line)}
+.ftab.on{background:#000;color:var(--amber);box-shadow:inset 0 -2px 0 var(--amber)}
+.ftab .code{color:var(--green);font-size:9px;margin-right:4px}
+
+/* layout */
+.wrap{flex:1;min-height:0;overflow:auto;padding:6px}
+.view{display:none}.view.on{display:block}
+.quad{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto auto;gap:6px}
+.panel{border:1px solid var(--line2);background:var(--panel)}
+.ph{display:flex;align-items:center;gap:8px;padding:3px 8px;background:linear-gradient(180deg,#14120a,#0a0908);border-bottom:1px solid var(--line2)}
+.ph .n{color:#000;background:var(--amber);font-weight:800;font-size:10px;padding:0 5px}
+.ph h3{margin:0;font-size:11px;font-weight:700;letter-spacing:1px;color:var(--amber)}
+.ph .meta{margin-left:auto;color:var(--tx3);font-size:10px}
+.pc{padding:0}
+table{width:100%;border-collapse:collapse;font-size:11.5px}
+th{text-align:left;color:var(--tx3);font-weight:400;font-size:10px;letter-spacing:.5px;padding:3px 8px;border-bottom:1px solid var(--line2);text-transform:uppercase;white-space:nowrap}
+th.r,td.r{text-align:right}
+td{padding:1px 8px;border-bottom:1px solid var(--line);white-space:nowrap;height:20px}
+tbody tr{cursor:pointer}
+tbody tr:hover{background:#14120a}
+tbody tr.sel{background:#1e1a0c;box-shadow:inset 3px 0 0 var(--amber)}
+.bktag{font-weight:800;font-size:10px;padding:0 4px}
+.bk-act{color:var(--green)}.bk-rev{color:var(--amber)}.bk-blk{color:var(--red)}
+.up::before{content:"▲ ";color:var(--green)}.down::before{content:"▼ ";color:var(--red)}
+.newb{background:var(--green);color:#000;font-weight:800;font-size:9px;padding:0 3px}
+.retb{color:var(--orange)}
+.gauge{display:inline-block;width:60px;height:8px;background:#1a1810;vertical-align:middle;position:relative}
+.gauge i{display:block;height:100%;background:linear-gradient(90deg,var(--red),var(--amber),var(--green))}
+
+/* DES card */
+.des{border:1px solid var(--amber-d);background:#070705;margin-top:6px}
+.des .dh{display:flex;align-items:center;gap:10px;padding:5px 10px;background:#14120a;border-bottom:1px solid var(--amber-d)}
+.des .dh .t{font-size:14px;font-weight:800;color:var(--white);letter-spacing:1px}
+.des .grid{display:grid;grid-template-columns:1fr 1fr;gap:0}
+.des .col{padding:8px 12px}
+.des .col:first-child{border-right:1px solid var(--line)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:2px 14px;font-size:11.5px}
+.kv .l{color:var(--tx3)}.kv .v{text-align:right;color:var(--white)}
+.sec-t{color:var(--amber);font-size:10px;letter-spacing:1px;margin:8px 0 3px;border-bottom:1px solid var(--line);padding-bottom:2px}
+.conf-r{display:grid;grid-template-columns:90px 1fr 30px;gap:6px;align-items:center;font-size:10.5px;margin:2px 0}
+.leg{display:flex;gap:8px;font-size:11px;padding:1px 0}
+.leg .yes{color:var(--green);font-weight:700}.leg .no{color:var(--red);font-weight:700}
+.note{font-size:11px;color:var(--tx2);line-height:1.5}
+.help-row{display:flex;gap:14px;flex-wrap:wrap;font-size:10.5px;color:var(--tx3);padding:6px 4px}
+.help-row b{color:var(--amber)}
+.bp{margin-top:8px;border:1px dashed var(--line2);padding:8px;font-size:10px;color:var(--tx3)}
+.bp b{color:var(--tx2)}
+</style>
+</head>
+<body>
+
+<div class="cmdline">
+  <div class="fkeys">
+    <span class="fkey y" data-f="OPP">OPP</span>
+    <span class="fkey g" data-f="RES">RES</span>
+    <span class="fkey c" data-f="OPS">OPS</span>
+    <span class="fkey r" data-f="ALRT">ALRT</span>
+  </div>
+  <div class="cmdinput">
+    <span class="prompt">&gt;</span>
+    <input id="cmd" placeholder="TYPE FUNCTION: OPP / RES / OPS / ALRT / SINNER  THEN  &lt;GO&gt;" autocomplete="off">
+    <button class="go" id="goBtn">&lt;GO&gt;</button>
+  </div>
+  <div class="clock" id="clock">KALSHI&lt;EQUITY&gt;</div>
+</div>
+
+<div class="statline" id="statline"></div>
+
+<div class="ftabs" id="ftabs">
+  <div class="ftab on" data-v="opp"><span class="code">1)</span>OPP &lt;GO&gt;</div>
+  <div class="ftab" data-v="res"><span class="code">2)</span>RES &lt;GO&gt;</div>
+  <div class="ftab" data-v="ops"><span class="code">3)</span>OPS &lt;GO&gt;</div>
+</div>
+
+<div class="wrap">
+  <!-- OPPORTUNITY -->
+  <div class="view on" id="v-opp">
+    <div class="quad">
+      <div class="panel" style="grid-column:1/3">
+        <div class="ph"><span class="n">1</span><h3>ACTIONABLE — EXECUTABLE GROSS EDGES</h3>
+          <span class="meta">LENS: <span id="lensName" class="amber">BLENDED</span> · click row → DES · J/K + ENTER</span></div>
+        <div class="pc"><div id="tblAct"></div></div>
+      </div>
+      <div class="panel">
+        <div class="ph"><span class="n">2</span><h3>REVIEW / BLOCKED</h3><span class="meta">SETTLEMENT-DEP</span></div>
+        <div class="pc"><div id="tblRev"></div></div>
+      </div>
+      <div class="panel">
+        <div class="ph"><span class="n">3</span><h3>WATCH / MOVERS</h3></div>
+        <div class="pc"><div id="tblWatch"></div></div>
+      </div>
+    </div>
+    <div id="desHost"></div>
+    <div class="help-row">
+      <span><b>FUNCTIONS:</b></span><span><b>OPP</b> opportunities</span><span><b>RES</b> research</span>
+      <span><b>OPS</b> operations</span><span><b>ALRT</b> alerts</span><span><b>&lt;ticker&gt;</b> open DES card</span>
+      <span><b>1/2/3</b> lens</span><span><b>J/K</b> rows</span><span><b>ENTER</b> open</span>
+    </div>
+    <div class="bp"><b>BLUEPRINT:</b> status line → §14 data-quality · DES card + EVIDENCE → §8/§3 · 9-dim confidence gauges → §7 ·
+      RES function → §5/§6/§11 · OPS function → §1/§13 · ALRT blink → §10 · WATCH panel → §9.3. Function codes scale to every future detector family.</div>
+  </div>
+
+  <!-- RESEARCH -->
+  <div class="view" id="v-res">
+    <div class="quad">
+      <div class="panel"><div class="ph"><span class="n">R</span><h3>IMPLIED DISTRIBUTION — NBA FIELD</h3><span class="meta green">RESEARCH</span></div>
+        <div class="pc" style="padding:8px"><div id="rDist"></div></div></div>
+      <div class="panel"><div class="ph"><span class="n">R</span><h3>PROB TERM STRUCTURE</h3><span class="meta green">RESEARCH</span></div>
+        <div class="pc" style="padding:8px"><div id="rTerm"></div></div></div>
+      <div class="panel"><div class="ph"><span class="n">R</span><h3>FAV–LONGSHOT CALIBRATION</h3><span class="meta green">RESEARCH</span></div>
+        <div class="pc" style="padding:8px"><div id="rCal"></div></div></div>
+      <div class="panel"><div class="ph"><span class="n">R</span><h3>BINARY GREEKS — SINNER</h3><span class="meta green">RESEARCH</span></div>
+        <div class="pc" style="padding:8px"><div class="kv"><span class="l">Δ IMPLIED PROB</span><span class="v">0.41</span>
+          <span class="l">Γ EVENT-TIME</span><span class="v">HIGH</span><span class="l">Θ DRIFT</span><span class="v">-0.6/D</span>
+          <span class="l">CAPITAL DURATION</span><span class="v">9D</span></div>
+          <div class="note" style="margin-top:8px">DISPLAY LAYER. Δ ≡ IMPLIED PROB; NEVER FEEDS STRICT CLASSIFICATION (§0.1).</div></div></div>
+    </div>
+  </div>
+
+  <!-- OPS -->
+  <div class="view" id="v-ops">
+    <div class="quad">
+      <div class="panel" style="grid-column:1/3"><div class="ph"><span class="n">O</span><h3>ENDPOINT / CAPABILITY HEALTH</h3></div>
+        <div class="pc"><table><thead><tr><th>CAPABILITY</th><th>AUTH</th><th class="r">TOK</th><th>PROBE</th><th>STATUS</th></tr></thead><tbody>
+          <tr><td>/MARKETS</td><td>PUBLIC</td><td class="r">10</td><td>12S</td><td class="green">HEALTHY</td></tr>
+          <tr><td>/EVENTS</td><td>PUBLIC</td><td class="r">10</td><td>12S</td><td class="green">HEALTHY</td></tr>
+          <tr><td>/ORDERBOOK</td><td>CONFLICTED</td><td class="r">10</td><td>1H</td><td class="amber">PROBE-REQ</td></tr>
+          <tr><td>/CANDLESTICKS</td><td>PUBLIC</td><td class="r">10</td><td>1H</td><td class="cyan">SELECTIVE</td></tr>
+        </tbody></table></div></div>
+      <div class="panel"><div class="ph"><span class="n">O</span><h3>SCAN PROFILE</h3></div>
+        <div class="pc"><table><tbody>
+          <tr><td>FETCH</td><td class="r amber">1.9S</td></tr><tr><td>PARSE</td><td class="r">0.3S</td></tr>
+          <tr><td>DETECT(7)</td><td class="r amber">1.4S</td></tr><tr><td>STORE</td><td class="r">0.2S</td></tr>
+          <tr><td>RENDER</td><td class="r">0.3S</td></tr><tr><td class="green">TOTAL</td><td class="r green">3.4S · 49 GET</td></tr>
+        </tbody></table></div></div>
+      <div class="panel"><div class="ph"><span class="n">O</span><h3>DATA-QUALITY EVENTS</h3></div>
+        <div class="pc"><table><tbody>
+          <tr><td>PARITY SKEW</td><td class="dim r">DATA-QUAL</td></tr>
+          <tr><td>CROSSED BOOK</td><td class="amber r">REVIEW</td></tr>
+          <tr><td>SERIES FAIL KXMOTOGP</td><td class="red r">BLOCKER</td></tr>
+        </tbody></table></div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+const OPPS=[
+ {id:1,tk:"SINNER",b:"act",chg:"new",sport:"TEN",name:"J. SINNER",sub:"REACH FINAL ⊇ WIN",setup:"CONTAINMENT",plan:"BUY YES R-FINAL 38 / BUY NO WIN 55",edge:7,roi:14.0,units:140,profit:9.80,trad:"YES",cav:"—",q:"TIGHT",cost:93,floor:100,worst:-7,best:7,be:93,fill:140,legs:[["YES","REACH FINAL · KXATPADVANCE","38¢",140],["NO","WIN · KXFOMEN","55¢",140]],why:"FIRM CHILD BID (REACH FINAL) EXCEEDS PARENT ASK (WIN) BY 7¢.",conf:{DATA:95,QUOTE:92,LIQ:78,EXEC:80,SETTLE:88,STRAT:96,MODEL:60,COMPAR:84,CPLX:90}},
+ {id:2,tk:"BRAZIL",b:"act",chg:"up",sport:"SOC",name:"BRAZIL v SERBIA",sub:"HOME/AWAY/TIE 3-WAY",setup:"DUTCH (OVERROUND)",plan:"BUY NO H61 / A78 / T72",edge:11,roi:5.5,units:90,profit:9.90,trad:"YES",cav:"GAME POSTPONE",q:"OK",cost:211,floor:200,worst:-11,best:11,be:106,fill:90,legs:[["NO","HOME · KXWCGAME","61¢",90],["NO","AWAY · KXWCGAME","78¢",90],["NO","TIE · KXWCGAME","72¢",90]],why:"Σ NO-ASK 11¢ BELOW (n-1)·100 FLOOR.",conf:{DATA:94,QUOTE:80,LIQ:70,EXEC:74,SETTLE:82,STRAT:95,MODEL:55,COMPAR:80,CPLX:78}},
+ {id:3,tk:"OILERS",b:"act",chg:"",sport:"NHL",name:"OILERS @ PANTHERS",sub:"HEAD-TO-HEAD",setup:"GAME DUTCH",plan:"BUY YES OIL 47 / PAN 49",edge:4,roi:4.0,units:200,profit:8.00,trad:"YES",cav:"—",q:"TIGHT",cost:96,floor:100,worst:-4,best:4,be:96,fill:200,legs:[["YES","OILERS · KXNHLGAME","47¢",200],["YES","PANTHERS · KXNHLGAME","49¢",200]],why:"UNDERROUND Σ YES-ASK 96¢ < 100¢ DRAW-FREE.",conf:{DATA:96,QUOTE:94,LIQ:88,EXEC:86,SETTLE:90,STRAT:96,MODEL:62,COMPAR:85,CPLX:92}},
+ {id:4,tk:"FAZE",b:"act",chg:"ret",sport:"ESP",name:"FAZE v VITALITY",sub:"MAP-1 (DRAW-FREE)",setup:"MAP DUTCH",plan:"BUY YES FAZE 52 / VIT 45",edge:3,roi:3.0,units:60,profit:1.80,trad:"YES",cav:"—",q:"OK",cost:97,floor:100,worst:-3,best:3,be:97,fill:60,legs:[["YES","FAZE · KXCS2MAP","52¢",60],["YES","VITALITY · KXCS2MAP","45¢",60]],why:"UNDERROUND 2-WAY MAP 97¢ < 100¢.",conf:{DATA:90,QUOTE:78,LIQ:60,EXEC:66,SETTLE:86,STRAT:94,MODEL:50,COMPAR:70,CPLX:88}},
+ {id:5,tk:"CELTICS",b:"rev",chg:"new",sport:"NBA",name:"BOSTON CELTICS",sub:"REACH SF ≡ WIN CONF",setup:"EQUIVALENCE",plan:"BUY YES SF 71 / BUY NO CONF 33",edge:4,roi:6.0,units:50,profit:2.00,trad:"RULE",cav:"RULE_CHECK_REQ",q:"OK",cost:104,floor:100,worst:-4,best:4,be:104,fill:50,legs:[["YES","REACH SF","71¢",50],["NO","WIN CONF","33¢",50]],why:"EQUIVALENCE CROSS — SETTLEMENT WORDING DIFFERS BY A TOKEN.",conf:{DATA:88,QUOTE:76,LIQ:64,EXEC:60,SETTLE:55,STRAT:80,MODEL:48,COMPAR:72,CPLX:70}},
+ {id:6,tk:"ALCARAZ",b:"rev",chg:"",sport:"TEN",name:"C. ALCARAZ",sub:"SCORE BUNDLE ≡ WIN",setup:"SYNTHETIC",plan:"BUY YES {3-0,3-1,3-2} / BUY NO MATCH",edge:5,roi:5.0,units:40,profit:2.00,trad:"REVIEW",cav:"SETTLE_CHECK_REQ",q:"WIDE",cost:95,floor:100,worst:-5,best:5,be:95,fill:40,legs:[["YES","3-0","12¢",40],["YES","3-1","18¢",40],["YES","3-2","21¢",40],["NO","MATCH WINNER","54¢",40]],why:"MECE SCORELINE BUNDLE REPLICATES WIN; 5¢ UNDER HEDGE.",conf:{DATA:84,QUOTE:58,LIQ:50,EXEC:48,SETTLE:45,STRAT:78,MODEL:42,COMPAR:60,CPLX:55}},
+ {id:7,tk:"DODGERS",b:"blk",chg:"",sport:"MLB",name:"LA DODGERS",sub:"PLAYOFFS ⊇ WIN WS",setup:"CONTAINMENT",plan:"BUY YES PLAYOFFS / BUY NO WS",edge:6,roi:0,units:0,profit:0,trad:"NO",cav:"BLOCKED:NO SIZE",q:"1-SIDED",cost:0,floor:100,worst:0,best:0,be:0,fill:0,legs:[["YES","REACH PLAYOFFS","—",0],["NO","WIN WS","—",0]],why:"DISPLAY CROSS BUT ZERO RESTING SIZE — QUOTE_SIZE_MISSING.",conf:{DATA:80,QUOTE:30,LIQ:10,EXEC:15,SETTLE:78,STRAT:82,MODEL:40,COMPAR:55,CPLX:75}},
+];
+const $=(s,r=document)=>r.querySelector(s);const el=(t,c,h)=>{const e=document.createElement(t);if(c)e.className=c;if(h!=null)e.innerHTML=h;return e;};
+let state={lens:"blended",sel:null};
+function lensVal(o){switch(state.lens){case"edge":return o.edge;case"spread":return o.best-o.worst;case"ev":return o.roi*.6+o.edge*.4;default:return o.edge*.35+o.roi*.45+(o.best-o.worst)*.2;}}
+function chgCell(o){if(o.chg==="new")return '<span class="newb">NEW</span>';if(o.chg==="up")return '<span class="up"></span>';if(o.chg==="ret")return '<span class="retb">↺</span>';return "";}
+function rowsHTML(list){
+  let h='<table><thead><tr><th></th><th>BKT</th><th>SPT</th><th>NAME</th><th>SETUP</th><th class="r">EDGE</th><th class="r">ROI</th><th class="r">UNITS</th><th class="r">PROFIT</th><th>TRAD</th><th>CAVEAT</th></tr></thead><tbody>';
+  list.forEach(o=>{h+=`<tr data-id="${o.id}" class="${state.sel===o.id?'sel':''}"><td>${chgCell(o)}</td>`+
+    `<td class="bktag bk-${o.b}">${o.b.toUpperCase()}</td><td class="dim">${o.sport}</td>`+
+    `<td class="white">${o.name}<span class="dim"> ${o.sub}</span></td><td>${o.setup}</td>`+
+    `<td class="r ${o.chg==='up'?'green':''}">${o.edge||'—'}</td><td class="r">${o.roi?o.roi.toFixed(1):'—'}</td>`+
+    `<td class="r">${o.units||'—'}</td><td class="r">${o.profit?o.profit.toFixed(2):'—'}</td>`+
+    `<td class="${o.trad==='YES'?'green':o.trad==='NO'?'dim':'amber'}">${o.trad}</td>`+
+    `<td class="${o.cav.includes('BLOCK')?'red':o.cav==='—'?'dim':'amber'}">${o.cav}</td></tr>`;});
+  return h+'</tbody></table>';
+}
+function render(){
+  const act=[...OPPS.filter(o=>o.b==="act")].sort((a,b)=>lensVal(b)-lensVal(a));
+  $("#tblAct").innerHTML=rowsHTML(act);
+  $("#tblRev").innerHTML=rowsHTML(OPPS.filter(o=>o.b!=="act"));
+  $("#tblWatch").innerHTML='<table><tbody>'+OPPS.filter(o=>o.chg).map(o=>`<tr data-id="${o.id}"><td class="white">${o.name}</td><td class="dim">${o.sport}</td><td class="r ${o.chg==='up'?'green':o.chg==='ret'?'amber':''}">${o.chg==='up'?'▲':o.chg==='ret'?'↺':'●'} ${o.edge}¢</td></tr>`).join("")+'</tbody></table>';
+  document.querySelectorAll('tr[data-id]').forEach(tr=>tr.onclick=()=>openDES(+tr.dataset.id));
+}
+function gauge(v){return `<span class="gauge"><i style="width:${v}%"></i></span>`;}
+function openDES(id){
+  const o=OPPS.find(x=>x.id===id);state.sel=id;render();
+  const legs=o.legs.map(l=>`<div class="leg"><span class="${l[0]==='YES'?'yes':'no'}">${l[0]}</span><span style="flex:1">${l[1]}</span><span class="white">${l[2]}</span><span class="dim">×${l[3]}</span></div>`).join("");
+  const conf=Object.entries(o.conf).map(([k,v])=>`<div class="conf-r"><span class="dim">${k}</span>${gauge(v)}<span class="r white">${v}</span></div>`).join("");
+  $("#desHost").innerHTML=`<div class="des"><div class="dh"><span class="n" style="background:var(--amber);color:#000;font-weight:800;padding:0 5px">DES</span>
+    <span class="t">${o.name}</span><span class="dim">${o.sub}</span><span style="margin-left:auto" class="bktag bk-${o.b}">${o.b.toUpperCase()}</span>
+    <span class="dim">${o.setup}</span></div>
+    <div class="grid"><div class="col">
+      <div class="sec-t">BUY-ONLY PLAN (LEGS)</div>${legs}
+      <div class="kv" style="margin-top:6px"><span class="l">COST / $1</span><span class="v">${o.cost}¢</span>
+        <span class="l">PAYOUT FLOOR</span><span class="v">${o.floor}¢</span><span class="l">WORST / BEST</span><span class="v">${o.worst}¢ / +${o.best}¢</span>
+        <span class="l">BREAK-EVEN</span><span class="v">${o.be}%</span><span class="l">FILLABLE</span><span class="v">${o.fill}</span><span class="l">ROI</span><span class="v">${o.roi?o.roi.toFixed(1):'—'}%</span></div>
+      <div class="sec-t">SCENARIO PAYOFF (¢/CONTRACT)</div>
+      <div class="kv"><span class="l">BROADER YES / DEEPER NO</span><span class="v green">+${o.best}</span>
+        <span class="l">BOTH SAME</span><span class="v red">${o.worst}</span><span class="l">ABNORMAL (RETIRE/VOID)</span><span class="v amber">RULE-DEP</span></div>
+      <div class="sec-t">EVIDENCEPACK</div>
+      <div class="kv"><span class="l">SCAN ID</span><span class="v">SCAN_8841</span><span class="l">QUOTE TS</span><span class="v">12S</span>
+        <span class="l">ENDPOINTS</span><span class="v">/MARKETS /EVENTS</span><span class="l">RULES VER</span><span class="v">R3</span><span class="l">TEMPLATE</span><span class="v">${o.setup}</span></div>
+    </div><div class="col">
+      <div class="sec-t">DECOMPOSED CONFIDENCE — 9 DIM</div>${conf}
+      <div class="sec-t">WHY FLAGGED</div><div class="note">${o.why}</div>
+      <div class="sec-t">DEPTH (TOP-OF-BOOK → DERIVED)</div>
+      <div class="kv"><span class="l green">YES BID ${o.legs[0][2]}</span><span class="v">${o.fill}</span>
+        <span class="l red">NO ASK ${o.legs[o.legs.length-1][2]}</span><span class="v">${o.fill}</span></div>
+      <div class="note">EFF FILL @50 ≈ ${o.cost+1}¢ · ASKS DERIVED FROM OPPOSING BIDS (PARITY = DATA-QUALITY ONLY).</div>
+    </div></div></div>`;
+  $("#desHost").scrollIntoView({behavior:"smooth",block:"nearest"});
+}
+/* charts (amber svg) */
+function bars(h,data){const max=Math.max(...data.map(d=>d[1]));let s='<svg width="100%" height="130" viewBox="0 0 300 130" preserveAspectRatio="none">';const bw=288/data.length;data.forEach((d,i)=>{const bh=d[1]/max*100;s+=`<rect x="${6+i*bw}" y="${110-bh}" width="${bw-3}" height="${bh}" fill="${i===0?'#ffb000':'#3a3320'}"/>`;});s+='</svg><div style="display:flex;justify-content:space-between;font-size:9px;color:#7a6a3a">'+data.map(d=>`<span>${d[0]}</span>`).join("")+'</div>';h.innerHTML=s;}
+function line(h,pts){const w=300,ht=120,mn=Math.min(...pts),mx=Math.max(...pts),rg=(mx-mn)||1,st=w/(pts.length-1);const d=pts.map((p,i)=>`${i?'L':'M'}${(i*st).toFixed(0)},${(ht-8-((p-mn)/rg)*(ht-24)).toFixed(0)}`).join(' ');h.innerHTML=`<svg width="100%" height="120" viewBox="0 0 ${w} ${ht}"><path d="${d}" fill="none" stroke="#33ff66" stroke-width="2"/></svg>`;}
+function cal(h){let s='<svg width="100%" height="120" viewBox="0 0 300 120"><line x1="15" y1="105" x2="285" y2="12" stroke="#3a3320" stroke-dasharray="4"/>';const p=[[15,103],[75,86],[135,58],[195,42],[255,22]];s+=`<path d="${p.map((q,i)=>`${i?'L':'M'}${q[0]},${q[1]}`).join(' ')}" fill="none" stroke="#ffb000" stroke-width="2"/>`;p.forEach(q=>s+=`<circle cx="${q[0]}" cy="${q[1]}" r="2.5" fill="#ffb000"/>`);h.innerHTML=s+'</svg>';}
+function renderRes(){bars($("#rDist"),[["WIN",34],["SF",22],["QF",16],["R16",12],["R32",9],["OUT",7]]);line($("#rTerm"),[31,38,46,52,57,61]);cal($("#rCal"));}
+/* status line */
+function statline(){$("#statline").innerHTML=
+  '<span class="s green">● SCAN IDLE · 12S</span><span class="s">CONTRACTS <span class="white">1204</span></span>'+
+  '<span class="s">CHECKS <span class="white">747</span></span><span class="s">REQ <span class="white">49</span></span>'+
+  '<span class="s green">● EXCHANGE OPEN</span><span class="s">AUTO-SCAN <span class="white">ON·30S</span></span>'+
+  '<span class="s amber">● FAIL SERIES 1</span><span class="s">DB <span class="white">42MB</span></span>'+
+  '<span class="s red blink" id="alrtBlink">● ALRT 4</span><span class="s dim" style="margin-left:auto">GROSS · TOP-OF-BOOK · $1 · READ-ONLY · NEVER "ARBITRAGE"</span>';}
+/* nav */
+function setView(v){document.querySelectorAll('.ftab').forEach(t=>t.classList.toggle('on',t.dataset.v===v));
+  document.querySelectorAll('.view').forEach(x=>x.classList.toggle('on',x.id==='v-'+v));if(v==='res')renderRes();}
+function runCmd(raw){const c=raw.trim().toUpperCase();if(!c)return;
+  if(c==="OPP")return setView('opp');if(c==="RES")return setView('res');if(c==="OPS")return setView('ops');
+  if(c==="ALRT"){$("#alrtBlink").style.color="#fff";setTimeout(()=>$("#alrtBlink").style.color="",600);return;}
+  const o=OPPS.find(x=>x.tk===c||x.name.includes(c));if(o){setView('opp');openDES(o.id);}else{$("#cmd").value="";$("#cmd").placeholder="?? '"+c+"' NOT A FUNCTION — TRY OPP/RES/OPS/ALRT/<TICKER>";}
+}
+function init(){
+  statline();render();
+  $("#goBtn").onclick=()=>{runCmd($("#cmd").value);$("#cmd").value="";};
+  $("#cmd").onkeydown=e=>{if(e.key==="Enter"){runCmd($("#cmd").value);$("#cmd").value="";}};
+  document.querySelectorAll('.fkey').forEach(f=>f.onclick=()=>runCmd(f.dataset.f));
+  document.querySelectorAll('.ftab').forEach(t=>t.onclick=()=>setView(t.dataset.v));
+  let idx=0;
+  document.addEventListener('keydown',e=>{
+    if(document.activeElement===$("#cmd"))return;
+    if(e.key==="1"){state.lens="blended";$("#lensName").textContent="BLENDED";render();}
+    if(e.key==="2"){state.lens="edge";$("#lensName").textContent="EDGE";render();}
+    if(e.key==="3"){state.lens="spread";$("#lensName").textContent="SPREAD";render();}
+    const act=[...OPPS.filter(o=>o.b==="act")].sort((a,b)=>lensVal(b)-lensVal(a));
+    if(e.key==="j"){idx=Math.min(idx+1,act.length-1);openDES(act[idx].id);}
+    if(e.key==="k"){idx=Math.max(idx-1,0);openDES(act[idx].id);}
+    if(e.key==="Enter"&&act[idx])openDES(act[idx].id);
+  });
+}
+document.addEventListener('DOMContentLoaded',init);
+</script>
+</body>
+</html>

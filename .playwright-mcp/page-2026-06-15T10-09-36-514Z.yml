@@ -1,0 +1,445 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - generic [ref=e5] [cursor=pointer]: OPP
+      - generic [ref=e6] [cursor=pointer]: RES
+      - generic [ref=e7] [cursor=pointer]: OPS
+      - generic [ref=e8] [cursor=pointer]: ALRT
+    - generic [ref=e9]:
+      - generic [ref=e10]: ">"
+      - textbox "SEARCH — functions · participants · lenses · layouts (press / or Ctrl-K)" [ref=e11]:
+        - /placeholder: SEARCH — functions · participants · lenses · layouts   (press / or Ctrl-K)
+      - generic [ref=e12]: Ctrl K
+      - button "<GO>" [ref=e13] [cursor=pointer]
+    - generic [ref=e14]: 47136s · KALSHI
+  - generic [ref=e15]:
+    - generic [ref=e16]:
+      - generic [ref=e17]: ●
+      - text: "SNAPSHOT #2545 · 47136s ago"
+    - generic [ref=e18]:
+      - text: Opps
+      - generic [ref=e19]: 2,370
+    - generic [ref=e20]:
+      - text: Contracts
+      - generic [ref=e21]: 3,778
+    - generic [ref=e22]:
+      - text: Checks
+      - generic [ref=e23]: 1,574
+    - generic [ref=e24]:
+      - text: Requests
+      - generic [ref=e25]: "188"
+    - generic [ref=e26]:
+      - text: Sports
+      - generic [ref=e27]: "10"
+    - generic [ref=e28]:
+      - generic [ref=e29]: ●
+      - text: ALRT
+      - generic [ref=e30]: "0"
+    - generic [ref=e31]: GROSS · TOP-OF-BOOK · $1 BASIS · READ-ONLY · NO ORDER ENTRY · NOT RISKLESS · fees est. only
+  - generic [ref=e32]:
+    - generic [ref=e33] [cursor=pointer]:
+      - generic [ref=e34]: 1)
+      - text: OPP
+    - generic [ref=e35] [cursor=pointer]:
+      - generic [ref=e36]: 2)
+      - text: RES
+    - generic [ref=e37] [cursor=pointer]:
+      - generic [ref=e38]: 3)
+      - text: OPS
+    - generic [ref=e39]:
+      - generic [ref=e40]: LAYOUT
+      - combobox [ref=e41]:
+        - option "Default" [selected]
+        - option "Triage"
+        - option "Inspect"
+        - option "Research"
+        - option "Blotter full"
+      - button "＋ ADD ▾" [ref=e42] [cursor=pointer]
+      - button "▦ ELEMENTS ▾" [ref=e43] [cursor=pointer]
+      - generic [ref=e44]: LENS
+      - generic [ref=e45]:
+        - button "BLENDED" [ref=e46] [cursor=pointer]
+        - button "EDGE¢" [ref=e47] [cursor=pointer]
+        - button "SPREAD" [ref=e48] [cursor=pointer]
+        - button "OUTRIGHT+SPREAD" [ref=e49] [cursor=pointer]
+        - button "IMPLIED EV" [ref=e50] [cursor=pointer]
+        - button "RIPENESS" [ref=e51] [cursor=pointer]
+      - generic [ref=e52]:
+        - button "⚙ SETTINGS ▾" [active] [ref=e53] [cursor=pointer]
+        - generic [ref=e451]:
+          - generic [ref=e452]: SETTINGS
+          - generic [ref=e453] [cursor=pointer]:
+            - checkbox "Show net of fees (est.)" [ref=e454]
+            - text: Show net of fees (est.)
+          - generic [ref=e455] [cursor=pointer]:
+            - checkbox "Larger text" [ref=e456]
+            - text: Larger text
+          - generic [ref=e457] [cursor=pointer]: "◐ Theme: Amber"
+      - button "▷ SCAN" [ref=e54] [cursor=pointer]
+      - button "⚡" [ref=e55] [cursor=pointer]
+      - button "◐" [ref=e56] [cursor=pointer]
+  - generic [ref=e57]:
+    - generic [ref=e58]: SPORT
+    - 'button "Sport: All ▾" [ref=e60] [cursor=pointer]'
+    - generic [ref=e61]: TOURNAMENT
+    - 'button "Tournament: All ▾" [ref=e63] [cursor=pointer]'
+    - generic [ref=e64]: PARTICIPANT
+    - textbox "contains…" [ref=e65]
+    - generic [ref=e66]: MIN SIZE
+    - spinbutton [ref=e67]: "0"
+    - generic [ref=e68] [cursor=pointer]:
+      - checkbox "Tradable-only" [ref=e69]
+      - text: Tradable-only
+    - button "⬇ CSV" [ref=e70] [cursor=pointer]
+    - generic [ref=e71]: 12 shown
+    - generic [ref=e72] [cursor=pointer]: clear
+  - generic [ref=e73]:
+    - generic [ref=e74] [cursor=pointer]:
+      - generic [ref=e75]: ACTIONABLE
+      - generic [ref=e76]: "12"
+      - generic [ref=e77]: executable now
+    - generic [ref=e78] [cursor=pointer]:
+      - generic [ref=e79]: REVIEW
+      - generic [ref=e80]: "29"
+      - generic [ref=e81]: settlement-dep
+    - generic [ref=e82] [cursor=pointer]:
+      - generic [ref=e83]: BLOCKED
+      - generic [ref=e84]: "13"
+      - generic [ref=e85]: not fillable
+    - generic [ref=e86] [cursor=pointer]:
+      - generic [ref=e87]: BOUNDED-LOSS
+      - generic [ref=e88]: "231"
+      - generic [ref=e89]: can lose money
+    - generic [ref=e90] [cursor=pointer]:
+      - generic [ref=e91]: NEAR-MISS
+      - generic [ref=e92]: "205"
+      - generic [ref=e93]: watchlist
+    - generic [ref=e94] [cursor=pointer]:
+      - generic [ref=e95]: QUALIFIER
+      - generic [ref=e96]: "50"
+      - generic [ref=e97]: WC setups
+    - generic [ref=e98] [cursor=pointer]:
+      - generic [ref=e99]: CHEAP-NO
+      - generic [ref=e100]: "488"
+      - generic [ref=e101]: NO fades
+    - generic [ref=e102] [cursor=pointer]:
+      - generic [ref=e103]: DATA-QUALITY
+      - generic [ref=e104]: 1,342
+      - generic [ref=e105]: diagnostic
+  - generic [ref=e107]:
+    - generic [ref=e108]:
+      - generic [ref=e110]:
+        - generic [ref=e111]:
+          - generic [ref=e112]: "1"
+          - heading "BLOTTER" [level=3] [ref=e113]
+          - generic [ref=e114]: click row · J/K · ENTER · drag splitters · ⚙ columns
+          - generic [ref=e115]:
+            - generic "Pop out" [ref=e116] [cursor=pointer]: ⧉
+            - generic "Maximize" [ref=e117] [cursor=pointer]: ▢
+            - generic "Collapse" [ref=e118] [cursor=pointer]: ▁
+            - generic "Remove from this view" [ref=e119] [cursor=pointer]: ✕
+        - generic [ref=e120]:
+          - generic [ref=e121]:
+            - generic [ref=e122] [cursor=pointer]: EXECUTABLE 12 firm · gross edge
+            - generic [ref=e123] [cursor=pointer]: SPECULATIVE 231 bounded-loss · can lose money
+            - generic [ref=e124] [cursor=pointer]: DIAGNOSTIC 1,342 review-only · data quality
+          - generic [ref=e125]:
+            - generic [ref=e126] [cursor=pointer]: ACTIONABLE12
+            - generic [ref=e127] [cursor=pointer]: REVIEW29
+            - generic [ref=e128] [cursor=pointer]: BLOCKED13
+            - generic [ref=e129] [cursor=pointer]: ⚙ columns ▾
+          - table [ref=e240]:
+            - rowgroup [ref=e241]:
+              - row "Participant / market Sport Gross edge ¢ ROI % Max units Max gross profit Tradable Caveat" [ref=e242]:
+                - columnheader "Participant / market" [ref=e243]
+                - columnheader "Sport" [ref=e244]
+                - columnheader "Gross edge ¢" [ref=e245]
+                - columnheader "ROI %" [ref=e246]
+                - columnheader "Max units" [ref=e247]
+                - columnheader "Max gross profit" [ref=e248]
+                - columnheader "Tradable" [ref=e249]
+                - columnheader "Caveat" [ref=e250]
+            - rowgroup [ref=e251]:
+              - 'row "Pro Basketball (M) · 27 winner field Pro Basketball (M) · 27 NBA 4¢ 0.2% 10.7 $0.43 ● Yes One-winner-field overround: this buys NO on the priceable subset of a mutually-exclusive field (exactly one winner), not every entrant — safe because an untraded or unlisted winner only pays more. Gross, top-of-book; many legs are illiquid so the position is often only partly fillable." [ref=e252] [cursor=pointer]':
+                - cell "Pro Basketball (M) · 27 winner field Pro Basketball (M) · 27" [ref=e253]:
+                  - text: Pro Basketball (M) · 27 winner field Pro Basketball (M) · 27
+                  - img [ref=e254]
+                - cell "NBA" [ref=e256]
+                - cell "4¢" [ref=e257]
+                - cell "0.2%" [ref=e258]
+                - cell "10.7" [ref=e259]
+                - cell "$0.43" [ref=e260]
+                - cell "● Yes" [ref=e261]
+                - 'cell "One-winner-field overround: this buys NO on the priceable subset of a mutually-exclusive field (exactly one winner), not every entrant — safe because an untraded or unlisted winner only pays more. Gross, top-of-book; many legs are illiquid so the position is often only partly fillable." [ref=e262]'
+              - row "Group Stage — stage of elimination FIFA World Cup · 26 Soccer (World Cup) 4¢ 0.7% 1.5 $0.06 ● Yes" [ref=e263] [cursor=pointer]:
+                - cell "Group Stage — stage of elimination FIFA World Cup · 26" [ref=e264]:
+                  - text: Group Stage — stage of elimination FIFA World Cup · 26
+                  - img [ref=e265]
+                - cell "Soccer (World Cup)" [ref=e267]
+                - cell "4¢" [ref=e268]
+                - cell "0.7%" [ref=e269]
+                - cell "1.5" [ref=e270]
+                - cell "$0.06" [ref=e271]
+                - cell "● Yes" [ref=e272]
+                - cell [ref=e273]
+              - row "Group Stage — stage of elimination FIFA World Cup · 26 Soccer (World Cup) 3¢ 0.5% 1 $0.03 ● Yes" [ref=e274] [cursor=pointer]:
+                - cell "Group Stage — stage of elimination FIFA World Cup · 26" [ref=e275]:
+                  - text: Group Stage — stage of elimination FIFA World Cup · 26
+                  - img [ref=e276]
+                - cell "Soccer (World Cup)" [ref=e278]
+                - cell "3¢" [ref=e279]
+                - cell "0.5%" [ref=e280]
+                - cell "1" [ref=e281]
+                - cell "$0.03" [ref=e282]
+                - cell "● Yes" [ref=e283]
+                - cell [ref=e284]
+              - 'row "Carolina Royal Ravens vs Riyadh Falcons Call of Duty · 26 Esports 2¢ 2% 138 $2.76 ● Yes Per-game settlement risk: if the game is postponed, delayed past its scheduled start window, abandoned, ruled no-contest, or not played as originally scheduled (some leagues then resolve to a fair market price), the legs may not settle together and the gross gap need not hold — review the settlement rules before trading." [ref=e285] [cursor=pointer]':
+                - cell "Carolina Royal Ravens vs Riyadh Falcons Call of Duty · 26" [ref=e286]:
+                  - text: Carolina Royal Ravens vs Riyadh Falcons Call of Duty · 26
+                  - img [ref=e287]
+                - cell "Esports" [ref=e289]
+                - cell "2¢" [ref=e290]
+                - cell "2%" [ref=e291]
+                - cell "138" [ref=e292]
+                - cell "$2.76" [ref=e293]
+                - cell "● Yes" [ref=e294]
+                - 'cell "Per-game settlement risk: if the game is postponed, delayed past its scheduled start window, abandoned, ruled no-contest, or not played as originally scheduled (some leagues then resolve to a fair market price), the legs may not settle together and the gross gap need not hold — review the settlement rules before trading." [ref=e295]'
+              - 'row "ODDIK vs paiN Academy CS2 · 26 Esports 2¢ 2% 4 $0.08 ● Yes Per-game settlement risk: if the game is postponed, delayed past its scheduled start window, abandoned, ruled no-contest, or not played as originally scheduled (some leagues then resolve to a fair market price), the legs may not settle together and the gross gap need not hold — review the settlement rules before trading." [ref=e296] [cursor=pointer]':
+                - cell "ODDIK vs paiN Academy CS2 · 26" [ref=e297]:
+                  - text: ODDIK vs paiN Academy CS2 · 26
+                  - img [ref=e298]
+                - cell "Esports" [ref=e300]
+                - cell "2¢" [ref=e301]
+                - cell "2%" [ref=e302]
+                - cell "4" [ref=e303]
+                - cell "$0.08" [ref=e304]
+                - cell "● Yes" [ref=e305]
+                - 'cell "Per-game settlement risk: if the game is postponed, delayed past its scheduled start window, abandoned, ruled no-contest, or not played as originally scheduled (some leagues then resolve to a fair market price), the legs may not settle together and the gross gap need not hold — review the settlement rules before trading." [ref=e306]'
+              - 'row "Scotland vs Morocco FIFA World Cup · 26 Soccer (World Cup) 2¢ 1% 63.7 $1.27 ● Yes Per-game settlement risk: if the game is postponed, delayed past its scheduled start window, abandoned, ruled no-contest, or not played as originally scheduled (some leagues then resolve to a fair market price), the legs may not settle together and the gross gap need not hold — review the settlement rules before trading." [ref=e307] [cursor=pointer]':
+                - cell "Scotland vs Morocco FIFA World Cup · 26" [ref=e308]:
+                  - text: Scotland vs Morocco FIFA World Cup · 26
+                  - img [ref=e309]
+                - cell "Soccer (World Cup)" [ref=e311]
+                - cell "2¢" [ref=e312]
+                - cell "1%" [ref=e313]
+                - cell "63.7" [ref=e314]
+                - cell "$1.27" [ref=e315]
+                - cell "● Yes" [ref=e316]
+                - 'cell "Per-game settlement risk: if the game is postponed, delayed past its scheduled start window, abandoned, ruled no-contest, or not played as originally scheduled (some leagues then resolve to a fair market price), the legs may not settle together and the gross gap need not hold — review the settlement rules before trading." [ref=e317]'
+              - row "Cape Verde FIFA World Cup · 26 Soccer (World Cup) 1¢ 1% 3 $0.03 ● Yes" [ref=e318] [cursor=pointer]:
+                - cell "Cape Verde FIFA World Cup · 26" [ref=e319]:
+                  - text: Cape Verde FIFA World Cup · 26
+                  - img [ref=e320]
+                - cell "Soccer (World Cup)" [ref=e322]
+                - cell "1¢" [ref=e323]
+                - cell "1%" [ref=e324]
+                - cell "3" [ref=e325]
+                - cell "$0.03" [ref=e326]
+                - cell "● Yes" [ref=e327]
+                - cell [ref=e328]
+              - 'row "Cape Verde vs Saudi Arabia FIFA World Cup · 26 Soccer (World Cup) 1¢ 1% 608.2 $6.08 ● Yes Per-game settlement risk: if the game is postponed, delayed past its scheduled start window, abandoned, ruled no-contest, or not played as originally scheduled (some leagues then resolve to a fair market price), the legs may not settle together and the gross gap need not hold — review the settlement rules before trading." [ref=e329] [cursor=pointer]':
+                - cell "Cape Verde vs Saudi Arabia FIFA World Cup · 26" [ref=e330]:
+                  - text: Cape Verde vs Saudi Arabia FIFA World Cup · 26
+                  - img [ref=e331]
+                - cell "Soccer (World Cup)" [ref=e333]
+                - cell "1¢" [ref=e334]
+                - cell "1%" [ref=e335]
+                - cell "608.2" [ref=e336]
+                - cell "$6.08" [ref=e337]
+                - cell "● Yes" [ref=e338]
+                - 'cell "Per-game settlement risk: if the game is postponed, delayed past its scheduled start window, abandoned, ruled no-contest, or not played as originally scheduled (some leagues then resolve to a fair market price), the legs may not settle together and the gross gap need not hold — review the settlement rules before trading." [ref=e339]'
+              - 'row "F1 · main-race · 26 winner field F1 · main-race · 26 Motorsport 1¢ 0.3% 8 $0.08 ● Yes One-winner-field overround: this buys NO on the priceable subset of a mutually-exclusive field (exactly one winner), not every entrant — safe because an untraded or unlisted winner only pays more. Gross, top-of-book; many legs are illiquid so the position is often only partly fillable." [ref=e340] [cursor=pointer]':
+                - cell "F1 · main-race · 26 winner field F1 · main-race · 26" [ref=e341]:
+                  - text: F1 · main-race · 26 winner field F1 · main-race · 26
+                  - img [ref=e342]
+                - cell "Motorsport" [ref=e344]
+                - cell "1¢" [ref=e345]
+                - cell "0.3%" [ref=e346]
+                - cell "8" [ref=e347]
+                - cell "$0.08" [ref=e348]
+                - cell "● Yes" [ref=e349]
+                - 'cell "One-winner-field overround: this buys NO on the priceable subset of a mutually-exclusive field (exactly one winner), not every entrant — safe because an untraded or unlisted winner only pays more. Gross, top-of-book; many legs are illiquid so the position is often only partly fillable." [ref=e350]'
+              - row "Tessa Johanna Brockmann vs Alycia Parks Berlin Tennis 1¢ 1% 1 $0.01 ● Yes" [ref=e351] [cursor=pointer]:
+                - cell "Tessa Johanna Brockmann vs Alycia Parks Berlin" [ref=e352]:
+                  - text: Tessa Johanna Brockmann vs Alycia Parks Berlin
+                  - img [ref=e353]
+                - cell "Tennis" [ref=e355]
+                - cell "1¢" [ref=e356]
+                - cell "1%" [ref=e357]
+                - cell "1" [ref=e358]
+                - cell "$0.01" [ref=e359]
+                - cell "● Yes" [ref=e360]
+                - cell [ref=e361]
+              - row "Tommy Paul vs Zachary Svajda ATP London Tennis 1¢ 1% 34 $0.34 ● Yes" [ref=e362] [cursor=pointer]:
+                - cell "Tommy Paul vs Zachary Svajda ATP London" [ref=e363]:
+                  - text: Tommy Paul vs Zachary Svajda ATP London
+                  - img [ref=e364]
+                - cell "Tennis" [ref=e366]
+                - cell "1¢" [ref=e367]
+                - cell "1%" [ref=e368]
+                - cell "34" [ref=e369]
+                - cell "$0.34" [ref=e370]
+                - cell "● Yes" [ref=e371]
+                - cell [ref=e372]
+              - 'row "Croatia vs Ghana FIFA World Cup · 26 Soccer (World Cup) 1¢ 0.5% 103 $1.03 ● Yes Per-game settlement risk: if the game is postponed, delayed past its scheduled start window, abandoned, ruled no-contest, or not played as originally scheduled (some leagues then resolve to a fair market price), the legs may not settle together and the gross gap need not hold — review the settlement rules before trading." [ref=e373] [cursor=pointer]':
+                - cell "Croatia vs Ghana FIFA World Cup · 26" [ref=e374]:
+                  - text: Croatia vs Ghana FIFA World Cup · 26
+                  - img [ref=e375]
+                - cell "Soccer (World Cup)" [ref=e377]
+                - cell "1¢" [ref=e378]
+                - cell "0.5%" [ref=e379]
+                - cell "103" [ref=e380]
+                - cell "$1.03" [ref=e381]
+                - cell "● Yes" [ref=e382]
+                - 'cell "Per-game settlement risk: if the game is postponed, delayed past its scheduled start window, abandoned, ruled no-contest, or not played as originally scheduled (some leagues then resolve to a fair market price), the legs may not settle together and the gross gap need not hold — review the settlement rules before trading." [ref=e383]'
+          - generic [ref=e132]: Showing 12 · 8 cols · engine order
+      - generic [ref=e136]:
+        - generic [ref=e137]: "2"
+        - heading "INSPECTOR" [level=3] [ref=e138]
+        - generic [ref=e139]: read-only · buy-only · gross
+        - generic [ref=e140]:
+          - generic "Pop out" [ref=e141] [cursor=pointer]: ⧉
+          - generic "Maximize" [ref=e142] [cursor=pointer]: ▢
+          - generic "Collapse" [ref=e143] [cursor=pointer]: ▁
+          - generic "Remove from this view" [ref=e144] [cursor=pointer]: ✕
+    - generic [ref=e154]:
+      - generic [ref=e155]:
+        - generic [ref=e156]: "3"
+        - heading "DEPTH LADDER" [level=3] [ref=e157]
+        - generic [ref=e158]: top-of-book + derived
+        - generic [ref=e159]:
+          - generic "Pop out" [ref=e160] [cursor=pointer]: ⧉
+          - generic "Maximize" [ref=e161] [cursor=pointer]: ▢
+          - generic "Collapse" [ref=e162] [cursor=pointer]: ▁
+          - generic "Remove from this view" [ref=e163] [cursor=pointer]: ✕
+      - generic [ref=e164]: READ-ONLY · TOP-OF-BOOK + DERIVED · POLL-REFRESHED · LIVE BOOK = FUTURE
+      - generic [ref=e165]: —
+    - generic [ref=e167]:
+      - generic [ref=e169]:
+        - generic [ref=e170]:
+          - generic [ref=e171]: ★
+          - heading "RECENTLY ACTIONABLE" [level=3] [ref=e172]
+          - generic [ref=e173]:
+            - generic "Pop out" [ref=e174] [cursor=pointer]: ⧉
+            - generic "Maximize" [ref=e175] [cursor=pointer]: ▢
+            - generic "Collapse" [ref=e176] [cursor=pointer]: ▁
+            - generic "Remove from this view" [ref=e177] [cursor=pointer]: ✕
+        - generic [ref=e178]:
+          - generic [ref=e384] [cursor=pointer]:
+            - generic [ref=e385]: ●
+            - generic [ref=e386]:
+              - text: Pro Basketball (M) · 27 winner field
+              - generic [ref=e387]: NBA · overround
+            - generic [ref=e388]: 4¢
+          - generic [ref=e389] [cursor=pointer]:
+            - generic [ref=e390]: ●
+            - generic [ref=e391]:
+              - text: Group Stage — stage of elimination
+              - generic [ref=e392]: Soccer (World Cup) · overround
+            - generic [ref=e393]: 4¢
+          - generic [ref=e394] [cursor=pointer]:
+            - generic [ref=e395]: ●
+            - generic [ref=e396]:
+              - text: Group Stage — stage of elimination
+              - generic [ref=e397]: Soccer (World Cup) · overround
+            - generic [ref=e398]: 3¢
+          - generic [ref=e399] [cursor=pointer]:
+            - generic [ref=e400]: ●
+            - generic [ref=e401]:
+              - text: Carolina Royal Ravens vs Riyadh Falcons
+              - generic [ref=e402]: Esports · underround
+            - generic [ref=e403]: 2¢
+          - generic [ref=e404] [cursor=pointer]:
+            - generic [ref=e405]: ●
+            - generic [ref=e406]:
+              - text: ODDIK vs paiN Academy
+              - generic [ref=e407]: Esports · overround
+            - generic [ref=e408]: 2¢
+          - generic [ref=e409] [cursor=pointer]:
+            - generic [ref=e410]: ●
+            - generic [ref=e411]:
+              - text: Scotland vs Morocco
+              - generic [ref=e412]: Soccer (World Cup) · overround
+            - generic [ref=e413]: 2¢
+          - generic [ref=e414] [cursor=pointer]:
+            - generic [ref=e415]: ●
+            - generic [ref=e416]:
+              - text: Cape Verde
+              - generic [ref=e417]: Soccer (World Cup) · Reach Semifinals ≤ Reach Quarterfinals
+            - generic [ref=e418]: 1¢
+          - generic [ref=e180] [cursor=pointer]: REVIEW MOVERS
+          - generic [ref=e419] [cursor=pointer]:
+            - generic [ref=e420]: ◐
+            - generic [ref=e421]:
+              - text: Round of 32 — Reach Round of 32 (synthetic vs advance)
+              - generic [ref=e422]: Soccer (World Cup) · rule-dep
+          - generic [ref=e423] [cursor=pointer]:
+            - generic [ref=e424]: ◐
+            - generic [ref=e425]:
+              - text: Quarterfinals — Reach Quarterfinals (synthetic vs advance)
+              - generic [ref=e426]: Soccer (World Cup) · rule-dep
+          - generic [ref=e427] [cursor=pointer]:
+            - generic [ref=e428]: ◐
+            - generic [ref=e429]:
+              - text: Round of 16 — Reach Round of 16 (synthetic vs advance)
+              - generic [ref=e430]: Soccer (World Cup) · rule-dep
+          - generic [ref=e431] [cursor=pointer]:
+            - generic [ref=e432]: ◐
+            - generic [ref=e433]:
+              - text: Round of 16 — Reach Round of 16 (synthetic vs advance)
+              - generic [ref=e434]: Soccer (World Cup) · rule-dep
+      - generic [ref=e183]:
+        - generic [ref=e184]:
+          - generic [ref=e185]: "!"
+          - heading "ALERTS" [level=3] [ref=e186]
+          - generic [ref=e187]:
+            - generic "Pop out" [ref=e188] [cursor=pointer]: ⧉
+            - generic "Maximize" [ref=e189] [cursor=pointer]: ▢
+            - generic "Collapse" [ref=e190] [cursor=pointer]: ▁
+            - generic "Remove from this view" [ref=e191] [cursor=pointer]: ✕
+        - generic [ref=e192]:
+          - generic [ref=e195]:
+            - generic [ref=e196]: became executable — Pro Basketball (M) · 27 winner field
+            - generic [ref=e197]: firm both legs
+          - generic [ref=e200]:
+            - generic [ref=e201]: bucket changed — → Review · rule-check
+            - generic [ref=e202]: settlement check
+          - generic [ref=e205]:
+            - generic [ref=e206]: series failed — 0 series
+            - generic [ref=e207]: coverage partial
+          - generic [ref=e210]:
+            - generic [ref=e211]: new bounded-loss — Pittsburgh
+            - generic [ref=e212]: watchlist
+      - generic [ref=e215]:
+        - generic [ref=e216]:
+          - generic [ref=e217]: ≈
+          - heading "RESEARCH" [level=3] [ref=e218]
+          - generic [ref=e219]: read-only · P5
+          - generic [ref=e220]:
+            - generic "Pop out" [ref=e221] [cursor=pointer]: ⧉
+            - generic "Maximize" [ref=e222] [cursor=pointer]: ▢
+            - generic "Collapse" [ref=e223] [cursor=pointer]: ▁
+            - generic "Remove from this view" [ref=e224] [cursor=pointer]: ✕
+        - generic [ref=e225]:
+          - generic [ref=e226]: Read-only research (P5) — derived data only, never feeds actionability.
+          - generic [ref=e227]: OPPORTUNITIES BY SPORT
+          - generic [ref=e228]:
+            - generic [ref=e436]: NBA
+            - generic [ref=e438]: Socc
+            - generic [ref=e440]: Espo
+            - generic [ref=e442]: Moto
+            - generic [ref=e444]: Tenn
+            - generic [ref=e446]: NFL
+            - generic [ref=e448]: Golf
+            - generic [ref=e450]: MLB
+          - generic [ref=e229]: BOUNDED-LOSS MIX
+          - generic [ref=e230]: Vertical 106 · Calendar 125. Cheap-NO scope — Championship 20 · Tournament 217 · Event 242.
+  - generic [ref=e231]:
+    - generic [ref=e232]: TERMINAL PRO · real viewmodel rows · full column catalog · bounded-loss + cheap-NO splits · read-only over the live snapshot
+    - generic [ref=e233]:
+      - generic [ref=e234]: Ctrl K palette
+      - generic [ref=e235]: 1-6 lens
+      - generic [ref=e236]: J/K rows
+      - generic [ref=e237]: ↵ open
+      - generic [ref=e238]: drag splitters resize
+      - generic [ref=e239]: Ctrl/Shift-click multi-select

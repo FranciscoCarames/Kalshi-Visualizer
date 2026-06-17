@@ -1,0 +1,279 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - generic [ref=e5] [cursor=pointer]: OPP
+      - generic [ref=e6] [cursor=pointer]: RES
+      - generic [ref=e7] [cursor=pointer]: OPS
+      - generic [ref=e8] [cursor=pointer]: ALRT
+    - generic [ref=e9]:
+      - generic [ref=e10]: ">"
+      - textbox "Open command palette" [ref=e11]:
+        - /placeholder: SEARCH — functions · participants · lenses · layouts   (press / or Ctrl-K)
+      - generic [ref=e12]: Ctrl K
+      - button "<GO>" [ref=e13] [cursor=pointer]
+    - generic [ref=e14]: 66s · KALSHI
+  - generic [ref=e15]:
+    - generic [ref=e16]:
+      - generic [ref=e17]: ●
+      - text: "SNAPSHOT #2796 · 66s ago"
+    - generic [ref=e18]:
+      - text: Opps
+      - generic [ref=e19]: 1,829
+    - generic [ref=e20]:
+      - text: Contracts
+      - generic [ref=e21]: 3,126
+    - generic [ref=e22]:
+      - text: Checks
+      - generic [ref=e23]: 1,072
+    - generic [ref=e24]:
+      - text: Requests
+      - generic [ref=e25]: "176"
+    - generic [ref=e26]:
+      - text: Sports
+      - generic [ref=e27]: "10"
+    - generic [ref=e28]:
+      - generic [ref=e29]: ●
+      - text: Failed
+      - generic [ref=e30]: "0"
+    - generic [ref=e31]:
+      - generic [ref=e32]: ●
+      - text: ALRT
+      - generic [ref=e33]: "9"
+    - generic [ref=e34]: GROSS · TOP-OF-BOOK · $1 BASIS · READ-ONLY · NO ORDER ENTRY · NOT RISKLESS · fees est. only
+  - generic [ref=e35]:
+    - generic [ref=e36] [cursor=pointer]:
+      - generic [ref=e37]: 1)
+      - text: OPP
+    - generic [ref=e38] [cursor=pointer]:
+      - generic [ref=e39]: 2)
+      - text: RES
+    - generic [ref=e40] [cursor=pointer]:
+      - generic [ref=e41]: 3)
+      - text: OPS
+    - generic [ref=e42]:
+      - generic [ref=e43]: LAYOUT
+      - combobox [ref=e44]:
+        - option "Default" [selected]
+        - option "Triage"
+        - option "Inspect"
+        - option "Research"
+        - option "Blotter full"
+      - button "＋ ADD ▾" [ref=e45] [cursor=pointer]
+      - button "▦ ELEMENTS ▾" [ref=e46] [cursor=pointer]
+      - generic [ref=e47]: LENS
+      - generic [ref=e48]:
+        - button "BLENDED" [ref=e49] [cursor=pointer]
+        - button "EDGE¢" [ref=e50] [cursor=pointer]
+        - button "SPREAD" [ref=e51] [cursor=pointer]
+        - button "OUTRIGHT+SPREAD" [ref=e52] [cursor=pointer]
+        - button "IMPLIED EV" [ref=e53] [cursor=pointer]
+        - button "RIPENESS" [ref=e54] [cursor=pointer]
+      - button "⚙ SETTINGS ▾" [ref=e56] [cursor=pointer]
+      - button "Scan now" [ref=e57] [cursor=pointer]: ▷ SCAN
+      - button "Force scan (bypass cooldown)" [ref=e58] [cursor=pointer]: ⚡
+      - button "Toggle theme" [ref=e59] [cursor=pointer]: ◐
+  - generic [ref=e60]:
+    - generic [ref=e61]: SPORT
+    - button "Filter by Sport (All)" [ref=e63] [cursor=pointer]: "Sport: All ▾"
+    - generic [ref=e64]: TOURNAMENT
+    - button "Filter by Tournament (All)" [ref=e66] [cursor=pointer]: "Tournament: All ▾"
+    - generic [ref=e67]: PARTICIPANT
+    - textbox "Filter by participant" [ref=e68]:
+      - /placeholder: contains…
+    - generic [ref=e69]: MIN SIZE
+    - spinbutton "Minimum size" [ref=e70]: "0"
+    - generic [ref=e71] [cursor=pointer]:
+      - checkbox "Tradable-only" [ref=e72]
+      - text: Tradable-only
+    - button "Export current view as CSV" [ref=e73] [cursor=pointer]: ⬇ CSV
+    - button "Export filtered snapshot as ZIP" [ref=e74] [cursor=pointer]: ⬇ ZIP
+    - generic [ref=e75]: 9 shown
+    - generic [ref=e76] [cursor=pointer]: clear
+  - generic [ref=e77]:
+    - generic [ref=e78] [cursor=pointer]:
+      - generic [ref=e79]: ACTIONABLE
+      - generic [ref=e80]: "9"
+      - generic [ref=e81]: executable now
+    - generic [ref=e82] [cursor=pointer]:
+      - generic [ref=e83]: REVIEW
+      - generic [ref=e84]: "19"
+      - generic [ref=e85]: settlement-dep
+    - generic [ref=e86] [cursor=pointer]:
+      - generic [ref=e87]: BLOCKED
+      - generic [ref=e88]: "4"
+      - generic [ref=e89]: not fillable
+    - generic [ref=e90] [cursor=pointer]:
+      - generic [ref=e91]: BOUNDED-LOSS
+      - generic [ref=e92]: "39"
+      - generic [ref=e93]: can lose money
+    - generic [ref=e94] [cursor=pointer]:
+      - generic [ref=e95]: NEAR-MISS
+      - generic [ref=e96]: "184"
+      - generic [ref=e97]: watchlist
+    - generic [ref=e98] [cursor=pointer]:
+      - generic [ref=e99]: QUALIFIER
+      - generic [ref=e100]: "49"
+      - generic [ref=e101]: WC setups
+    - generic [ref=e102] [cursor=pointer]:
+      - generic [ref=e103]: CHEAP-NO
+      - generic [ref=e104]: "58"
+      - generic [ref=e105]: NO fades
+    - generic [ref=e106] [cursor=pointer]:
+      - generic [ref=e107]: DATA-QUALITY
+      - generic [ref=e108]: "797"
+      - generic [ref=e109]: diagnostic
+  - generic [ref=e401]:
+    - generic [ref=e402]:
+      - generic [ref=e403]:
+        - text: RESEARCH LAB — read-only over derived data
+        - generic [ref=e404]: P5 · FUTURE
+      - generic [ref=e406]: Research surfaces are P5, not a parity predecessor — derived data only, never new scoring, never feed actionability.
+    - generic [ref=e407]:
+      - generic [ref=e408]:
+        - text: CONDITIONAL PROBABILITY — raw price ratio
+        - generic [ref=e409]: UNCALIBRATED
+      - generic [ref=e411]: Per-node P(deeper│reached) as a raw price ratio on two bases — display and firm (bid/ask) — in the inspector's Participant Detail tab. Gross, top-of-book, NOT de-vigged, not fair value.
+    - generic [ref=e412]:
+      - generic [ref=e413]:
+        - text: MOST LIQUID — SPORTS
+        - generic [ref=e414]: CONTEXT
+      - table [ref=e416]:
+        - rowgroup [ref=e417]:
+          - row "Sport Depth Buy $ Sell $ Depth×mid $" [ref=e418]:
+            - columnheader "Sport" [ref=e419]
+            - columnheader "Depth" [ref=e420]
+            - columnheader "Buy $" [ref=e421]
+            - columnheader "Sell $" [ref=e422]
+            - columnheader "Depth×mid $" [ref=e423]
+        - rowgroup [ref=e424]:
+          - row "Soccer (World Cup) 5,788,282 20,965,037 2,150,250 1,463,941" [ref=e425] [cursor=pointer]:
+            - cell "Soccer (World Cup)" [ref=e426]
+            - cell "5,788,282" [ref=e427]
+            - cell "20,965,037" [ref=e428]
+            - cell "2,150,250" [ref=e429]
+            - cell "1,463,941" [ref=e430]
+          - row "NFL 2,837,535 979,920 102,553 102,037" [ref=e431] [cursor=pointer]:
+            - cell "NFL" [ref=e432]
+            - cell "2,837,535" [ref=e433]
+            - cell "979,920" [ref=e434]
+            - cell "102,553" [ref=e435]
+            - cell "102,037" [ref=e436]
+          - row "MLB 762,493 4,523,239 722,883 341,079" [ref=e437] [cursor=pointer]:
+            - cell "MLB" [ref=e438]
+            - cell "762,493" [ref=e439]
+            - cell "4,523,239" [ref=e440]
+            - cell "722,883" [ref=e441]
+            - cell "341,079" [ref=e442]
+          - row "Golf 461,978 255,541 15,955 15,090" [ref=e443] [cursor=pointer]:
+            - cell "Golf" [ref=e444]
+            - cell "461,978" [ref=e445]
+            - cell "255,541" [ref=e446]
+            - cell "15,955" [ref=e447]
+            - cell "15,090" [ref=e448]
+          - row "Tennis 260,146 482,425 146,168 118,390" [ref=e449] [cursor=pointer]:
+            - cell "Tennis" [ref=e450]
+            - cell "260,146" [ref=e451]
+            - cell "482,425" [ref=e452]
+            - cell "146,168" [ref=e453]
+            - cell "118,390" [ref=e454]
+    - generic [ref=e455]:
+      - generic [ref=e456]:
+        - text: MOST LIQUID — CONTRACTS
+        - generic [ref=e457]: CONTEXT
+      - table [ref=e459]:
+        - rowgroup [ref=e460]:
+          - row "Contract Depth Spread ¢" [ref=e461]:
+            - columnheader "Contract" [ref=e462]
+            - columnheader "Depth" [ref=e463]
+            - columnheader "Spread ¢" [ref=e464]
+        - rowgroup [ref=e465]:
+          - row "Colombia — Win the World Cup 497,186 0" [ref=e466] [cursor=pointer]:
+            - cell "Colombia — Win the World Cup" [ref=e467]
+            - cell "497,186" [ref=e468]
+            - cell "0" [ref=e469]
+          - row "Minnesota — Win the Super Bowl 423,380 1" [ref=e470] [cursor=pointer]:
+            - cell "Minnesota — Win the Super Bowl" [ref=e471]
+            - cell "423,380" [ref=e472]
+            - cell "1" [ref=e473]
+          - row "New York G — Win the Super Bowl 313,620 1" [ref=e474] [cursor=pointer]:
+            - cell "New York G — Win the Super Bowl" [ref=e475]
+            - cell "313,620" [ref=e476]
+            - cell "1" [ref=e477]
+          - row "Tampa Bay — Win the Super Bowl 265,607 1" [ref=e478] [cursor=pointer]:
+            - cell "Tampa Bay — Win the Super Bowl" [ref=e479]
+            - cell "265,607" [ref=e480]
+            - cell "1" [ref=e481]
+          - row "New Zealand — IR Iran vs New Zealand Winner 247,742 1" [ref=e482] [cursor=pointer]:
+            - cell "New Zealand — IR Iran vs New Zealand Winner" [ref=e483]
+            - cell "247,742" [ref=e484]
+            - cell "1" [ref=e485]
+    - generic [ref=e486]:
+      - generic [ref=e487]:
+        - text: TIGHTEST BOOKS
+        - generic [ref=e488]: CONTEXT
+      - table [ref=e490]:
+        - rowgroup [ref=e491]:
+          - row "Contract Spread ¢ Depth" [ref=e492]:
+            - columnheader "Contract" [ref=e493]
+            - columnheader "Spread ¢" [ref=e494]
+            - columnheader "Depth" [ref=e495]
+        - rowgroup [ref=e496]:
+          - row "Colombia — Win the World Cup 0 497,186" [ref=e497] [cursor=pointer]:
+            - cell "Colombia — Win the World Cup" [ref=e498]
+            - cell "0" [ref=e499]
+            - cell "497,186" [ref=e500]
+          - row "Croatia — Win the World Cup 0 156,193" [ref=e501] [cursor=pointer]:
+            - cell "Croatia — Win the World Cup" [ref=e502]
+            - cell "0" [ref=e503]
+            - cell "156,193" [ref=e504]
+          - row "England — Win the World Cup 0 154,869" [ref=e505] [cursor=pointer]:
+            - cell "England — Win the World Cup" [ref=e506]
+            - cell "0" [ref=e507]
+            - cell "154,869" [ref=e508]
+          - row "Patrick Cantlay — Win the tournament 0 95,000" [ref=e509] [cursor=pointer]:
+            - cell "Patrick Cantlay — Win the tournament" [ref=e510]
+            - cell "0" [ref=e511]
+            - cell "95,000" [ref=e512]
+          - row "Belgium — Win the World Cup 0 67,099" [ref=e513] [cursor=pointer]:
+            - cell "Belgium — Win the World Cup" [ref=e514]
+            - cell "0" [ref=e515]
+            - cell "67,099" [ref=e516]
+    - generic [ref=e517]:
+      - generic [ref=e518]:
+        - text: MOST TRADED
+        - generic [ref=e519]: CONTEXT
+      - table [ref=e521]:
+        - rowgroup [ref=e522]:
+          - row "Contract Volume" [ref=e523]:
+            - columnheader "Contract" [ref=e524]
+            - columnheader "Volume" [ref=e525]
+        - rowgroup [ref=e526]:
+          - row "USA — Win the World Cup 20,999,784" [ref=e527] [cursor=pointer]:
+            - cell "USA — Win the World Cup" [ref=e528]
+            - cell "20,999,784" [ref=e529]
+          - row "Mexico — Win the World Cup 16,641,559" [ref=e530] [cursor=pointer]:
+            - cell "Mexico — Win the World Cup" [ref=e531]
+            - cell "16,641,559" [ref=e532]
+          - row "Portugal — Win the World Cup 16,001,278" [ref=e533] [cursor=pointer]:
+            - cell "Portugal — Win the World Cup" [ref=e534]
+            - cell "16,001,278" [ref=e535]
+          - row "Netherlands — Win the World Cup 13,890,813" [ref=e536] [cursor=pointer]:
+            - cell "Netherlands — Win the World Cup" [ref=e537]
+            - cell "13,890,813" [ref=e538]
+          - row "France — Win the World Cup 13,095,373" [ref=e539] [cursor=pointer]:
+            - cell "France — Win the World Cup" [ref=e540]
+            - cell "13,095,373" [ref=e541]
+    - generic [ref=e542]:
+      - generic [ref=e543]:
+        - text: MOST VOLATILE NOW
+        - generic [ref=e544]: DISPLAY-ONLY
+      - generic [ref=e546]: "Market telemetry: largest move: XLG Gaming — XLG Gaming win map 2 in the XLG Gaming vs. EDward Gaming match — moved 58¢ over 12 obs in ~30 min — context, not a tradable signal."
+  - generic [ref=e216]:
+    - generic [ref=e217]: KALSHI STRUCTURED SCANNER · real viewmodel rows · full column catalog · bounded-loss + cheap-NO splits · read-only over the live snapshot
+    - generic [ref=e218]:
+      - generic [ref=e219]: Ctrl K palette
+      - generic [ref=e220]: 1-6 lens
+      - generic [ref=e221]: J/K rows
+      - generic [ref=e222]: ↵ open
+      - generic [ref=e223]: drag splitters resize
+      - generic [ref=e224]: Ctrl/Shift-click multi-select

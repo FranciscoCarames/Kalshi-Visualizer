@@ -1,0 +1,403 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - generic [ref=e5] [cursor=pointer]: OPP
+      - generic [ref=e6] [cursor=pointer]: RES
+      - generic [ref=e7] [cursor=pointer]: OPS
+      - generic [ref=e8] [cursor=pointer]: ALRT
+    - generic [ref=e9]:
+      - generic [ref=e10]: ">"
+      - textbox "Open command palette" [ref=e11]:
+        - /placeholder: SEARCH — functions · participants · lenses · layouts   (press / or Ctrl-K)
+      - generic [ref=e12]: Ctrl K
+      - button "<GO>" [ref=e13] [cursor=pointer]
+    - generic [ref=e14]: 1929s · KALSHI
+  - generic [ref=e15]:
+    - generic [ref=e16]:
+      - generic [ref=e17]: ●
+      - text: "SNAPSHOT #487 · 1929s ago"
+    - generic [ref=e18]:
+      - text: Opps
+      - generic [ref=e19]: 2,180
+    - generic [ref=e20]:
+      - text: Contracts
+      - generic [ref=e21]: 3,664
+    - generic [ref=e22]:
+      - text: Checks
+      - generic [ref=e23]: 1,314
+    - generic [ref=e24]:
+      - text: Requests
+      - generic [ref=e25]: "166"
+    - generic [ref=e26]:
+      - text: Sports
+      - generic [ref=e27]: "10"
+    - generic [ref=e28]:
+      - generic [ref=e29]: ●
+      - text: Failed
+      - generic [ref=e30]: "0"
+    - generic [ref=e31]:
+      - generic [ref=e32]: ●
+      - text: ALRT
+      - generic [ref=e33]: "10"
+    - generic [ref=e34]: GROSS · TOP-OF-BOOK · $1 BASIS · READ-ONLY · NO ORDER ENTRY · NOT RISKLESS · fees est. only
+  - generic [ref=e35]:
+    - generic [ref=e36] [cursor=pointer]:
+      - generic [ref=e37]: 1)
+      - text: OPP
+    - generic [ref=e38] [cursor=pointer]:
+      - generic [ref=e39]: 2)
+      - text: RES
+    - generic [ref=e40] [cursor=pointer]:
+      - generic [ref=e41]: 3)
+      - text: OPS
+    - generic [ref=e42]:
+      - generic [ref=e43]: LAYOUT
+      - combobox [ref=e44]:
+        - option "Default" [selected]
+        - option "Triage"
+        - option "Inspect"
+        - option "Research"
+        - option "Scanner full"
+      - button "＋ ADD ▾" [ref=e45] [cursor=pointer]
+      - button "▦ ELEMENTS ▾" [ref=e46] [cursor=pointer]
+      - button "⟲ RESET" [ref=e47] [cursor=pointer]
+      - generic [ref=e48]: LENS
+      - generic [ref=e49]:
+        - button "BLENDED" [ref=e50] [cursor=pointer]
+        - button "EDGE¢" [ref=e51] [cursor=pointer]
+        - button "SPREAD" [ref=e52] [cursor=pointer]
+        - button "OUTRIGHT+SPREAD" [ref=e53] [cursor=pointer]
+        - button "IMPLIED EV" [ref=e54] [cursor=pointer]
+        - button "RIPENESS" [ref=e55] [cursor=pointer]
+      - button "⚙ SETTINGS ▾" [ref=e57] [cursor=pointer]
+      - button "Scan now" [ref=e58] [cursor=pointer]: ▷ SCAN
+      - button "Force scan (bypass cooldown)" [ref=e59] [cursor=pointer]: ⚡
+      - button "Toggle theme" [ref=e60] [cursor=pointer]: ◐
+  - generic [ref=e61]:
+    - generic [ref=e62]: SPORT
+    - button "Filter by Sport (All)" [ref=e64] [cursor=pointer]: "Sport: All ▾"
+    - generic [ref=e65]: TOURNAMENT
+    - button "Filter by Tournament (All)" [ref=e67] [cursor=pointer]: "Tournament: All ▾"
+    - generic [ref=e68]: PARTICIPANT
+    - textbox "Filter by participant" [ref=e69]:
+      - /placeholder: contains…
+    - generic [ref=e70]: MIN SIZE
+    - spinbutton "Minimum size" [ref=e71]: "0"
+    - generic [ref=e72] [cursor=pointer]:
+      - checkbox "Tradable-only" [ref=e73]
+      - text: Tradable-only
+    - button "Export current view as CSV" [ref=e74] [cursor=pointer]: ⬇ CSV
+    - button "Export filtered snapshot as ZIP" [ref=e75] [cursor=pointer]: ⬇ ZIP
+    - generic [ref=e76]: 10 shown
+    - generic [ref=e77] [cursor=pointer]: clear
+  - generic [ref=e78]:
+    - generic [ref=e79] [cursor=pointer]:
+      - generic [ref=e80]: ACTIONABLE
+      - generic [ref=e81]: "10"
+      - generic [ref=e82]: executable now
+    - generic [ref=e83] [cursor=pointer]:
+      - generic [ref=e84]: REVIEW
+      - generic [ref=e85]: "14"
+      - generic [ref=e86]: settlement-dep
+    - generic [ref=e87] [cursor=pointer]:
+      - generic [ref=e88]: BLOCKED
+      - generic [ref=e89]: "5"
+      - generic [ref=e90]: not fillable
+    - generic [ref=e91] [cursor=pointer]:
+      - generic [ref=e92]: BOUNDED-LOSS
+      - generic [ref=e93]: "49"
+      - generic [ref=e94]: can lose money
+    - generic [ref=e95] [cursor=pointer]:
+      - generic [ref=e96]: NEAR-MISS
+      - generic [ref=e97]: "178"
+      - generic [ref=e98]: watchlist
+    - generic [ref=e99] [cursor=pointer]:
+      - generic [ref=e100]: QUALIFIER
+      - generic [ref=e101]: "48"
+      - generic [ref=e102]: WC setups
+    - generic [ref=e103] [cursor=pointer]:
+      - generic [ref=e104]: CHEAP-NO
+      - generic [ref=e105]: "72"
+      - generic [ref=e106]: NO fades
+    - generic [ref=e107] [cursor=pointer]:
+      - generic [ref=e108]: DATA-QUALITY
+      - generic [ref=e109]: "967"
+      - generic [ref=e110]: diagnostic
+  - generic [ref=e112]:
+    - generic [ref=e113]:
+      - generic [ref=e114]:
+        - generic [ref=e115]:
+          - generic [ref=e116]: "1"
+          - heading "SCANNER" [level=3] [ref=e117]
+          - generic [ref=e118]: click row · J/K · ENTER · drag splitters · ⚙ columns
+          - generic [ref=e119]:
+            - generic "Pop out" [ref=e120] [cursor=pointer]: ⧉
+            - generic "Maximize" [ref=e121] [cursor=pointer]: ▢
+            - generic "Collapse" [ref=e122] [cursor=pointer]: ▁
+            - generic "Remove from this view" [ref=e123] [cursor=pointer]: ✕
+        - generic [ref=e124]:
+          - generic [ref=e125]:
+            - generic [ref=e126] [cursor=pointer]: EXECUTABLE 29 firm · gross edge
+            - generic [ref=e127] [cursor=pointer]: SPECULATIVE 347 bounded-loss · convex EV · can lose money
+            - generic [ref=e128] [cursor=pointer]: DIAGNOSTIC 967 review-only · data quality
+          - generic [ref=e129]:
+            - generic [ref=e130] [cursor=pointer]: ACTIONABLE10
+            - generic [ref=e131] [cursor=pointer]: REVIEW14
+            - generic [ref=e132] [cursor=pointer]: BLOCKED5
+            - generic [ref=e133] [cursor=pointer]: ⚙ columns ▾
+          - table [ref=e223]:
+            - rowgroup [ref=e224]:
+              - row "Participant / market Sport Gross edge ¢ ROI % Max units Max gross profit Est. net edge $ Est. net max profit Est. fees $ Tradable Caveat" [ref=e225]:
+                - columnheader "Participant / market" [ref=e226]
+                - columnheader "Sport" [ref=e227]
+                - columnheader "Gross edge ¢" [ref=e228]
+                - columnheader "ROI %" [ref=e229]
+                - columnheader "Max units" [ref=e230]
+                - columnheader "Max gross profit" [ref=e231]
+                - columnheader "Est. net edge $" [ref=e232]
+                - columnheader "Est. net max profit" [ref=e233]
+                - columnheader "Est. fees $" [ref=e234]
+                - columnheader "Tradable" [ref=e235]
+                - columnheader "Caveat" [ref=e236]
+            - rowgroup [ref=e237]:
+              - 'row "Pro Basketball (M) · 27 winner field Pro Basketball (M) · 27 NBA 5¢ 0.3% 782.1 $39.11 -$0.01 $-9.27 $48.38 ● Yes Advisory One-winner-field overround: this buys NO on the priceable subset of a mutually-exclusive field (exactly one winner), not every entrant — safe because an untraded or unlisted winner only pays more. Gross, top-of-book; many legs are illiquid so the position is often only partly fillable." [ref=e238] [cursor=pointer]':
+                - cell "Pro Basketball (M) · 27 winner field Pro Basketball (M) · 27" [ref=e239]
+                - cell "NBA" [ref=e240]
+                - cell "5¢" [ref=e241]
+                - cell "0.3%" [ref=e242]
+                - cell "782.1" [ref=e243]
+                - cell "$39.11" [ref=e244]
+                - cell "-$0.01" [ref=e245]
+                - cell "$-9.27" [ref=e246]
+                - cell "$48.38" [ref=e247]
+                - cell "● Yes" [ref=e248]
+                - 'cell "Advisory One-winner-field overround: this buys NO on the priceable subset of a mutually-exclusive field (exactly one winner), not every entrant — safe because an untraded or unlisted winner only pays more. Gross, top-of-book; many legs are illiquid so the position is often only partly fillable." [ref=e249]'
+              - 'row "NASCAR Cup Series · main-race · AND26 winner field NASCAR Cup Series · main-race · AND26 Motorsport 2¢ 0.1% 64 $1.28 -$0.03 $-1.92 $3.20 ● Yes Advisory One-winner-field overround: this buys NO on the priceable subset of a mutually-exclusive field (exactly one winner), not every entrant — safe because an untraded or unlisted winner only pays more. Gross, top-of-book; many legs are illiquid so the position is often only partly fillable." [ref=e250] [cursor=pointer]':
+                - cell "NASCAR Cup Series · main-race · AND26 winner field NASCAR Cup Series · main-race · AND26" [ref=e251]
+                - cell "Motorsport" [ref=e252]
+                - cell "2¢" [ref=e253]
+                - cell "0.1%" [ref=e254]
+                - cell "64" [ref=e255]
+                - cell "$1.28" [ref=e256]
+                - cell "-$0.03" [ref=e257]
+                - cell "$-1.92" [ref=e258]
+                - cell "$3.20" [ref=e259]
+                - cell "● Yes" [ref=e260]
+                - 'cell "Advisory One-winner-field overround: this buys NO on the priceable subset of a mutually-exclusive field (exactly one winner), not every entrant — safe because an untraded or unlisted winner only pays more. Gross, top-of-book; many legs are illiquid so the position is often only partly fillable." [ref=e261]'
+              - 'row "Minnesota vs Texas Pro Baseball · 26 MLB 2¢ 2% 1 $0.02 -$0.02 $-0.02 $0.04 ● Yes Advisory Per-game settlement risk: if the game is postponed, delayed past its scheduled start window, abandoned, ruled no-contest, or not played as originally scheduled (some leagues then resolve to a fair market price), the legs may not settle together and the gross gap need not hold — review the settlement rules before trading." [ref=e262] [cursor=pointer]':
+                - cell "Minnesota vs Texas Pro Baseball · 26" [ref=e263]
+                - cell "MLB" [ref=e264]
+                - cell "2¢" [ref=e265]
+                - cell "2%" [ref=e266]
+                - cell "1" [ref=e267]
+                - cell "$0.02" [ref=e268]
+                - cell "-$0.02" [ref=e269]
+                - cell "$-0.02" [ref=e270]
+                - cell "$0.04" [ref=e271]
+                - cell "● Yes" [ref=e272]
+                - 'cell "Advisory Per-game settlement risk: if the game is postponed, delayed past its scheduled start window, abandoned, ruled no-contest, or not played as originally scheduled (some leagues then resolve to a fair market price), the legs may not settle together and the gross gap need not hold — review the settlement rules before trading." [ref=e273]'
+              - 'row "Tomas Martin Etcheverry vs Daniil Medvedev ATP Halle Tennis 1¢ 1% 6 $0.06 -$0.01 $-0.08 $0.14 ● Yes Fee: taker net-neg (est.)" [ref=e274] [cursor=pointer]':
+                - cell "Tomas Martin Etcheverry vs Daniil Medvedev ATP Halle" [ref=e275]
+                - cell "Tennis" [ref=e276]
+                - cell "1¢" [ref=e277]
+                - cell "1%" [ref=e278]
+                - cell "6" [ref=e279]
+                - cell "$0.06" [ref=e280]
+                - cell "-$0.01" [ref=e281]
+                - cell "$-0.08" [ref=e282]
+                - cell "$0.14" [ref=e283]
+                - cell "● Yes" [ref=e284]
+                - 'cell "Fee: taker net-neg (est.)" [ref=e285]'
+              - 'row "Romane Longueville vs Victoria Bosio ITF Tennis 1¢ 1% 5 $0.05 $0.00 $-0.01 $0.06 ● Yes Fee: taker net-neg (est.)" [ref=e286] [cursor=pointer]':
+                - cell "Romane Longueville vs Victoria Bosio ITF" [ref=e287]
+                - cell "Tennis" [ref=e288]
+                - cell "1¢" [ref=e289]
+                - cell "1%" [ref=e290]
+                - cell "5" [ref=e291]
+                - cell "$0.05" [ref=e292]
+                - cell "$0.00" [ref=e293]
+                - cell "$-0.01" [ref=e294]
+                - cell "$0.06" [ref=e295]
+                - cell "● Yes" [ref=e296]
+                - 'cell "Fee: taker net-neg (est.)" [ref=e297]'
+              - 'row "BetBoom vs Aurora Gaming CS2 · 26 Esports 1¢ 1% 33 $0.33 -$0.02 $-0.82 $1.15 ● Yes Advisory Per-game settlement risk: if the game is postponed, delayed past its scheduled start window, abandoned, ruled no-contest, or not played as originally scheduled (some leagues then resolve to a fair market price), the legs may not settle together and the gross gap need not hold — review the settlement rules before trading." [ref=e298] [cursor=pointer]':
+                - cell "BetBoom vs Aurora Gaming CS2 · 26" [ref=e299]
+                - cell "Esports" [ref=e300]
+                - cell "1¢" [ref=e301]
+                - cell "1%" [ref=e302]
+                - cell "33" [ref=e303]
+                - cell "$0.33" [ref=e304]
+                - cell "-$0.02" [ref=e305]
+                - cell "$-0.82" [ref=e306]
+                - cell "$1.15" [ref=e307]
+                - cell "● Yes" [ref=e308]
+                - 'cell "Advisory Per-game settlement risk: if the game is postponed, delayed past its scheduled start window, abandoned, ruled no-contest, or not played as originally scheduled (some leagues then resolve to a fair market price), the legs may not settle together and the gross gap need not hold — review the settlement rules before trading." [ref=e309]'
+              - 'row "Suzan Lamens vs Paula Badosa Berlin Tennis 1¢ 1% 6 $0.06 -$0.03 $-0.16 $0.22 ● Yes Fee: taker net-neg (est.)" [ref=e310] [cursor=pointer]':
+                - cell "Suzan Lamens vs Paula Badosa Berlin" [ref=e311]
+                - cell "Tennis" [ref=e312]
+                - cell "1¢" [ref=e313]
+                - cell "1%" [ref=e314]
+                - cell "6" [ref=e315]
+                - cell "$0.06" [ref=e316]
+                - cell "-$0.03" [ref=e317]
+                - cell "$-0.16" [ref=e318]
+                - cell "$0.22" [ref=e319]
+                - cell "● Yes" [ref=e320]
+                - 'cell "Fee: taker net-neg (est.)" [ref=e321]'
+              - 'row "Toronto vs Boston Pro Baseball · 26 MLB 1¢ 1% 162.4 $1.62 -$0.02 $-4.06 $5.68 ● Yes Advisory Per-game settlement risk: if the game is postponed, delayed past its scheduled start window, abandoned, ruled no-contest, or not played as originally scheduled (some leagues then resolve to a fair market price), the legs may not settle together and the gross gap need not hold — review the settlement rules before trading." [ref=e322] [cursor=pointer]':
+                - cell "Toronto vs Boston Pro Baseball · 26" [ref=e323]
+                - cell "MLB" [ref=e324]
+                - cell "1¢" [ref=e325]
+                - cell "1%" [ref=e326]
+                - cell "162.4" [ref=e327]
+                - cell "$1.62" [ref=e328]
+                - cell "-$0.02" [ref=e329]
+                - cell "$-4.06" [ref=e330]
+                - cell "$5.68" [ref=e331]
+                - cell "● Yes" [ref=e332]
+                - 'cell "Advisory Per-game settlement risk: if the game is postponed, delayed past its scheduled start window, abandoned, ruled no-contest, or not played as originally scheduled (some leagues then resolve to a fair market price), the legs may not settle together and the gross gap need not hold — review the settlement rules before trading." [ref=e333]'
+              - 'row "Group Stage — stage of elimination FIFA World Cup · 26 Soccer (World Cup) 1¢ 1% 13.0 $0.13 -$0.05 $-0.60 $0.73 ● Yes Fee: taker net-neg (est.)" [ref=e334] [cursor=pointer]':
+                - cell "Group Stage — stage of elimination FIFA World Cup · 26" [ref=e335]
+                - cell "Soccer (World Cup)" [ref=e336]
+                - cell "1¢" [ref=e337]
+                - cell "1%" [ref=e338]
+                - cell "13.0" [ref=e339]
+                - cell "$0.13" [ref=e340]
+                - cell "-$0.05" [ref=e341]
+                - cell "$-0.60" [ref=e342]
+                - cell "$0.73" [ref=e343]
+                - cell "● Yes" [ref=e344]
+                - 'cell "Fee: taker net-neg (est.)" [ref=e345]'
+              - 'row "Clemence Lesdos vs Chloe Noel ITF Tennis 1¢ 1% 254.8 $2.55 -$0.02 $-4.24 $6.79 ● Yes Fee: taker net-neg (est.)" [ref=e346] [cursor=pointer]':
+                - cell "Clemence Lesdos vs Chloe Noel ITF" [ref=e347]
+                - cell "Tennis" [ref=e348]
+                - cell "1¢" [ref=e349]
+                - cell "1%" [ref=e350]
+                - cell "254.8" [ref=e351]
+                - cell "$2.55" [ref=e352]
+                - cell "-$0.02" [ref=e353]
+                - cell "$-4.24" [ref=e354]
+                - cell "$6.79" [ref=e355]
+                - cell "● Yes" [ref=e356]
+                - 'cell "Fee: taker net-neg (est.)" [ref=e357]'
+          - generic [ref=e136]: Showing 10 of 10 in scope· 11 cols · engine order
+      - generic [ref=e138]:
+        - generic [ref=e139]:
+          - generic [ref=e140]: "2"
+          - heading "INSPECTOR" [level=3] [ref=e141]
+          - generic [ref=e142]: read-only · buy-only · gross
+          - generic [ref=e143]:
+            - generic "Pop out" [ref=e144] [cursor=pointer]: ⧉
+            - generic "Maximize" [ref=e145] [cursor=pointer]: ▢
+            - generic "Collapse" [ref=e146] [cursor=pointer]: ▁
+            - generic "Remove from this view" [ref=e147] [cursor=pointer]: ✕
+        - generic [ref=e148]:
+          - generic [ref=e149] [cursor=pointer]: TRADE CARD
+          - generic [ref=e150] [cursor=pointer]: PARTICIPANT DETAIL
+          - generic [ref=e151] [cursor=pointer]: FORMULAS
+        - generic [ref=e153]: Click a scanner row to load the trade card — legs · economics · evidence.
+    - generic [ref=e157]:
+      - generic [ref=e158]:
+        - generic [ref=e159]: "3"
+        - heading "DEPTH LADDER" [level=3] [ref=e160]
+        - generic [ref=e161]: live order book · top-of-book
+        - generic [ref=e162]:
+          - generic "Pop out" [ref=e163] [cursor=pointer]: ⧉
+          - generic "Maximize" [ref=e164] [cursor=pointer]: ▢
+          - generic "Collapse" [ref=e165] [cursor=pointer]: ▁
+          - generic "Remove from this view" [ref=e166] [cursor=pointer]: ✕
+      - generic [ref=e167]: READ-ONLY · LIVE KALSHI ORDER BOOK · TOP-OF-BOOK · POLL-REFRESHED
+      - generic [ref=e168]: —
+    - generic [ref=e171]:
+      - generic [ref=e172]:
+        - generic [ref=e173]:
+          - generic [ref=e174]: ★
+          - heading "WATCHLIST · TOP ACTIONABLE" [level=3] [ref=e175]
+          - generic [ref=e176]:
+            - generic "Pop out" [ref=e177] [cursor=pointer]: ⧉
+            - generic "Maximize" [ref=e178] [cursor=pointer]: ▢
+            - generic "Collapse" [ref=e179] [cursor=pointer]: ▁
+            - generic "Remove from this view" [ref=e180] [cursor=pointer]: ✕
+        - generic [ref=e181]:
+          - generic [ref=e358] [cursor=pointer]:
+            - generic [ref=e359]: ●
+            - generic [ref=e360]:
+              - text: Pro Basketball (M) · 27 winner field
+              - generic [ref=e361]: NBA · overround
+            - generic [ref=e362]: 5¢
+          - generic [ref=e363] [cursor=pointer]:
+            - generic [ref=e364]: ●
+            - generic [ref=e365]:
+              - text: NASCAR Cup Series · main-race · AND26 winner field
+              - generic [ref=e366]: Motorsport · overround
+            - generic [ref=e367]: 2¢
+          - generic [ref=e368] [cursor=pointer]:
+            - generic [ref=e369]: ●
+            - generic [ref=e370]:
+              - text: Minnesota vs Texas
+              - generic [ref=e371]: MLB · overround
+            - generic [ref=e372]: 2¢
+          - generic [ref=e373] [cursor=pointer]:
+            - generic [ref=e374]: ●
+            - generic [ref=e375]:
+              - text: Tomas Martin Etcheverry vs Daniil Medvedev
+              - generic [ref=e376]: Tennis · overround
+            - generic [ref=e377]: 1¢
+          - generic [ref=e378] [cursor=pointer]:
+            - generic [ref=e379]: ●
+            - generic [ref=e380]:
+              - text: Romane Longueville vs Victoria Bosio
+              - generic [ref=e381]: Tennis · overround
+            - generic [ref=e382]: 1¢
+          - generic [ref=e383] [cursor=pointer]:
+            - generic [ref=e384]: ●
+            - generic [ref=e385]:
+              - text: BetBoom vs Aurora Gaming
+              - generic [ref=e386]: Esports · overround
+            - generic [ref=e387]: 1¢
+          - generic [ref=e388] [cursor=pointer]:
+            - generic [ref=e389]: ●
+            - generic [ref=e390]:
+              - text: Suzan Lamens vs Paula Badosa
+              - generic [ref=e391]: Tennis · overround
+            - generic [ref=e392]: 1¢
+          - generic [ref=e183] [cursor=pointer]: REVIEW MOVERS
+          - generic [ref=e393] [cursor=pointer]:
+            - generic [ref=e394]: ◐
+            - generic [ref=e395]:
+              - text: Semifinals — Reach Semifinals (synthetic vs advance)
+              - generic [ref=e396]: Soccer (World Cup) · rule-dep
+          - generic [ref=e397] [cursor=pointer]:
+            - generic [ref=e398]: ◐
+            - generic [ref=e399]:
+              - text: Runner-Up — Reach Finals (synthetic vs advance)
+              - generic [ref=e400]: Soccer (World Cup) · rule-dep
+          - generic [ref=e401] [cursor=pointer]:
+            - generic [ref=e402]: ◐
+            - generic [ref=e403]:
+              - text: Runner-Up — Reach Finals (synthetic vs advance)
+              - generic [ref=e404]: Soccer (World Cup) · rule-dep
+          - generic [ref=e405] [cursor=pointer]:
+            - generic [ref=e406]: ◐
+            - generic [ref=e407]:
+              - text: Semifinals — Reach Semifinals (synthetic vs advance)
+              - generic [ref=e408]: Soccer (World Cup) · rule-dep
+      - generic [ref=e185]:
+        - generic [ref=e186]:
+          - generic [ref=e187]: "!"
+          - heading "ALERTS" [level=3] [ref=e188]
+          - generic [ref=e189]:
+            - generic "Pop out" [ref=e190] [cursor=pointer]: ⧉
+            - generic "Maximize" [ref=e191] [cursor=pointer]: ▢
+            - generic "Collapse" [ref=e192] [cursor=pointer]: ▁
+            - generic "Remove from this view" [ref=e193] [cursor=pointer]: ✕
+        - generic [ref=e195]: No prior scan baseline yet — alerts appear after the next scan.
+  - generic [ref=e214]:
+    - generic [ref=e215]: KALSHI STRUCTURED SCANNER · real viewmodel rows · full column catalog · bounded-loss + cheap-NO splits · read-only over the live snapshot
+    - generic [ref=e216]:
+      - generic [ref=e217]: Ctrl K palette
+      - generic [ref=e218]: 1-6 lens
+      - generic [ref=e219]: J/K rows
+      - generic [ref=e220]: ↵ open
+      - generic [ref=e221]: drag splitters resize
+      - generic [ref=e222]: Ctrl/Shift-click multi-select

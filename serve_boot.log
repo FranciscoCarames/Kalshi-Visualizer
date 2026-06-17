@@ -1,0 +1,63 @@
+INFO:     Started server process [2976]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+INFO:     127.0.0.1:53949 - "WebSocket /socket.io/?client_id=628370ea-a738-42b7-9511-21b64d81d4c1&next_message_id=1&implicit_handshake=true&document_id=628cfa49-a7d6-4be1-89f9-35e686936e14&tab_id=06afab1d-0ee8-4f6c-8e24-5d69578ab94f&old_tab_id=null&EIO=4&transport=websocket" [accepted]
+INFO:     connection open
+INFO:     connection closed
+Auto-scan presence gate: ON (paused while no viewer connected)
+INFO:     127.0.0.1:53945 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53951 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53953 - "GET /readyz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53954 - "WebSocket /socket.io/?client_id=662940b7-6883-437e-928a-2abbc2081e9b&next_message_id=0&implicit_handshake=true&document_id=a020b1c1-2d29-491c-9b0c-3fa7e1d3a15a&tab_id=06afab1d-0ee8-4f6c-8e24-5d69578ab94f&old_tab_id=null&EIO=4&transport=websocket" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:53969 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53971 - "WebSocket /socket.io/?client_id=1f02782c-1745-43a7-ae23-0da1c91baa5f&next_message_id=0&implicit_handshake=true&document_id=b05f8cbf-21c6-4f9b-8bc3-bc335ce6c698&tab_id=bb23326d-6ab5-4ffb-8f0c-3c26fba93ae7&old_tab_id=null&EIO=4&transport=websocket" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     connection closed
+snapshot frame retention: evicted 1 frame-snapshot(s); retained frame bytes=198773986, db size=3407978496 bytes
+INFO:     127.0.0.1:63917 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49399 - "WebSocket /socket.io/?client_id=b6a7f395-92dc-43d6-962c-ea69bf98ba12&next_message_id=0&implicit_handshake=true&document_id=a23e6d96-8d56-453c-a974-f1c943cbd9ff&tab_id=086a2805-f56d-47cb-b2bd-9ba5593e40da&old_tab_id=null&EIO=4&transport=websocket" [accepted]
+INFO:     connection open
+INFO:     connection closed
+snapshot frame retention: evicted 1 frame-snapshot(s); retained frame bytes=198714141, db size=3407978496 bytes
+snapshot frame retention: evicted 1 frame-snapshot(s); retained frame bytes=198616131, db size=3407978496 bytes
+INFO:     127.0.0.1:55080 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55089 - "WebSocket /socket.io/?client_id=06e09fdd-3640-4e3a-b5b0-743a7d60fc36&next_message_id=0&implicit_handshake=true&document_id=d6a13d22-ee51-44e9-853a-a7c75549e2b5&tab_id=55ca364b-b05f-4097-9b97-7db2044b4949&old_tab_id=null&EIO=4&transport=websocket" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     127.0.0.1:62795 - "WebSocket /socket.io/?client_id=06e09fdd-3640-4e3a-b5b0-743a7d60fc36&next_message_id=16&implicit_handshake=true&document_id=d6a13d22-ee51-44e9-853a-a7c75549e2b5&tab_id=55ca364b-b05f-4097-9b97-7db2044b4949&old_tab_id=null&EIO=4&transport=websocket" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     127.0.0.1:52535 - "WebSocket /socket.io/?client_id=06e09fdd-3640-4e3a-b5b0-743a7d60fc36&next_message_id=133&implicit_handshake=true&document_id=d6a13d22-ee51-44e9-853a-a7c75549e2b5&tab_id=55ca364b-b05f-4097-9b97-7db2044b4949&old_tab_id=null&EIO=4&transport=websocket" [accepted]
+INFO:     connection open
+snapshot frame retention: evicted 1 frame-snapshot(s); retained frame bytes=198521306, db size=3407978496 bytes
+INFO:     127.0.0.1:58256 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58257 - "GET /coverage HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58266 - "GET /metrics HTTP/1.1" 200 OK
+snapshot frame retention: evicted 1 frame-snapshot(s); retained frame bytes=198352960, db size=3407978496 bytes
+INFO:     127.0.0.1:58267 - "POST /scan?force=true&wait=true HTTP/1.1" 202 Accepted
+INFO:     connection closed
+INFO:     127.0.0.1:54205 - "WebSocket /socket.io/?client_id=06e09fdd-3640-4e3a-b5b0-743a7d60fc36&next_message_id=1566&implicit_handshake=true&document_id=d6a13d22-ee51-44e9-853a-a7c75549e2b5&tab_id=55ca364b-b05f-4097-9b97-7db2044b4949&old_tab_id=null&EIO=4&transport=websocket" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:63290 - "POST /scan?force=true&wait=true HTTP/1.1" 202 Accepted
+INFO:     127.0.0.1:63323 - "WebSocket /socket.io/?client_id=06e09fdd-3640-4e3a-b5b0-743a7d60fc36&next_message_id=1675&implicit_handshake=true&document_id=d6a13d22-ee51-44e9-853a-a7c75549e2b5&tab_id=55ca364b-b05f-4097-9b97-7db2044b4949&old_tab_id=null&EIO=4&transport=websocket" [accepted]
+INFO:     connection open
+INFO:     connection closed
+snapshot frame retention: evicted 1 frame-snapshot(s); retained frame bytes=198169994, db size=3407978496 bytes
+INFO:     127.0.0.1:63327 - "GET /scan/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56943 - "WebSocket /socket.io/?client_id=06e09fdd-3640-4e3a-b5b0-743a7d60fc36&next_message_id=1727&implicit_handshake=true&document_id=d6a13d22-ee51-44e9-853a-a7c75549e2b5&tab_id=55ca364b-b05f-4097-9b97-7db2044b4949&old_tab_id=null&EIO=4&transport=websocket" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:61032 - "GET / HTTP/1.1" 200 OK
+INFO:     connection closed
+INFO:     127.0.0.1:64189 - "WebSocket /socket.io/?client_id=ba8be1e8-9b30-4acc-b9c5-37fdffe68c0b&next_message_id=0&implicit_handshake=true&document_id=7399e174-b3c1-43a7-96a8-eb36451e8d1a&tab_id=90d8417c-1190-4262-a5cd-ad189835065d&old_tab_id=null&EIO=4&transport=websocket" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:55219 - "WebSocket /socket.io/?client_id=ba8be1e8-9b30-4acc-b9c5-37fdffe68c0b&next_message_id=72&implicit_handshake=true&document_id=7399e174-b3c1-43a7-96a8-eb36451e8d1a&tab_id=90d8417c-1190-4262-a5cd-ad189835065d&old_tab_id=null&EIO=4&transport=websocket" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:55220 - "WebSocket /socket.io/?client_id=06e09fdd-3640-4e3a-b5b0-743a7d60fc36&next_message_id=1791&implicit_handshake=true&document_id=d6a13d22-ee51-44e9-853a-a7c75549e2b5&tab_id=55ca364b-b05f-4097-9b97-7db2044b4949&old_tab_id=null&EIO=4&transport=websocket" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed

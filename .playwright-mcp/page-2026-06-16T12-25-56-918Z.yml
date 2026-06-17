@@ -1,0 +1,336 @@
+- generic [ref=e2]:
+  - generic [ref=e239]:
+    - generic [ref=e240]:
+      - generic [ref=e241] [cursor=pointer]: OPP
+      - generic [ref=e242] [cursor=pointer]: RES
+      - generic [ref=e243] [cursor=pointer]: OPS
+      - generic [ref=e244] [cursor=pointer]: ALRT
+    - generic [ref=e245]:
+      - generic [ref=e246]: ">"
+      - textbox "Open command palette" [ref=e247]:
+        - /placeholder: SEARCH — functions · participants · lenses · layouts   (press / or Ctrl-K)
+      - generic [ref=e248]: Ctrl K
+      - button "<GO>" [ref=e249] [cursor=pointer]
+    - generic [ref=e250]: 63s · KALSHI
+  - generic [ref=e251]:
+    - generic [ref=e252]:
+      - generic [ref=e253]: ●
+      - text: "SNAPSHOT #333 · 63s ago"
+    - generic [ref=e254]:
+      - text: Opps
+      - generic [ref=e255]: 2,214
+    - generic [ref=e256]:
+      - text: Contracts
+      - generic [ref=e257]: 3,702
+    - generic [ref=e258]:
+      - text: Checks
+      - generic [ref=e259]: 1,314
+    - generic [ref=e260]:
+      - text: Requests
+      - generic [ref=e261]: "185"
+    - generic [ref=e262]:
+      - text: Sports
+      - generic [ref=e263]: "10"
+    - generic [ref=e264]:
+      - generic [ref=e265]: ●
+      - text: Failed
+      - generic [ref=e266]: "0"
+    - generic [ref=e267]:
+      - generic [ref=e268]: ●
+      - text: ALRT
+      - generic [ref=e269]: "0"
+    - generic [ref=e270]: GROSS · TOP-OF-BOOK · $1 BASIS · READ-ONLY · NO ORDER ENTRY · NOT RISKLESS · fees est. only
+  - generic [ref=e271]:
+    - generic [ref=e272] [cursor=pointer]:
+      - generic [ref=e273]: 1)
+      - text: OPP
+    - generic [ref=e274] [cursor=pointer]:
+      - generic [ref=e275]: 2)
+      - text: RES
+    - generic [ref=e276] [cursor=pointer]:
+      - generic [ref=e277]: 3)
+      - text: OPS
+    - generic [ref=e278]:
+      - generic [ref=e279]: LAYOUT
+      - combobox [ref=e280]:
+        - option "Default" [selected]
+        - option "Triage"
+        - option "Inspect"
+        - option "Research"
+        - option "Scanner full"
+      - button "＋ ADD ▾" [ref=e281] [cursor=pointer]
+      - button "▦ ELEMENTS ▾" [ref=e282] [cursor=pointer]
+      - generic [ref=e283]: LENS
+      - generic [ref=e284]:
+        - button "BLENDED" [ref=e285] [cursor=pointer]
+        - button "EDGE¢" [ref=e286] [cursor=pointer]
+        - button "SPREAD" [ref=e287] [cursor=pointer]
+        - button "OUTRIGHT+SPREAD" [ref=e288] [cursor=pointer]
+        - button "IMPLIED EV" [ref=e289] [cursor=pointer]
+        - button "RIPENESS" [ref=e290] [cursor=pointer]
+      - generic [ref=e291]:
+        - button "⚙ SETTINGS ▾" [ref=e292] [cursor=pointer]
+        - generic [ref=e705]:
+          - generic [ref=e706]: SETTINGS
+          - generic [ref=e707] [cursor=pointer]:
+            - checkbox "Show net of fees (est.)" [checked] [ref=e708]
+            - text: Show net of fees (est.)
+          - generic [ref=e709] [cursor=pointer]:
+            - checkbox "Hide fee-negative (taker est.)" [checked] [active] [ref=e710]
+            - text: Hide fee-negative (taker est.)
+          - generic [ref=e711] [cursor=pointer]:
+            - checkbox "Larger text" [ref=e712]
+            - text: Larger text
+          - generic [ref=e713] [cursor=pointer]:
+            - checkbox "Show IDs & codes" [ref=e714]
+            - text: Show IDs & codes
+          - generic [ref=e715] [cursor=pointer]:
+            - checkbox "Resolution criteria" [checked] [ref=e716]
+            - text: Resolution criteria
+          - generic [ref=e717] [cursor=pointer]:
+            - checkbox "Long / short wording" [ref=e718]
+            - text: Long / short wording
+          - generic [ref=e719] [cursor=pointer]:
+            - text: Time zone
+            - combobox [ref=e720]:
+              - option "Local" [selected]
+              - option "UTC"
+              - option "America/New_York"
+          - generic [ref=e721] [cursor=pointer]:
+            - text: Auto-refresh
+            - combobox [ref=e722]:
+              - option "on · 10s" [selected]
+              - option "on · 30s"
+              - option "off"
+          - generic [ref=e723] [cursor=pointer]: "◐ Theme: Amber"
+      - button "Scan now" [ref=e293] [cursor=pointer]: ▷ SCAN
+      - button "Force scan (bypass cooldown)" [ref=e294] [cursor=pointer]: ⚡
+      - button "Toggle theme" [ref=e295] [cursor=pointer]: ◐
+  - generic [ref=e296]:
+    - generic [ref=e297]: SPORT
+    - button "Filter by Sport (All)" [ref=e299] [cursor=pointer]: "Sport: All ▾"
+    - generic [ref=e300]: TOURNAMENT
+    - button "Filter by Tournament (All)" [ref=e302] [cursor=pointer]: "Tournament: All ▾"
+    - generic [ref=e303]: PARTICIPANT
+    - textbox "Filter by participant" [ref=e304]:
+      - /placeholder: contains…
+    - generic [ref=e305]: MIN SIZE
+    - spinbutton "Minimum size" [ref=e306]: "0"
+    - generic [ref=e307] [cursor=pointer]:
+      - checkbox "Tradable-only" [ref=e308]
+      - text: Tradable-only
+    - button "Export current view as CSV" [ref=e309] [cursor=pointer]: ⬇ CSV
+    - button "Export filtered snapshot as ZIP" [ref=e310] [cursor=pointer]: ⬇ ZIP
+    - generic [ref=e311]: 0 shown
+    - generic "Executable rows whose taker net-of-fees estimate is negative are hidden — click to show" [ref=e724] [cursor=pointer]: 9 hidden by fee filter · show
+    - generic [ref=e312] [cursor=pointer]: clear
+  - generic [ref=e313]:
+    - generic [ref=e314] [cursor=pointer]:
+      - generic [ref=e315]: ACTIONABLE
+      - generic [ref=e316]: "0"
+      - generic [ref=e317]: executable now
+    - generic [ref=e318] [cursor=pointer]:
+      - generic [ref=e319]: REVIEW
+      - generic [ref=e320]: "18"
+      - generic [ref=e321]: settlement-dep
+    - generic [ref=e322] [cursor=pointer]:
+      - generic [ref=e323]: BLOCKED
+      - generic [ref=e324]: "8"
+      - generic [ref=e325]: not fillable
+    - generic [ref=e326] [cursor=pointer]:
+      - generic [ref=e327]: BOUNDED-LOSS
+      - generic [ref=e328]: "47"
+      - generic [ref=e329]: can lose money
+    - generic [ref=e330] [cursor=pointer]:
+      - generic [ref=e331]: NEAR-MISS
+      - generic [ref=e332]: "195"
+      - generic [ref=e333]: watchlist
+    - generic [ref=e334] [cursor=pointer]:
+      - generic [ref=e335]: QUALIFIER
+      - generic [ref=e336]: "48"
+      - generic [ref=e337]: WC setups
+    - generic [ref=e338] [cursor=pointer]:
+      - generic [ref=e339]: CHEAP-NO
+      - generic [ref=e340]: "89"
+      - generic [ref=e341]: NO fades
+    - generic [ref=e342] [cursor=pointer]:
+      - generic [ref=e343]: DATA-QUALITY
+      - generic [ref=e344]: "972"
+      - generic [ref=e345]: diagnostic
+  - generic [ref=e347]:
+    - generic [ref=e348]:
+      - generic [ref=e350]:
+        - generic [ref=e351]:
+          - generic [ref=e352]: "1"
+          - heading "SCANNER" [level=3] [ref=e353]
+          - generic [ref=e354]: click row · J/K · ENTER · drag splitters · ⚙ columns
+          - generic [ref=e355]:
+            - generic "Pop out" [ref=e356] [cursor=pointer]: ⧉
+            - generic "Maximize" [ref=e357] [cursor=pointer]: ▢
+            - generic "Collapse" [ref=e358] [cursor=pointer]: ▁
+            - generic "Remove from this view" [ref=e359] [cursor=pointer]: ✕
+        - generic [ref=e360]:
+          - generic [ref=e361]:
+            - generic [ref=e362] [cursor=pointer]: EXECUTABLE 26 firm · gross edge
+            - generic [ref=e363] [cursor=pointer]: SPECULATIVE 379 bounded-loss · convex EV · can lose money
+            - generic [ref=e364] [cursor=pointer]: DIAGNOSTIC 972 review-only · data quality
+          - generic [ref=e365]:
+            - generic [ref=e366] [cursor=pointer]: ACTIONABLE0
+            - generic [ref=e367] [cursor=pointer]: REVIEW18
+            - generic [ref=e368] [cursor=pointer]: BLOCKED8
+            - generic [ref=e369] [cursor=pointer]: ⚙ columns ▾
+          - generic [ref=e725]: All rows hidden by the section / band filters — relax them to see in-scope rows.
+          - generic [ref=e530]: Showing 0 of 9 in scope (9 hidden by settings)· 11 cols · engine order
+      - generic [ref=e533]:
+        - generic [ref=e534]:
+          - generic [ref=e535]: "2"
+          - heading "INSPECTOR" [level=3] [ref=e536]
+          - generic [ref=e537]: read-only · buy-only · gross
+          - generic [ref=e538]:
+            - generic "Pop out" [ref=e539] [cursor=pointer]: ⧉
+            - generic "Maximize" [ref=e540] [cursor=pointer]: ▢
+            - generic "Collapse" [ref=e541] [cursor=pointer]: ▁
+            - generic "Remove from this view" [ref=e542] [cursor=pointer]: ✕
+        - generic [ref=e543]:
+          - generic [ref=e544] [cursor=pointer]: TRADE CARD
+          - generic [ref=e545] [cursor=pointer]: PARTICIPANT DETAIL
+          - generic [ref=e546] [cursor=pointer]: FORMULAS
+        - generic [ref=e548]: Click a scanner row to load the trade card — legs · economics · evidence.
+    - generic [ref=e552]:
+      - generic [ref=e553]:
+        - generic [ref=e554]: "3"
+        - heading "DEPTH LADDER" [level=3] [ref=e555]
+        - generic [ref=e556]: live order book · top-of-book
+        - generic [ref=e557]:
+          - generic "Pop out" [ref=e558] [cursor=pointer]: ⧉
+          - generic "Maximize" [ref=e559] [cursor=pointer]: ▢
+          - generic "Collapse" [ref=e560] [cursor=pointer]: ▁
+          - generic "Remove from this view" [ref=e561] [cursor=pointer]: ✕
+      - generic [ref=e562]: READ-ONLY · LIVE KALSHI ORDER BOOK · TOP-OF-BOOK · POLL-REFRESHED
+      - generic [ref=e563]: —
+    - generic [ref=e565]:
+      - generic [ref=e567]:
+        - generic [ref=e568]:
+          - generic [ref=e569]: ★
+          - heading "WATCHLIST · TOP ACTIONABLE" [level=3] [ref=e570]
+          - generic [ref=e571]:
+            - generic "Pop out" [ref=e572] [cursor=pointer]: ⧉
+            - generic "Maximize" [ref=e573] [cursor=pointer]: ▢
+            - generic "Collapse" [ref=e574] [cursor=pointer]: ▁
+            - generic "Remove from this view" [ref=e575] [cursor=pointer]: ✕
+        - generic [ref=e576]:
+          - generic [ref=e577] [cursor=pointer]:
+            - generic [ref=e578]: ●
+            - generic [ref=e579]:
+              - text: Pro Basketball (M) · 27 winner field
+              - generic [ref=e580]: NBA · overround
+            - generic [ref=e581]: 6¢
+          - generic [ref=e582] [cursor=pointer]:
+            - generic [ref=e583]: ●
+            - generic [ref=e584]:
+              - text: NASCAR Cup Series · main-race · AND26 winner field
+              - generic [ref=e585]: Motorsport · overround
+            - generic [ref=e586]: 2¢
+          - generic [ref=e592] [cursor=pointer]:
+            - generic [ref=e593]: ●
+            - generic [ref=e594]:
+              - text: Cleveland vs Milwaukee
+              - generic [ref=e595]: MLB · underround
+            - generic [ref=e596]: 1¢
+          - generic [ref=e597] [cursor=pointer]:
+            - generic [ref=e598]: ●
+            - generic [ref=e599]:
+              - text: New Zealand vs Egypt
+              - generic [ref=e600]: Soccer (World Cup) · overround
+            - generic [ref=e601]: 1¢
+          - generic [ref=e607] [cursor=pointer]:
+            - generic [ref=e608]: ●
+            - generic [ref=e609]:
+              - text: Baltimore vs Seattle
+              - generic [ref=e610]: MLB · underround
+            - generic [ref=e611]: 1¢
+          - generic [ref=e726] [cursor=pointer]:
+            - generic [ref=e727]: ●
+            - generic [ref=e728]:
+              - text: San Diego vs St. Louis
+              - generic [ref=e729]: MLB · underround
+            - generic [ref=e730]: 1¢
+          - generic [ref=e731] [cursor=pointer]:
+            - generic [ref=e732]: ●
+            - generic [ref=e733]:
+              - text: Chicago WS vs New York Y
+              - generic [ref=e734]: MLB · underround
+            - generic [ref=e735]: 1¢
+          - generic [ref=e613] [cursor=pointer]: REVIEW MOVERS
+          - generic [ref=e614] [cursor=pointer]:
+            - generic [ref=e615]: ◐
+            - generic [ref=e616]:
+              - text: Semifinals — Reach Semifinals (synthetic vs advance)
+              - generic [ref=e617]: Soccer (World Cup) · rule-dep
+          - generic [ref=e618] [cursor=pointer]:
+            - generic [ref=e619]: ◐
+            - generic [ref=e620]:
+              - text: Runner-Up — Reach Finals (synthetic vs advance)
+              - generic [ref=e621]: Soccer (World Cup) · rule-dep
+          - generic [ref=e622] [cursor=pointer]:
+            - generic [ref=e623]: ◐
+            - generic [ref=e624]:
+              - text: Runner-Up — Reach Finals (synthetic vs advance)
+              - generic [ref=e625]: Soccer (World Cup) · rule-dep
+          - generic [ref=e736] [cursor=pointer]:
+            - generic [ref=e737]: ◐
+            - generic [ref=e738]:
+              - text: Quarterfinals — Reach Quarterfinals (synthetic vs advance)
+              - generic [ref=e739]: Soccer (World Cup) · rule-dep
+      - generic [ref=e632]:
+        - generic [ref=e633]:
+          - generic [ref=e634]: "!"
+          - heading "ALERTS" [level=3] [ref=e635]
+          - generic [ref=e636]:
+            - generic "Pop out" [ref=e637] [cursor=pointer]: ⧉
+            - generic "Maximize" [ref=e638] [cursor=pointer]: ▢
+            - generic "Collapse" [ref=e639] [cursor=pointer]: ▁
+            - generic "Remove from this view" [ref=e640] [cursor=pointer]: ✕
+        - generic [ref=e641]:
+          - generic [ref=e742]:
+            - generic [ref=e743]: edge up — Runner-Up — Reach Finals (synthetic vs advance)
+            - generic [ref=e744]: edge up since last scan
+          - generic [ref=e747]:
+            - generic [ref=e748]: edge up — Outright Winner — Win the World Cup (synthetic vs advance)
+            - generic [ref=e749]: edge up since last scan
+          - generic [ref=e752]:
+            - generic [ref=e753]: edge down — Semifinals — Reach Semifinals (synthetic vs advance)
+            - generic [ref=e754]: edge down since last scan
+      - generic [ref=e645]:
+        - generic [ref=e646]:
+          - generic [ref=e647]: ≈
+          - heading "RESEARCH" [level=3] [ref=e648]
+          - generic [ref=e649]: read-only · P5
+          - generic [ref=e650]:
+            - generic "Pop out" [ref=e651] [cursor=pointer]: ⧉
+            - generic "Maximize" [ref=e652] [cursor=pointer]: ▢
+            - generic "Collapse" [ref=e653] [cursor=pointer]: ▁
+            - generic "Remove from this view" [ref=e654] [cursor=pointer]: ✕
+        - generic [ref=e655]:
+          - generic [ref=e656]: Read-only research (P5) — derived data only, never feeds actionability.
+          - generic [ref=e657]: OPPORTUNITIES BY SPORT
+          - generic [ref=e658]:
+            - generic [ref=e660]: NBA
+            - generic [ref=e662]: Moto
+            - generic [ref=e666]: MLB
+            - generic [ref=e664]: Socc
+            - generic [ref=e670]: Golf
+            - generic [ref=e672]: NFL
+            - generic [ref=e674]: WNBA
+            - generic [ref=e668]: Tenn
+          - generic [ref=e675]: BOUNDED-LOSS MIX
+          - generic [ref=e676]: Vertical 209 · Calendar 133. Cheap-NO scope — Championship 0 · Tournament 0 · Event 0.
+  - generic [ref=e677]:
+    - generic [ref=e678]: KALSHI STRUCTURED SCANNER · real viewmodel rows · full column catalog · bounded-loss + cheap-NO splits · read-only over the live snapshot
+    - generic [ref=e679]:
+      - generic [ref=e680]: Ctrl K palette
+      - generic [ref=e681]: 1-6 lens
+      - generic [ref=e682]: J/K rows
+      - generic [ref=e683]: ↵ open
+      - generic [ref=e684]: drag splitters resize
+      - generic [ref=e685]: Ctrl/Shift-click multi-select

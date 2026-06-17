@@ -1,0 +1,145 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e3]: KALSHI RADAR
+    - generic [ref=e4]:
+      - button "Opportunity" [ref=e5] [cursor=pointer]
+      - button "Research" [ref=e6] [cursor=pointer]
+      - button "Operations" [ref=e7] [cursor=pointer]
+    - generic [ref=e8]:
+      - text: "Y"
+      - combobox [ref=e9]:
+        - option "Gross edge" [selected]
+        - option "ROI"
+        - option "Max upside"
+      - text: X
+      - combobox [ref=e10]:
+        - option "Confidence" [selected]
+        - option "Liquidity"
+        - option "Break-even"
+    - generic [ref=e11]:
+      - button "Custom axes" [ref=e12] [cursor=pointer]
+      - button "Act lens" [ref=e13] [cursor=pointer]
+      - button "Liquidity" [ref=e14] [cursor=pointer]
+    - generic [ref=e15]: scan 12s · 7 plotted
+  - generic [ref=e17]:
+    - generic [ref=e18]:
+      - img [ref=e19]:
+        - generic [ref=e20]: HIGH EDGE · HIGH CONFIDENCE → ACT
+        - generic [ref=e21]: HIGH EDGE · LOW CONFIDENCE → VERIFY
+        - generic [ref=e22]: LOW EDGE · HIGH CONFIDENCE → WATCH
+        - generic [ref=e23]: LOW EDGE · LOW CONFIDENCE → PARK
+        - generic [ref=e24]: Confidence (aggregate) →
+        - generic [ref=e25]: Gross edge ¢ →
+        - generic: TEN
+        - generic: SOC
+        - generic: NHL
+        - generic: ESP
+        - generic: NBA
+        - generic: TEN
+        - generic: MLB
+      - generic [ref=e33]:
+        - generic [ref=e34]: Actionable
+        - generic [ref=e36]: Review
+        - generic [ref=e38]: Blocked
+        - generic [ref=e40]: bubble size = liquidity / max size
+    - generic [ref=e41]:
+      - generic [ref=e42]:
+        - generic [ref=e43]: Ranked (synced with plot)
+        - generic [ref=e44]:
+          - generic [ref=e45] [cursor=pointer]:
+            - generic [ref=e47]:
+              - generic [ref=e48]: Brazil v Serbia
+              - generic [ref=e49]: Soccer · Dutch overround
+            - generic [ref=e50]: 11¢
+          - generic [ref=e51] [cursor=pointer]:
+            - generic [ref=e53]:
+              - generic [ref=e54]: J. Sinner
+              - generic [ref=e55]: Tennis · Containment ladder
+            - generic [ref=e56]: 7¢
+          - generic [ref=e57] [cursor=pointer]:
+            - generic [ref=e59]:
+              - generic [ref=e60]: LA Dodgers
+              - generic [ref=e61]: MLB · Containment
+            - generic [ref=e62]: 6¢
+          - generic [ref=e63] [cursor=pointer]:
+            - generic [ref=e65]:
+              - generic [ref=e66]: C. Alcaraz
+              - generic [ref=e67]: Tennis · Synthetic
+            - generic [ref=e68]: 5¢
+          - generic [ref=e69] [cursor=pointer]:
+            - generic [ref=e71]:
+              - generic [ref=e72]: Oilers @ Panthers
+              - generic [ref=e73]: NHL · Game dutch
+            - generic [ref=e74]: 4¢
+          - generic [ref=e75] [cursor=pointer]:
+            - generic [ref=e77]:
+              - generic [ref=e78]: Boston Celtics
+              - generic [ref=e79]: NBA · Equivalence
+            - generic [ref=e80]: 4¢
+          - generic [ref=e81] [cursor=pointer]:
+            - generic [ref=e83]:
+              - generic [ref=e84]: FaZe v Vitality
+              - generic [ref=e85]: Esports · Map dutch
+            - generic [ref=e86]: 3¢
+      - generic [ref=e87]:
+        - generic [ref=e88]:
+          - generic [ref=e89]: ACT
+          - generic [ref=e90]: J. Sinner
+        - generic [ref=e91]: Reach Final ⊇ Win · Containment ladder · conf 85
+        - generic [ref=e92]: Buy-only plan
+        - generic [ref=e93]:
+          - generic [ref=e94]: "YES"
+          - generic [ref=e95]: Reach Final · KXATPADVANCE
+          - generic [ref=e96]: 38¢
+        - generic [ref=e97]:
+          - generic [ref=e98]: "NO"
+          - generic [ref=e99]: Win · KXFOMEN
+          - generic [ref=e100]: 55¢
+        - generic [ref=e101]:
+          - generic [ref=e102]: Cost / $1
+          - generic [ref=e103]: 93¢
+          - generic [ref=e104]: Worst / best
+          - generic [ref=e105]: "-7 / +7¢"
+          - generic [ref=e106]: Break-even
+          - generic [ref=e107]: 93%
+          - generic [ref=e108]: Fillable
+          - generic [ref=e109]: "140"
+        - generic [ref=e110]: Confidence — 9 dim
+        - generic [ref=e111]:
+          - generic [ref=e112]: Data
+          - generic [ref=e115]: "95"
+        - generic [ref=e116]:
+          - generic [ref=e117]: Quote
+          - generic [ref=e120]: "92"
+        - generic [ref=e121]:
+          - generic [ref=e122]: Liquidity
+          - generic [ref=e125]: "78"
+        - generic [ref=e126]:
+          - generic [ref=e127]: Execution
+          - generic [ref=e130]: "80"
+        - generic [ref=e131]:
+          - generic [ref=e132]: Settlement
+          - generic [ref=e135]: "88"
+        - generic [ref=e136]:
+          - generic [ref=e137]: Strategy
+          - generic [ref=e140]: "96"
+        - generic [ref=e141]:
+          - generic [ref=e142]: Model
+          - generic [ref=e145]: "60"
+        - generic [ref=e146]:
+          - generic [ref=e147]: Comparability
+          - generic [ref=e150]: "84"
+        - generic [ref=e151]:
+          - generic [ref=e152]: Complexity
+          - generic [ref=e155]: "90"
+        - generic [ref=e156]: Why flagged
+        - generic [ref=e157]: Firm child bid exceeds parent ask by 7¢.
+        - generic [ref=e158]: EvidencePack
+        - generic [ref=e159]:
+          - generic [ref=e160]: Scan
+          - generic [ref=e161]: scan_8841
+          - generic [ref=e162]: Quote ts
+          - generic [ref=e163]: 12s
+          - generic [ref=e164]: Rules
+          - generic [ref=e165]: r3
+      - generic [ref=e166]: "Blueprint: axes/lens remap the space (§7) · bubbles = candidates, color = bucket, size = liquidity · click → TradeCard + 9-dim confidence + EvidencePack (§8/§3) · Research surface adds distribution/calibration plots (§5/§11) · Operations = system-health board (§13)."

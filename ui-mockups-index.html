@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kalshi Workstation — UI Mockup Gallery</title>
+<style>
+:root{
+  --bg:#0b0e14;--bg1:#10141c;--bg2:#161d28;--line:#222c3c;--line2:#2c3849;
+  --tx:#e6edf6;--tx2:#9fb0c5;--tx3:#6b7c93;--acc:#3b82f6;--pos:#22c55e;--violet:#a78bfa;
+  --sans:'Segoe UI',system-ui,sans-serif;--serif:'Iowan Old Style','Georgia',serif;--mono:'SF Mono','Consolas',monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--tx);font-family:var(--sans);font-size:14px;line-height:1.5;
+  background-image:radial-gradient(1100px 500px at 85% -5%,rgba(59,130,246,.08),transparent)}
+.wrap{max-width:1280px;margin:0 auto;padding:36px 28px 60px}
+.hero{margin-bottom:8px}
+.kick{font-family:var(--mono);font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--acc)}
+h1{font-family:var(--serif);font-size:34px;margin:6px 0 6px;font-weight:600}
+.sub{color:var(--tx2);max-width:760px}
+.sub b{color:var(--tx)}
+.legend{display:flex;gap:10px;margin:18px 0 26px;flex-wrap:wrap}
+.tag{font-size:11px;padding:3px 10px;border-radius:20px;border:1px solid var(--line2);color:var(--tx2)}
+.tag.anchor{border-color:#3b82f655;color:#9cc0ff}
+.tag.innov{border-color:#a78bfa55;color:#c9bcff}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px}
+@media(max-width:880px){.grid{grid-template-columns:1fr}}
+.card{background:var(--bg1);border:1px solid var(--line);border-radius:14px;overflow:hidden;display:flex;flex-direction:column;transition:.14s}
+.card:hover{border-color:var(--acc);transform:translateY(-2px);box-shadow:0 14px 40px rgba(0,0,0,.4)}
+.shot{aspect-ratio:16/10;background:var(--bg2);border-bottom:1px solid var(--line);overflow:hidden;position:relative}
+.shot img{width:100%;height:100%;object-fit:cover;object-position:top left;display:block}
+.shot .ph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--tx3);font-size:12px}
+.num{position:absolute;top:10px;left:10px;width:30px;height:30px;border-radius:9px;background:rgba(11,14,20,.8);border:1px solid var(--line2);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:700;font-size:14px}
+.body{padding:14px 16px;flex:1;display:flex;flex-direction:column}
+.body h2{margin:0 0 2px;font-size:18px}
+.kind{font-size:11px;font-family:var(--mono);margin-bottom:8px}
+.kind.anchor{color:#9cc0ff}.kind.innov{color:#c9bcff}
+.philo{color:var(--tx2);font-size:13px;flex:1}
+.feat{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 12px}
+.feat span{font-size:10.5px;color:var(--tx3);background:var(--bg2);border:1px solid var(--line);border-radius:6px;padding:2px 7px}
+.open{align-self:flex-start;text-decoration:none;background:var(--acc);color:#fff;font-weight:600;font-size:13px;padding:7px 16px;border-radius:8px}
+.open:hover{filter:brightness(1.1)}
+.foot{margin-top:30px;font-size:12px;color:var(--tx3);border-top:1px solid var(--line);padding-top:16px}
+.foot b{color:var(--tx2)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hero">
+    <div class="kick">Kalshi Trading Workstation · UI exploration</div>
+    <h1>Six ways to build the same workstation</h1>
+    <p class="sub"><b>★ Recommended → Option 7 "Terminal Pro"</b> is the unified merge: <b>Bloomberg identity + Trading
+    Technologies docked layout + Hybrid usability</b>. The originals below are kept as its ingredients (and the
+    rejected three for reference). One shared dataset, one roadmap (<b>MASTER_BACKLOG §9</b>); every option hosts the
+    full roadmap — three surfaces, status/trust strip, the standardized trade card with 9-dimension confidence +
+    EvidencePack, lenses, alerts, watchlist. Open Terminal Pro first.</p>
+  </div>
+  <div class="legend">
+    <span class="tag anchor">◆ Anchored in a trader tool</span>
+    <span class="tag innov">✦ Fully innovative</span>
+    <span class="tag">Shared sample data · dark+light where noted · self-contained HTML</span>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <div class="foot"><b>How to use:</b> click <i>Open</i> on each. The mockups are throwaway previews — the one you
+  pick becomes the spec for the real NiceGUI rebuild (branch-only, current app untouched). Mix-and-match welcome
+  (e.g. "Triage feed + a Workbook export sheet").</div>
+</div>
+
+<script>
+const CARDS=[
+ {n:8,file:"ui-mockup-8-blotter.html",shot:"thumb-8.png",kind:"anchor",name:"8 — Opportunity Blotter",tagline:"Bloomberg + TradingView + Excel",
+  philo:"The default home: a Bloomberg-dense Opportunity Blotter as the core, with a sport×class RADAR heatmap on top ('where do I look first?'), a Lifecycle/Tape strip below ('what changed?'), and a compact right-rail Inspector. Excel grid control (frozen columns, column chooser, multi-sort, conditional formatting, density) + TradingView screener mechanics (saved views/presets, search, watchlist stars).",
+  feat:["dense blotter","radar heatmap","lifecycle tape","column chooser","multi-sort","presets + watchlist"]},
+ {n:9,file:"ui-mockup-9-inspector.html",shot:"thumb-9.png",kind:"anchor",name:"9 — Leg-Proof Inspector",tagline:"Trading Technologies",
+  philo:"The single-opportunity proof surface (TT leg-by-leg): exact buy-only plan, a full leg table (side · market · price · size · cost · blockers/caveats), payoff scenarios with bounded-loss bars, quote/size evidence, why-tradable-or-not, the gross-vs-net limitations box, 9-dim confidence, and per-leg Kalshi links. This is where confusion gets resolved.",
+  feat:["TT leg table","payoff scenarios","quote/size evidence","gross-vs-net box","9-dim confidence","Kalshi links"]},
+ {n:10,file:"ui-mockup-10-bounded-loss.html",shot:"thumb-10.png",kind:"innov",name:"10 — Bounded-Loss Workbench",tagline:"thinkorswim option-chain",
+  philo:"Bounded-RISK / convex candidates in their OWN area, kept apart from the strict executable blotter. An option-chain table: cost over floor · max loss · max upside · upside:risk · parent/child leg prices · quote health · vertical-vs-calendar resolution · confidence label (uncalibrated / review-only / risk-budget candidate), with a per-row bounded payoff diagram. Conservative wording throughout — conditional ratio shown as '—' (not in sample data), no fake Greeks, never 'arbitrage'.",
+  feat:["option-chain table","bounded payoff diagram","cost-over-floor","resolution mode","confidence labels","non-executable banner"]},
+ {n:7,file:"ui-mockup-7-terminal-pro.html",shot:"thumb-7.png",kind:"anchor",name:"★ Terminal Pro (base)",tagline:"Merge — Bloomberg + TT + Hybrid",
+  philo:"The unified direction: Bloomberg amber/command-line identity, a Trading-Technologies docked workspace (blotter · read-only depth ladder · trade card · watch · alerts), and Hybrid usability (tiles, lens switcher, sparklines, rich trade card, simulate-scan). Variations 7A–7D below are flavors of this.",
+  feat:["command line","docked panels","read-only MD ladder","rich DES card","high-contrast toggle","decision checklist"]},
+ {n:"7A",file:"ui-mockup-7a-phosphor.html",shot:"thumb-7a.png",kind:"anchor",name:"7A — Phosphor",tagline:"Variation · NiceGUI-feasible",
+  philo:"Green-phosphor CRT palette, ultra-dense rows, the same docked layout, hero command line. The hardcore old-school terminal flavor.",
+  feat:["green CRT","ultra-dense","docked","hero command line"]},
+ {n:"7B",file:"ui-mockup-7b-slate.html",shot:"thumb-7b.png",kind:"anchor",name:"7B — Slate",tagline:"Variation · NiceGUI-feasible",
+  philo:"Cool slate + cyan palette, comfortable density, two-pane focus (big blotter + always-on big trade card with embedded depth strip), watch/alerts as a top ticker, Ctrl+K command palette. The readable 'default for everyone' candidate.",
+  feat:["slate palette","two-pane focus","comfortable","Ctrl+K palette"]},
+ {n:"7C",file:"ui-mockup-7c-blotter-max.html",shot:"thumb-7c.png",kind:"anchor",name:"7C — Blotter-Max",tagline:"Variation · NiceGUI-feasible",
+  philo:"Amber identity, a full-width blotter that dominates, with the trade card + MD ladder sliding up as a bottom detail dock on row-select; slim right rail for watch/alerts. List-first power layout.",
+  feat:["amber","full-width blotter","slide-up detail dock","dense"]},
+ {n:"7D",file:"ui-mockup-7d-pro-desk.html",shot:"thumb-7d.png",kind:"innov",name:"7D — Pro Desk (beyond NiceGUI)",tagline:"Variation · needs a dedicated frontend",
+  philo:"The ceiling: true window manager — drag-move + resize + pop-out panels — an AG-Grid-class virtualized blotter with per-cell streaming flashes, and a fuzzy Ctrl+K command palette. Picking this means moving off NiceGUI to a dedicated web frontend (React/Svelte + AG-Grid + docking) on the FastAPI backend.",
+  feat:["drag/resize/pop-out","AG-Grid-class grid","fuzzy palette","streaming cell-flash","off-NiceGUI"]},
+ {n:1,file:"ui-redesign-mockup.html",shot:"mockup-dark.png",kind:"anchor",name:"Hybrid Dashboard",tagline:"Ingredient — usability layer",
+  philo:"The baseline you already liked: a single dense+polished page — landing tiles, status strip, restructured grids, lens switcher, trade-card drawer. The safe, familiar evolution of today's app.",
+  feat:["3 surfaces","status strip","trade-card drawer","command palette","dark+light"]},
+ {n:2,file:"ui-mockup-2-terminal.html",shot:"thumb-2.png",kind:"anchor",name:"Terminal",tagline:"Ingredient — Bloomberg Terminal",
+  philo:"Function-code command line (OPP / RES / OPS / <ticker> <GO>), amber-on-black, maximum density, monospace everything, DES-style trade-card screen. Pure muscle-memory for a Bloomberg user.",
+  feat:["command line","function codes","amber CRT","DES card","keyboard-first"]},
+ {n:3,file:"ui-mockup-3-workspace.html",shot:"thumb-3.png",kind:"anchor",name:"Workspace",tagline:"Ingredient — Trading Technologies",
+  philo:"Dockable panels with tab strips and workspaces, centered on an MD-Trader-style price ladder (read-only depth DOM). The trading-platform layout traders expect from X_TRADER.",
+  feat:["dockable panels","MD ladder / DOM","workspaces","analysis ticket","depth"]},
+ {n:4,file:"ui-mockup-4-workbook.html",shot:"thumb-4.png",kind:"anchor",name:"Workbook",tagline:"Anchored — Excel",
+  philo:"A live spreadsheet: row/column headers, a formula bar that shows each cell's basis/provenance, conditional-format heatmaps, sheet tabs (Opportunities · Research · Ops · Watchlist · Journal), export everywhere.",
+  feat:["sheet tabs","formula/provenance bar","heatmaps","frozen panes","light default"]},
+ {n:5,file:"ui-mockup-5-triage.html",shot:"thumb-5.png",kind:"innov",name:"Triage",tagline:"Innovative — attention-first",
+  philo:"Answers \"what deserves attention now?\" literally: a prioritized card feed + a large focus pane with decision actions (Watch / Alert / Snooze / Dismiss). Keyboard triage, inbox-zero for opportunities.",
+  feat:["card feed","focus pane","confidence rings","keyboard triage","workflow primitives"]},
+ {n:6,file:"ui-mockup-6-radar.html",shot:"thumb-6.png",kind:"innov",name:"Radar",tagline:"Innovative — spatial analytics",
+  philo:"The opportunity space as an interactive scatter/quadrant: edge vs confidence, bubble size = liquidity, color = bucket. The lens remaps the axes; click a node for its card. Built for spotting clusters and outliers.",
+  feat:["scatter canvas","quadrants","lens remaps axes","synced list","analytics-first"]},
+];
+document.getElementById("grid").innerHTML=CARDS.map(c=>`
+ <div class="card">
+   <div class="shot"><div class="num">${c.n}</div><img src="${c.shot}" alt="${c.name}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="ph" style="display:none">preview — open to view</div></div>
+   <div class="body">
+     <h2>${c.name}</h2>
+     <div class="kind ${c.kind}">${c.kind==='anchor'?'◆':'✦'} ${c.tagline}</div>
+     <div class="philo">${c.philo}</div>
+     <div class="feat">${c.feat.map(f=>`<span>${f}</span>`).join("")}</div>
+     <a class="open" href="${c.file}">Open ${c.name} →</a>
+   </div>
+ </div>`).join("");
+</script>
+</body>
+</html>
