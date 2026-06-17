@@ -6,7 +6,8 @@
  * back on discrete actions / pointer-up. */
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { useTerminal } from "./context";
+import { TerminalProvider, useTerminal } from "./context";
+import type { Feed } from "./feed";
 import Blotter from "./Blotter";
 import Inspector, { Detail, Formulas } from "./Inspector";
 import Ladder from "./Ladder";
@@ -68,25 +69,30 @@ const PANELS: PanelDef[] = [
 ];
 const BY_ID: Record<string, PanelDef> = Object.fromEntries(PANELS.map((p) => [p.id, p]));
 
-/* Pop a panel into its own OS window as a LIVE React tree (not a static DOM clone): we open the window,
- * copy the page's stylesheets, then `createPortal` the panel's real body into it. Because the portal stays
- * part of the MAIN React tree, it shares the same TerminalProvider context — so its tabs/controls work and
- * its selection is LINKED to the main window (click a row in the Scanner → the popped-out Inspector follows,
- * and vice-versa). Cleans up on manual close (polls `win.closed`), on unload, and on unmount. Rendering via
- * React (never innerHTML) preserves the "never re-parse untrusted feed text as markup" safety rule. */
-function PopoutPortal({ panel, onClose }: { panel: PanelDef; onClose: () => void }) {
+// Panels shown in an independent pop-out workspace: Scanner + Inspector + Ladder — the linked trading trio.
+const POPOUT_PANELS = ["p-blotter", "p-des", "p-ladder"];
+
+/* An INDEPENDENT pop-out mini-workspace in its own OS window. We open the window, copy the page's
+ * stylesheets, then `createPortal` a NESTED <TerminalProvider embedded={feed}> into it. The nested provider
+ * shares the parent's feed DATA (passed as `feed`, kept live as the parent re-renders) but owns its OWN view
+ * state — selection, Inspector tab, lens, filters — so its toggles DON'T leak to the main window, and its
+ * Scanner row clicks drive its OWN Inspector (linked within this window). Multiple pop-outs are each
+ * independent. Cleans up on manual close (polls win.closed), on unload, and on unmount. React-rendered (never
+ * innerHTML), preserving the no-reparse-untrusted-markup rule. */
+function PopoutPortal({ feed, onClose }: { feed: Feed | null; onClose: () => void }) {
   const [container, setContainer] = useState<HTMLElement | null>(null);
   useEffect(() => {
-    const w = window.open("", "_blank", "width=680,height=760");
-    if (!w) { alert("Popup blocked — allow popups for this site to pop a panel out."); onClose(); return; }
+    const w = window.open("", "_blank", "width=900,height=840");
+    if (!w) { alert("Popup blocked — allow popups for this site to pop out a workspace."); onClose(); return; }
     const doc = w.document;
-    doc.title = `${panel.title} — popout`;
+    doc.title = "Scanner workspace — popout";
     doc.documentElement.setAttribute("data-theme", document.documentElement.dataset.theme ?? "");
+    doc.documentElement.setAttribute("data-textsize", document.documentElement.dataset.textsize ?? "");
     document.querySelectorAll('link[rel="stylesheet"],style').forEach((n) => doc.head.appendChild(doc.importNode(n, true)));
     doc.body.style.margin = "0";
     const root = doc.createElement("div");
-    root.className = "panel popout";
-    root.style.height = "100vh";
+    root.className = "popoutws";
+    root.style.height = "100vh"; root.style.overflow = "auto";
     doc.body.appendChild(root);
     setContainer(root);
     const onUnload = () => onClose();
@@ -101,11 +107,15 @@ function PopoutPortal({ panel, onClose }: { panel: PanelDef; onClose: () => void
   }, []);
   if (!container) return null;
   return createPortal(
-    <>
-      <div className="ph"><span className="n">{panel.n}</span><h3>{panel.title}</h3>
-        <span className="hint">{panel.hint || ""}</span></div>
-      {panel.body}
-    </>,
+    <TerminalProvider embedded={feed}>
+      {POPOUT_PANELS.map((id) => BY_ID[id]).filter(Boolean).map((p) => (
+        <div className="panel popout" key={p.id} style={{ marginBottom: 6 }}>
+          <div className="ph"><span className="n">{p.n}</span><h3>{p.title}</h3>
+            <span className="hint">{p.hint || ""}</span></div>
+          {p.body}
+        </div>
+      ))}
+    </TerminalProvider>,
     container,
   );
 }
@@ -119,7 +129,8 @@ export default function Workspace() {
   const draggingRef = useRef(false);                          // true during a splitter resize (defer commit)
   const dragId = useRef<string | null>(null);
   const refs = useRef<Record<string, HTMLDivElement | null>>({});
-  const [popouts, setPopouts] = useState<string[]>([]);      // panel ids currently popped into their own window
+  const [popouts, setPopouts] = useState<number[]>([]);      // ids of open independent pop-out workspaces
+  const popoutSeq = useRef(0);
 
   useEffect(() => { draftRef.current = draft; }, [draft]);
   // Pull EXTERNAL context-layout changes (hydration / preset / reset) into the local draft; skip our own commits.
@@ -147,11 +158,11 @@ export default function Workspace() {
     apply({ ...s, cols: next, st: stNext });
   };
 
-  // pop-out: render the panel as a LIVE React tree in its own window (see PopoutPortal). Toggles — popping an
-  // already-popped panel brings nothing new; closing the window (or this toggle) removes it. Multiple panels
-  // can be popped at once, each in its own window, all sharing the main selection state.
-  const popOut = (id: string) => setPopouts((p) => (p.includes(id) ? p : [...p, id]));
-  const closePopout = (id: string) => setPopouts((p) => p.filter((x) => x !== id));
+  // pop-out: open a NEW independent mini-workspace window (Scanner + Inspector + Ladder under a nested
+  // embedded provider — its own selection/toggles, shared feed data; see PopoutPortal). Multiple allowed,
+  // each independent of the main window and of each other.
+  const popOut = () => setPopouts((p) => [...p, ++popoutSeq.current]);
+  const closePopout = (id: number) => setPopouts((p) => p.filter((x) => x !== id));
 
   // Column-WIDTH resize (M/R). Live on the draft; committed once on pointer-up/cancel (no per-tick persist).
   const dragV = (which: "M" | "R") => (e: React.PointerEvent) => {
@@ -209,7 +220,7 @@ export default function Workspace() {
             <span className="n">{p.n}</span><h3>{p.title}</h3>
             <span className="hint">{p.hint || ""}</span>
             <span className="dock">
-              <span title="Pop out (live, linked)" onClick={() => popOut(p.id)}>⧉</span>
+              <span title="Pop out an independent workspace (Scanner + Inspector + Ladder)" onClick={() => popOut()}>⧉</span>
               <span title="Maximize" onClick={() => patch(p.id, { maxed: !s.maxed })}>▢</span>
               <span title="Collapse" onClick={() => patch(p.id, { collapsed: !s.collapsed })}>▁</span>
               <span title="Remove from this view" onClick={() => patch(p.id, { hidden: true })}>✕</span>
@@ -232,9 +243,9 @@ export default function Workspace() {
 
   return (
     <div className="workspace" id="ws">
-      {popouts.map((id) => BY_ID[id]
-        ? <PopoutPortal key={id} panel={BY_ID[id]} onClose={() => closePopout(id)} />
-        : null)}
+      {popouts.map((id) => (
+        <PopoutPortal key={id} feed={t._feed} onClose={() => closePopout(id)} />
+      ))}
       <div className="col" id="colL" {...colDrop("L")}>{renderCol("L")}</div>
       {!colHidden.M ? <>
         <div className="vsplit" onPointerDown={dragV("M")} />
