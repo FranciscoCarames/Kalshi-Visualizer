@@ -682,9 +682,9 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             show_net_sw = ui.switch("Show net of fees", value=False).tooltip(
                 "Reveal estimated net-of-fees columns (general taker-fee estimate). Display only — does not "
                 "affect ranking, bucketing, or actionability.")
-            # Wave 1b: default-ON row-hide for fee-negative actionable rows (parity with the SPA). Taker-
-            # basis; never re-buckets — purely a display declutter. The hidden count surfaces in the title.
-            hide_fee_neg_sw = ui.switch("Hide fee-negative", value=True).tooltip(
+            # Default-OFF row-hide for fee-negative actionable rows (owner pref; parity with the SPA).
+            # Taker-basis; never re-buckets — purely a display declutter. Hidden count surfaces in the title.
+            hide_fee_neg_sw = ui.switch("Hide fee-negative", value=False).tooltip(
                 "Hide Actionable rows whose estimated TAKER net-of-fees edge is ≤ 0 (a display declutter — "
                 "never re-buckets; the count of hidden rows shows in the Actionable title).")
         ui.label("Sections").classes("text-sm font-bold mt-2")
