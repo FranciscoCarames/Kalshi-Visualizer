@@ -22,9 +22,15 @@ both; if you must, set `AUTH_ENABLED=1` yourself.
 ## Account creation
 
 - **Self-registration (default ON):** the login screen shows a "create one" link; `POST /auth/register`
-  validates the username (3–32 chars, `[A-Za-z0-9._-]`) + password strength, rejects a taken name, and
-  logs the new user straight in. Rate-limited by (IP, username) like login. The **only** way to access an
-  account's data is its username + password.
+  validates the username (3–32 chars, `[A-Za-z0-9._-]`), rejects a taken name, and logs the new user
+  straight in. Rate-limited by (IP, username) like login. The **only** way to access an account's data is
+  its username + password.
+- **Password policy (owner decision, 2026-06-17):** there is **NO strength floor** — any non-empty
+  password is accepted (subject only to a max-length DoS cap, `AUTH_MAX_CRED_LEN`). The former 10-char
+  minimum and common-password blocklist were removed. This is a **deliberate downgrade for a read-only,
+  trusted-LAN deployment behind WireGuard** — it is NOT appropriate for an internet-facing install. Keep
+  the app off the public internet, and prefer `AUTH_ALLOW_SIGNUP=0` (admin-created accounts only) if weak
+  user-chosen passwords are a concern. Passwords are still hashed with argon2id.
 - **Admin-created:** `python -m manage_users add <username>` (see Operations). Use this and set
   `AUTH_ALLOW_SIGNUP=0` if you want a closed set of accounts.
 - **Trade-offs to know (trusted-LAN model):** open registration means anyone who can reach the host can
@@ -148,7 +154,8 @@ python -m manage_users disable <username>     # revokes live sessions + device t
 python -m manage_users enable <username>
 python -m manage_users unlock <username>      # clear a brute-force lockout
 
-# First-admin bootstrap (one-shot, only when zero users exist; never overwrites; rejects weak passwords):
+# First-admin bootstrap (one-shot, only when zero users exist; never overwrites). No strength floor is
+# enforced (owner policy) — still choose a long passphrase for an admin account:
 export APP_ADMIN_USER=admin APP_ADMIN_PASSWORD='a-long-passphrase'
 python serve.py
 ```

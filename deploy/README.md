@@ -52,3 +52,35 @@ Internal-only; **do not expose to the public internet.**
 - `curl http://127.0.0.1:$API_PORT/healthz` → `{"status":"ok"}` (liveness)
 - `curl http://127.0.0.1:$API_PORT/readyz` → `ready` after the first scan (`degraded` before)
 - One process only: `sudo ss -ltnp | grep :$API_PORT`
+
+## Updating (after a new release)
+A bare `git pull` updates **code only** — NOT the installed Python packages and NOT the built frontend
+(`frontend/dist` is gitignored and is what prod serves). Run the bundled script, which does the whole safe
+sequence (clean-tree + branch check → record commit + print a rollback line → `git pull --ff-only` →
+`uv pip install -r requirements.txt` → `npm ci && npm run build` → `systemctl restart` → poll `/healthz`):
+```bash
+sudo -E SERVICE=kalshi-dashboard HEALTH_URL=http://127.0.0.1:$API_PORT deploy/update.sh
+```
+Defaults: `SERVICE=kalshi-dashboard`, `HEALTH_URL=http://127.0.0.1:8000`, `VENV=.venv`, `BRANCH=main`.
+If it reports unhealthy it prints the exact rollback command (`git checkout <old> && systemctl restart …`).
+
+### Toolchain assumptions (don't drift)
+- **Python 3.13**, venv is **uv-managed** (no `pip` inside): install with `uv pip install -r requirements.txt`
+  — `requirements.txt` is the source of truth (a new import MUST be added there).
+- **Node**: deploys use `npm ci` (needs `package-lock.json`), not `npm install`, for reproducibility.
+- `frontend/dist` must be rebuilt on every deploy that pulls frontend changes (the update script does this).
+
+## Upgrading from an older (auth-less) deploy — READ THIS
+The React rewrite turned **authentication ON by default** (`serve.apply_runtime_defaults()` setdefaults
+`AUTH_ENABLED=1` + open signup). With auth on, `serve.py`'s fail-closed bind guard **refuses a non-loopback
+bind** unless you also have a seeded user, TLS (or a declared HTTPS reverse proxy), and `APP_ALLOWED_HOSTS`.
+A previously auth-less LAN deployment ("WireGuard is the perimeter") will therefore **fail to start** after
+the update. Two choices:
+- **Keep the old open posture:** set `AUTH_ENABLED=0` in the env file (the guard messages are otherwise
+  buried in `journalctl`).
+- **Adopt auth:** seed a user (`python manage_users.py add <name>`), set `APP_ALLOWED_HOSTS`, and put TLS /
+  a reverse proxy in front. See `docs/AUTH.md`.
+
+Note (2026-06-17): the password **strength floor was removed** by owner decision — any non-empty password is
+accepted on a trusted-LAN install. Keep this app off the public internet, and consider `AUTH_ALLOW_SIGNUP=0`
+so only admin-created accounts exist. See `docs/AUTH.md`.
