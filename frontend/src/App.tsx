@@ -284,6 +284,11 @@ function Shell() {
       <div className="scanbar" />
       <div className="statline">
         <span className="s"><b className={t.scanText ? "amber blink" : t.err ? "red" : "green"}>●</b> {t.scanText ?? <>SNAPSHOT #{m?.snapshot_id ?? "—"} · <AgeClock fetchedAt={m?.fetched_at ?? null} /> ago</>}</span>
+        {m?.price_source === "live" && (
+          <span className="s" title={`Live WS prices · covers ${m?.live_covered ?? 0}/${m?.live_total ?? 0} markets · ${m?.live_actionability ? "actionability live (Stage 2D)" : "display only — Actionable set stays REST-confirmed (Stage 2C)"}`}>
+            <b className="green blink">◉ LIVE</b> {m?.live_covered ?? 0}/{m?.live_total ?? 0}{!m?.live_actionability && " · display"}
+          </span>
+        )}
         <span className="s">Opps <b>{(m?.n_total ?? 0).toLocaleString()}</b></span>
         <span className="s">Contracts <b>{(m?.contracts ?? 0).toLocaleString()}</b></span>
         <span className="s">Checks <b>{(m?.checks ?? 0).toLocaleString()}</b></span>

@@ -46,6 +46,12 @@ export interface FeedRow {
   pnode?: string; cnode?: string;
   pbid?: number | null; cask?: number | null; pdisp?: number | null; cdisp?: number | null;
   legs?: FeedLeg[]; nlegs?: number; url?: string;
+  // Real-time Stage 2 (live overlay), present only on a LIVE push: per-row freshness/coverage. price_source
+  // ∈ live|mixed|rest; live_demoted+live_block_reason mark a row held out of Actionable (stale/uncovered
+  // leg, or a new live-only edge in 2C). Display-only — never re-ranks client-side.
+  price_source?: string; live_coverage?: boolean; all_legs_live?: boolean;
+  live_legs?: number; legs_total?: number; price_age_s?: number | null;
+  live_demoted?: boolean; live_block_reason?: string;
   [k: string]: unknown;
 }
 
@@ -62,6 +68,11 @@ export interface FeedMeta {
   series_errors?: unknown;
   defaults?: BandDefaults;       // old-dashboard band-control defaults (single-sourced from config)
   fee_data_status?: string;      // DISPLAY-ONLY fee provenance: ok/partial/fallback/failed/capped/disabled
+  // Real-time Stage 2 (live WS overlay): present only on a LIVE push. price_source="live"; live_seq is a
+  // monotonic id (the flash diff advances on it since snapshot_id stays the REST snapshot's). Coverage is
+  // honest (covered/total markets). live_actionability=false ⇒ Stage 2C (live display, REST-confirmed acts).
+  price_source?: string; live_seq?: number; live_actionability?: boolean;
+  live_covered?: number; live_total?: number;
 }
 
 export interface Feed { meta: FeedMeta; opps: FeedRow[]; }

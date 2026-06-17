@@ -274,7 +274,11 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
   const [flashIds, setFlashIds] = useState<Set<string>>(new Set());
   const [baselineReady, setBaselineReady] = useState(false);          // true once a real diff vs a prior snap ran
   useEffect(() => {
-    const sid = meta?.snapshot_id ?? null;
+    // Diff key advances on live_seq too: a LIVE overlay push keeps the REST snapshot_id but moves prices,
+    // so without this the NEW/up/down flash would never fire on a live tick. Composite keeps both monotonic.
+    const sid = meta?.live_seq != null
+      ? (meta.snapshot_id ?? 0) * 1_000_000 + meta.live_seq
+      : meta?.snapshot_id ?? null;
     if (sid == null || sid === prevSnapRef.current) return;          // no snapshot / unchanged → keep flags
     const isFirst = prevSnapRef.current === null;
     const { change: chg, flash } = diffSnapshot(prevEdgeRef.current, opps, isFirst, seenEverRef.current);
@@ -283,7 +287,7 @@ export function TerminalProvider({ children }: { children: ReactNode }) {
     prevEdgeRef.current = edgeMap(opps);
     prevSnapRef.current = sid;
     for (const o of opps) seenEverRef.current.add(o.id);            // remember after diffing
-  }, [meta?.snapshot_id, opps]);
+  }, [meta?.snapshot_id, meta?.live_seq, opps]);
 
   const sports = useMemo(() => Object.keys(meta?.sports ?? {}).sort(), [meta]);
   const colKey = colKeyOf(zone, section);
