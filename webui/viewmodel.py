@@ -478,6 +478,10 @@ def risk_budget_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str
     wc, bc = o.get("worst_case_profit_c"), o.get("best_case_profit_c")
     _r2 = lambda x: None if _num_or_none(x) is None else round(x, 2)   # noqa: E731 — display rounding
     _sized = _sized_at_budget(o)   # PR E: ($100-capped units, gross max-loss ¢, gross best-upside ¢) or None
+    # Table-clarity (EXPERIMENTAL, display-only): top-of-book COST capacity in $ = cost_c × top-book units
+    # / 100 — the dollars to take the whole VISIBLE top book (NOT full-depth, NOT guaranteed fill). Makes a
+    # 49-unit longshot vs a 40,000-unit name tangible. Centralised here so the SPA feed + NiceGUI share it.
+    _cap_c, _cap_u = _num_or_none(o.get("cost_c")), _num_or_none(o.get("exec_min_size"))
     return _stamp_severity({
         "opportunity_id": o.get("opportunity_id"),
         "new": o.get("opportunity_id") in new_ids,   # bool → a coloured "NEW" badge in the cell slot
@@ -524,6 +528,8 @@ def risk_budget_row(o: dict[str, Any], new_ids: set[str], changes: dict[str, str
                            if on),
         "max_units": _num_or_none(o.get("exec_min_size")),
         "quote_health": str(o.get("comp_quote_quality") or ""),
+        # Top-book COST capacity $ (experimental; display-only) — see note above.
+        "capacity": round(_cap_c * _cap_u / 100, 2) if (_cap_c is not None and _cap_u is not None) else None,
         "units_100": _sized[0] if _sized else None,
         "loss_100": round(_sized[1] / 100, 1) if _sized else None,    # gross max loss at $100, in dollars
         "upside_100": round(_sized[2] / 100, 1) if _sized else None,  # gross best upside at $100, in dollars

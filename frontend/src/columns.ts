@@ -21,6 +21,7 @@ export const COLS: Record<string, Col[]> = {
     C("cheap", "Cheap vs peers", "text"), C("sport", "Sport", "text"), NAME, C("detail", "Detail", "text", true),
     C("wins_if", "Wins if…", "text"), C("cost", "Cost ¢", "c", true), C("max_loss", "Max loss ¢", "c"),
     C("max_profit", "Max profit ¢", "c"), C("max_units", "Max units", "num"),
+    C("capacity", "Top-book cost cap $", "money", false, "EXPERIMENTAL · display-only: $ to take the whole VISIBLE top book (cost ¢ × top-book units) — NOT full-depth, NOT guaranteed fill; makes a thin longshot vs a deep name tangible"),
     C("loss_100", "Max loss @ $100", "money"), C("upside_100", "Best upside @ $100", "money"),
     C("quote_health", "Quote health", "qh"), C("ratio", "Upside:risk", "num"),
     C("ev", "Implied EV ¢", "c", false, "gross · top-of-book · display proxy · not net of fees · not fair value · never affects ranking"),

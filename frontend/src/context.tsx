@@ -341,7 +341,10 @@ export function TerminalProvider({ children, embedded }: { children: ReactNode; 
     if (section === "bounded" && split !== "all") {
       r = r.filter((o) => (String(o.resolution_mode || "calendar")) === split);
     }
-    const sorted = applyLens(r, lens);
+    // Table-clarity (experimental): the bounded-loss bucket DEFAULTS to the implied-EV (chance-weighted)
+    // order so genuine candidates lead instead of big-payout longshots — unless the user picks a lens.
+    // "ev" is an UNCALIBRATED display proxy, never executable ranking. Other sections keep engine order.
+    const sorted = applyLens(r, lens || (section === "bounded" ? "ev" : ""));
     // Cheap-NO "group by ladder" is a final display grouping (after the lens), by tournament/ladder.
     if (section === "cheapno" && band.groupByLadder) {
       return [...sorted].sort((a, b) => String(a.sub || "").localeCompare(String(b.sub || "")));

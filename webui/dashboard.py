@@ -287,6 +287,9 @@ _RISK_COLUMNS = [
     {"name": "max_loss", "label": "Max loss ¢", "field": "max_loss", "align": "center", "sortable": True},
     {"name": "max_profit", "label": "Max profit ¢", "field": "max_profit", "align": "center", "sortable": True},
     {"name": "max_units", "label": "Max units", "field": "max_units", "align": "center", "sortable": True},
+    # Table-clarity (experimental, display-only): $ to take the whole VISIBLE top book (cost × units) —
+    # NOT full-depth, NOT guaranteed fill. Shared with the SPA via vm.risk_budget_row.
+    {"name": "capacity", "label": "Top-book cost cap $", "field": "capacity", "align": "center", "sortable": True},
     {"name": "loss_100", "label": "Max loss @ $100 ($)", "field": "loss_100", "align": "center", "sortable": True},
     {"name": "upside_100", "label": "Best upside @ $100 ($)", "field": "upside_100", "align": "center", "sortable": True},
     {"name": "quote_health", "label": "Quote health", "field": "quote_health", "align": "center", "sortable": True},
@@ -1392,7 +1395,7 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
     for _t in (actionable, review, blocked):
         for _f in ("roi", "units", "profit", "net_edge", "net_profit", "fees"):
             _t.add_slot(f"body-cell-{_f}", _num_cell_slot(_f))
-    for _f in ("cost", "max_loss", "max_profit", "max_units", "loss_100", "upside_100", "ratio",
+    for _f in ("cost", "max_loss", "max_profit", "max_units", "capacity", "loss_100", "upside_100", "ratio",
                "gap_vs_be", "roc", "spread_over_parent", "spread_over_child",
                "parent_outright", "child_outright", "display_spread"):
         for _rb in (rb_all, rb_vertical, rb_calendar):
@@ -1797,6 +1800,11 @@ def dashboard(sport: str = "", tournament: str = "", participant: str = "",
             min_outright_c=int(rb_min_outright.value or 0),
             max_spread_ratio_hundredths=round(float(rb_max_ratio.value or 0) * 100)) if include_rb else []
         vm.flag_peer_cheapness(rbv)        # PR F: stamp cheap_cost/cheap_ratio (same-sport peers); display-only
+        # Table-clarity (experimental): default the bounded-loss order to implied-EV (chance-weighted) so
+        # genuine candidates lead, not big-payout longshots. Uncalibrated display proxy; NEVER executable
+        # ranking (engine order is unchanged — this only reorders the display list). Parity with the SPA.
+        _ev = lambda o: (e if (e := vm._implied_ev_c(o)) is not None else float("-inf"))   # noqa: E731
+        rbv.sort(key=_ev, reverse=True)
         rb_vert, rb_cal = vm.split_by_resolution(rbv)
         # PR E: the combined "All" table shows the full ranked set; the splits show each kind.
         rb_all.rows = [vm.risk_budget_row(o, new_ids, chg, flash) for o in rbv]
