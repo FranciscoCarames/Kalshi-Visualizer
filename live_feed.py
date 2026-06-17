@@ -134,12 +134,10 @@ class OrderBook:
         self.last_update_ts = now
 
     def apply_delta(self, side: str, price: Any, delta: Any, seq: int | None, *, now: float) -> bool:
-        """Apply one single-level `orderbook_delta`. Returns True if applied, False if it forced a desync
-        (a seq gap — the caller must re-request a snapshot). A delta on an unsynced book is ignored."""
-        # Sequence gap → the book is no longer trustworthy. Mark desynced; the caller resyncs via snapshot.
-        if seq is not None and self.seq is not None and seq != self.seq + 1:
-            self.synced = False
-            return False
+        """Apply one single-level `orderbook_delta`. Returns True if it updated the book, False if rejected
+        (bad fields, or the book was never snapshotted). Kalshi's `seq` is a CONNECTION-wide counter (NOT
+        per-market — verified live: nearly every per-market delta would otherwise look like a gap), so it is
+        tracked for observability at the connection level (`LiveFeed`), NOT used to desync a single book."""
         if not self.synced:
             return False
         book = self.yes if side == "yes" else self.no if side == "no" else None
@@ -319,9 +317,15 @@ def plan_subscriptions(db_path: str | None = None, cap: int | None = None) -> li
     market stays REST-only and is labeled uncovered. (Tier-1-first prioritization — Actionable/Review legs
     and their MECE peers ahead of the rest — is the Stage 2D refinement; this keeps the universe honest and
     bounded for shadow + display.) Imports store/sports LAZILY so a default-OFF deploy needn't load them."""
+    import os
+
     import store
     from sports import all_sports
-    cap = cap if cap is not None else config.LIVE_MAX_SUBSCRIPTIONS
+    if cap is None:
+        try:
+            cap = int(os.getenv("KALSHI_LIVE_MAX_SUBSCRIPTIONS", "") or config.LIVE_MAX_SUBSCRIPTIONS)
+        except ValueError:
+            cap = config.LIVE_MAX_SUBSCRIPTIONS
     sid = store.latest_snapshot_id(db_path=db_path)
     if sid is None:
         return []
@@ -375,6 +379,17 @@ class LiveFeed:
         self._stop = False
         self._sid_to_ticker: dict[int, str] = {}       # subscription id → market_ticker (for delta routing)
         self._next_id = 1
+        self._last_seq: int | None = None              # connection-wide seq (for the gap metric only)
+
+    def _track_seq(self, seq: int | None) -> None:
+        """Count CONNECTION-level seq gaps (a missed message anywhere) for observability — Kalshi's seq is
+        global, not per-market, so it can't gate a single book's freshness."""
+        if seq is None:
+            return
+        if self._last_seq is not None and seq != self._last_seq + 1:
+            with metrics.lock:
+                metrics.seq_gaps += 1
+        self._last_seq = seq
 
     # --- message dispatch (pure over shared state; no socket) ------------------------------------------
     def _dispatch(self, msg: dict[str, Any]) -> None:
@@ -400,7 +415,8 @@ class LiveFeed:
             if not tk:
                 return
             # Kalshi WS snapshot carries `yes_dollars_fp`/`no_dollars_fp` — each a [[price$, size], …] bid
-            # ladder (verified live 2026-06-17), NOT `yes`/`no`. seq is top-level + per-market.
+            # ladder (verified live 2026-06-17), NOT `yes`/`no`. seq is top-level + connection-wide.
+            self._track_seq(msg.get("seq"))
             self.book.book(tk).apply_snapshot(
                 body.get("yes_dollars_fp"), body.get("no_dollars_fp"), msg.get("seq"), now=now)
             self._notify(tk)
@@ -411,13 +427,9 @@ class LiveFeed:
                 return
             ob = self.book.book(tk)
             # Delta fields are `price_dollars`/`delta_fp`/`side` (verified live 2026-06-17).
-            applied = ob.apply_delta(body.get("side"), body.get("price_dollars"), body.get("delta_fp"),
-                                     msg.get("seq"), now=now)
-            if not applied and not ob.synced:
-                with metrics.lock:
-                    metrics.seq_gaps += 1
-                self._schedule_resync(tk)
-            else:
+            self._track_seq(msg.get("seq"))            # CONNECTION-level gap metric (seq is global)
+            if ob.apply_delta(body.get("side"), body.get("price_dollars"), body.get("delta_fp"),
+                              msg.get("seq"), now=now):
                 self._notify(tk)
             return
         if mtype == "error":
@@ -435,18 +447,6 @@ class LiveFeed:
                 self._on_book_change(ticker)
             except Exception:                          # noqa: BLE001 — a consumer error must not kill the feed
                 pass
-
-    def _schedule_resync(self, ticker: str) -> None:
-        """A desynced book is reseeded from a fresh REST snapshot (best-effort; the WS `get_snapshot`
-        request is the preferred path when the socket is healthy — see `_request_ws_snapshot`)."""
-        try:
-            import kalshi_client
-            ob_rest = kalshi_client.get_orderbook(ticker)
-            self.book.book(ticker).apply_snapshot(
-                ob_rest.get("yes"), ob_rest.get("no"), None, now=time.monotonic())
-            self._notify(ticker)
-        except Exception:                              # noqa: BLE001 — leave it desynced; 2D blocks it
-            pass
 
     # --- subscription command -------------------------------------------------------------------------
     def _subscribe_cmd(self, tickers: list[str]) -> dict[str, Any]:

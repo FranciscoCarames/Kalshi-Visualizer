@@ -91,15 +91,17 @@ def test_delta_add_update_remove_moves_top_of_book():
     assert ob.derived()["yes_bid_size"] == 13
 
 
-def test_seq_gap_desyncs_and_blocks_until_reseed():
+def test_delta_applied_leniently_across_global_seq_jump():
+    # Kalshi's seq is connection-wide, so a per-market delta routinely jumps far ahead of this book's last
+    # seq. That is NOT a per-book gap — the delta is still applied (a real missed message only makes the book
+    # slightly stale, acceptable for display; the connection-level gap METRIC lives on LiveFeed).
     ob = live_feed.OrderBook()
     ob.apply_snapshot([["0.50", 10]], [], 5, now=1.0)
-    assert ob.apply_delta("yes", "0.60", 1, 99, now=1.0) is False  # seq jumped 5→99 → gap
-    assert ob.synced is False
-    # a delta on a desynced book is ignored (returns False) until a fresh snapshot reseeds it
-    assert ob.apply_delta("yes", "0.60", 1, 100, now=1.0) is False
-    ob.apply_snapshot([["0.60", 2]], [], 200, now=2.0)
+    assert ob.apply_delta("yes", "0.60", 1, 9999, now=1.0) is True  # seq 5→9999 (global) → still applied
     assert ob.synced is True and ob.derived()["yes_bid_c"] == 60
+    # an unsnapshotted book still rejects deltas (must seed from a snapshot first)
+    fresh = live_feed.OrderBook()
+    assert fresh.apply_delta("yes", "0.60", 1, 1, now=1.0) is False
 
 
 def test_rest_shape_matches_get_orderbook_ascending():
@@ -137,17 +139,17 @@ def test_dispatch_routes_snapshot_then_delta_by_ticker():
     assert live_feed.metrics.snapshot()["live_messages"] == 2
 
 
-def test_dispatch_seq_gap_counts_and_resyncs(monkeypatch):
-    import kalshi_client
-    monkeypatch.setattr(kalshi_client, "get_orderbook",
-                        lambda tk, depth=10: {"ticker": tk, "yes": [["0.70", 9]], "no": []})
+def test_dispatch_counts_connection_gap_but_keeps_book_live():
+    # A connection-level seq jump is counted (a message was missed somewhere) but the book is NOT desynced —
+    # the delta still applies and the book stays usable. Crucially: NO blocking network on the event loop.
     lf = live_feed.LiveFeed("kid", b"pem", tickers=["KXT"])
     lf._dispatch({"type": "orderbook_snapshot", "seq": 1,
                   "msg": {"market_ticker": "KXT", "yes_dollars_fp": [["0.50", 5]], "no_dollars_fp": []}})
-    lf._dispatch({"type": "orderbook_delta", "seq": 50,        # gap → desync → REST resync
+    lf._dispatch({"type": "orderbook_delta", "seq": 50,        # seq 1 → 50 (global) → counted, applied
                   "msg": {"market_ticker": "KXT", "side": "yes", "price_dollars": "0.55", "delta_fp": 3}})
     assert live_feed.metrics.snapshot()["live_seq_gaps"] == 1
-    assert live_feed.book.derived("KXT")["yes_bid_c"] == 70    # reseeded from the REST snapshot
+    assert live_feed.book.book("KXT").synced is True           # NOT desynced — book stays live
+    assert live_feed.book.derived("KXT")["yes_bid_c"] == 55    # the delta was applied
 
 
 def test_subscribe_cmd_uses_yes_price():

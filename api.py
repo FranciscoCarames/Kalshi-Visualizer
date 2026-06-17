@@ -51,13 +51,18 @@ async def _lifespan(_app: "FastAPI"):
     (lifespan doesn't run) — `events.publish` stays a safe no-op there, keeping `import api` side-effect-free."""
     events.set_loop(asyncio.get_running_loop())
     # Start the Stage 2 live WS feed on THIS loop when armed (serve.py built the singleton + flipped the
-    # config switch after its fail-hard safety check). Default OFF ⇒ no singleton ⇒ nothing starts. Wire the
-    # debounced live-overlay pusher (2C/2D) so a moved book rebuilds the feed off-loop and pushes over SSE.
+    # config switch after its fail-hard safety check). Default OFF ⇒ no singleton ⇒ nothing starts. The live
+    # WS + book cache + `/api/terminal/orderbook` (live-backed) + `/metrics` always run when armed.
+    #
+    # The full-grid live-OVERLAY pusher (2C/2D) re-runs the WHOLE engine per push (~seconds on a large
+    # universe — GIL-bound), so it is OPT-IN via `KALSHI_LIVE_PUSH=1`; left OFF it can't starve the event
+    # loop. Performant incremental recompute is the follow-up that makes it default-on.
     if live_feed.is_enabled() and live_feed.feed_singleton is not None:
-        import live_overlay
         loop = asyncio.get_running_loop()
-        pusher = live_overlay.LivePusher(loop)
-        live_feed.feed_singleton._on_book_change = pusher.on_book_change
+        if os.getenv("KALSHI_LIVE_PUSH") == "1":
+            import live_overlay
+            pusher = live_overlay.LivePusher(loop)
+            live_feed.feed_singleton._on_book_change = pusher.on_book_change
         live_feed.feed_singleton.start(loop)
     try:
         yield
