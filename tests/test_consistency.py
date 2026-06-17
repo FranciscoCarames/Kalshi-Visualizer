@@ -777,9 +777,9 @@ def test_build_checks_stamps_relationship_type_and_stable_unique_id():
     checks = consistency.build_checks(df)
     assert {"relationship_type", "opportunity_id", "bucket", "blocked_reason"} <= set(checks.columns)
     assert not checks.empty
-    assert set(checks["relationship_type"]) <= {"containment_adjacent", "match_alignment"}
+    assert set(checks["relationship_type"]) <= {"containment_adjacent", "containment_transitive", "match_alignment"}
     assert (checks["opportunity_id"].str.len() == 16).all()
-    assert checks["opportunity_id"].is_unique                      # unique within the snapshot
+    assert checks["opportunity_id"].is_unique                      # unique within the snapshot (incl. closure pairs)
     again = consistency.build_checks(df)                           # deterministic across rebuilds
     assert list(again["opportunity_id"]) == list(checks["opportunity_id"])
 
@@ -831,8 +831,11 @@ def test_transitive_containment_bridges_missing_middle():
     assert "MISSING_LAYER" in {c["status"] for _, c in checks.iterrows()}
 
 
-def test_transitive_not_emitted_when_all_nodes_present():
-    """All three rungs present -> the adjacent chain already covers it; no duplicate transitive row."""
+def test_full_closure_emits_nonadjacent_pair_when_all_present():
+    """Full transitive closure: EVERY (broader ⊇ deeper) pair is recognized, not just adjacent rungs. With
+    all three rungs present + consistent (60 ≥ 40 ≥ 20 broad→deep), the NON-ADJACENT pair
+    (Win Tournament ≤ Reach Semifinal) is now emitted too (status CLEAN), alongside the two adjacent pairs.
+    Each non-adjacent pair appears exactly once (deduped against adjacent + the upper-triangular generator)."""
     import pandas as pd
     rows = [
         _ckey_row("P", "uuid-p", "advance", "Semifinal", 60),
@@ -840,7 +843,27 @@ def test_transitive_not_emitted_when_all_nodes_present():
         _ckey_row("P", "uuid-p", "winner", "Champion", 20),
     ]
     checks = consistency.build_checks(pd.DataFrame(rows))
-    assert "containment_transitive" not in [c["relationship_type"] for _, c in checks.iterrows()]
+    by_chain = {c["chain"]: c for _, c in checks.iterrows()}
+    assert "Win Tournament ≤ Reach Semifinal" in by_chain          # the non-adjacent closure pair
+    nonadj = by_chain["Win Tournament ≤ Reach Semifinal"]
+    assert nonadj["relationship_type"] == "containment_transitive"
+    assert nonadj["status"] == "CLEAN"                             # consistent ordering, no cross
+    # exactly one row for that pair (no duplicate emission)
+    assert sum(c["chain"] == "Win Tournament ≤ Reach Semifinal" for _, c in checks.iterrows()) == 1
+
+
+def test_full_closure_emits_nonadjacent_cross_when_all_present():
+    """A non-adjacent cross is caught even when the middle rung is present and consistent: Reach Semifinal
+    ask 41, Reach Final fine, but Win Tournament bid 69 > Semifinal ask 41 ⇒ the (Win ≤ Semifinal) closure
+    pair is an EXECUTABLE_VIOLATION the adjacent chain alone would not surface."""
+    import pandas as pd
+    semi = _ckey_row("P", "uuid-p", "advance", "Semifinal", 40)
+    final = _ckey_row("P", "uuid-p", "advance", "Final", 38)
+    champ = _ckey_row("P", "uuid-p", "winner", "Champion", 70)
+    checks = consistency.build_checks(pd.DataFrame([semi, final, champ]))
+    by_chain = {c["chain"]: c for _, c in checks.iterrows()}
+    assert "Win Tournament ≤ Reach Semifinal" in by_chain
+    assert by_chain["Win Tournament ≤ Reach Semifinal"]["relationship_type"] == "containment_transitive"
 
 
 # --- field-de-vig per node (DISPLAY-ONLY conditional panel) ---------------------------

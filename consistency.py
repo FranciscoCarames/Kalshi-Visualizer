@@ -900,28 +900,36 @@ def build_checks(df: pd.DataFrame, *, risk_budget_max_loss_c: int = 0) -> pd.Dat
                                 child_node=child_node, parent_node=parent_node, tournament=_tournament,
                                 relationship_type=rel, opp_id=oid, simultaneous=ladder.simultaneous))
 
-        # Transitive containment: when a MIDDLE ladder node is absent, the adjacent loop above only emits
-        # MISSING_LAYER for the gap — it never compares the present broader vs deeper nodes that span it,
-        # so a real cross can hide (a false negative). Bridge it: over node_order (broad -> deep), compare
-        # each consecutive pair of PRESENT nodes that is NOT already an adjacent pair (i.e. >=1 node
-        # between them is missing). When every node is present, each consecutive present pair IS an
-        # adjacent pair, so nothing extra is emitted (no duplicate findings). Both legs are present by
-        # construction, so this reuses the same _classify as the adjacent containment check.
-        present = [n for n in ladder.node_order if nodes.get(n, {}).get("market") is not None]
+        # Transitive CLOSURE: recognize EVERY (broader ⊇ deeper) containment pair in the ladder, not just
+        # adjacent rungs — e.g. Reach Round of 32 ⊇ Win the World Cup directly, or Reach SF ⊇ Win. By the
+        # ladder's total order, any deeper node is contained by every broader ancestor, so each non-adjacent
+        # pair is a real containment relationship, checked EXACTLY like an adjacent pair (same _classify /
+        # _row / bucket routing). This SUBSUMES the old consecutive-present "bridge": comparing the two
+        # present endpoints directly also spans any missing OR illiquid middle rung. Iterating node_order
+        # (broad -> deep) naturally EXCLUDES optional side-branch leaves (e.g. soccer "Win group"), which
+        # live only in adjacent_pairs and are incomparable to deeper rungs. Both endpoints must be present
+        # (a missing rung is already surfaced as MISSING_LAYER by the adjacent loop); reuses _classify since
+        # both legs are present. Dedup against adjacent_pairs so an adjacent pair is never emitted twice.
+        order = ladder.node_order
         adjacent_set = set(ladder.adjacent_pairs)
-        for broader_node, deeper_node in zip(present, present[1:]):   # node_order is broad -> deep
-            if (deeper_node, broader_node) in adjacent_set:
-                continue                                              # already covered by the adjacent loop
-            child = nodes[deeper_node]["market"]
-            parent = nodes[broader_node]["market"]
-            chain = f"{deeper_node} ≤ {broader_node}"
-            rel = "containment_transitive"
-            oid = opportunity_id(rel, player_key, _tournament, deeper_node, broader_node)
-            out.append(_row(player, player_key, chain, child, parent,
-                            _classify(child, parent, False, risk_budget_max_loss_c,
-                                      finishing_ladder=ladder.simultaneous),
-                            child_node=deeper_node, parent_node=broader_node, tournament=_tournament,
-                            relationship_type=rel, opp_id=oid, simultaneous=ladder.simultaneous))
+        for i in range(len(order)):
+            broader_node = order[i]
+            for j in range(i + 1, len(order)):                        # j > i ⇒ order[j] is deeper
+                deeper_node = order[j]
+                if (deeper_node, broader_node) in adjacent_set:
+                    continue                                          # already covered by the adjacent loop
+                child = nodes.get(deeper_node, {}).get("market")
+                parent = nodes.get(broader_node, {}).get("market")
+                if child is None or parent is None:
+                    continue                                          # present endpoints only
+                chain = f"{deeper_node} ≤ {broader_node}"
+                rel = "containment_transitive"
+                oid = opportunity_id(rel, player_key, _tournament, deeper_node, broader_node)
+                out.append(_row(player, player_key, chain, child, parent,
+                                _classify(child, parent, False, risk_budget_max_loss_c,
+                                          finishing_ladder=ladder.simultaneous),
+                                child_node=deeper_node, parent_node=broader_node, tournament=_tournament,
+                                relationship_type=rel, opp_id=oid, simultaneous=ladder.simultaneous))
 
         # Match-alignment (equivalence) rows where both a market and a confident match exist. One
         # equivalence per node (build_player_nodes keeps a single representative per source), so the
