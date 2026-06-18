@@ -66,7 +66,7 @@ function ResearchBody() {
 }
 
 const PANELS: PanelDef[] = [
-  { id: "p-blotter", n: "1", title: "SCANNER", hint: "click row · J/K · ENTER · drag splitters · ⚙ columns", body: <Blotter /> },
+  { id: "p-blotter", n: "1", title: "SCANNER", hint: "click row · J/K · drag splitters · ⚙ columns", body: <Blotter /> },
   { id: "p-des", n: "2", title: "INSPECTOR", hint: "read-only · buy-only · gross", body: <InspectorBody /> },
   { id: "p-ladder", n: "3", title: "DEPTH LADDER", hint: "live order book · top-of-book", body: <LadderBody /> },
   { id: "p-watch", n: "★", title: "WATCHLIST · TOP ACTIONABLE", body: <WatchBody /> },

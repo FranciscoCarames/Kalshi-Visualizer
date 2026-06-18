@@ -214,6 +214,15 @@ export default function Blotter() {
           ))}
         </div>
       ) : null}
+      {t.section === "cheapno" ? (
+        // Settlement-scope subsection tabs (parallel to bounded's split) — wired to the existing cheapScope
+        // band filter (filters.applyBand), so this is purely a prominent UI for a filter that already exists.
+        <div className="subtabs">
+          {[["all", "All"], ["event", "Event"], ["tournament", "Tournament"], ["championship", "Championship"]].map(([s, label]) => (
+            <div key={s} className={"subtab" + (t.band.cheapScope === s ? " on" : "")} onClick={() => t.setBand({ cheapScope: s })}>{label}</div>
+          ))}
+        </div>
+      ) : null}
       {t.multi.length > 1 ? (
         <div className="selbar">▣ <b className="white">{t.multi.length}</b> selected ·
           <button className="tbtn" onClick={t.openLadders}>Open ladders</button>
@@ -270,7 +279,19 @@ export default function Blotter() {
       </div>
       <div className="showing">
         Showing <b className="white">{shown.length.toLocaleString()}</b> of {t.inScope(t.zone, t.section).toLocaleString()} in scope
-        {(() => { const hid = t.inScope(t.zone, t.section) - rows.length; return hid > 0 ? <> ({hid.toLocaleString()} hidden by settings)</> : null; })()}
+        {(() => {
+          // Distinguish rows hidden by the SUB-TAB (bounded Vertical/Calendar split) from rows removed by the
+          // band/size/tradable FILTERS, instead of lumping both into a vague "hidden by settings". `count`
+          // applies membership+threshold+band across all splits; `rows` is after the split → the difference is
+          // the tab. Clamped so a transient async mismatch can't print a negative.
+          const inScope = t.inScope(t.zone, t.section), cnt = t.count(t.zone, t.section);
+          const byTab = Math.max(0, cnt - rows.length);          // the Vertical/Calendar tab you're not on
+          const byFilters = Math.max(0, inScope - cnt);          // band / min-size / tradable-only
+          return <>
+            {byTab > 0 ? <> · <b className="amber">{byTab.toLocaleString()}</b> on other tabs</> : null}
+            {byFilters > 0 ? <> · <b className="amber">{byFilters.toLocaleString()}</b> by filters</> : null}
+          </>;
+        })()}
         · {tableCols.length} cols
         {sort ? <> · sort <b className="amber">{sort.field} {sort.dir === "asc" ? "▲" : "▼"}</b></>
               : t.lens ? <> · lens <b className="amber">{t.lens}</b></> : <> · engine order</>}

@@ -250,12 +250,9 @@ function SecBar() {
     <div className="secbar"><span className="tag">NEAR-MISS</span>{numI(b.maxOverpay, "maxOverpay", "Max overpay ¢")}{hint}</div>
   );
   if (t.section === "cheapno") return (
+    // Settlement scope (All/Event/Tournament/Championship) now lives in the prominent subsection tabs
+    // (Blotter.tsx), so it's no longer duplicated here.
     <div className="secbar"><span className="tag">CHEAP-NO</span>
-      <span className="dim" style={{ fontSize: 9 }}>SCOPE</span>
-      <div className="lens">{([["all", "All"], ["event", "Event"], ["tournament", "Tournament"], ["championship", "Championship"]] as [string, string][]).map(([v, lbl]) => (
-        <button key={v} className={b.cheapScope === v ? "on" : ""} title={`Settlement scope: ${lbl}`}
-          onClick={() => t.setBand({ cheapScope: v })}>{lbl}</button>
-      ))}</div>
       <label>Kind <select value={b.cheapKind} onChange={(e) => t.setBand({ cheapKind: e.target.value })}>
         <option value="all">all</option><option value="band">band</option><option value="outright">outright</option></select></label>
       {numI(b.maxLoss, "maxLoss", "Max loss ¢")}
@@ -374,7 +371,7 @@ function Shell() {
 
       <div className="foot">
         <div><b className="amber">KALSHI STRUCTURED SCANNER</b> · real viewmodel rows · full column catalog · bounded-loss + cheap-NO splits · read-only over the live snapshot <span className="dim" title="build version (git short SHA · build date)">· {__APP_VERSION__}</span></div>
-        <div className="help"><span><b>Ctrl K</b> palette</span><span><b>1-6</b> lens</span><span><b>J/K</b> rows</span><span><b>↵</b> open</span><span><b>drag splitters</b> resize</span><span><b>Ctrl/Shift-click</b> multi-select</span></div>
+        <div className="help"><span><b>Ctrl K</b> palette</span><span><b>1-6</b> lens</span><span><b>J/K</b> rows</span><span><b>drag splitters</b> resize</span><span><b>Ctrl/Shift-click</b> multi-select</span></div>
       </div>
       <Keys />
       <Palette />
