@@ -82,13 +82,17 @@ export default function Blotter() {
   // reach the scrollbar, so the bottom options were unreachable.
   useEffect(() => {
     if (!chooser) return;
+    // Scope the listener to the MENU's OWN document, not the module-global `document`. In a pop-out window
+    // the menu lives in that window's document, so listening on the main `document` would never see the
+    // pop-out's clicks (and vice-versa) — each window's chooser must close on ITS own outside clicks.
+    const doc = menuRef.current?.ownerDocument ?? document;
     const onDown = (e: MouseEvent) => {
       const tgt = e.target as Node;
       if (menuRef.current?.contains(tgt) || colsBtnRef.current?.contains(tgt)) return;
       setChooser(false);
     };
-    document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
+    doc.addEventListener("mousedown", onDown);
+    return () => doc.removeEventListener("mousedown", onDown);
   }, [chooser]);
   const cols: Col[] = t.visible.map((f) => COLS[t.colKey].find((c) => c.f === f)).filter((c): c is Col => !!c);
   // Click-sort is a display override; reset to engine/lens order when the section/catalog changes.
