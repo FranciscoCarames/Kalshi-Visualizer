@@ -194,6 +194,7 @@ tbody tr.sel.msel td:first-child{box-shadow:inset 3px 0 0 var(--amber)}
 .dtitle .t{color:var(--white);font-size:calc(var(--fs) + 0.5px);font-weight:700;font-family:var(--sans)}
 .bk{font-weight:800;font-size:calc(var(--fs) - 3.5px);padding:0 4px;border-radius:2px}
 .bk-exec{background:rgba(51,255,122,.15);color:var(--green)}.bk-spec{background:rgba(255,176,0,.15);color:var(--amber)}.bk-diag{background:rgba(122,106,58,.2);color:var(--tx2)}
+.bk-rev{background:rgba(255,176,0,.15);color:var(--amber)}.bk-blk{background:rgba(255,77,77,.15);color:var(--red)}
 .basis{margin-left:auto;display:flex;border:1px solid var(--line2)}
 .basis button{padding:1px 8px;font-size:calc(var(--fs) - 3px);background:transparent;border:none;color:var(--tx2);cursor:pointer;font-family:var(--mono)}
 .basis button.on{background:var(--amber);color:#000;font-weight:700}

@@ -101,7 +101,14 @@ export default function Inspector({ row, lens, snapshotId, showNet, longShort }:
   return (
     <div className="des">
       <div className="dtitle">
-        <span className={"bk " + z[0]}>{z[1]}</span>
+        {(() => {
+          // Section-aware badge inside the EXECUTABLE zone so a REVIEW / BLOCKED row (e.g. a settlement-
+          // dependent stage-elim synthetic, "Review rules") never reads as a green "EXECUTABLE".
+          const b: [string, string] = row.zone === "exec"
+            ? (row.section === "rev" ? ["bk-rev", "REVIEW"] : row.section === "blk" ? ["bk-blk", "BLOCKED"] : ["bk-exec", "EXECUTABLE"])
+            : z;
+          return <span className={"bk " + b[0]}>{b[1]}</span>;
+        })()}
         <span className="t">{row.name}</span>
         <div className="basis">
           <button className={basis === 1 ? "on" : ""} onClick={() => setBasis(1)}>$1</button>
