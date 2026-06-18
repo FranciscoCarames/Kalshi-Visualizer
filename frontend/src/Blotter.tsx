@@ -109,11 +109,15 @@ export default function Blotter() {
     nearmiss: ["note"],
     qual: ["setup", "legs", "review_status", "caveat"],
   };
+  // Compare + display the FORMATTED value (via the column's formatter), not the raw field — so a field whose
+  // value is an object/array (e.g. `legs` holds the leg array, a "num" column that renders "—") is skipped
+  // rather than stringified to "[object Object]".
   const bannerVal = (f: string): string | null => {
     if (!rows.length) return null;
-    const s0 = rows[0][f] == null ? "" : String(rows[0][f]);
+    const fmt = fmtOf(f);
+    const s0 = fmtVal(rows[0][f], fmt);
     if (!s0 || s0 === "—") return null;
-    for (const r of rows) { if ((r[f] == null ? "" : String(r[f])) !== s0) return null; }
+    for (const r of rows) { if (fmtVal(r[f], fmt) !== s0) return null; }
     return s0;
   };
   const banners = (BANNER_FIELDS[t.section] ?? [])
