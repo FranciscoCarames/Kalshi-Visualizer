@@ -117,6 +117,21 @@ export default function Inspector({ row, lens, snapshotId, showNet, longShort }:
         </div>
       ) : (<>
       <div className="sect">BUY-ONLY PLAN — {row.nlegs ?? legs.length} LEG{(row.nlegs ?? legs.length) === 1 ? "" : "S"}</div>
+      {(() => {
+        // What to actually BUY for the strategy: the SAME number of contracts on EVERY leg (a balanced
+        // set), capped by the thinnest leg = "Max units". The per-leg "avail" below is order-book DEPTH,
+        // NOT the amount to buy (so you don't buy e.g. 348 of one team and 1011 of another). Display-only.
+        const mu = num(row.max_units ?? row.units);
+        if (mu == null || (legs.length <= 1)) return null;
+        const whole = mu >= 1 ? Math.floor(mu) : 0;
+        return (
+          <div className="note dim" style={{ marginTop: 2 }}>
+            Buy the <b>same</b> count on every leg —{" "}
+            <b className="white">{whole >= 1 ? `${whole} contract${whole === 1 ? "" : "s"}` : "<1 set (barely fillable)"}</b>{" "}
+            of each, capped by the thinnest leg. The “avail” below is book depth, not what to buy.
+          </div>
+        );
+      })()}
       {legs.length ? legs.map((l, i) => {
         const href = safeHref(l.u);
         // Book-only pseudo-leg (bo): a reference market the engine attached for the depth panel — NOT a
@@ -139,7 +154,7 @@ export default function Inspector({ row, lens, snapshotId, showNet, longShort }:
             <span className="l2">{l.c}</span>
             {l.tk ? <span className="dim" style={{ fontFamily: "monospace", fontSize: "0.85em" }} title="market ticker">{l.tk}</span> : null}
             <span className="white">{l.p != null ? l.p + "¢" : "—"}</span>
-            <span className="dim">×{l.sz ?? 0}</span>
+            <span className="dim" title="contracts available at this price (order-book depth) — NOT the amount to buy; see the plan header above">{l.sz ?? 0} avail</span>
             {href ? <a href={href} target="_blank" rel="noreferrer">↗</a> : null}
           </div>
         );
