@@ -68,6 +68,32 @@ def test_book_overround_fires():
     assert all(leg["side"] == "buy_no" for leg in g["legs"])
 
 
+def test_book_title_is_team_and_question_specific():
+    g = stage_elim.find_stage_elim_books(team_buckets(yes_asks=[10] * 7))[0]
+    # The title now names WHICH team and WHAT the book is about (not the bare "— stage of elimination").
+    low = g["match"].lower()
+    assert "how far do they go" in low and "stage-of-elimination" in low
+    assert "USA" in g["match"]
+
+
+def test_book_legs_carry_bucket_labels_and_bucket_specific_tickers():
+    g = stage_elim.find_stage_elim_books(team_buckets(yes_asks=[10] * 7))[0]
+    labels = dict(sports.WC_STAGE_ELIM_BUCKETS)            # suffix -> human round label
+    # legs are ordered broad->deep; each leg states ITS round AND links to ITS own bucket market.
+    for leg, suffix in zip(g["legs"], _BUCKETS):
+        assert leg["contract"] == labels[suffix]          # e.g. "Eliminated: Round of 32" (not the team name)
+        assert leg["ticker"] == f"KXWCSTAGEOFELIM-26USA-{suffix}"   # bucket-specific deep-link target
+        assert labels[suffix] in leg["text"]              # buy-text mentions the round
+
+
+def test_book_opportunity_id_is_stable_under_naming_change():
+    g = stage_elim.find_stage_elim_books(team_buckets(yes_asks=[10] * 7))[0]
+    # The id keys on (check_type, event, team) — NOT the display title / leg labels — so renaming never
+    # changes a row's identity (no lifecycle churn / duplicate alerts).
+    assert g["opportunity_id"] == data.opportunity_id(
+        stage_elim.BOOK_CHECK_TYPE, "KXWCSTAGEOFELIM-26USA", "usa")
+
+
 def test_book_missing_bucket_rejected_fail_closed():
     diag: dict = {}
     rows = team_buckets(yes_asks=[10] * 6, suffixes=_BUCKETS[:6])   # only 6 of 7 buckets
