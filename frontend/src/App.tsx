@@ -372,7 +372,7 @@ function Shell() {
       {t.surface === "alrt" ? <BacklogSurface /> : null}
 
       <div className="foot">
-        <div><b className="amber">KALSHI STRUCTURED SCANNER</b> · real viewmodel rows · full column catalog · bounded-loss + cheap-NO splits · read-only over the live snapshot</div>
+        <div><b className="amber">KALSHI STRUCTURED SCANNER</b> · real viewmodel rows · full column catalog · bounded-loss + cheap-NO splits · read-only over the live snapshot <span className="dim" title="build version (git short SHA · build date)">· {__APP_VERSION__}</span></div>
         <div className="help"><span><b>Ctrl K</b> palette</span><span><b>1-6</b> lens</span><span><b>J/K</b> rows</span><span><b>↵</b> open</span><span><b>drag splitters</b> resize</span><span><b>Ctrl/Shift-click</b> multi-select</span></div>
       </div>
       <Keys />
