@@ -79,6 +79,17 @@ export default function Blotter() {
   // hiding the lower half of the (30+ row) bounded-loss catalog. Captured on open.
   const [menuPos, setMenuPos] = useState<{ top: number; right: number; maxH: number } | null>(null);
   const [sort, setSort] = useState<SortState | null>(null);
+  // Per-section dismissal of the section-note banner (persisted in localStorage so it stays hidden across
+  // reloads). Dismissing qualifier's banner doesn't touch near-miss's.
+  const NOTE_KEY = "kss_dismissed_secnotes";
+  const [dismissedNotes, setDismissedNotes] = useState<Set<string>>(() => {
+    try { return new Set<string>(JSON.parse(localStorage.getItem(NOTE_KEY) || "[]")); } catch { return new Set(); }
+  });
+  const setNoteDismissed = (section: string, hide: boolean) => setDismissedNotes((d) => {
+    const n = new Set(d); if (hide) n.add(section); else n.delete(section);
+    try { localStorage.setItem(NOTE_KEY, JSON.stringify([...n])); } catch { /* storage unavailable — keep in-memory */ }
+    return n;
+  });
   const dragF = useRef<string | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const colsBtnRef = useRef<HTMLSpanElement | null>(null);
@@ -213,11 +224,18 @@ export default function Blotter() {
         </div>
       ) : null}
       {banners.length ? (
-        <div className="secnote">
-          {banners.map((b) => (
-            <span key={b.f} className="secnote-item"><b>{b.l}:</b> {b.v}</span>
-          ))}
-        </div>
+        dismissedNotes.has(t.section) ? (
+          <div className="secnote secnote-collapsed" title="show section notes" onClick={() => setNoteDismissed(t.section, false)}>
+            ▸ section notes
+          </div>
+        ) : (
+          <div className="secnote">
+            {banners.map((b) => (
+              <span key={b.f} className="secnote-item"><b>{b.l}:</b> {b.v}</span>
+            ))}
+            <span className="secnote-x" title="hide these notes" onClick={() => setNoteDismissed(t.section, true)}>✕</span>
+          </div>
+        )
       ) : null}
       <div className="pbody">
         {t.err ? <div className="empty red">feed error: {t.err}</div>

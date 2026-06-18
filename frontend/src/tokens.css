@@ -82,6 +82,8 @@ select.in,input.in{background:var(--bg1);border:1px solid var(--line2);color:var
  * note, qualifier setup/legs/review-status/caveat), so the table doesn't repeat the same text per row. */
 .secnote{display:flex;flex-wrap:wrap;gap:6px 18px;flex:0 0 auto;padding:4px 10px;background:var(--bg2);border-bottom:1px solid var(--line2);color:var(--tx2);font-size:calc(var(--fs) - 2px)}
 .secnote-item b{color:var(--tx3);font-weight:600}
+.secnote-x{margin-left:auto;cursor:pointer;color:var(--tx3);padding:0 3px;flex:0 0 auto}.secnote-x:hover{color:var(--white)}
+.secnote-collapsed{cursor:pointer;color:var(--tx3);font-size:calc(var(--fs) - 3px);letter-spacing:.5px}.secnote-collapsed:hover{color:var(--white)}
 
 .filt{display:flex;align-items:center;gap:7px;background:var(--bg2);border-bottom:1px solid var(--line2);padding:3px 9px;flex:0 0 auto;flex-wrap:wrap;font-size:calc(var(--fs) - 2px)}
 .filt label{color:var(--tx3);letter-spacing:.4px}
