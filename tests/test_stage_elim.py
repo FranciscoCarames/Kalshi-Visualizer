@@ -28,7 +28,8 @@ def selim(suffix, *, team="usa", event="KXWCSTAGEOFELIM-26USA", yes_ask_c=None, 
         "tournament": "2026 FIFA World Cup", "tour": "",
         "yes_ask_c": yes_ask_c, "no_ask_c": no_ask_c, "yes_bid_c": yes_bid_c,
         "yes_ask_size": ask_size, "yes_bid_size": bid_size, "quote_quality": quality, "status": status,
-        "market_ticker": f"{event}-{suffix}", "kalshi_url": "https://kalshi.com/x", "event_title": "USA SoE",
+        "market_ticker": f"{event}-{suffix}", "kalshi_url": "https://kalshi.com/x",
+        "event_title": "USA: Stage of Elimination",   # team name lives here ('<Team>: Stage of Elimination')
     }
 
 
@@ -70,10 +71,11 @@ def test_book_overround_fires():
 
 def test_book_title_is_team_and_question_specific():
     g = stage_elim.find_stage_elim_books(team_buckets(yes_asks=[10] * 7))[0]
-    # The title now names WHICH team and WHAT the book is about (not the bare "— stage of elimination").
+    # The title names WHICH team (from the event title, NOT the bucket stage label) and WHAT it is about.
     low = g["match"].lower()
     assert "how far do they go" in low and "stage-of-elimination" in low
-    assert "USA" in g["match"]
+    assert g["match"].startswith("USA —")                # the team, not "Group Stage —"
+    assert "group stage" not in low                       # a stage label must never be the title prefix
 
 
 def test_book_legs_carry_bucket_labels_and_bucket_specific_tickers():

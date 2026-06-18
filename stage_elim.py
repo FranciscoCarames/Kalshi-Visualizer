@@ -67,8 +67,18 @@ def _team_key(rows: list[dict[str, Any]]) -> str:
 
 
 def _team_name(rows: list[dict[str, Any]]) -> str:
-    """The team's display name (e.g. 'USA'), falling back to its UUID key — for the opportunity title."""
-    return str(rows[0].get("player") or _team_key(rows)) if rows else ""
+    """The team's DISPLAY name (e.g. 'USA' / 'Portugal') for the opportunity title. The bucket rows carry
+    the stage label in `player` (yes_sub_title = 'Group Stage' / 'Runner-up …'), NOT the team — so derive
+    the team from the event title ('<Team>: Stage of Elimination'). Falls back to `player` then the UUID
+    key. Display-only; never feeds the opportunity_id (which keys on the team UUID via _team_key)."""
+    if not rows:
+        return ""
+    event_title = str(rows[0].get("event_title") or "")
+    if ":" in event_title:
+        name = event_title.split(":", 1)[0].strip()
+        if name:
+            return name
+    return str(rows[0].get("player") or _team_key(rows))
 
 
 def _leg_label(row: dict[str, Any]) -> str:
