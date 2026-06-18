@@ -242,6 +242,7 @@ function SecBar() {
     <div className="secbar"><span className="tag">BOUNDED-LOSS</span>
       {numI(b.maxLoss, "maxLoss", "Max loss ¢")}
       {numI(b.minRatio, "minRatio", "Min upside:risk", 0.1)}
+      {numI(b.minParentOutright, "minParentOutright", "Min parent-outright ¢")}
       {numI(b.minChildOutright, "minChildOutright", "Min child-outright ¢")}
       {numI(b.maxSpreadOverChild, "maxSpreadOverChild", "Max spread÷child", 0.1)}{hint}</div>
   );
