@@ -9,7 +9,9 @@ function appVersion(): string {
   let v = "unknown";
   try {
     const sha = execSync("git rev-parse --short HEAD", { stdio: ["ignore", "pipe", "ignore"] }).toString().trim();
-    const dirty = execSync("git status --porcelain", { stdio: ["ignore", "pipe", "ignore"] }).toString().trim() ? "-dirty" : "";
+    // Only TRACKED uncommitted changes count as "dirty" (git describe --dirty convention) — untracked
+    // scratch (dist, logs) must not flip a clean committed build to "-dirty".
+    const dirty = execSync("git status --porcelain --untracked-files=no", { stdio: ["ignore", "pipe", "ignore"] }).toString().trim() ? "-dirty" : "";
     v = sha + dirty;
   } catch { /* no git → keep "unknown" */ }
   return `${v} · ${new Date().toISOString().slice(0, 10)}`;
