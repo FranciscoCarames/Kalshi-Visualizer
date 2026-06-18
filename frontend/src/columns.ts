@@ -19,6 +19,7 @@ export const COLS: Record<string, Col[]> = {
     C("tradable", "Tradable", "trad"), C("caveat", "Caveat", "text")],
   risk: [C("signal", "Signal", "text"), C("flags", "Flags", "text"), C("resolution", "Kind", "text"),
     C("cheap", "Cheap vs peers", "text"), C("sport", "Sport", "text"), NAME, C("detail", "Detail", "text", true),
+    C("quality", "Setup quality", "text", false, "Uncalibrated diagnostic combining ripeness (parent ÷ max loss) with the market-implied conditional chance P(deeper│reached): High / Med / Low, or 'Insufficient data' when either input is missing. Not fair value; never an executable ranking."),
     C("wins_if", "Wins if…", "text"), C("cost", "Cost ¢", "c", true), C("max_loss", "Max loss ¢", "c"),
     C("max_profit", "Max profit ¢", "c"), C("max_units", "Max units", "num"),
     C("capacity", "Top-book cost cap $", "money", false, "EXPERIMENTAL · display-only: $ to take the whole VISIBLE top book (cost ¢ × top-book units) — NOT full-depth, NOT guaranteed fill; makes a thin longshot vs a deep name tangible"),
@@ -28,11 +29,11 @@ export const COLS: Record<string, Col[]> = {
     C("breakeven", "Breakeven %", "pct", false, "max loss ÷ (max loss + max profit) — min payoff chance the bet needs"),
     C("basis_flags", "Basis", "text", false, "honesty flags: MID-ONLY = positive only on the display basis; WIDE = rests on a wide quote"),
     C("display_spread", "Market gap (pp)", "num"),
-    C("cond_success", "Success given reached % (display)", "pct", false, "P(success│reached) on the display price — uncalibrated, gross"),
-    C("cond_child", "Deeper given reached % (display)", "pct", false, "P(deeper│reached) on the display price — uncalibrated, gross"),
-    C("cond_success_firm", "Success given reached % (firm)", "pct", true, "P(success│reached) on the firm bid/ask — diagnostic, NOT an executable edge"),
-    C("cond_child_firm", "Deeper given reached % (firm)", "pct", true, "P(deeper│reached) on the firm bid/ask — diagnostic, NOT an executable edge"),
-    C("firm_gap", "Firm success gap ¢", "c"),
+    C("cond_success", "Success given reached % (display)", "pct", false, "P(success│reached) on the display price (midpoint when the spread is reasonable, else last trade) — uncalibrated, gross"),
+    C("cond_child", "Deeper given reached % (display)", "pct", false, "P(deeper│reached) on the display price (midpoint when the spread is reasonable, else last trade) — uncalibrated, gross"),
+    C("cond_success_firm", "Success given reached % (bid/ask)", "pct", true, "P(success│reached) on the executable bid/ask — diagnostic, NOT an executable edge"),
+    C("cond_child_firm", "Deeper given reached % (bid/ask)", "pct", true, "P(deeper│reached) on the executable bid/ask — diagnostic, NOT an executable edge"),
+    C("firm_gap", "Bid/ask success gap ¢", "c"),
     C("gap_vs_be", "Gap vs breakeven (pp)", "num"),
     C("parent_over_maxloss", "Parent ÷ max loss", "num", false, "RIPENESS lens — in-the-money chance per ¢ at risk"),
     C("roc", "Worst-case ROC %", "pct", true), C("spread_over_parent", "Spread÷parent", "num", true),
@@ -69,6 +70,39 @@ export function colKeyOf(zone: string, section: string): string {
 
 const n1 = (v: number) => (Number.isInteger(v) ? String(v) : v.toFixed(1));
 const num = (v: unknown) => (typeof v === "number" && !isNaN(v) ? v : null);
+
+/** Human-readable labels for the engine's bounded-loss `signal` classes (webui/viewmodel._signal_class).
+ *  Display-only: the raw value still drives ranking/honesty narrative (see lens.rankWhy). An unknown value
+ *  falls through to itself so a new class is never blanked. */
+export const SIGNAL_LABELS: Record<string, string> = {
+  "Candidate": "Candidate setup",
+  "Breakeven": "At breakeven",
+  "Negative proxy": "Below breakeven",
+  "Inverted / diagnostic": "Inverted (diagnostic)",
+  "Data quality": "Insufficient data",
+};
+/** Friendly label for a raw signal value (raw fallback for anything unmapped). */
+export function signalLabel(raw: unknown): string {
+  const s = raw == null ? "" : String(raw);
+  if (!s) return "—";
+  return SIGNAL_LABELS[s] ?? s;
+}
+
+export type QualityTier = "High" | "Med" | "Low" | "n/a";
+export interface Quality { tier: QualityTier; label: string; score: number | null; }
+/** Single uncalibrated diagnostic for a bounded-loss row: blends RIPENESS (parent ÷ max loss — in-the-money
+ *  chance per ¢ at risk) with the market-implied CONDITIONAL chance P(deeper│reached). When EITHER input is
+ *  missing the result is "Insufficient data" — never "Low" (missing ≠ bad). Thresholds are uncalibrated and
+ *  display-only; this never affects bucket/actionability. score = ripeness × (conditional ÷ 100). */
+export function qualityOf(row: Record<string, unknown>): Quality {
+  const ripeness = num(row.parent_over_maxloss);
+  const cond = num(row.cond_child);                 // P(deeper│reached) %, display basis
+  if (ripeness === null || cond === null) return { tier: "n/a", label: "Insufficient data", score: null };
+  const frac = Math.max(0, Math.min(1, cond / 100));
+  const score = ripeness * frac;
+  const tier: QualityTier = score >= 2 ? "High" : score >= 1 ? "Med" : "Low";
+  return { tier, label: tier, score };
+}
 
 /** A cents amount rendered as display dollars: "$1.75", "-$0.12", and "$0.00" (never "-$0.00").
  *  Shared by the `cmoney` column formatter AND the Inspector fee block so the rule lives in one place. */

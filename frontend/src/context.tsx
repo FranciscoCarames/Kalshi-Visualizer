@@ -13,12 +13,14 @@ import { postScan, getScanStatus } from "./scan";
 import { diffSnapshot, edgeMap, type Change } from "./diff";
 import { type FilterState, type BandState, emptyFilters, defaultBand, isDefaultBand, applyBand, passAll, passMembership, hiddenByFee, tournamentOptions } from "./filters";
 import { loadPrefs, savePrefs, PREFS_VERSION, THEMES, LAYOUT_PRESETS, SPLITS, type Prefs } from "./prefs";
-import { cleanLayout, presetSnapshot, type LayoutSnapshot } from "./layout";
+import { cleanLayout, presetSnapshot, TEXT_SIZES, type LayoutSnapshot, type TextSize } from "./layout";
 import { apiFetch } from "./http";
 
 export interface ExtraPanel { title: string; body: ReactNode; }
-export const TEXT_SIZES = ["compact", "normal", "large", "xlarge"] as const;
-export type TextSize = (typeof TEXT_SIZES)[number];
+// Re-exported from the pure layout module (single source) so existing `import { TEXT_SIZES } from "./context"`
+// callers keep working.
+export { TEXT_SIZES };
+export type { TextSize };
 export interface Settings { longShort: boolean; showIds: boolean; resolutionCriteria: boolean; hideNetNegExec: boolean; textSize: TextSize; tz: string; autoRefresh: string; }
 const AUTO_MS: Record<string, number> = { "10s": 10000, "30s": 30000, off: 0 };
 

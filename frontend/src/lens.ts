@@ -3,6 +3,7 @@
  * are the engine's). The default view is engine order (no lens active). Isolation-safe by construction:
  * it only reads display fields and reorders an array. */
 import type { FeedRow } from "./feed";
+import { qualityOf } from "./columns";
 
 export const LENSES: [string, string, string][] = [
   ["blended", "BLENDED", "Weighted mix of edge + ROI + payoff geometry — the all-rounder."],
@@ -11,6 +12,7 @@ export const LENSES: [string, string, string][] = [
   ["ratio", "OUTRIGHT+SPREAD", "Child outright magnitude, then spread÷outright — cheap longshots with room."],
   ["ev", "IMPLIED EV", "Display-spread minus overpay — a ranking aid, NOT a real edge."],
   ["ripeness", "RIPENESS", "Parent ÷ max loss — in-the-money chance per ¢ at risk (bounded-loss). Higher = riper."],
+  ["quality", "SETUP QUALITY", "Uncalibrated diagnostic: ripeness × conditional chance P(deeper│reached). Insufficient-data rows sort last."],
 ];
 
 /* Which lenses make sense per zone (the rest sort on fields a zone's rows don't carry, so they'd be
@@ -18,7 +20,7 @@ export const LENSES: [string, string, string][] = [
  * the full payoff-geometry set; diagnostic rows are review-only and get NO lens bar (engine order only). */
 const _LENSES_BY_ZONE: Record<string, Set<string>> = {
   exec: new Set(["blended", "edge"]),
-  spec: new Set(["blended", "edge", "spread", "ratio", "ev", "ripeness"]),
+  spec: new Set(["blended", "edge", "spread", "ratio", "ev", "ripeness", "quality"]),
   diag: new Set(),
 };
 export function lensesFor(zone: string): [string, string, string][] {
@@ -36,6 +38,7 @@ export function rankKey(o: FeedRow, lens: string): number {
   if (lens === "ratio") return c ? (sp / c) * 100 : 0;
   if (lens === "ev") return n(o.ev);
   if (lens === "ripeness") return o.parent_over_maxloss == null ? -1e9 : n(o.parent_over_maxloss);
+  if (lens === "quality") { const q = qualityOf(o); return q.score == null ? -1e9 : q.score; }   // insufficient data sorts last
   return e * 0.35 + r * 0.45 + (sp || best) * 0.2;     // blended
 }
 

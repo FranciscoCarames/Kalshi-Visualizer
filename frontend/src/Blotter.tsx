@@ -5,7 +5,7 @@
 import { memo, useEffect, useRef, useState } from "react";
 import { useTerminal } from "./context";
 import { ZONES, SUBTABS, type FeedRow } from "./feed";
-import { COLS, fmtVal, qhClass, type Col } from "./columns";
+import { COLS, fmtVal, qhClass, signalLabel, qualityOf, type Col } from "./columns";
 import { sortRows, nextSort, type SortState } from "./sort";
 
 function severityOf(o: FeedRow): { cls: string; txt: string } | null {
@@ -44,6 +44,15 @@ const Cell = memo(function Cell({ row, col, chg }: { row: FeedRow; col: Col; chg
     const txt = fmtVal(v, "text");
     return <td>{sev ? <span className={"sev " + sev.cls} title={txt === "—" ? sev.txt : txt}>{sev.txt}</span> : null} {txt === "—" ? "" : txt}</td>;
   }
+  // Human-readable bounded-loss signal class (display-only; raw value still drives ranking narrative).
+  if (col.f === "signal") return <td>{signalLabel(v)}</td>;
+  // Single uncalibrated setup-quality diagnostic (ripeness × conditional). "Insufficient data" ≠ "Low".
+  if (col.f === "quality") {
+    const q = qualityOf(row);
+    if (q.tier === "n/a") return <td className="dim" title="ripeness or conditional chance missing — not scored (missing ≠ low)">Insufficient data</td>;
+    const cls = q.tier === "High" ? "green" : q.tier === "Med" ? "amber" : "dim";
+    return <td><span className={cls} title={`uncalibrated: ripeness × P(deeper│reached); score ${q.score!.toFixed(2)}`}>{q.label}</span></td>;
+  }
   if (col.fmt === "qh") return <td className={qhClass(v)}>{fmtVal(v, col.fmt)}</td>;
   if (col.fmt === "trad") {
     const t = String(v || "").toLowerCase();
@@ -66,12 +75,48 @@ export default function Blotter() {
   const [chooser, setChooser] = useState(false);
   const [sort, setSort] = useState<SortState | null>(null);
   const dragF = useRef<string | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  const colsBtnRef = useRef<HTMLSpanElement | null>(null);
+  // Close the column chooser on an OUTSIDE click — never on mouse-leave. Mouse-leave made a long catalog
+  // (bounded-loss has 30+ columns) impossible to use: the menu vanished the instant the cursor left it to
+  // reach the scrollbar, so the bottom options were unreachable.
+  useEffect(() => {
+    if (!chooser) return;
+    const onDown = (e: MouseEvent) => {
+      const tgt = e.target as Node;
+      if (menuRef.current?.contains(tgt) || colsBtnRef.current?.contains(tgt)) return;
+      setChooser(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [chooser]);
   const cols: Col[] = t.visible.map((f) => COLS[t.colKey].find((c) => c.f === f)).filter((c): c is Col => !!c);
   // Click-sort is a display override; reset to engine/lens order when the section/catalog changes.
   useEffect(() => { setSort(null); }, [t.colKey]);
   const fmtOf = (f: string) => COLS[t.colKey].find((c) => c.f === f)?.fmt ?? "num";
   const rows = sortRows(t.rows, sort, fmtOf);
   const shown = rows.length > ROW_CAP ? rows.slice(0, ROW_CAP) : rows;
+
+  // Section-note banner: collapse a boilerplate field to ONE banner line only when its value is identical
+  // across EVERY visible row (and non-empty). A field that varies stays a per-row column — so a row-specific
+  // caveat (or differing note) is never hidden. Near-miss collapses its shared "note"; qualifier collapses
+  // its shared setup / legs / review-status / caveat.
+  const BANNER_FIELDS: Record<string, string[]> = {
+    nearmiss: ["note"],
+    qual: ["setup", "legs", "review_status", "caveat"],
+  };
+  const bannerVal = (f: string): string | null => {
+    if (!rows.length) return null;
+    const s0 = rows[0][f] == null ? "" : String(rows[0][f]);
+    if (!s0 || s0 === "—") return null;
+    for (const r of rows) { if ((r[f] == null ? "" : String(r[f])) !== s0) return null; }
+    return s0;
+  };
+  const banners = (BANNER_FIELDS[t.section] ?? [])
+    .map((f) => { const v = bannerVal(f); return v == null ? null : { f, l: COLS[t.colKey].find((c) => c.f === f)?.l ?? f, v }; })
+    .filter((x): x is { f: string; l: string; v: string } => !!x);
+  const bannerSet = new Set(banners.map((b) => b.f));
+  const tableCols = cols.filter((c) => !bannerSet.has(c.f));
 
   const onRowClick = (e: React.MouseEvent, o: FeedRow) => {
     if (e.ctrlKey || e.metaKey || e.shiftKey) {
@@ -114,10 +159,11 @@ export default function Blotter() {
             {label}<span className="ct">{t.count(t.zone, s).toLocaleString()}</span>
           </div>
         ))}
-        <span className="cols" onClick={() => setChooser((v) => !v)}>⚙ columns ▾</span>
+        <span className="cols" ref={colsBtnRef} onClick={() => setChooser((v) => !v)}>⚙ columns ▾</span>
         {chooser ? (
-          <div className="menu on" style={{ right: 0, top: 20 }} onMouseLeave={() => setChooser(false)}>
-            <div className="mh">COLUMNS · {t.section.toUpperCase()}</div>
+          <div className="menu on" ref={menuRef} style={{ right: 0, top: 20 }}>
+            <div className="mh">COLUMNS · {t.section.toUpperCase()}
+              <span className="mclose" title="close" onClick={() => setChooser(false)}>✕</span></div>
             {COLS[t.colKey].map((c) => (
               <label key={c.f}><input type="checkbox" checked={t.visible.includes(c.f)} onChange={() => t.toggleCol(c.f)} />{c.l}</label>
             ))}
@@ -141,12 +187,19 @@ export default function Blotter() {
           <button className="tbtn" onClick={() => t.setMulti([])}>Clear</button>
         </div>
       ) : null}
+      {banners.length ? (
+        <div className="secnote">
+          {banners.map((b) => (
+            <span key={b.f} className="secnote-item"><b>{b.l}:</b> {b.v}</span>
+          ))}
+        </div>
+      ) : null}
       <div className="pbody">
         {t.err ? <div className="empty red">feed error: {t.err}</div>
           : !rows.length ? <div className="empty">{emptyMsg()}</div>
           : (
           <table>
-            <thead><tr>{cols.map((c) => (
+            <thead><tr>{tableCols.map((c) => (
               <th key={c.f} className={c.fmt !== "text" && c.fmt !== "name" ? "r" : ""} draggable
                   aria-sort={sort?.field === c.f ? (sort.dir === "asc" ? "ascending" : "descending") : "none"}
                   title={(c.tip ? c.tip + " — " : "") + "click to sort · drag to reorder"}
@@ -161,11 +214,11 @@ export default function Blotter() {
               const fc = t.flashIds.has(o.id) ? " fl" : "";
               const chg = t.changeOf(o.id);
               return <tr key={o.id} className={(zc + sc + mc + fc).trim()} onClick={(e) => onRowClick(e, o)}>
-                {cols.map((c) => <Cell key={c.f} row={o} col={c} chg={c.fmt === "name" ? chg : undefined} />)}
+                {tableCols.map((c) => <Cell key={c.f} row={o} col={c} chg={c.fmt === "name" ? chg : undefined} />)}
               </tr>;
             })}
             {rows.length > ROW_CAP ? (
-              <tr className="zdiag"><td className="dim" colSpan={cols.length}>
+              <tr className="zdiag"><td className="dim" colSpan={tableCols.length}>
                 +{(rows.length - ROW_CAP).toLocaleString()} more rows hidden — refine filters or sort to narrow the view.
               </td></tr>
             ) : null}</tbody>
@@ -175,7 +228,7 @@ export default function Blotter() {
       <div className="showing">
         Showing <b className="white">{shown.length.toLocaleString()}</b> of {t.inScope(t.zone, t.section).toLocaleString()} in scope
         {(() => { const hid = t.inScope(t.zone, t.section) - rows.length; return hid > 0 ? <> ({hid.toLocaleString()} hidden by settings)</> : null; })()}
-        · {t.visible.length} cols
+        · {tableCols.length} cols
         {sort ? <> · sort <b className="amber">{sort.field} {sort.dir === "asc" ? "▲" : "▼"}</b></>
               : t.lens ? <> · lens <b className="amber">{t.lens}</b></> : <> · engine order</>}
       </div>

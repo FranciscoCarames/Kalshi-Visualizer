@@ -4,7 +4,7 @@
 import { useEffect, useState } from "react";
 import type { FeedRow } from "./feed";
 import { rankWhy } from "./lens";
-import { centsToDollars } from "./columns";
+import { centsToDollars, qualityOf } from "./columns";
 import { detailKey, loadDetail, loadLadder, loadPayoff, type DetailBundle, type LadderData, type PayoffData } from "./detail";
 import { PayoffChart, LadderChart } from "./Charts";
 
@@ -45,16 +45,18 @@ function FeeScenarios({ row }: { row: FeedRow }) {
     <>
       <div className="sect">FEES — IMMEDIATE-FILL (TAKER)</div>
       <div className="kv">
-        <span className="l">Est. fees</span>{takerLine}
+        <span className="l">Est. fees (whole order)</span>{takerLine}
         <span className="l">Est. net edge / unit</span><span className="v">{row.taker_complete === false ? "—" : dol(row.net_edge)}</span>
         <span className="l">Breakeven gross gap</span>
         <span className="v">{row.fee_breakeven == null ? "—" : cents(row.fee_breakeven) + (row.fee_breakeven_approx ? " (approx)" : "")}</span>
       </div>
-      <div className="note dim" style={{ marginTop: 2 }}>Immediate-fill estimate — cross visible top-of-book now.</div>
+      <div className="note dim" style={{ marginTop: 2 }}>
+        Fee total is for the <b>whole order — every leg at the full fillable size</b>, not per contract. Net edge &amp;
+        breakeven are per unit. Immediate-fill estimate — cross visible top-of-book now.</div>
 
       <div className="sect">FEES — RESTING-ORDER (MAKER)</div>
       <div className="kv">
-        <span className="l">Est. fees</span>{makerLine}
+        <span className="l">Est. fees (whole order)</span>{makerLine}
         <span className="l">Est. net edge / unit</span><span className="v">{row.maker_complete === false ? "—" : dol(row.net_edge_maker)}</span>
       </div>
       <div className="note dim" style={{ marginTop: 2 }}>
@@ -156,6 +158,16 @@ export default function Inspector({ row, lens, snapshotId, showNet, longShort }:
         {row.parent_over_maxloss != null
           ? <><span className="l">Ripeness (parent÷loss)</span><span className="v amber">{(row.parent_over_maxloss as number).toFixed(2)}</span></>
           : null}
+        {row.section === "bounded" ? (() => {
+          // Single uncalibrated setup-quality diagnostic = ripeness × conditional chance. Shown ALONGSIDE the
+          // raw ripeness (above) and the conditional note (below) — never replacing them. "Insufficient data"
+          // when an input is missing (≠ Low).
+          const q = qualityOf(row);
+          const cls = q.tier === "High" ? "green" : q.tier === "Med" ? "amber" : "dim";
+          return <><span className="l">Setup quality</span>
+            <span className={"v " + cls} title="uncalibrated diagnostic: ripeness × P(deeper│reached). Not fair value; never executable ranking.">
+              {q.tier === "n/a" ? "Insufficient data" : `${q.label}${q.score != null ? ` (${q.score.toFixed(2)})` : ""}`}</span></>;
+        })() : null}
       </div>
 
       {showNet ? <FeeScenarios row={row} /> : null}
@@ -164,7 +176,7 @@ export default function Inspector({ row, lens, snapshotId, showNet, longShort }:
       {hasCond ? (
         <div className="note" style={{ marginTop: 6 }}>
           <b className="violet">Conditional (market-implied · display basis):</b> P(deeper │ reached) ≈ <span className="violet">{n1(condPct as number)}%</span>
-          {row.cond_child_firm != null ? <> · firm <span className="violet">{n1(row.cond_child_firm)}%</span></> : null}
+          {row.cond_child_firm != null ? <> · bid/ask <span className="violet">{n1(row.cond_child_firm)}%</span></> : null}
           {" "}— price ratio. See the <b>Participant Detail</b> tab for the full table. <span className="uncal">uncalibrated · not fair value</span>
         </div>
       ) : (row.pnode || row.cnode) ? (
@@ -309,11 +321,12 @@ export function Detail({ row, showIds, showRules = true }: { row: FeedRow | null
           <div className="note" style={{ marginBottom: 4 }}>
             The market-implied chance the <b>deeper</b> outcome happens <i>given</i> the <b>broader</b> one
             already did — the price ratio (deeper ÷ broader) on two bases: <b>display</b> (the dashboard
-            price) and <b>firm</b> (executable bid/ask). Uncalibrated, not a fair-value model; the firm
-            figure is a diagnostic, not an executable edge.
+            price — midpoint when the spread is reasonable, else last trade) and <b>bid/ask</b> (executable
+            quotes). Uncalibrated, not a fair-value model; the bid/ask figure is a diagnostic, not an
+            executable edge.
           </div>
           <table className="condtbl"><tbody>
-            <tr><th>Stage</th><th>display</th><th>firm (bid/ask)</th></tr>
+            <tr><th>Stage</th><th>display</th><th>bid/ask</th></tr>
             <tr><td>P(deeper │ broader reached)</td>
               <td className="violet">{row.cond_child != null ? n1(row.cond_child) + "%" : "—"}</td>
               <td>{row.cond_child_firm != null ? n1(row.cond_child_firm) + "%" : "—"}</td></tr>
@@ -322,7 +335,7 @@ export function Detail({ row, showIds, showRules = true }: { row: FeedRow | null
               <td>{row.cond_success_firm != null ? n1(row.cond_success_firm) + "%" : "—"}</td></tr>
           </tbody></table>
           <div className="formula">display: P(deeper│reached) = price(deeper) ÷ price(parent){row.cdisp != null && row.pdisp ? ` = ${row.cdisp}/${row.pdisp} = ${n1(row.cond_child as number)}%` : ""}</div>
-          {row.cask != null && row.pbid ? <div className="formula">firm: child ask ÷ parent bid = {row.cask}/{row.pbid}{row.cond_child_firm != null ? ` = ${n1(row.cond_child_firm)}%` : ""}</div> : null}
+          {row.cask != null && row.pbid ? <div className="formula">bid/ask: child ask ÷ parent bid = {row.cask}/{row.pbid}{row.cond_child_firm != null ? ` = ${n1(row.cond_child_firm)}%` : ""}</div> : null}
           {row.cond_child == null && row.cond_reason
             ? <div className="note" style={{ marginTop: 4 }}>Display conditional unavailable — {row.cond_reason}.</div> : null}
         </>
@@ -448,7 +461,7 @@ export function Formulas({ row }: { row: FeedRow | null }) {
       <div className="formula">parent_display ÷ (cost − 100) = {row.parent_over_maxloss != null ? (row.parent_over_maxloss as number).toFixed(2) : "n/a"} — in-the-money chance per ¢ at risk</div>
       <div className="sect">CONDITIONAL <span className="uncal">UNCALIBRATED · DISPLAY-ONLY</span></div>
       <div className="formula">display: P(deeper│reached) = price(deeper)/price(parent) = {row.cond_child != null && row.cdisp != null && row.pdisp ? `${row.cdisp}/${row.pdisp} = ${n1(row.cond_child)}%` : "n/a"}</div>
-      <div className="formula">firm: child ask/parent bid = {row.cond_child_firm != null && row.cask != null && row.pbid ? `${row.cask}/${row.pbid} = ${n1(row.cond_child_firm)}%` : "n/a"} <span className="uncal">diagnostic, not an executable edge</span></div>
+      <div className="formula">bid/ask: child ask/parent bid = {row.cond_child_firm != null && row.cask != null && row.pbid ? `${row.cask}/${row.pbid} = ${n1(row.cond_child_firm)}%` : "n/a"} <span className="uncal">diagnostic, not an executable edge</span></div>
       <div className="sect">FEES (estimate, display-only)</div>
       <div className="formula">kalshi taker fee ≈ 0.07·c·p·(1−p) → fees {cents(row.fees)} · net edge {cents(row.net_edge)} · never affects ranking</div>
       <div className="note"><span className="uncal">general taker estimate only · not net P&L · special schedules / maker fills / rounding / series fee changes may differ</span></div>
