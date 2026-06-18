@@ -306,7 +306,7 @@ export function Detail({ row, showIds, showRules = true }: { row: FeedRow | null
       <div className="sub">{[row.sub, row.sport].filter(Boolean).join(" · ")} · participant detail</div>
 
       {canPick ? (
-        <div className="note" style={{ marginTop: 6 }}>
+        <div className="note pchooser" style={{ marginTop: 6 }}>
           <b>Participant:</b>{" "}
           {legParts.map((p) => (
             <button key={p.pk} className={(validPick ?? baseKey?.player_key) === p.pk ? "on" : ""} onClick={() => setPickPk(p.pk)}>{p.label}</button>
