@@ -150,7 +150,8 @@ export default function Inspector({ row, lens, snapshotId, showNet, longShort }:
             <span className="l2">{l.c || l.tk || "reference market"}</span>
             <span className="dim">reference only</span>
             <span className="dim" />
-            {href ? <a href={href} target="_blank" rel="noreferrer">↗</a> : null}
+            {href ? <a href={href} target="_blank" rel="noreferrer"
+              title={`Open on Kalshi. A multi-contract event (e.g. a winner field or a "reach round") may open its DEFAULT contract — select ${l.c || l.tk || "this contract"} (${l.tk || "—"}) from the list.`}>↗</a> : null}
           </div>
         );
         const yes = String(l.side || "").includes("yes");
@@ -162,7 +163,8 @@ export default function Inspector({ row, lens, snapshotId, showNet, longShort }:
             {l.tk ? <span className="dim" style={{ fontFamily: "monospace", fontSize: "0.85em" }} title="market ticker">{l.tk}</span> : null}
             <span className="white">{l.p != null ? l.p + "¢" : "—"}</span>
             <span className="dim" title="contracts available at this price (order-book depth) — NOT the amount to buy; see the plan header above">{l.sz ?? 0} avail</span>
-            {href ? <a href={href} target="_blank" rel="noreferrer">↗</a> : null}
+            {href ? <a href={href} target="_blank" rel="noreferrer"
+              title={`Open on Kalshi. A multi-contract event (e.g. a winner field or a "reach round") may open its DEFAULT contract — select ${l.c || l.tk || "this contract"} (${l.tk || "—"}) from the list.`}>↗</a> : null}
           </div>
         );
       }) : <div className="note">No leg detail.</div>}
