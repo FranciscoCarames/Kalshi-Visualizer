@@ -292,7 +292,7 @@ export default function Blotter() {
             {byFilters > 0 ? <> · <b className="amber">{byFilters.toLocaleString()}</b> by filters</> : null}
           </>;
         })()}
-        · {tableCols.length} cols
+        {" · "}{tableCols.length} cols
         {sort ? <> · sort <b className="amber">{sort.field} {sort.dir === "asc" ? "▲" : "▼"}</b></>
               : t.lens ? <> · lens <b className="amber">{t.lens}</b></> : <> · engine order</>}
       </div>
