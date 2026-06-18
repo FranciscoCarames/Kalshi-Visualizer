@@ -3,6 +3,7 @@
  * on the mockup's classes. Rows arrive engine-ranked + lens-sorted; a click on a header applies a display-
  * only sort override (reset when the section/catalog changes). AG-Grid's virtualization is not reproduced. */
 import { memo, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useTerminal } from "./context";
 import { ZONES, SUBTABS, type FeedRow } from "./feed";
 import { COLS, fmtVal, qhClass, signalLabel, qualityOf, type Col } from "./columns";
@@ -73,10 +74,24 @@ const ROW_CAP = 500;
 export default function Blotter() {
   const t = useTerminal();
   const [chooser, setChooser] = useState(false);
+  // Fixed-position anchor for the column menu (viewport coords of the ⚙ button). The menu is PORTALED to the
+  // document body with position:fixed so the scanner panel's `overflow:hidden` can't clip it — that was
+  // hiding the lower half of the (30+ row) bounded-loss catalog. Captured on open.
+  const [menuPos, setMenuPos] = useState<{ top: number; right: number; maxH: number } | null>(null);
   const [sort, setSort] = useState<SortState | null>(null);
   const dragF = useRef<string | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const colsBtnRef = useRef<HTMLSpanElement | null>(null);
+  const openChooser = () => {
+    if (chooser) { setChooser(false); return; }
+    const btn = colsBtnRef.current;
+    if (btn) {
+      const r = btn.getBoundingClientRect();
+      const win = btn.ownerDocument.defaultView ?? window;   // the menu's own window (handles pop-outs)
+      setMenuPos({ top: r.bottom + 2, right: win.innerWidth - r.right, maxH: win.innerHeight - r.bottom - 12 });
+    }
+    setChooser(true);
+  };
   // Close the column chooser on an OUTSIDE click — never on mouse-leave. Mouse-leave made a long catalog
   // (bounded-loss has 30+ columns) impossible to use: the menu vanished the instant the cursor left it to
   // reach the scrollbar, so the bottom options were unreachable.
@@ -167,16 +182,18 @@ export default function Blotter() {
             {label}<span className="ct">{t.count(t.zone, s).toLocaleString()}</span>
           </div>
         ))}
-        <span className="cols" ref={colsBtnRef} onClick={() => setChooser((v) => !v)}>⚙ columns ▾</span>
-        {chooser ? (
-          <div className="menu on" ref={menuRef} style={{ right: 0, top: 20 }}>
+        <span className="cols" ref={colsBtnRef} onClick={openChooser}>⚙ columns ▾</span>
+        {chooser && menuPos ? createPortal(
+          <div className="menu on" ref={menuRef}
+               style={{ position: "fixed", top: menuPos.top, right: menuPos.right, maxHeight: menuPos.maxH }}>
             <div className="mh">COLUMNS · {t.section.toUpperCase()}
               <span className="mclose" title="close" onClick={() => setChooser(false)}>✕</span></div>
             {COLS[t.colKey].map((c) => (
               <label key={c.f}><input type="checkbox" checked={t.visible.includes(c.f)} onChange={() => t.toggleCol(c.f)} />{c.l}</label>
             ))}
             <div className="mi" onClick={t.resetCols}>↺ reset to defaults</div>
-          </div>
+          </div>,
+          (colsBtnRef.current?.ownerDocument ?? document).body,
         ) : null}
       </div>
       {t.section === "bounded" ? (
