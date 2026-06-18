@@ -189,7 +189,10 @@ def legs_of(row: dict[str, Any]) -> list[dict[str, Any]]:
             "side": row.get(f"action_{i}_side") or "",
             "contract": row.get(f"action_{i}_contract") or "",
             "price_c": _num(row.get(f"action_{i}_price_c")),
-            "size": None,
+            # Use the per-leg size the detector stamped (action_i_size) — not a hard-coded None, which
+            # rendered as "0 available". Detectors now build a real `legs` list (so this synthesis is the
+            # fallback for action-only rows / old snapshots), but keep it correct to avoid a regression path.
+            "size": _num(row.get(f"action_{i}_size")),
             "ticker": tk or "",
             "url": url or "",
             "text": text,

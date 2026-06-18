@@ -176,6 +176,19 @@ def _buy_text(side: str, contract: str, price_c: int | None) -> str:
     return f"{word} — {contract} @ {price}"
 
 
+def _leg(side: str, row: dict[str, Any], price_c: int | None) -> dict[str, Any]:
+    """The canonical per-leg dict shared by EVERY dutch-book detector (pair / n-way / field) so the SPA
+    always receives a populated leg (side / contract / size / ticker), never a blank book-only stub. The
+    tradable size is `yes_ask_size` for a Buy-YES leg and `yes_bid_size` for a Buy-NO leg (you buy NO by
+    hitting the resting YES bid). Display-only; never read by the detector math."""
+    label = _leg_label(row)
+    size = row.get("yes_ask_size") if side == "buy_yes" else row.get("yes_bid_size")
+    return {"side": side, "contract": label, "price_c": price_c, "size": _num(size),
+            "ticker": row.get("market_ticker", ""), "url": row.get("kalshi_url", ""),
+            "player_key": row.get("player_key", ""),   # per-leg identity (participant filter, PR6)
+            "text": _buy_text(side, label, price_c)}
+
+
 def _settlement_caveat(rows: list[dict[str, Any]]) -> str:
     """The NON-blocking settlement caveat for a finding's legs, or '' when none applies.
 
@@ -330,6 +343,10 @@ def _detect_pair(event_ticker: str, markets: list[dict[str, Any]],
     direction = "underround" if side == "buy_yes" else "overround"
     label_a, label_b = _leg_label(a), _leg_label(b)
     gap_c, min_size = best["gap_c"], best["min_size"]
+    # Populated per-leg list (same shape as the n-way / field detectors) so the SPA shows real side /
+    # team / available size — not the blank book-only stub the feed used to synthesize. Leg order matches
+    # action_1/action_2 (a then b).
+    legs = [_leg(side, a, best["price_a"]), _leg(side, b, best["price_b"])]
 
     # Tradable now: a real, executable edge needs positive size on both legs and both markets open.
     # The settlement caveat (a postponement note on per-game books; see `_settlement_caveat`) is a
@@ -403,9 +420,11 @@ def _detect_pair(event_ticker: str, markets: list[dict[str, Any]],
         "settlement_caveat": settlement_caveat,
         # Two-leg buy-only action plan (same vocabulary as consistency rows, so the dashboard reuses it).
         "action_1_side": side, "action_1_contract": label_a, "action_1_price_c": best["price_a"],
-        "action_1_text": _buy_text(side, label_a, best["price_a"]),
+        "action_1_size": legs[0]["size"], "action_1_text": _buy_text(side, label_a, best["price_a"]),
         "action_2_side": side, "action_2_contract": label_b, "action_2_price_c": best["price_b"],
-        "action_2_text": _buy_text(side, label_b, best["price_b"]),
+        "action_2_size": legs[1]["size"], "action_2_text": _buy_text(side, label_b, best["price_b"]),
+        # Populated legs (side/contract/size/ticker) — the SPA renders these directly (no blank book-only stub).
+        "legs": legs, "n_legs": 2,
         # Profit / sizing (mirrors consistency's exec_* keys; gross of fees/slippage). A MECE book pays its
         # floor in EVERY state, so the per-unit profit is flat (worst == best == gap_c, negative on a
         # near-miss = the guaranteed bundle loss).
@@ -565,14 +584,7 @@ def _detect_n_way(event_ticker: str, rows: list[dict[str, Any]], cfg: Any,
     word = "buy YES" if side == "buy_yes" else "buy NO"
     gap_c, min_size, floor, cost = best["gap_c"], best["min_size"], best["payout_floor_c"], best["cost_c"]
 
-    legs: list[dict[str, Any]] = []
-    for r, p in zip(rows, best["prices"]):
-        size = r.get("yes_ask_size") if side == "buy_yes" else r.get("yes_bid_size")
-        label = _leg_label(r)
-        legs.append({"side": side, "contract": label, "price_c": p, "size": _num(size),
-                     "ticker": r.get("market_ticker", ""), "url": r.get("kalshi_url", ""),
-                     "player_key": r.get("player_key", ""),   # per-leg identity (participant filter, PR6)
-                     "text": _buy_text(side, label, p)})
+    legs = [_leg(side, r, p) for r, p in zip(rows, best["prices"])]
 
     all_active = all(_is_active(r) for r in rows)
     tradable_now = "Yes" if (min_size is not None and all_active) else "No"
@@ -728,13 +740,7 @@ def _detect_field(event_ticker: str, rows: list[dict[str, Any]], cfg: Any,
     n_field, k = len(rows), len(subset)
     cost, gap_c, min_size, floor = cand["cost_c"], cand["gap_c"], cand["min_size"], cand["payout_floor_c"]
 
-    legs: list[dict[str, Any]] = []
-    for r, p in zip(subset, cand["prices"]):
-        label = _leg_label(r)
-        legs.append({"side": "buy_no", "contract": label, "price_c": p, "size": _num(r.get("yes_bid_size")),
-                     "ticker": r.get("market_ticker", ""), "url": r.get("kalshi_url", ""),
-                     "player_key": r.get("player_key", ""),   # per-leg identity (participant filter, PR6)
-                     "text": _buy_text("buy_no", label, p)})
+    legs = [_leg("buy_no", r, p) for r, p in zip(subset, cand["prices"])]
 
     all_active = all(_is_active(r) for r in subset)
     tradable_now = "Yes" if (min_size is not None and all_active) else "No"
