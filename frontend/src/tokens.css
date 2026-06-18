@@ -120,7 +120,7 @@ select.in,input.in{background:var(--bg1);border:1px solid var(--line2);color:var
 .ph:active{cursor:grabbing}
 html[data-theme="hc"] .ph{background:var(--bg2)}
 .ph .n{color:#000;background:var(--amber);font-weight:800;font-size:calc(var(--fs) - 3px);padding:0 4px}
-.ph h3{margin:0;font-size:calc(var(--fs) - 2px);font-weight:700;letter-spacing:.7px;color:var(--amber)}
+.ph h3{margin:0;font-size:calc(var(--fs) - 2px);font-weight:700;letter-spacing:.7px;color:var(--amber);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .ph .hint{margin-left:auto;color:var(--tx3);font-size:calc(var(--fs) - 3px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ph .dock{display:flex;gap:6px;flex:0 0 auto}.ph .dock span{cursor:pointer;color:var(--tx3);font-size:calc(var(--fs) - 1px)}.ph .dock span:hover{color:var(--white)}
 .ph .dock .tsz{letter-spacing:-1px}.ph .dock .tsz.on{color:var(--amber)}

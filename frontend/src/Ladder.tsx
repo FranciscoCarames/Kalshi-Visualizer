@@ -30,6 +30,17 @@ export function firstBookableLeg(legs: FeedLeg[]): number {
   return i >= 0 ? i : 0;
 }
 
+/** Whether to show the participant's full ladder RUNG picker (vs. the per-leg picker). True ONLY for a
+ * genuine CONTAINMENT parent→child pair — the feed sets both `pnode` and `cnode` on exactly those rows
+ * (bounded-loss, cheap-NO containment, executable containment violations). Every AGGREGATE row — winner
+ * field, dutch book, 2-way game, stage-of-elimination book/synthetic, synthetic bundle — has neither, so
+ * it falls through to the leg picker and exposes ALL its legs (not one anchor team's ladder). Verified
+ * against the live feed; `source`/`relationship_type`/`setup_family` are not present in the SPA feed, so
+ * `pnode && cnode` is the reliable signal. */
+export function showLadderRungs(row: FeedRow | null): boolean {
+  return !!(row && row.pnode && row.cnode);
+}
+
 interface Level { p: number; bid: number; ask: number; }
 
 /** Build the displayed price ladder from the raw book. YES bids verbatim; YES asks = NO bids inverted
@@ -65,12 +76,16 @@ export default function Ladder({ row }: { row: FeedRow | null }) {
   // ladder never lingers under a new participant).
   useEffect(() => { setLeg(firstBookableLeg(legs)); setRungTicker(null); setRungs([]); }, [row?.id]);   // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Load the player's full ladder rungs (with tickers) for the rung picker — ANY containment row with a valid
-  // detail key (cheap-NO, advance, rounds, top-N). Aborted on row/key change. Field/game rows → no rungs.
+  // Load the player's full ladder rungs (with tickers) for the rung picker — ONLY for a genuine CONTAINMENT
+  // parent→child row (showLadderRungs). Aggregate rows (winner field, dutch book, 2-way game, stage-elim
+  // book/synthetic, synthetic bundle) skip this entirely so they fall through to the leg picker and expose
+  // ALL their legs — and a late response can never repopulate rungs and re-shadow the leg picker. Aborted
+  // on row/key change.
+  const useRungs = showLadderRungs(row);
   const key = detailKey(row);
   const keyStr = key ? `${key.sport}|${key.player_key}|${key.tournament}` : "";
   useEffect(() => {
-    if (!key) { setRungs([]); return; }
+    if (!key || !useRungs) { setRungs([]); return; }
     let alive = true;
     const ctrl = new AbortController();
     loadDetail(key, ctrl.signal)
@@ -78,7 +93,7 @@ export default function Ladder({ row }: { row: FeedRow | null }) {
       .catch(() => { if (alive) setRungs([]); });
     return () => { alive = false; ctrl.abort(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [keyStr]);
+  }, [keyStr, useRungs]);
 
   // Fetch the live book for the EFFECTIVE ticker (picked rung overrides the leg); re-poll ~5s; abort in-flight
   // on change/unmount. Paused when nothing is selected (no ticker → no fetch).
@@ -143,7 +158,7 @@ export default function Ladder({ row }: { row: FeedRow | null }) {
           : !ob && loading ? <div className="empty">loading live order book…</div>
           : !hasBook ? <div className="empty">no resting orders (empty or closed book)</div>
           : (
-            <table className="ladtbl"><thead><tr><th>Bid size</th><th>Px¢</th><th>Ask size</th></tr></thead>
+            <table className="ladtbl" title="Kalshi books hold YES & NO bids. A YES ask = a NO bid inverted (100 − no). To Buy NO, take a YES bid at NO price = 100 − bid."><thead><tr><th>YES bid</th><th>Px¢</th><th>YES ask</th></tr></thead>
               <tbody>{rows.map(({ p, bid, ask }) => (
                 <tr key={p}>
                   <td className="bidc">{bid ? bar(bid) : null}</td>
@@ -154,7 +169,10 @@ export default function Ladder({ row }: { row: FeedRow | null }) {
           )}
       </div>
       {hasBook
-        ? <div className="ladfoot"><span>LIVE order book · refreshed {secsAgo}s ago</span><span>best bid {bestBid ?? "—"}¢ · ask {bestAsk ?? "—"}¢ · gross/top-of-book</span></div>
+        ? <div className="ladfoot">
+            <span title="Kalshi books hold YES & NO bids; a YES ask = a NO bid inverted (100 − no).">YES book · Buy NO = 100 − YES bid</span>
+            <span>refreshed {secsAgo}s · best {bestBid ?? "—"}/{bestAsk ?? "—"}¢ · top-of-book</span>
+          </div>
         : null}
     </>
   );
