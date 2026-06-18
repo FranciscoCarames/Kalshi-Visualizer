@@ -163,11 +163,23 @@ export default function Inspector({ row, lens, snapshotId, showNet, longShort }:
       <div className="sect">ECONOMICS (PER UNIT)</div>
       <div className="kv">
         <span className="l">Cost</span><span className="v">{cv(row.cost)}</span>
-        <span className="l">{isSpec ? "Max loss" : "Worst case"}</span><span className="v red">{cv(row.max_loss)}</span>
-        <span className="l">{isSpec ? "Max profit" : "Best case"}</span><span className="v green">{cv(row.max_profit ?? row.profit)}</span>
+        {(() => {
+          // Dutch-book / field rows carry NO per-unit max_loss/max_profit — the payout is a FLAT locked
+          // gross gap (`edge`) in every outcome (a winner-field subset can only pay MORE), so show that as
+          // the guaranteed floor instead of a blank "—" or the mis-scaled total $ profit.
+          const ml = num(row.max_loss), mp = num(row.max_profit), gap = num(row.edge);
+          if (ml == null && mp == null && gap != null) return (<>
+            <span className="l">{isSpec ? "Max loss" : "Worst case"}</span><span className="v green">+{cv(gap)} <span className="dim">flat</span></span>
+            <span className="l">{isSpec ? "Max profit" : "Best case"}</span><span className="v green">+{cv(gap)} <span className="dim">locked gross{(row.nlegs ?? legs.length) > 2 ? "; field ≥" : ""}</span></span>
+          </>);
+          return (<>
+            <span className="l">{isSpec ? "Max loss" : "Worst case"}</span><span className="v red">{cv(ml)}</span>
+            <span className="l">{isSpec ? "Max profit" : "Best case"}</span><span className="v green">{cv(mp ?? num(row.profit))}</span>
+          </>);
+        })()}
         <span className="l">ROI</span><span className="v">{num(row.roi) == null ? "—" : (row.roi as number).toFixed(1) + "%"}</span>
         <span className="l">Max units</span><span className="v">{num(row.max_units ?? row.units) ?? "—"}</span>
-        <span className="l">Quote</span><span className="v">{row.quote_health || "—"}</span>
+        <span className="l">Quote</span><span className="v">{row.quote_health || (legs.length > 1 ? "multi-leg — see legs" : "—")}</span>
         <span className="l">Tradable</span>
         <span className={"v " + (String(row.tradable || "").toLowerCase().startsWith("yes") ? "green" : "amber")}>{row.tradable || "—"}</span>
         {row.parent_over_maxloss != null
