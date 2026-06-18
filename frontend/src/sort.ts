@@ -2,7 +2,7 @@
  * never changes a row's bucket/status/rank; clearing the sort (or switching section) returns to engine
  * order. Nulls/blanks always sort last in both directions (audit). */
 import type { FeedRow } from "./feed";
-import type { Fmt } from "./columns";
+import { qualityOf, type Fmt } from "./columns";
 
 export type SortDir = "asc" | "desc";
 export interface SortState { field: string; dir: SortDir; }
@@ -12,8 +12,11 @@ const isNumericFmt = (fmt: Fmt) => fmt !== "text" && fmt !== "name" && fmt !== "
 /** Sort a COPY by one column. `fmtOf` gives the column's format (numeric vs string). Nulls last. Stable. */
 export function sortRows(rows: FeedRow[], state: SortState | null, fmtOf: (f: string) => Fmt): FeedRow[] {
   if (!state) return rows;
-  const numeric = isNumericFmt(fmtOf(state.field));
+  // "quality" (Setup quality) is a DERIVED column — not a stored row field — so sort it by its computed
+  // numeric score (ripeness × conditional); "Insufficient data" (score null) sorts last like any blank.
+  const numeric = state.field === "quality" || isNumericFmt(fmtOf(state.field));
   const key = (o: FeedRow): number | string | null => {
+    if (state.field === "quality") { const s = qualityOf(o).score; return s == null ? null : s; }
     const v = o[state.field];
     if (v == null || v === "") return null;
     if (numeric) { const n = typeof v === "number" ? v : Number(v); return Number.isNaN(n) ? null : n; }

@@ -27,6 +27,16 @@ describe("sortRows", () => {
     sortRows(rows, { field: "edge", dir: "asc" }, fmtOf);
     expect(rows).toEqual(copy);
   });
+  it("sorts the DERIVED 'quality' column by its computed score (not the absent row field), blanks last", () => {
+    // score = parent_over_maxloss × (cond_child/100): hi 5×0.8=4, mid 2×0.6=1.2, lo 1×0.5=0.5; n/a missing input
+    const hi = row("hi", { parent_over_maxloss: 5, cond_child: 80 });
+    const mid = row("mid", { parent_over_maxloss: 2, cond_child: 60 });
+    const lo = row("lo", { parent_over_maxloss: 1, cond_child: 50 });
+    const na = row("na", { cond_child: 90 });   // no ripeness → Insufficient data → last
+    const rs = [mid, na, lo, hi];
+    expect(sortRows(rs, { field: "quality", dir: "desc" }, fmtOf).map((r) => r.id)).toEqual(["hi", "mid", "lo", "na"]);
+    expect(sortRows(rs, { field: "quality", dir: "asc" }, fmtOf).map((r) => r.id)).toEqual(["lo", "mid", "hi", "na"]);
+  });
 });
 
 describe("nextSort (3-state cycle)", () => {
