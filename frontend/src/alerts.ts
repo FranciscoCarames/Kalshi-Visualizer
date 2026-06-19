@@ -26,7 +26,7 @@ const MAX_MOVERS = 4;
  * diff (≥2 distinct snapshots) has run — on first load only current-state warnings (coverage_partial) fire,
  * never a flood of false "new". Returns [] when nothing is alert-worthy (the caller shows the honest
  * baseline/empty message). NEVER emits a bucket-change row (no client-side prev-bucket truth). */
-export function deriveAlerts(opps: FeedRow[], changeOf: ChangeFn, meta: FeedMeta | null, hasBaseline: boolean): Alert[] {
+export function deriveAlerts(opps: FeedRow[], changeOf: ChangeFn, meta: FeedMeta | null, hasBaseline: boolean, hideFeeNeg = false): Alert[] {
   const out: Alert[] = [];
   const a = (kind: AlertKind, label: string, basis: string, opportunity_id?: string): Alert =>
     ({ kind, severity: SEV[kind], opportunity_id, label, basis });
@@ -37,6 +37,9 @@ export function deriveAlerts(opps: FeedRow[], changeOf: ChangeFn, meta: FeedMeta
     for (const o of opps || []) {
       const id = o?.id;
       if (!id) continue;
+      // L4: a row hidden from the ACTIONABLE badge by the fee filter must not raise a contradicting alert.
+      // Mirror filters.hiddenByFee (exec zone + net_negative); the suppressed count surfaces in the panel.
+      if (hideFeeNeg && o.zone === "exec" && o.net_negative === true) continue;
       const c = changeOf(id);
       if (!c) continue;
       const name = String(o.name || id);

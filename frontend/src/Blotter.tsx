@@ -174,6 +174,11 @@ export default function Blotter() {
     if (!t.meta || t.meta.snapshot_id == null) return "No scan yet — hit ▷ SCAN (or open the dashboard).";
     if ((t.meta.n_total ?? 0) === 0) return "No opportunities in the latest snapshot.";
     if (t.inScope(t.zone, t.section) === 0) return "No opportunities in this section for the current filters.";
+    // Rows ARE in scope (membership passes) but none are shown — say WHY, specifically (L1 + M3):
+    if (t.zone === "exec" && t.hiddenByFeeCount > 0)
+      return `All executable rows here are hidden by the fee filter — a display filter (${t.hiddenByFeeCount} hidden). Reveal them via the “show” chip or Settings.`;
+    if (t.countBeforeBand(t.zone, t.section) > 0)
+      return "Rows are in scope but hidden by this section’s band filter — relax the band (the SecBar above) to see them.";
     return "All rows hidden by the section / band filters — relax them to see in-scope rows.";
   };
 
@@ -190,7 +195,7 @@ export default function Blotter() {
       <div className="btabs" style={{ position: "relative" }}>
         {SUBTABS[t.zone].map(([s, label]) => (
           <div key={s} className={"btab" + (t.section === s ? " on" : "")} data-tab={s} onClick={() => t.setSection(s)}>
-            {label}<span className="ct">{t.count(t.zone, s).toLocaleString()}</span>
+            {label}<span className="ct">{t.countLabel(t.zone, s)}</span>
           </div>
         ))}
         <span className="cols" ref={colsBtnRef} onClick={openChooser}>⚙ columns ▾</span>

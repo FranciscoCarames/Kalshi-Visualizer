@@ -40,6 +40,8 @@ interface TerminalState {
   zoneCount: (zone: string) => number;                      // sum of the zone's section counts (band-aware)
   hiddenByFeeCount: number;                                 // exec rows hidden by the fee filter (honest chip)
   inScope: (zone: string, section: string) => number;       // membership-only count (thresholds not applied)
+  countBeforeBand: (zone: string, section: string) => number; // membership+thresholds+fee, BEFORE the SecBar band
+  countLabel: (zone: string, section: string) => string;      // count, or "0 (filtered)" when a band hides all in-scope rows
   runScan: (force: boolean) => void;
   setSetting: <K extends keyof Settings>(k: K, v: Settings[K]) => void;
   setBand: (patch: Partial<BandState>) => void;
@@ -367,6 +369,16 @@ export function TerminalProvider({ children, embedded }: { children: ReactNode; 
       ? applyBand(base, s, bands[s] ?? defaultBand(s, meta?.defaults)).length
       : base.length;
   };
+  // M3: the same membership+thresholds+fee set as `count`, but BEFORE the per-section SecBar band. When
+  // `count` is 0 yet this is > 0, the section's default band (e.g. 5¢ max-loss) is hiding everything → the UI
+  // shows "0 (filtered)" / a band-specific empty state instead of a bare 0 that reads as "nothing here".
+  const countBeforeBand = (z: string, s: string) =>
+    rowsFor(opps, z, s).filter((o) => passAll(o, filters) && !hiddenByFee(o, z, settings.hideNetNegExec)).length;
+  const countLabel = (z: string, s: string): string => {
+    const c = count(z, s);
+    if (c > 0) return c.toLocaleString();
+    return countBeforeBand(z, s) > 0 ? "0 (filtered)" : "0";   // band hid all in-scope rows vs genuinely none
+  };
   // How many exec rows the fee filter is hiding right now (membership-passing) — drives the honest
   // "N hidden by fee filter" chip so a dropped ACTIONABLE count never implies "no opportunities".
   const hiddenByFeeCount = useMemo(() =>
@@ -388,7 +400,7 @@ export function TerminalProvider({ children, embedded }: { children: ReactNode; 
     _feed: feed,
     meta, opps, err, sports, zone, section, lens, filters, part: filters.part, tourOptions,
     sel, colKey, visible, rows, theme, paletteOpen, multi, surface, showNet, itab,
-    extra, panelsMenuOpen, scanText, settings, band, bandIsDefault, split, count, zoneCount, hiddenByFeeCount, inScope, runScan, setSetting,
+    extra, panelsMenuOpen, scanText, settings, band, bandIsDefault, split, count, zoneCount, hiddenByFeeCount, inScope, countBeforeBand, countLabel, runScan, setSetting,
     changeOf: (id) => change.get(id) ?? null, flashIds, hasBaseline: baselineReady,
     setBand, resetBand, setSplit,
     goSection: (z, s) => { setZone(z); setSectionRaw(s); },

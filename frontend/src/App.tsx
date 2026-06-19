@@ -358,7 +358,7 @@ function Shell() {
         {TILES.map(([label, z, s, accent]) => (
           <div key={label} className={"tile" + (t.zone === z && t.section === s ? " on" : "")} onClick={() => { t.setSurface("opp"); t.goSection(z, s); }}>
             <div className="k">{label}</div>
-            <div className={"v " + (TILE_ACCENT[accent] || "")}>{t.count(z, s).toLocaleString()}</div>
+            <div className={"v " + (TILE_ACCENT[accent] || "")}>{t.countLabel(z, s)}</div>
             <div className="s">{TILE_SUB[s]}</div>
           </div>
         ))}
