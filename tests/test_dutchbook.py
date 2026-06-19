@@ -584,7 +584,7 @@ def test_soccer_3way_id_is_order_independent():
 
 
 def test_nba_2way_book_unchanged_by_n_outcome_path():
-    # Regression: NBA playoff-series 2-way book still fires identically, 2-leg shape (legs None).
+    # Regression: NBA playoff-series 2-way book still fires identically; now carries a populated 2-leg list.
     a = market("Boston", series="KXNBASERIES", event="KXNBASERIES-26FIN", player_key="bos",
                yes_ask_c=45, yes_bid_c=43)
     b = market("Denver", series="KXNBASERIES", event="KXNBASERIES-26FIN", player_key="den",
@@ -592,7 +592,59 @@ def test_nba_2way_book_unchanged_by_n_outcome_path():
     a["kind"] = b["kind"] = "match"
     g = dutchbook.find_dutch_books([a, b])[0]
     assert g["direction"] == "underround" and g["exec_gap_c"] == 7
-    assert g.get("legs") is None and g.get("n_legs") is None     # 2-leg shape unchanged
+    # 2-way books now emit real legs (side/contract/size), like the field/n-way detectors — leg order = a,b.
+    assert g["n_legs"] == 2 and len(g["legs"]) == 2
+    assert [leg["contract"] for leg in g["legs"]] == ["Boston", "Denver"]
+    assert all(leg["side"] == "buy_yes" for leg in g["legs"])
+    assert g["legs"][0]["size"] is not None and g["legs"][0]["size"] > 0   # yes_ask_size (Buy-YES)
+
+
+# --- 2-way books now emit populated legs (the empty-legs bug) ------------------------------
+def test_2way_underround_emits_real_legs():
+    a = market("Alpha", yes_ask_c=44, yes_bid_c=42, yes_ask_size=120)
+    b = market("Bravo", yes_ask_c=51, yes_bid_c=49, yes_ask_size=80)
+    g = dutchbook.find_dutch_books([a, b])[0]
+    assert g["direction"] == "underround" and g["n_legs"] == 2 and len(g["legs"]) == 2
+    for leg, name, sz in zip(g["legs"], ["Alpha", "Bravo"], [120, 80]):
+        assert leg["side"] == "buy_yes" and leg["contract"] == name and leg["size"] == sz
+        assert leg["price_c"] is not None and leg["ticker"] and leg["url"] and leg["text"]
+
+
+def test_2way_overround_legs_sized_from_yes_bid():
+    # overround = Buy NO both (Σ no_ask < 100); the Buy-NO tradable size is yes_bid_size.
+    a = market("Alpha", yes_ask_c=57, yes_bid_c=55, no_ask_c=45, yes_bid_size=300)
+    b = market("Bravo", yes_ask_c=54, yes_bid_c=52, no_ask_c=48, yes_bid_size=150)
+    g = dutchbook.find_dutch_books([a, b])[0]
+    assert g["direction"] == "overround"
+    assert all(leg["side"] == "buy_no" for leg in g["legs"])
+    assert [leg["size"] for leg in g["legs"]] == [300, 150]   # yes_bid_size, not yes_ask_size
+
+
+def test_2way_near_miss_also_emits_legs():
+    # cost ≥ 100 → near-miss watchlist row; legs must STILL be populated (same _detect_pair path).
+    # Underround overpay = 4¢ (Σ yes_ask 104); overround is worse (Σ no_ask 110) so the near-miss wins.
+    a = market("Alpha", yes_ask_c=52, yes_bid_c=45)
+    b = market("Bravo", yes_ask_c=52, yes_bid_c=45)
+    g = dutchbook.find_dutch_books([a, b], near_miss_max_over_c=10)[0]
+    assert g["edge_class"] == "near_miss" and g["n_legs"] == 2
+    assert all(leg["contract"] and leg["side"] == "buy_yes" for leg in g["legs"])
+
+
+def test_2way_legs_survive_to_the_scanner_and_feed():
+    # End-to-end: detector legs flow through scanner + the feed adapter as real legs (side/contract/size),
+    # NOT the blank book-only stub that produced "0 available". This is the layer the bug actually showed at.
+    import scanner
+    from webui import feed as wfeed
+    a = market("Home", yes_ask_c=44, yes_bid_c=42, yes_ask_size=210)
+    b = market("Away", yes_ask_c=53, yes_bid_c=51, yes_ask_size=190)
+    g = dutchbook.find_dutch_books([a, b])[0]
+    # scanner.legs_of keeps the populated legs (sizes intact)
+    assert [leg["size"] for leg in scanner.legs_of(g)] == [210, 190]
+    # the SPA feed adapter renders real side / contract / size — never a bo=True empty stub
+    fl = wfeed._trim_legs(g)
+    assert len(fl) == 2
+    for leg in fl:
+        assert leg["side"] and leg["c"] and (leg["sz"] or 0) > 0 and not leg.get("bo")
 
 
 # --- Per-game settlement caveat (Phase B PR 6) --------------------------------------------

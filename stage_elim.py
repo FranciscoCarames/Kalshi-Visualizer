@@ -40,6 +40,9 @@ FAMILY = "stage_of_elim"
 _BUCKETS = tuple(s for s, _ in sports.WC_STAGE_ELIM_BUCKETS)        # ("GS","R32","R16","QF","SF","FL","FW")
 _EXPECTED_N = len(_BUCKETS)                                        # 7
 _BUCKET_SET = frozenset(_BUCKETS)
+# suffix -> human bucket label ("R32" -> "Eliminated: Round of 32"), single-sourced from sports. Used to make
+# each LEG say WHICH ROUND it refers to (not just the team name, which is identical across all 7 buckets).
+_BUCKET_LABELS = dict(sports.WC_STAGE_ELIM_BUCKETS)
 
 # Cross-family rungs: advance-ladder node -> the tail-bucket suffixes whose Buy-YES sum replicates it.
 # (Reach a stage S == NOT eliminated before S == the union of all buckets from S onward.) "Win the World
@@ -63,8 +66,29 @@ def _team_key(rows: list[dict[str, Any]]) -> str:
     return str(rows[0].get("player_key") or "") if rows else ""
 
 
+def _team_name(rows: list[dict[str, Any]]) -> str:
+    """The team's DISPLAY name (e.g. 'USA' / 'Portugal') for the opportunity title. The bucket rows carry
+    the stage label in `player` (yes_sub_title = 'Group Stage' / 'Runner-up …'), NOT the team — so derive
+    the team from the event title ('<Team>: Stage of Elimination'). Falls back to `player` then the UUID
+    key. Display-only; never feeds the opportunity_id (which keys on the team UUID via _team_key)."""
+    if not rows:
+        return ""
+    event_title = str(rows[0].get("event_title") or "")
+    if ":" in event_title:
+        name = event_title.split(":", 1)[0].strip()
+        if name:
+            return name
+    return str(rows[0].get("player") or _team_key(rows))
+
+
+def _leg_label(row: dict[str, Any]) -> str:
+    """Per-leg label that states WHAT the leg is: the elimination round ('Eliminated: Round of 32') for a
+    bucket leg, else the market's own contract / participant (e.g. the advance-market hedge)."""
+    return _BUCKET_LABELS.get(_bucket_suffix(row)) or str(row.get("contract") or row.get("player") or _bucket_suffix(row))
+
+
 def _leg(side: str, row: dict[str, Any], price_c: int) -> dict[str, Any]:
-    label = str(row.get("player") or row.get("contract") or _bucket_suffix(row))
+    label = _leg_label(row)
     size = row.get("yes_ask_size") if side == "buy_yes" else row.get("yes_bid_size")
     return {"side": side, "contract": label, "price_c": price_c, "size": _num(size),
             "ticker": row.get("market_ticker", ""), "url": row.get("kalshi_url", ""),
@@ -78,7 +102,7 @@ def _blockers_for(rows: list[dict[str, Any]], min_size: Any) -> list[str]:
         out.append(BLOCKERS["size_missing"])
     for r in rows:
         q = r.get("quote_quality")
-        label = str(r.get("player") or r.get("contract") or _bucket_suffix(r))
+        label = _leg_label(r)
         if q in ("No quote", "One-sided"):
             out.append(BLOCKERS["no_quote"].format(leg=label))
         elif q == "Crossed":
@@ -149,7 +173,7 @@ def _detect_book(event: str, rows: list[dict[str, Any]], diag: dict | None) -> d
         "settlement_basis": STAGE_ELIM_BOOK_BASIS,
         "event_ticker": event, "series": ordered[0].get("series", ""),
         "tournament": ordered[0].get("tournament", ""), "tour": ordered[0].get("tour", ""),
-        "match": f"{ordered[0].get('player') or team} — stage of elimination",
+        "match": f"{_team_name(ordered)} — World Cup: how far do they go? (stage-of-elimination)",
         "player_a": ordered[0].get("player", ""), "player_b": ordered[-1].get("player", ""),
         "player_key_a": team, "player_key_b": team,
         "legs": legs, "n_legs": n, "payout_floor_c": floor,
@@ -259,7 +283,7 @@ def _detect_synthetic(event: str, rows: list[dict[str, Any]], node: str, tail_su
         "settlement_caveat": BLOCKERS["stage_elim_synthetic"], "settlement_basis": STAGE_ELIM_SYNTH_BASIS,
         "event_ticker": event, "series": tail[0].get("series", ""),
         "tournament": tail[0].get("tournament", ""), "tour": tail[0].get("tour", ""),
-        "match": f"{tail[0].get('player') or team} — {node} (synthetic vs advance)",
+        "match": f"{_team_name(tail)} — {node}: World Cup stage-of-elimination synthetic vs advance",
         "player_a": tail[0].get("player", ""), "player_b": hedge.get("player", ""),
         "player_key_a": team, "player_key_b": str(hedge.get("player_key") or ""),
         "legs": legs, "n_legs": len(legs), "payout_floor_c": floor,

@@ -4,7 +4,7 @@
 import { useEffect, useState } from "react";
 import type { FeedRow } from "./feed";
 import { rankWhy } from "./lens";
-import { centsToDollars } from "./columns";
+import { centsToDollars, qualityOf } from "./columns";
 import { detailKey, loadDetail, loadLadder, loadPayoff, type DetailBundle, type LadderData, type PayoffData } from "./detail";
 import { PayoffChart, LadderChart } from "./Charts";
 
@@ -45,16 +45,18 @@ function FeeScenarios({ row }: { row: FeedRow }) {
     <>
       <div className="sect">FEES — IMMEDIATE-FILL (TAKER)</div>
       <div className="kv">
-        <span className="l">Est. fees</span>{takerLine}
+        <span className="l">Est. fees (whole order)</span>{takerLine}
         <span className="l">Est. net edge / unit</span><span className="v">{row.taker_complete === false ? "—" : dol(row.net_edge)}</span>
         <span className="l">Breakeven gross gap</span>
         <span className="v">{row.fee_breakeven == null ? "—" : cents(row.fee_breakeven) + (row.fee_breakeven_approx ? " (approx)" : "")}</span>
       </div>
-      <div className="note dim" style={{ marginTop: 2 }}>Immediate-fill estimate — cross visible top-of-book now.</div>
+      <div className="note dim" style={{ marginTop: 2 }}>
+        Fee total is for the <b>whole order — every leg at the full fillable size</b>, not per contract. Net edge &amp;
+        breakeven are per unit. Immediate-fill estimate — cross visible top-of-book now.</div>
 
       <div className="sect">FEES — RESTING-ORDER (MAKER)</div>
       <div className="kv">
-        <span className="l">Est. fees</span>{makerLine}
+        <span className="l">Est. fees (whole order)</span>{makerLine}
         <span className="l">Est. net edge / unit</span><span className="v">{row.maker_complete === false ? "—" : dol(row.net_edge_maker)}</span>
       </div>
       <div className="note dim" style={{ marginTop: 2 }}>
@@ -99,7 +101,14 @@ export default function Inspector({ row, lens, snapshotId, showNet, longShort }:
   return (
     <div className="des">
       <div className="dtitle">
-        <span className={"bk " + z[0]}>{z[1]}</span>
+        {(() => {
+          // Section-aware badge inside the EXECUTABLE zone so a REVIEW / BLOCKED row (e.g. a settlement-
+          // dependent stage-elim synthetic, "Review rules") never reads as a green "EXECUTABLE".
+          const b: [string, string] = row.zone === "exec"
+            ? (row.section === "rev" ? ["bk-rev", "REVIEW"] : row.section === "blk" ? ["bk-blk", "BLOCKED"] : ["bk-exec", "EXECUTABLE"])
+            : z;
+          return <span className={"bk " + b[0]}>{b[1]}</span>;
+        })()}
         <span className="t">{row.name}</span>
         <div className="basis">
           <button className={basis === 1 ? "on" : ""} onClick={() => setBasis(1)}>$1</button>
@@ -115,6 +124,21 @@ export default function Inspector({ row, lens, snapshotId, showNet, longShort }:
         </div>
       ) : (<>
       <div className="sect">BUY-ONLY PLAN — {row.nlegs ?? legs.length} LEG{(row.nlegs ?? legs.length) === 1 ? "" : "S"}</div>
+      {(() => {
+        // What to actually BUY for the strategy: the SAME number of contracts on EVERY leg (a balanced
+        // set), capped by the thinnest leg = "Max units". The per-leg "avail" below is order-book DEPTH,
+        // NOT the amount to buy (so you don't buy e.g. 348 of one team and 1011 of another). Display-only.
+        const mu = num(row.max_units ?? row.units);
+        if (mu == null || (legs.length <= 1)) return null;
+        const whole = mu >= 1 ? Math.floor(mu) : 0;
+        return (
+          <div className="note dim" style={{ marginTop: 2 }}>
+            Buy the <b>same</b> count on every leg —{" "}
+            <b className="white">{whole >= 1 ? `${whole} contract${whole === 1 ? "" : "s"}` : "<1 set (barely fillable)"}</b>{" "}
+            of each, capped by the thinnest leg. The “avail” below is book depth, not what to buy.
+          </div>
+        );
+      })()}
       {legs.length ? legs.map((l, i) => {
         const href = safeHref(l.u);
         // Book-only pseudo-leg (bo): a reference market the engine attached for the depth panel — NOT a
@@ -126,7 +150,8 @@ export default function Inspector({ row, lens, snapshotId, showNet, longShort }:
             <span className="l2">{l.c || l.tk || "reference market"}</span>
             <span className="dim">reference only</span>
             <span className="dim" />
-            {href ? <a href={href} target="_blank" rel="noreferrer">↗</a> : null}
+            {href ? <a href={href} target="_blank" rel="noreferrer"
+              title={`Open on Kalshi. A multi-contract event (e.g. a winner field or a "reach round") may open its DEFAULT contract — select ${l.c || l.tk || "this contract"} (${l.tk || "—"}) from the list.`}>↗</a> : null}
           </div>
         );
         const yes = String(l.side || "").includes("yes");
@@ -137,8 +162,9 @@ export default function Inspector({ row, lens, snapshotId, showNet, longShort }:
             <span className="l2">{l.c}</span>
             {l.tk ? <span className="dim" style={{ fontFamily: "monospace", fontSize: "0.85em" }} title="market ticker">{l.tk}</span> : null}
             <span className="white">{l.p != null ? l.p + "¢" : "—"}</span>
-            <span className="dim">×{l.sz ?? 0}</span>
-            {href ? <a href={href} target="_blank" rel="noreferrer">↗</a> : null}
+            <span className="dim" title="contracts available at this price (order-book depth) — NOT the amount to buy; see the plan header above">{l.sz ?? 0} avail</span>
+            {href ? <a href={href} target="_blank" rel="noreferrer"
+              title={`Open on Kalshi. A multi-contract event (e.g. a winner field or a "reach round") may open its DEFAULT contract — select ${l.c || l.tk || "this contract"} (${l.tk || "—"}) from the list.`}>↗</a> : null}
           </div>
         );
       }) : <div className="note">No leg detail.</div>}
@@ -146,16 +172,38 @@ export default function Inspector({ row, lens, snapshotId, showNet, longShort }:
       <div className="sect">ECONOMICS (PER UNIT)</div>
       <div className="kv">
         <span className="l">Cost</span><span className="v">{cv(row.cost)}</span>
-        <span className="l">{isSpec ? "Max loss" : "Worst case"}</span><span className="v red">{cv(row.max_loss)}</span>
-        <span className="l">{isSpec ? "Max profit" : "Best case"}</span><span className="v green">{cv(row.max_profit ?? row.profit)}</span>
+        {(() => {
+          // Dutch-book / field rows carry NO per-unit max_loss/max_profit — the payout is a flat gross
+          // gap (`edge`) in every outcome (a winner-field subset can only pay MORE), so show that as
+          // the guaranteed floor instead of a blank "—" or the mis-scaled total $ profit.
+          const ml = num(row.max_loss), mp = num(row.max_profit), gap = num(row.edge);
+          if (ml == null && mp == null && gap != null) return (<>
+            <span className="l">{isSpec ? "Max loss" : "Worst case"}</span><span className="v green">+{cv(gap)} <span className="dim">flat</span></span>
+            <span className="l">{isSpec ? "Max profit" : "Best case"}</span><span className="v green">+{cv(gap)} <span className="dim">gross{(row.nlegs ?? legs.length) > 2 ? "; field ≥" : ""}</span></span>
+          </>);
+          return (<>
+            <span className="l">{isSpec ? "Max loss" : "Worst case"}</span><span className="v red">{cv(ml)}</span>
+            <span className="l">{isSpec ? "Max profit" : "Best case"}</span><span className="v green">{cv(mp ?? num(row.profit))}</span>
+          </>);
+        })()}
         <span className="l">ROI</span><span className="v">{num(row.roi) == null ? "—" : (row.roi as number).toFixed(1) + "%"}</span>
         <span className="l">Max units</span><span className="v">{num(row.max_units ?? row.units) ?? "—"}</span>
-        <span className="l">Quote</span><span className="v">{row.quote_health || "—"}</span>
+        <span className="l">Quote</span><span className="v">{row.quote_health || (legs.length > 1 ? "multi-leg — see legs" : "—")}</span>
         <span className="l">Tradable</span>
         <span className={"v " + (String(row.tradable || "").toLowerCase().startsWith("yes") ? "green" : "amber")}>{row.tradable || "—"}</span>
         {row.parent_over_maxloss != null
           ? <><span className="l">Ripeness (parent÷loss)</span><span className="v amber">{(row.parent_over_maxloss as number).toFixed(2)}</span></>
           : null}
+        {row.section === "bounded" ? (() => {
+          // Single uncalibrated setup-quality diagnostic = ripeness × conditional chance. Shown ALONGSIDE the
+          // raw ripeness (above) and the conditional note (below) — never replacing them. "Insufficient data"
+          // when an input is missing (≠ Low).
+          const q = qualityOf(row);
+          const cls = q.tier === "High" ? "green" : q.tier === "Med" ? "amber" : "dim";
+          return <><span className="l">Setup quality</span>
+            <span className={"v " + cls} title="uncalibrated diagnostic: ripeness × P(deeper│reached). Not fair value; never executable ranking.">
+              {q.tier === "n/a" ? "Insufficient data" : `${q.label}${q.score != null ? ` (${q.score.toFixed(2)})` : ""}`}</span></>;
+        })() : null}
       </div>
 
       {showNet ? <FeeScenarios row={row} /> : null}
@@ -164,7 +212,7 @@ export default function Inspector({ row, lens, snapshotId, showNet, longShort }:
       {hasCond ? (
         <div className="note" style={{ marginTop: 6 }}>
           <b className="violet">Conditional (market-implied · display basis):</b> P(deeper │ reached) ≈ <span className="violet">{n1(condPct as number)}%</span>
-          {row.cond_child_firm != null ? <> · firm <span className="violet">{n1(row.cond_child_firm)}%</span></> : null}
+          {row.cond_child_firm != null ? <> · bid/ask <span className="violet">{n1(row.cond_child_firm)}%</span></> : null}
           {" "}— price ratio. See the <b>Participant Detail</b> tab for the full table. <span className="uncal">uncalibrated · not fair value</span>
         </div>
       ) : (row.pnode || row.cnode) ? (
@@ -294,7 +342,7 @@ export function Detail({ row, showIds, showRules = true }: { row: FeedRow | null
       <div className="sub">{[row.sub, row.sport].filter(Boolean).join(" · ")} · participant detail</div>
 
       {canPick ? (
-        <div className="note" style={{ marginTop: 6 }}>
+        <div className="note pchooser" style={{ marginTop: 6 }}>
           <b>Participant:</b>{" "}
           {legParts.map((p) => (
             <button key={p.pk} className={(validPick ?? baseKey?.player_key) === p.pk ? "on" : ""} onClick={() => setPickPk(p.pk)}>{p.label}</button>
@@ -309,11 +357,12 @@ export function Detail({ row, showIds, showRules = true }: { row: FeedRow | null
           <div className="note" style={{ marginBottom: 4 }}>
             The market-implied chance the <b>deeper</b> outcome happens <i>given</i> the <b>broader</b> one
             already did — the price ratio (deeper ÷ broader) on two bases: <b>display</b> (the dashboard
-            price) and <b>firm</b> (executable bid/ask). Uncalibrated, not a fair-value model; the firm
-            figure is a diagnostic, not an executable edge.
+            price — midpoint when the spread is reasonable, else last trade) and <b>bid/ask</b> (executable
+            quotes). Uncalibrated, not a fair-value model; the bid/ask figure is a diagnostic, not an
+            executable edge.
           </div>
           <table className="condtbl"><tbody>
-            <tr><th>Stage</th><th>display</th><th>firm (bid/ask)</th></tr>
+            <tr><th>Stage</th><th>display</th><th>bid/ask</th></tr>
             <tr><td>P(deeper │ broader reached)</td>
               <td className="violet">{row.cond_child != null ? n1(row.cond_child) + "%" : "—"}</td>
               <td>{row.cond_child_firm != null ? n1(row.cond_child_firm) + "%" : "—"}</td></tr>
@@ -322,7 +371,7 @@ export function Detail({ row, showIds, showRules = true }: { row: FeedRow | null
               <td>{row.cond_success_firm != null ? n1(row.cond_success_firm) + "%" : "—"}</td></tr>
           </tbody></table>
           <div className="formula">display: P(deeper│reached) = price(deeper) ÷ price(parent){row.cdisp != null && row.pdisp ? ` = ${row.cdisp}/${row.pdisp} = ${n1(row.cond_child as number)}%` : ""}</div>
-          {row.cask != null && row.pbid ? <div className="formula">firm: child ask ÷ parent bid = {row.cask}/{row.pbid}{row.cond_child_firm != null ? ` = ${n1(row.cond_child_firm)}%` : ""}</div> : null}
+          {row.cask != null && row.pbid ? <div className="formula">bid/ask: child ask ÷ parent bid = {row.cask}/{row.pbid}{row.cond_child_firm != null ? ` = ${n1(row.cond_child_firm)}%` : ""}</div> : null}
           {row.cond_child == null && row.cond_reason
             ? <div className="note" style={{ marginTop: 4 }}>Display conditional unavailable — {row.cond_reason}.</div> : null}
         </>
@@ -448,7 +497,7 @@ export function Formulas({ row }: { row: FeedRow | null }) {
       <div className="formula">parent_display ÷ (cost − 100) = {row.parent_over_maxloss != null ? (row.parent_over_maxloss as number).toFixed(2) : "n/a"} — in-the-money chance per ¢ at risk</div>
       <div className="sect">CONDITIONAL <span className="uncal">UNCALIBRATED · DISPLAY-ONLY</span></div>
       <div className="formula">display: P(deeper│reached) = price(deeper)/price(parent) = {row.cond_child != null && row.cdisp != null && row.pdisp ? `${row.cdisp}/${row.pdisp} = ${n1(row.cond_child)}%` : "n/a"}</div>
-      <div className="formula">firm: child ask/parent bid = {row.cond_child_firm != null && row.cask != null && row.pbid ? `${row.cask}/${row.pbid} = ${n1(row.cond_child_firm)}%` : "n/a"} <span className="uncal">diagnostic, not an executable edge</span></div>
+      <div className="formula">bid/ask: child ask/parent bid = {row.cond_child_firm != null && row.cask != null && row.pbid ? `${row.cask}/${row.pbid} = ${n1(row.cond_child_firm)}%` : "n/a"} <span className="uncal">diagnostic, not an executable edge</span></div>
       <div className="sect">FEES (estimate, display-only)</div>
       <div className="formula">kalshi taker fee ≈ 0.07·c·p·(1−p) → fees {cents(row.fees)} · net edge {cents(row.net_edge)} · never affects ranking</div>
       <div className="note"><span className="uncal">general taker estimate only · not net P&L · special schedules / maker fills / rounding / series fee changes may differ</span></div>

@@ -256,6 +256,10 @@ BACKLOG_DEFAULT = "1 hour"
 # GET /backlog/events). The HEAVY snapshot store deliberately stays at SNAPSHOT_RETENTION_SECONDS (30h) —
 # extending that to 7 days would be ~60k full snapshots; the interval table is one tiny row per lifecycle.
 BACKLOG_RETENTION_SECONDS = 7 * 24 * 60 * 60   # 7 days
+# Hard row cap on the GET /backlog/events payload (most-recent-first), so the ALRT surface can never pull a
+# multi-MB / multi-second response off a large store (the `days` WINDOW alone left it unbounded). When the cap
+# is hit the response carries an `X-Backlog-Truncated: 1` header. The newest intervals are always returned.
+BACKLOG_EVENTS_MAX_ROWS = 500
 # Which dashboard `bucket` maps to which durable backlog category (store-side routing, derived from the
 # already-promoted `bucket` so nothing is added to the public unified schema). Buckets not listed are NOT
 # tracked. "statistical_arbitrage" is a RESERVED slot: when a detector lands it routes its bucket here with

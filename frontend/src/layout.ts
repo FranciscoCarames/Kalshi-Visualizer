@@ -4,7 +4,11 @@
  * context.tsx (persist/hydrate). DISPLAY-only chrome state; nothing here touches engine data. */
 
 export type Col = "L" | "M" | "R";
-export interface PanelState { collapsed: boolean; maxed: boolean; hidden: boolean; basis?: number; }
+// Text-size scale (single-sourced here so the pure layout sanitizer can validate per-panel overrides without
+// importing the React context). "normal" == the 12px base. Re-exported by context.tsx for the chrome.
+export const TEXT_SIZES = ["compact", "normal", "large", "xlarge"] as const;
+export type TextSize = (typeof TEXT_SIZES)[number];
+export interface PanelState { collapsed: boolean; maxed: boolean; hidden: boolean; basis?: number; textSize?: TextSize; }
 export interface LayoutSnapshot {
   colW: { M: number; R: number };
   colHidden: { M: boolean; R: boolean };
@@ -71,11 +75,15 @@ export function cleanLayout(raw: unknown, knownIds: readonly string[] = PANEL_ID
 
   const rst = obj(r.st);
   const st: Record<string, PanelState> = {};
+  const okSize = (v: unknown): v is TextSize => (TEXT_SIZES as readonly string[]).includes(v as string);
   for (const id of knownIds) {
     const s = obj(rst[id]);
     const b = num(s.basis);
+    // textSize: keep ONLY a valid scale; an old layout without it, or an invalid value, drops to undefined
+    // (panel inherits the page-wide default) rather than poisoning the cascade.
     st[id] = { collapsed: bool(s.collapsed), maxed: bool(s.maxed), hidden: bool(s.hidden),
-               ...(b != null ? { basis: clampBasis(b) } : {}) };
+               ...(b != null ? { basis: clampBasis(b) } : {}),
+               ...(okSize(s.textSize) ? { textSize: s.textSize } : {}) };
   }
 
   const rc = obj(r.cols);

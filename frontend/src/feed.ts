@@ -84,16 +84,16 @@ export const ZONES: [string, string, string][] = [
 
 export const SUBTABS: Record<string, [string, string, string][]> = {
   exec: [["act", "ACTIONABLE", "actionable"], ["rev", "REVIEW", "review_signal"], ["blk", "BLOCKED", "blocked"]],
-  spec: [["bounded", "BOUNDED-LOSS", "risk_budget"], ["nearmiss", "NEAR-MISS", "near_miss"],
-         ["qual", "QUALIFIER", "qualifier_setup"], ["cheapno", "CHEAP-NO", "no_structure"]],
+  spec: [["bounded", "BOUNDED-LOSS", "risk_budget"], ["cheapno", "CHEAP-NO", "no_structure"],
+         ["qual", "QUALIFIER", "qualifier_setup"], ["nearmiss", "NEAR-MISS", "near_miss"]],
   diag: [["diag", "DIAGNOSTIC", "data_quality"]],
 };
 
 /* The 8 landing tiles: label, zone, section, accent. */
 export const TILES: [string, string, string, string][] = [
   ["ACTIONABLE", "exec", "act", "green"], ["REVIEW", "exec", "rev", "amber"], ["BLOCKED", "exec", "blk", "red"],
-  ["BOUNDED-LOSS", "spec", "bounded", "amber"], ["NEAR-MISS", "spec", "nearmiss", ""],
-  ["QUALIFIER", "spec", "qual", ""], ["CHEAP-NO", "spec", "cheapno", ""], ["DATA-QUALITY", "diag", "diag", "cyan"],
+  ["BOUNDED-LOSS", "spec", "bounded", "amber"], ["CHEAP-NO", "spec", "cheapno", ""],
+  ["QUALIFIER", "spec", "qual", ""], ["NEAR-MISS", "spec", "nearmiss", ""], ["DATA-QUALITY", "diag", "diag", "cyan"],
 ];
 
 export const SECTION_BUCKET: Record<string, string> = {

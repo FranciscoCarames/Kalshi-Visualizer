@@ -33,15 +33,21 @@ export function Watch({ opps, onPick }: { opps: FeedRow[]; onPick: (r: FeedRow) 
 const SEV_COLOR: Record<AlertSeverity, string> = { info: "green", review: "amber", warn: "red" };
 
 export function Alerts() {
-  const { opps, changeOf, meta, hasBaseline } = useTerminal();
-  const alerts = deriveAlerts(opps, changeOf, meta, hasBaseline);
+  const { opps, changeOf, meta, hasBaseline, settings, hiddenByFeeCount } = useTerminal();
+  const alerts = deriveAlerts(opps, changeOf, meta, hasBaseline, settings.hideNetNegExec);
+  // L4: when the fee filter suppresses executable rows, say so explicitly so the alert list (and badge) are
+  // never silently shorter than reality — the rows are revealable via the chip/Settings.
+  const feeNote = hiddenByFeeCount > 0
+    ? <div className="note" style={{ padding: 6 }}>{hiddenByFeeCount} executable row{hiddenByFeeCount > 1 ? "s" : ""} hidden by the fee filter — reveal via the chip / Settings.</div>
+    : null;
   if (!alerts.length) {
-    return <div className="note" style={{ padding: 6 }}>
+    return <>{feeNote}<div className="note" style={{ padding: 6 }}>
       {hasBaseline ? "No changes since last scan." : "No prior scan baseline yet — alerts appear after the next scan."}
-    </div>;
+    </div></>;
   }
   return (
     <>
+      {feeNote}
       {alerts.map((a, i) => (
         <div className="arow" key={i}>
           <span className="ic" style={{ background: `var(--${SEV_COLOR[a.severity]})` }} />

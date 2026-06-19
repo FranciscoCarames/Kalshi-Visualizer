@@ -3,9 +3,10 @@
  * on the mockup's classes. Rows arrive engine-ranked + lens-sorted; a click on a header applies a display-
  * only sort override (reset when the section/catalog changes). AG-Grid's virtualization is not reproduced. */
 import { memo, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useTerminal } from "./context";
 import { ZONES, SUBTABS, type FeedRow } from "./feed";
-import { COLS, fmtVal, qhClass, type Col } from "./columns";
+import { COLS, fmtVal, qhClass, signalLabel, qualityOf, type Col } from "./columns";
 import { sortRows, nextSort, type SortState } from "./sort";
 
 function severityOf(o: FeedRow): { cls: string; txt: string } | null {
@@ -44,6 +45,15 @@ const Cell = memo(function Cell({ row, col, chg }: { row: FeedRow; col: Col; chg
     const txt = fmtVal(v, "text");
     return <td>{sev ? <span className={"sev " + sev.cls} title={txt === "—" ? sev.txt : txt}>{sev.txt}</span> : null} {txt === "—" ? "" : txt}</td>;
   }
+  // Human-readable bounded-loss signal class (display-only; raw value still drives ranking narrative).
+  if (col.f === "signal") return <td>{signalLabel(v)}</td>;
+  // Single uncalibrated setup-quality diagnostic (ripeness × conditional). "Insufficient data" ≠ "Low".
+  if (col.f === "quality") {
+    const q = qualityOf(row);
+    if (q.tier === "n/a") return <td className="dim" title="ripeness or conditional chance missing — not scored (missing ≠ low)">Insufficient data</td>;
+    const cls = q.tier === "High" ? "green" : q.tier === "Med" ? "amber" : "dim";
+    return <td><span className={cls} title={`uncalibrated: ripeness × P(deeper│reached); score ${q.score!.toFixed(2)}`}>{q.label}</span></td>;
+  }
   if (col.fmt === "qh") return <td className={qhClass(v)}>{fmtVal(v, col.fmt)}</td>;
   if (col.fmt === "trad") {
     const t = String(v || "").toLowerCase();
@@ -64,14 +74,83 @@ const ROW_CAP = 500;
 export default function Blotter() {
   const t = useTerminal();
   const [chooser, setChooser] = useState(false);
+  // Fixed-position anchor for the column menu (viewport coords of the ⚙ button). The menu is PORTALED to the
+  // document body with position:fixed so the scanner panel's `overflow:hidden` can't clip it — that was
+  // hiding the lower half of the (30+ row) bounded-loss catalog. Captured on open.
+  const [menuPos, setMenuPos] = useState<{ top: number; right: number; maxH: number } | null>(null);
   const [sort, setSort] = useState<SortState | null>(null);
+  // Per-section dismissal of the section-note banner (persisted in localStorage so it stays hidden across
+  // reloads). Dismissing qualifier's banner doesn't touch near-miss's.
+  const NOTE_KEY = "kss_dismissed_secnotes";
+  const [dismissedNotes, setDismissedNotes] = useState<Set<string>>(() => {
+    try { return new Set<string>(JSON.parse(localStorage.getItem(NOTE_KEY) || "[]")); } catch { return new Set(); }
+  });
+  const setNoteDismissed = (section: string, hide: boolean) => setDismissedNotes((d) => {
+    const n = new Set(d); if (hide) n.add(section); else n.delete(section);
+    try { localStorage.setItem(NOTE_KEY, JSON.stringify([...n])); } catch { /* storage unavailable — keep in-memory */ }
+    return n;
+  });
   const dragF = useRef<string | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  const colsBtnRef = useRef<HTMLSpanElement | null>(null);
+  const openChooser = () => {
+    if (chooser) { setChooser(false); return; }
+    const btn = colsBtnRef.current;
+    if (btn) {
+      const r = btn.getBoundingClientRect();
+      const win = btn.ownerDocument.defaultView ?? window;   // the menu's own window (handles pop-outs)
+      setMenuPos({ top: r.bottom + 2, right: win.innerWidth - r.right, maxH: win.innerHeight - r.bottom - 12 });
+    }
+    setChooser(true);
+  };
+  // Close the column chooser on an OUTSIDE click — never on mouse-leave. Mouse-leave made a long catalog
+  // (bounded-loss has 30+ columns) impossible to use: the menu vanished the instant the cursor left it to
+  // reach the scrollbar, so the bottom options were unreachable.
+  useEffect(() => {
+    if (!chooser) return;
+    // Scope the listener to the MENU's OWN document, not the module-global `document`. In a pop-out window
+    // the menu lives in that window's document, so listening on the main `document` would never see the
+    // pop-out's clicks (and vice-versa) — each window's chooser must close on ITS own outside clicks.
+    const doc = menuRef.current?.ownerDocument ?? document;
+    const onDown = (e: MouseEvent) => {
+      const tgt = e.target as Node;
+      if (menuRef.current?.contains(tgt) || colsBtnRef.current?.contains(tgt)) return;
+      setChooser(false);
+    };
+    doc.addEventListener("mousedown", onDown);
+    return () => doc.removeEventListener("mousedown", onDown);
+  }, [chooser]);
   const cols: Col[] = t.visible.map((f) => COLS[t.colKey].find((c) => c.f === f)).filter((c): c is Col => !!c);
   // Click-sort is a display override; reset to engine/lens order when the section/catalog changes.
   useEffect(() => { setSort(null); }, [t.colKey]);
   const fmtOf = (f: string) => COLS[t.colKey].find((c) => c.f === f)?.fmt ?? "num";
   const rows = sortRows(t.rows, sort, fmtOf);
   const shown = rows.length > ROW_CAP ? rows.slice(0, ROW_CAP) : rows;
+
+  // Section-note banner: collapse a boilerplate field to ONE banner line only when its value is identical
+  // across EVERY visible row (and non-empty). A field that varies stays a per-row column — so a row-specific
+  // caveat (or differing note) is never hidden. Near-miss collapses its shared "note"; qualifier collapses
+  // its shared setup / legs / review-status / caveat.
+  const BANNER_FIELDS: Record<string, string[]> = {
+    nearmiss: ["note"],
+    qual: ["setup", "legs", "review_status", "caveat"],
+  };
+  // Compare + display the FORMATTED value (via the column's formatter), not the raw field — so a field whose
+  // value is an object/array (e.g. `legs` holds the leg array, a "num" column that renders "—") is skipped
+  // rather than stringified to "[object Object]".
+  const bannerVal = (f: string): string | null => {
+    if (!rows.length) return null;
+    const fmt = fmtOf(f);
+    const s0 = fmtVal(rows[0][f], fmt);
+    if (!s0 || s0 === "—") return null;
+    for (const r of rows) { if (fmtVal(r[f], fmt) !== s0) return null; }
+    return s0;
+  };
+  const banners = (BANNER_FIELDS[t.section] ?? [])
+    .map((f) => { const v = bannerVal(f); return v == null ? null : { f, l: COLS[t.colKey].find((c) => c.f === f)?.l ?? f, v }; })
+    .filter((x): x is { f: string; l: string; v: string } => !!x);
+  const bannerSet = new Set(banners.map((b) => b.f));
+  const tableCols = cols.filter((c) => !bannerSet.has(c.f));
 
   const onRowClick = (e: React.MouseEvent, o: FeedRow) => {
     if (e.ctrlKey || e.metaKey || e.shiftKey) {
@@ -95,6 +174,11 @@ export default function Blotter() {
     if (!t.meta || t.meta.snapshot_id == null) return "No scan yet — hit ▷ SCAN (or open the dashboard).";
     if ((t.meta.n_total ?? 0) === 0) return "No opportunities in the latest snapshot.";
     if (t.inScope(t.zone, t.section) === 0) return "No opportunities in this section for the current filters.";
+    // Rows ARE in scope (membership passes) but none are shown — say WHY, specifically (L1 + M3):
+    if (t.zone === "exec" && t.hiddenByFeeCount > 0)
+      return `All executable rows here are hidden by the fee filter — a display filter (${t.hiddenByFeeCount} hidden). Reveal them via the “show” chip or Settings.`;
+    if (t.countBeforeBand(t.zone, t.section) > 0)
+      return "Rows are in scope but hidden by this section’s band filter — relax the band (the SecBar above) to see them.";
     return "All rows hidden by the section / band filters — relax them to see in-scope rows.";
   };
 
@@ -111,24 +195,36 @@ export default function Blotter() {
       <div className="btabs" style={{ position: "relative" }}>
         {SUBTABS[t.zone].map(([s, label]) => (
           <div key={s} className={"btab" + (t.section === s ? " on" : "")} data-tab={s} onClick={() => t.setSection(s)}>
-            {label}<span className="ct">{t.count(t.zone, s).toLocaleString()}</span>
+            {label}<span className="ct">{t.countLabel(t.zone, s)}</span>
           </div>
         ))}
-        <span className="cols" onClick={() => setChooser((v) => !v)}>⚙ columns ▾</span>
-        {chooser ? (
-          <div className="menu on" style={{ right: 0, top: 20 }} onMouseLeave={() => setChooser(false)}>
-            <div className="mh">COLUMNS · {t.section.toUpperCase()}</div>
+        <span className="cols" ref={colsBtnRef} onClick={openChooser}>⚙ columns ▾</span>
+        {chooser && menuPos ? createPortal(
+          <div className="menu on" ref={menuRef}
+               style={{ position: "fixed", top: menuPos.top, right: menuPos.right, maxHeight: menuPos.maxH }}>
+            <div className="mh">COLUMNS · {t.section.toUpperCase()}
+              <span className="mclose" title="close" onClick={() => setChooser(false)}>✕</span></div>
             {COLS[t.colKey].map((c) => (
               <label key={c.f}><input type="checkbox" checked={t.visible.includes(c.f)} onChange={() => t.toggleCol(c.f)} />{c.l}</label>
             ))}
             <div className="mi" onClick={t.resetCols}>↺ reset to defaults</div>
-          </div>
+          </div>,
+          (colsBtnRef.current?.ownerDocument ?? document).body,
         ) : null}
       </div>
       {t.section === "bounded" ? (
         <div className="subtabs">
           {[["all", "All"], ["vertical", "Vertical"], ["calendar", "Calendar"]].map(([s, label]) => (
             <div key={s} className={"subtab" + (t.split === s ? " on" : "")} onClick={() => t.setSplit(s)}>{label}</div>
+          ))}
+        </div>
+      ) : null}
+      {t.section === "cheapno" ? (
+        // Settlement-scope subsection tabs (parallel to bounded's split) — wired to the existing cheapScope
+        // band filter (filters.applyBand), so this is purely a prominent UI for a filter that already exists.
+        <div className="subtabs">
+          {[["all", "All"], ["event", "Event"], ["tournament", "Tournament"], ["championship", "Championship"]].map(([s, label]) => (
+            <div key={s} className={"subtab" + (t.band.cheapScope === s ? " on" : "")} onClick={() => t.setBand({ cheapScope: s })}>{label}</div>
           ))}
         </div>
       ) : null}
@@ -141,12 +237,26 @@ export default function Blotter() {
           <button className="tbtn" onClick={() => t.setMulti([])}>Clear</button>
         </div>
       ) : null}
+      {banners.length ? (
+        dismissedNotes.has(t.section) ? (
+          <div className="secnote secnote-collapsed" title="show section notes" onClick={() => setNoteDismissed(t.section, false)}>
+            ▸ section notes
+          </div>
+        ) : (
+          <div className="secnote">
+            {banners.map((b) => (
+              <span key={b.f} className="secnote-item"><b>{b.l}:</b> {b.v}</span>
+            ))}
+            <span className="secnote-x" title="hide these notes" onClick={() => setNoteDismissed(t.section, true)}>✕</span>
+          </div>
+        )
+      ) : null}
       <div className="pbody">
         {t.err ? <div className="empty red">feed error: {t.err}</div>
           : !rows.length ? <div className="empty">{emptyMsg()}</div>
           : (
           <table>
-            <thead><tr>{cols.map((c) => (
+            <thead><tr>{tableCols.map((c) => (
               <th key={c.f} className={c.fmt !== "text" && c.fmt !== "name" ? "r" : ""} draggable
                   aria-sort={sort?.field === c.f ? (sort.dir === "asc" ? "ascending" : "descending") : "none"}
                   title={(c.tip ? c.tip + " — " : "") + "click to sort · drag to reorder"}
@@ -161,11 +271,11 @@ export default function Blotter() {
               const fc = t.flashIds.has(o.id) ? " fl" : "";
               const chg = t.changeOf(o.id);
               return <tr key={o.id} className={(zc + sc + mc + fc).trim()} onClick={(e) => onRowClick(e, o)}>
-                {cols.map((c) => <Cell key={c.f} row={o} col={c} chg={c.fmt === "name" ? chg : undefined} />)}
+                {tableCols.map((c) => <Cell key={c.f} row={o} col={c} chg={c.fmt === "name" ? chg : undefined} />)}
               </tr>;
             })}
             {rows.length > ROW_CAP ? (
-              <tr className="zdiag"><td className="dim" colSpan={cols.length}>
+              <tr className="zdiag"><td className="dim" colSpan={tableCols.length}>
                 +{(rows.length - ROW_CAP).toLocaleString()} more rows hidden — refine filters or sort to narrow the view.
               </td></tr>
             ) : null}</tbody>
@@ -174,8 +284,20 @@ export default function Blotter() {
       </div>
       <div className="showing">
         Showing <b className="white">{shown.length.toLocaleString()}</b> of {t.inScope(t.zone, t.section).toLocaleString()} in scope
-        {(() => { const hid = t.inScope(t.zone, t.section) - rows.length; return hid > 0 ? <> ({hid.toLocaleString()} hidden by settings)</> : null; })()}
-        · {t.visible.length} cols
+        {(() => {
+          // Distinguish rows hidden by the SUB-TAB (bounded Vertical/Calendar split) from rows removed by the
+          // band/size/tradable FILTERS, instead of lumping both into a vague "hidden by settings". `count`
+          // applies membership+threshold+band across all splits; `rows` is after the split → the difference is
+          // the tab. Clamped so a transient async mismatch can't print a negative.
+          const inScope = t.inScope(t.zone, t.section), cnt = t.count(t.zone, t.section);
+          const byTab = Math.max(0, cnt - rows.length);          // the Vertical/Calendar tab you're not on
+          const byFilters = Math.max(0, inScope - cnt);          // band / min-size / tradable-only
+          return <>
+            {byTab > 0 ? <> · <b className="amber">{byTab.toLocaleString()}</b> on other tabs</> : null}
+            {byFilters > 0 ? <> · <b className="amber">{byFilters.toLocaleString()}</b> by filters</> : null}
+          </>;
+        })()}
+        {" · "}{tableCols.length} cols
         {sort ? <> · sort <b className="amber">{sort.field} {sort.dir === "asc" ? "▲" : "▼"}</b></>
               : t.lens ? <> · lens <b className="amber">{t.lens}</b></> : <> · engine order</>}
       </div>

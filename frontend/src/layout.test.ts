@@ -33,6 +33,20 @@ describe("cleanLayout — defensive validation of a saved/hostile layout", () =>
     const c = cleanLayout({ st: { "p-des": { collapsed: 1, maxed: true, hidden: "yes" } } })!;
     expect(c.st["p-des"]).toMatchObject({ collapsed: false, maxed: true, hidden: false });
   });
+  // Per-panel textSize migration/sanitization (new field — old + hostile layouts must stay safe).
+  it("migrates an OLD layout with no textSize (panel inherits the page default)", () => {
+    const c = cleanLayout({ st: { "p-blotter": { collapsed: false, maxed: false, hidden: false } } })!;
+    expect("textSize" in c.st["p-blotter"]).toBe(false);   // absent → undefined → inherits global
+  });
+  it("drops an INVALID textSize rather than poisoning the cascade", () => {
+    const c = cleanLayout({ st: { "p-blotter": { textSize: "ginormous" }, "p-des": { textSize: 7 } } })!;
+    expect(c.st["p-blotter"].textSize).toBeUndefined();
+    expect(c.st["p-des"].textSize).toBeUndefined();
+  });
+  it("keeps a VALID per-panel textSize", () => {
+    const c = cleanLayout({ st: { "p-blotter": { textSize: "large" } } })!;
+    expect(c.st["p-blotter"].textSize).toBe("large");
+  });
 });
 
 describe("presetSnapshot", () => {

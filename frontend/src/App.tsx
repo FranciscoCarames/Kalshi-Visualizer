@@ -242,6 +242,7 @@ function SecBar() {
     <div className="secbar"><span className="tag">BOUNDED-LOSS</span>
       {numI(b.maxLoss, "maxLoss", "Max loss ¢")}
       {numI(b.minRatio, "minRatio", "Min upside:risk", 0.1)}
+      {numI(b.minParentOutright, "minParentOutright", "Min parent-outright ¢")}
       {numI(b.minChildOutright, "minChildOutright", "Min child-outright ¢")}
       {numI(b.maxSpreadOverChild, "maxSpreadOverChild", "Max spread÷child", 0.1)}{hint}</div>
   );
@@ -249,12 +250,9 @@ function SecBar() {
     <div className="secbar"><span className="tag">NEAR-MISS</span>{numI(b.maxOverpay, "maxOverpay", "Max overpay ¢")}{hint}</div>
   );
   if (t.section === "cheapno") return (
+    // Settlement scope (All/Event/Tournament/Championship) now lives in the prominent subsection tabs
+    // (Blotter.tsx), so it's no longer duplicated here.
     <div className="secbar"><span className="tag">CHEAP-NO</span>
-      <span className="dim" style={{ fontSize: 9 }}>SCOPE</span>
-      <div className="lens">{([["all", "All"], ["event", "Event"], ["tournament", "Tournament"], ["championship", "Championship"]] as [string, string][]).map(([v, lbl]) => (
-        <button key={v} className={b.cheapScope === v ? "on" : ""} title={`Settlement scope: ${lbl}`}
-          onClick={() => t.setBand({ cheapScope: v })}>{lbl}</button>
-      ))}</div>
       <label>Kind <select value={b.cheapKind} onChange={(e) => t.setBand({ cheapKind: e.target.value })}>
         <option value="all">all</option><option value="band">band</option><option value="outright">outright</option></select></label>
       {numI(b.maxLoss, "maxLoss", "Max loss ¢")}
@@ -297,7 +295,9 @@ function Shell() {
         <span className="s">Checks <b>{(m?.checks ?? 0).toLocaleString()}</b></span>
         <span className="s">Requests <b>{m?.requests ?? 0}</b></span>
         <span className="s">Sports <b>{t.sports.length}</b></span>
-        <span className="s"><b className={m?.failed ? "amber" : "green"}>●</b> Failed <b>{m?.failed ?? 0}</b></span>
+        <span className="s" title={`${m?.scanned ?? 0} series scanned, ${m?.failed ?? 0} failed (rate-limited) this scan. This is coverage of the series the scan ATTEMPTED — not all Kalshi markets. See OPS for the failure list.`}>
+          <b className={m?.failed ? "amber" : "green"}>●</b> Scan <b>{m?.scanned ?? 0}</b>{(m?.failed ?? 0) > 0 ? <> · <b className="amber">{m?.failed}</b> failed</> : null}
+        </span>
         <span className={"s" + (alrt ? " blink" : "")}><b className="red">●</b> ALRT <b>{alrt}</b></span>
         <span className="s discl">GROSS · TOP-OF-BOOK · $1 BASIS · READ-ONLY · NO ORDER ENTRY · NOT RISKLESS · fees est. only</span>
       </div>
@@ -315,9 +315,9 @@ function Shell() {
           <button className="tbtn" onClick={() => t.setPaletteOpen(true)}>＋ ADD ▾</button>
           <button className="tbtn" onClick={() => t.setPanelsMenuOpen(true)}>▦ ELEMENTS ▾</button>
           <button className="tbtn" title="Reset the workspace to the selected layout preset" onClick={() => t.resetLayout()}>⟲ RESET</button>
-          {lensesFor(t.zone).length ? (<>
+          {lensesFor(t.zone, t.section).length ? (<>
             <span className="dim" style={{ fontSize: 9 }}>LENS</span>
-            <div className="lens">{lensesFor(t.zone).map(([l, lbl, tip]) => (
+            <div className="lens">{lensesFor(t.zone, t.section).map(([l, lbl, tip]) => (
               <button key={l} className={t.lens === l ? "on" : ""} title={tip} onClick={() => t.toggleLens(l)}>{lbl}</button>
             ))}</div>
           </>) : null}
@@ -360,7 +360,7 @@ function Shell() {
         {TILES.map(([label, z, s, accent]) => (
           <div key={label} className={"tile" + (t.zone === z && t.section === s ? " on" : "")} onClick={() => { t.setSurface("opp"); t.goSection(z, s); }}>
             <div className="k">{label}</div>
-            <div className={"v " + (TILE_ACCENT[accent] || "")}>{t.count(z, s).toLocaleString()}</div>
+            <div className={"v " + (TILE_ACCENT[accent] || "")}>{t.countLabel(z, s)}</div>
             <div className="s">{TILE_SUB[s]}</div>
           </div>
         ))}
@@ -372,8 +372,8 @@ function Shell() {
       {t.surface === "alrt" ? <BacklogSurface /> : null}
 
       <div className="foot">
-        <div><b className="amber">KALSHI STRUCTURED SCANNER</b> · real viewmodel rows · full column catalog · bounded-loss + cheap-NO splits · read-only over the live snapshot</div>
-        <div className="help"><span><b>Ctrl K</b> palette</span><span><b>1-6</b> lens</span><span><b>J/K</b> rows</span><span><b>↵</b> open</span><span><b>drag splitters</b> resize</span><span><b>Ctrl/Shift-click</b> multi-select</span></div>
+        <div><b className="amber">KALSHI STRUCTURED SCANNER</b> <span className="dim" title="application version">· {__APP_VERSION__}</span></div>
+        <div className="help"><span><b>Ctrl K</b> palette</span><span><b>1-6</b> lens</span><span><b>J/K</b> rows</span><span><b>drag splitters</b> resize</span><span><b>Ctrl/Shift-click</b> multi-select</span></div>
       </div>
       <Keys />
       <Palette />

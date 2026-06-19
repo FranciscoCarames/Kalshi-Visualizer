@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { levelsFrom, firstBookableLeg, legLabel } from "./Ladder";
+import { levelsFrom, firstBookableLeg, legLabel, showLadderRungs } from "./Ladder";
 import type { OrderbookData } from "./detail";
-import type { FeedLeg } from "./feed";
+import type { FeedLeg, FeedRow } from "./feed";
 
 const ob = (yes: number[][], no: number[][]): OrderbookData =>
   ({ ticker: "TK", yes, no, ok: true, error: null, age_s: 0 });
@@ -81,6 +81,28 @@ describe("chainRungs — selectable ladder rungs with a real ticker, broad→dee
   });
   it("non-numeric display_pct → null", () => {
     expect(chainRungs(bundle([{ layer: "X", market_ticker: "KX-X", display_pct: null }]))[0].display_pct).toBeNull();
+  });
+});
+
+describe("showLadderRungs — rung picker ONLY for genuine containment pairs (pnode && cnode)", () => {
+  const row = (o: Partial<FeedRow>) => o as FeedRow;
+  it("TRUE for a containment row (both parent & child ladder nodes set)", () => {
+    expect(showLadderRungs(row({ pnode: "Top 20", cnode: "Top 10" }))).toBe(true);
+    expect(showLadderRungs(row({ pnode: "Reach Round of 32", cnode: "Reach Round of 16" }))).toBe(true);
+  });
+  it("FALSE for aggregate rows — winner field / dutch book / 2-way game (no pnode/cnode)", () => {
+    expect(showLadderRungs(row({ name: "NHL · 27 winner field", detail: "overround" }))).toBe(false);
+    expect(showLadderRungs(row({ name: "A vs B", detail: "overround" }))).toBe(false);
+    expect(showLadderRungs(row({ pnode: "", cnode: "" }))).toBe(false);
+  });
+  it("FALSE for stage-elim book/synthetic and synthetic bundle (single participant, NOT a containment pair)", () => {
+    expect(showLadderRungs(row({ name: "Reach Finals — synthetic vs advance", detail: "reverse" }))).toBe(false);
+    expect(showLadderRungs(row({ name: "Sabalenka exact-score bundle" }))).toBe(false);
+  });
+  it("FALSE when only one of pnode/cnode is present, or row is null", () => {
+    expect(showLadderRungs(row({ pnode: "Top 20" }))).toBe(false);
+    expect(showLadderRungs(row({ cnode: "Top 10" }))).toBe(false);
+    expect(showLadderRungs(null)).toBe(false);
   });
 });
 

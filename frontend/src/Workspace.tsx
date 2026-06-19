@@ -12,9 +12,15 @@ import Blotter from "./Blotter";
 import Inspector, { Detail, Formulas } from "./Inspector";
 import Ladder from "./Ladder";
 import { Watch, Alerts } from "./SidePanels";
-import { type Col, type LayoutSnapshot, type PanelState } from "./layout";
+import { type Col, type LayoutSnapshot, type PanelState, type TextSize } from "./layout";
 
 interface PanelDef { id: string; n: string; title: string; hint?: string; body: ReactNode; }
+
+// Per-panel text-size cycle: inherit (page default) → compact → normal → large → xlarge → inherit. A panel's
+// `data-textsize` scopes --fs to its own subtree (tokens.css), independent of the global page size.
+const SIZE_CYCLE: (TextSize | undefined)[] = [undefined, "compact", "normal", "large", "xlarge"];
+const nextSize = (cur?: TextSize): TextSize | undefined =>
+  SIZE_CYCLE[(SIZE_CYCLE.indexOf(cur) + 1) % SIZE_CYCLE.length];
 
 function InspectorBody() {
   const t = useTerminal();
@@ -60,7 +66,7 @@ function ResearchBody() {
 }
 
 const PANELS: PanelDef[] = [
-  { id: "p-blotter", n: "1", title: "SCANNER", hint: "click row · J/K · ENTER · drag splitters · ⚙ columns", body: <Blotter /> },
+  { id: "p-blotter", n: "1", title: "SCANNER", hint: "click row · J/K · drag splitters · ⚙ columns", body: <Blotter /> },
   { id: "p-des", n: "2", title: "INSPECTOR", hint: "read-only · buy-only · gross", body: <InspectorBody /> },
   { id: "p-ladder", n: "3", title: "DEPTH LADDER", hint: "live order book · top-of-book", body: <LadderBody /> },
   { id: "p-watch", n: "★", title: "WATCHLIST · TOP ACTIONABLE", body: <WatchBody /> },
@@ -213,13 +219,16 @@ export default function Workspace() {
       const style: React.CSSProperties = s.basis != null && !s.collapsed && !s.maxed ? { flex: `0 0 ${s.basis}px` } : {};
       out.push(dropSlot(c, idx));        // drop ABOVE this panel
       out.push(
-        <div className={cls} id={p.id} key={p.id} style={style} ref={(el) => { refs.current[p.id] = el; }}>
+        <div className={cls} id={p.id} key={p.id} style={style} data-textsize={s.textSize} ref={(el) => { refs.current[p.id] = el; }}>
           <div className="ph" draggable
                onDragStart={(e) => { if ((e.target as HTMLElement).closest(".dock")) { e.preventDefault(); return; } dragId.current = p.id; setDragActive(true); e.dataTransfer.effectAllowed = "move"; }}
                onDragEnd={endDrag}>
             <span className="n">{p.n}</span><h3>{p.title}</h3>
             <span className="hint">{p.hint || ""}</span>
             <span className="dock">
+              <span className={"tsz" + (s.textSize ? " on" : "")}
+                    title={`Panel text size: ${s.textSize ?? "inherit (page default)"} — click to cycle`}
+                    onClick={() => patch(p.id, { textSize: nextSize(s.textSize) })}>A↕</span>
               <span title="Pop out an independent workspace (Scanner + Inspector + Ladder)" onClick={() => popOut()}>⧉</span>
               <span title="Maximize" onClick={() => patch(p.id, { maxed: !s.maxed })}>▢</span>
               <span title="Collapse" onClick={() => patch(p.id, { collapsed: !s.collapsed })}>▁</span>

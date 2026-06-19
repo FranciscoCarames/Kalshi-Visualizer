@@ -546,6 +546,8 @@ class TerminalOrderbook(BaseModel):
     yes: list[list[int]] = []
     no: list[list[int]] = []
     ok: bool = True
+    not_found: bool = False         # ok, but the ticker is not a market in the latest snapshot (typo/expired) —
+    #                                 distinct from a real market with a momentarily empty/closed book.
     error: str | None = None
     age_s: float = 0.0
 
@@ -576,6 +578,34 @@ _ORDERBOOK_CACHE_TTL_S = 2.0
 _orderbook_cache: dict[str, tuple[float, dict[str, Any]]] = {}      # ticker -> (fetched_monotonic, parsed)
 _orderbook_cache_lock = threading.Lock()
 _orderbook_limiter = ratelimit.SlidingWindow(config.ORDERBOOK_HTTP_MAX_PER_WINDOW, config.ORDERBOOK_HTTP_WINDOW_SECONDS)
+# Known-market tickers from the latest snapshot, memoized by snapshot_id (rebuilt only when the snapshot
+# changes) so the orderbook handler can tell an UNKNOWN ticker from a real market with an empty book without a
+# per-request DB scan. Consulted only on the empty-book path. Read-only; no engine coupling.
+_known_tickers_cache: tuple[int | None, frozenset[str]] = (None, frozenset())
+_known_tickers_lock = threading.Lock()
+
+
+def _known_market_tickers(db_path: str | None) -> frozenset[str]:
+    global _known_tickers_cache
+    sid = store.latest_snapshot_id(db_path=db_path)
+    with _known_tickers_lock:
+        if _known_tickers_cache[0] == sid:
+            return _known_tickers_cache[1]
+    snap = store.latest(db_path=db_path) or {}
+    tks: set[str] = set()
+    for o in (snap.get("opportunities") or []):
+        for k in ("ticker_1", "ticker_2"):
+            v = o.get(k)
+            if v:
+                tks.add(str(v).upper())
+        for leg in (o.get("legs") or []):
+            v = leg.get("tk") if isinstance(leg, dict) else None
+            if v:
+                tks.add(str(v).upper())
+    frozen = frozenset(tks)
+    with _known_tickers_lock:
+        _known_tickers_cache = (sid, frozen)
+    return frozen
 
 
 def _participant_rows(sport: str, player_key: str, tournament: str, db_path: str | None) -> list[dict[str, Any]]:
@@ -673,7 +703,8 @@ def get_terminal_telemetry(db_path: str | None = Depends(db_path_dep)) -> Termin
 
 
 @app.get("/api/terminal/orderbook", response_model=TerminalOrderbook)
-def get_terminal_orderbook(ticker: str, depth: int = _ORDERBOOK_DEFAULT_DEPTH) -> TerminalOrderbook:
+def get_terminal_orderbook(ticker: str, depth: int = _ORDERBOOK_DEFAULT_DEPTH,
+                           db_path: str | None = Depends(db_path_dep)) -> TerminalOrderbook:
     """LIVE resting order book for one market — the SPA depth ladder (replaces the old synthetic book).
     Read-only market data, GATED by the auth middleware when AUTH_ENABLED (like every `/api/terminal/*`
     route — it is NOT public). Validates the ticker, clamps depth to 1..100, coalesces the
@@ -690,7 +721,8 @@ def get_terminal_orderbook(ticker: str, depth: int = _ORDERBOOK_DEFAULT_DEPTH) -
         hit = _orderbook_cache.get(tk)
         if hit and (now - hit[0]) < _ORDERBOOK_CACHE_TTL_S:
             ob = hit[1]
-            return TerminalOrderbook(ticker=tk, yes=ob["yes"], no=ob["no"], age_s=round(now - hit[0], 2))
+            nf = (not ob["yes"] and not ob["no"]) and tk not in _known_market_tickers(db_path)
+            return TerminalOrderbook(ticker=tk, yes=ob["yes"], no=ob["no"], not_found=nf, age_s=round(now - hit[0], 2))
 
     if not _orderbook_limiter.allow(time.time()):
         return TerminalOrderbook(ticker=tk, ok=False, error="rate limited — try again shortly")
@@ -700,7 +732,8 @@ def get_terminal_orderbook(ticker: str, depth: int = _ORDERBOOK_DEFAULT_DEPTH) -
         return TerminalOrderbook(ticker=tk, ok=False, error=f"order book unavailable: {exc}")
     with _orderbook_cache_lock:
         _orderbook_cache[tk] = (now, ob)
-    return TerminalOrderbook(ticker=tk, yes=ob["yes"], no=ob["no"], age_s=0.0)
+    nf = (not ob["yes"] and not ob["no"]) and tk not in _known_market_tickers(db_path)
+    return TerminalOrderbook(ticker=tk, yes=ob["yes"], no=ob["no"], not_found=nf, age_s=0.0)
 
 
 @app.post("/api/terminal/export")
@@ -752,14 +785,18 @@ def get_backlog(window_s: float = config.BACKLOG_WINDOWS["1 hour"],
 
 
 @app.get("/backlog/events", response_model=list[BacklogInterval])
-def get_backlog_events(days: float = 7.0, category: str | None = None, include_open: bool = True,
-                       db_path: str | None = Depends(db_path_dep)):
+def get_backlog_events(response: Response, days: float = 7.0, category: str | None = None,
+                       include_open: bool = True, db_path: str | None = Depends(db_path_dep)):
     """The DURABLE 7-day interval backlog (v4) — distinct from `/backlog` above (the short live
     `recently_actionable` view, unchanged). Each row is one open/closed lifecycle of an opportunity in a
     tracked category. `days` windows by activity (capped at the retention window); `category` narrows to
     one of `actionable` / `bounded_loss` (`statistical_arbitrage` reserved — no detector yet);
-    `include_open=false` returns only closed intervals."""
-    rows = store.backlog_intervals(category=category, include_open=include_open, days=days, db_path=db_path)
+    `include_open=false` returns only closed intervals. Hard-capped at `BACKLOG_EVENTS_MAX_ROWS` rows
+    (newest first) so the payload stays bounded on a large store; a hit sets `X-Backlog-Truncated: 1`."""
+    rows = store.backlog_intervals(category=category, include_open=include_open, days=days,
+                                   limit=config.BACKLOG_EVENTS_MAX_ROWS, db_path=db_path)
+    if len(rows) >= config.BACKLOG_EVENTS_MAX_ROWS:
+        response.headers["X-Backlog-Truncated"] = "1"
     return [BacklogInterval(**r) for r in rows]
 
 

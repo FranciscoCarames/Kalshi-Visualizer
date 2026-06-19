@@ -683,11 +683,12 @@ _BACKLOG_FIELDS = (
 
 
 def backlog_intervals(*, category: str | None = None, include_open: bool = True, days: float | None = None,
-                      db_path: str | None = None) -> list[dict[str, Any]]:
+                      limit: int | None = None, db_path: str | None = None) -> list[dict[str, Any]]:
     """Read the durable interval backlog (v4), most-recent-activity first. `category` narrows to one
     tracked category; `include_open=False` returns only CLOSED intervals; `days` windows to that many days
-    of activity (capped at `BACKLOG_RETENTION_SECONDS`), measured from the newest activity. Each row is the
-    promoted columns plus `duration_s`, `last_legs`, and the full `data` (JSON-expanded)."""
+    of activity (capped at `BACKLOG_RETENTION_SECONDS`), measured from the newest activity; `limit` caps the
+    row count (newest first — bounds the payload regardless of window). Each row is the promoted columns plus
+    `duration_s`, `last_legs`, and the full `data` (JSON-expanded)."""
     where: list[str] = []
     params: list[Any] = []
     if category is not None:
@@ -708,9 +709,13 @@ def backlog_intervals(*, category: str | None = None, include_open: bool = True,
                 where.append("COALESCE(left_ts, last_seen_ts) >= ?")
                 params.append(cutoff)
                 clause = " WHERE " + " AND ".join(where)
+        limit_clause = ""
+        if limit is not None and int(limit) > 0:
+            limit_clause = " LIMIT ?"
+            params.append(int(limit))           # bound after the ORDER BY (newest-first) → keeps the newest rows
         rows = conn.execute(
             f"SELECT {', '.join(_BACKLOG_FIELDS)}, last_legs, data FROM backlog_intervals{clause} "
-            "ORDER BY COALESCE(left_ts, last_seen_ts) DESC, id DESC", tuple(params)).fetchall()
+            f"ORDER BY COALESCE(left_ts, last_seen_ts) DESC, id DESC{limit_clause}", tuple(params)).fetchall()
     finally:
         conn.close()
     out: list[dict[str, Any]] = []

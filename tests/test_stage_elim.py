@@ -28,7 +28,8 @@ def selim(suffix, *, team="usa", event="KXWCSTAGEOFELIM-26USA", yes_ask_c=None, 
         "tournament": "2026 FIFA World Cup", "tour": "",
         "yes_ask_c": yes_ask_c, "no_ask_c": no_ask_c, "yes_bid_c": yes_bid_c,
         "yes_ask_size": ask_size, "yes_bid_size": bid_size, "quote_quality": quality, "status": status,
-        "market_ticker": f"{event}-{suffix}", "kalshi_url": "https://kalshi.com/x", "event_title": "USA SoE",
+        "market_ticker": f"{event}-{suffix}", "kalshi_url": "https://kalshi.com/x",
+        "event_title": "USA: Stage of Elimination",   # team name lives here ('<Team>: Stage of Elimination')
     }
 
 
@@ -66,6 +67,33 @@ def test_book_overround_fires():
     assert g["direction"] == "overround" and g["payout_floor_c"] == 600
     assert g["cost_c"] == 70 and g["exec_gap_c"] == 530
     assert all(leg["side"] == "buy_no" for leg in g["legs"])
+
+
+def test_book_title_is_team_and_question_specific():
+    g = stage_elim.find_stage_elim_books(team_buckets(yes_asks=[10] * 7))[0]
+    # The title names WHICH team (from the event title, NOT the bucket stage label) and WHAT it is about.
+    low = g["match"].lower()
+    assert "how far do they go" in low and "stage-of-elimination" in low
+    assert g["match"].startswith("USA —")                # the team, not "Group Stage —"
+    assert "group stage" not in low                       # a stage label must never be the title prefix
+
+
+def test_book_legs_carry_bucket_labels_and_bucket_specific_tickers():
+    g = stage_elim.find_stage_elim_books(team_buckets(yes_asks=[10] * 7))[0]
+    labels = dict(sports.WC_STAGE_ELIM_BUCKETS)            # suffix -> human round label
+    # legs are ordered broad->deep; each leg states ITS round AND links to ITS own bucket market.
+    for leg, suffix in zip(g["legs"], _BUCKETS):
+        assert leg["contract"] == labels[suffix]          # e.g. "Eliminated: Round of 32" (not the team name)
+        assert leg["ticker"] == f"KXWCSTAGEOFELIM-26USA-{suffix}"   # bucket-specific deep-link target
+        assert labels[suffix] in leg["text"]              # buy-text mentions the round
+
+
+def test_book_opportunity_id_is_stable_under_naming_change():
+    g = stage_elim.find_stage_elim_books(team_buckets(yes_asks=[10] * 7))[0]
+    # The id keys on (check_type, event, team) — NOT the display title / leg labels — so renaming never
+    # changes a row's identity (no lifecycle churn / duplicate alerts).
+    assert g["opportunity_id"] == data.opportunity_id(
+        stage_elim.BOOK_CHECK_TYPE, "KXWCSTAGEOFELIM-26USA", "usa")
 
 
 def test_book_missing_bucket_rejected_fail_closed():

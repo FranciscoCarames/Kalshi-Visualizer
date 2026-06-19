@@ -72,7 +72,7 @@ export function filteredCount(opps: FeedRow[], zone: string, section: string, f:
  * (o.kind), so the kind filter selects type explicitly and max-loss applies to the band's capped risk. */
 export interface BandState {
   maxLoss: number; minRatio: number; maxOverpay: number;
-  minChildOutright: number; maxSpreadOverChild: number;
+  minChildOutright: number; minParentOutright: number; maxSpreadOverChild: number;
   cheapKind: string;            // "all" | "band" | "outright"
   cheapScope: string;           // cheap-NO settlement scope tab: "all" | "event" | "tournament" | "championship"
   maxBuyNo: number;             // cheap-NO: cap the Buy-NO anchor cost (¢); 0 = off
@@ -83,7 +83,7 @@ export interface BandState {
   groupByLadder: boolean;
 }
 export const emptyBand = (): BandState =>
-  ({ maxLoss: 0, minRatio: 0, maxOverpay: 0, minChildOutright: 0, maxSpreadOverChild: 0, cheapKind: "all", cheapScope: "all", maxBuyNo: 0,
+  ({ maxLoss: 0, minRatio: 0, maxOverpay: 0, minChildOutright: 0, minParentOutright: 0, maxSpreadOverChild: 0, cheapKind: "all", cheapScope: "all", maxBuyNo: 0,
      minLadderDepth: 0, maxLadderBottom: 0, maxStepRatio: 0, groupByLadder: false });
 
 /* Fallback band defaults if meta.defaults is absent — these literals match config.py
@@ -117,7 +117,8 @@ const underMin = (x: unknown, lim: number) => lim > 0 && fnum(x) < lim;       //
 export function applyBand(rows: FeedRow[], section: string, b: BandState): FeedRow[] {
   if (section === "bounded") {
     return rows.filter((o) => !overMax(o.max_loss, b.maxLoss) && !underMin(o.ratio, b.minRatio)
-      && !underMin(o.child_outright, b.minChildOutright) && !overMax(o.spread_over_child, b.maxSpreadOverChild));
+      && !underMin(o.child_outright, b.minChildOutright) && !underMin(o.parent_outright, b.minParentOutright)
+      && !overMax(o.spread_over_child, b.maxSpreadOverChild));
   }
   if (section === "nearmiss") return rows.filter((o) => !overMax(o.overpay, b.maxOverpay));
   if (section === "cheapno") {

@@ -18,10 +18,13 @@ body{background:var(--bg);color:var(--tx);font-family:var(--mono);font-size:var(
  * (converted from the mockup's hardcoded px), so a step scales the whole UI, not just a few panels.
  * "normal" == the 12px base, so it is pixel-identical to the original mockup. body.big is kept as a
  * back-compat alias for "large". */
-html[data-textsize="compact"]{--fs:11.5px}
-html[data-textsize="normal"]{--fs:12px}
-html[data-textsize="large"]{--fs:14px}
-html[data-textsize="xlarge"]{--fs:16px}
+/* data-textsize sets --fs; selectors are element-scoped (NOT html-only) so ANY element carrying the
+ * attribute — a workspace panel — overrides --fs for its own subtree via the cascade, while <html> keeps the
+ * page-wide default. */
+[data-textsize="compact"]{--fs:11.5px}
+[data-textsize="normal"]{--fs:12px}
+[data-textsize="large"]{--fs:14px}
+[data-textsize="xlarge"]{--fs:16px}
 body.big{--fs:14px}
 html[data-theme="hc"] body{background-image:none}
 ::-webkit-scrollbar{width:9px;height:9px}::-webkit-scrollbar-thumb{background:var(--line2)}::-webkit-scrollbar-track{background:var(--bg1)}
@@ -57,6 +60,10 @@ html[data-theme="hc"] .stab.on{background:var(--bg2)}
 .lens{display:flex;border:1px solid var(--line2)}
 .lens button{padding:3px 8px;font-size:calc(var(--fs) - 2px);background:transparent;border:none;color:var(--tx2);cursor:pointer;font-family:var(--mono);letter-spacing:.3px}
 .lens button.on{background:var(--amber);color:#000;font-weight:700}
+/* Participant chooser (Inspector · Participant Detail): terminal-styled chips, matching .lens/.basis. */
+.pchooser button{padding:1px 7px;margin:1px 4px 1px 0;font-size:calc(var(--fs) - 2px);background:var(--bg2);border:1px solid var(--line2);color:var(--tx2);cursor:pointer;font-family:var(--mono);border-radius:2px}
+.pchooser button:hover{color:var(--white);border-color:var(--tx3)}
+.pchooser button.on{background:var(--amber);color:#000;font-weight:700;border-color:var(--amber)}
 .tbtn{background:var(--bg2);border:1px solid var(--line2);color:var(--tx2);font-size:calc(var(--fs) - 2px);padding:3px 9px;cursor:pointer;font-family:var(--mono);position:relative}
 .tbtn:hover{color:var(--white);background:var(--hover)}
 .tbtn.force{border-color:var(--red);color:var(--red)}
@@ -64,11 +71,19 @@ select.in,input.in{background:var(--bg1);border:1px solid var(--line2);color:var
 
 .menu{position:absolute;z-index:50;background:var(--bg1);border:1px solid var(--line2);box-shadow:0 8px 26px rgba(0,0,0,.6);min-width:190px;max-height:70vh;overflow:auto;display:none;padding:4px 0;font-size:calc(var(--fs) - 1.5px)}
 .menu.on{display:block}
-.menu .mh{padding:3px 10px;color:var(--amber);font-size:calc(var(--fs) - 3.5px);letter-spacing:.7px;border-bottom:1px solid var(--line)}
+.menu .mh{display:flex;align-items:center;gap:8px;padding:3px 10px;color:var(--amber);font-size:calc(var(--fs) - 3.5px);letter-spacing:.7px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg1);z-index:1}
+.menu .mclose{margin-left:auto;cursor:pointer;color:var(--tx3);letter-spacing:0}.menu .mclose:hover{color:var(--white)}
 .menu label,.menu .mi{display:flex;align-items:center;gap:6px;padding:3px 10px;cursor:pointer;color:var(--tx2);white-space:nowrap}
 .menu label:hover,.menu .mi:hover{background:var(--hover);color:var(--white)}
 .menu input{accent-color:var(--amber)}
 .menu select{background:var(--bg2);border:1px solid var(--line2);color:var(--white);font-family:var(--mono);font-size:calc(var(--fs) - 2px);margin-left:auto}
+
+/* Section-note banner — one shared line for fields that are identical across every visible row (near-miss
+ * note, qualifier setup/legs/review-status/caveat), so the table doesn't repeat the same text per row. */
+.secnote{display:flex;flex-wrap:wrap;gap:6px 18px;flex:0 0 auto;padding:4px 10px;background:var(--bg2);border-bottom:1px solid var(--line2);color:var(--tx2);font-size:calc(var(--fs) - 2px)}
+.secnote-item b{color:var(--tx3);font-weight:600}
+.secnote-x{margin-left:auto;cursor:pointer;color:var(--tx3);padding:0 3px;flex:0 0 auto}.secnote-x:hover{color:var(--white)}
+.secnote-collapsed{cursor:pointer;color:var(--tx3);font-size:calc(var(--fs) - 3px);letter-spacing:.5px}.secnote-collapsed:hover{color:var(--white)}
 
 .filt{display:flex;align-items:center;gap:7px;background:var(--bg2);border-bottom:1px solid var(--line2);padding:3px 9px;flex:0 0 auto;flex-wrap:wrap;font-size:calc(var(--fs) - 2px)}
 .filt label{color:var(--tx3);letter-spacing:.4px}
@@ -93,7 +108,7 @@ select.in,input.in{background:var(--bg1);border:1px solid var(--line2);color:var
 
 .workspace{flex:1;min-height:0;display:flex;padding:4px;gap:0;position:relative}
 .col{display:flex;flex-direction:column;min-width:0;min-height:0}
-#colL{flex:1 1 auto}#colM{flex:0 0 330px}#colR{flex:0 0 290px}
+#colL{flex:1 1 auto;min-width:160px}#colM{flex:0 0 330px}#colR{flex:0 0 290px}
 .vsplit{flex:0 0 5px;cursor:col-resize}.vsplit:hover,.vsplit.drag{background:var(--amber-d)}
 .hsplit{flex:0 0 5px;cursor:row-resize}.hsplit:hover,.hsplit.drag{background:var(--amber-d)}
 .panel{border:1px solid var(--line2);background:var(--panel);display:flex;flex-direction:column;min-height:24px;min-width:0;overflow:hidden;flex:1 1 0}
@@ -111,9 +126,10 @@ select.in,input.in{background:var(--bg1);border:1px solid var(--line2);color:var
 .ph:active{cursor:grabbing}
 html[data-theme="hc"] .ph{background:var(--bg2)}
 .ph .n{color:#000;background:var(--amber);font-weight:800;font-size:calc(var(--fs) - 3px);padding:0 4px}
-.ph h3{margin:0;font-size:calc(var(--fs) - 2px);font-weight:700;letter-spacing:.7px;color:var(--amber)}
+.ph h3{margin:0;font-size:calc(var(--fs) - 2px);font-weight:700;letter-spacing:.7px;color:var(--amber);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .ph .hint{margin-left:auto;color:var(--tx3);font-size:calc(var(--fs) - 3px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ph .dock{display:flex;gap:6px;flex:0 0 auto}.ph .dock span{cursor:pointer;color:var(--tx3);font-size:calc(var(--fs) - 1px)}.ph .dock span:hover{color:var(--white)}
+.ph .dock .tsz{letter-spacing:-1px}.ph .dock .tsz.on{color:var(--amber)}
 .pbody{flex:1;overflow:auto;min-height:0}
 
 .zones{display:flex;background:var(--bg1);border-bottom:1px solid var(--line);flex:0 0 auto}
@@ -180,6 +196,7 @@ tbody tr.sel.msel td:first-child{box-shadow:inset 3px 0 0 var(--amber)}
 .dtitle .t{color:var(--white);font-size:calc(var(--fs) + 0.5px);font-weight:700;font-family:var(--sans)}
 .bk{font-weight:800;font-size:calc(var(--fs) - 3.5px);padding:0 4px;border-radius:2px}
 .bk-exec{background:rgba(51,255,122,.15);color:var(--green)}.bk-spec{background:rgba(255,176,0,.15);color:var(--amber)}.bk-diag{background:rgba(122,106,58,.2);color:var(--tx2)}
+.bk-rev{background:rgba(255,176,0,.15);color:var(--amber)}.bk-blk{background:rgba(255,77,77,.15);color:var(--red)}
 .basis{margin-left:auto;display:flex;border:1px solid var(--line2)}
 .basis button{padding:1px 8px;font-size:calc(var(--fs) - 3px);background:transparent;border:none;color:var(--tx2);cursor:pointer;font-family:var(--mono)}
 .basis button.on{background:var(--amber);color:#000;font-weight:700}

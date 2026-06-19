@@ -50,6 +50,12 @@ describe("applyBand (fail-open on missing fields)", () => {
     const rows = [row({ ratio: 3 }), row({ ratio: 1 }), row({})];
     expect(applyBand(rows, "bounded", b).length).toBe(2); // 3 kept, 1 dropped, missing kept
   });
+  it("min parent-outright floor drops rows below it but KEEPS a missing value (fail-open)", () => {
+    const b = { ...base(), minParentOutright: 10 };
+    const rows = [row({ parent_outright: 15 }), row({ parent_outright: 4 }), row({})];
+    expect(applyBand(rows, "bounded", b).length).toBe(2);      // 15 kept, 4 dropped, missing kept
+    expect(applyBand(rows, "bounded", base()).length).toBe(3); // off (0) = no-op
+  });
   it("cheap-NO kind selector filters by row type, not price", () => {
     const rows = [row({ section: "cheapno", kind: "Band" }), row({ section: "cheapno", kind: "Outright" })];
     expect(applyBand(rows, "cheapno", { ...base(), cheapKind: "band" }).map((r) => r.kind)).toEqual(["Band"]);

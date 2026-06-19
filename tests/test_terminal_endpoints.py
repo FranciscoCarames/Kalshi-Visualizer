@@ -11,6 +11,7 @@ the ones the plan's audit called out:
 """
 from __future__ import annotations
 
+import csv
 import io
 import zipfile
 
@@ -18,6 +19,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 import api
+import data
 import presence
 import scan_manager
 import store
@@ -97,6 +99,39 @@ def test_detail_requires_tournament(client):
     # blank tournament → 400 (our guard); never a silent fallback that merges all tournaments
     r = c.get("/api/terminal/detail", params={"sport": "tennis", "player_key": "p1", "tournament": ""})
     assert r.status_code == 400
+
+
+def test_staleness_gate_is_uniform_across_opps_and_export(client):
+    """N3 PROOF: the snapshot-staleness downgrade is applied in api._opps, which feeds BOTH /opportunities and
+    the ZIP export (export.build_export_zip is a pure serializer of the opps it's handed). So a STALE snapshot
+    can never ship a fresh 'Yes' tradable_now in the export while the live grid shows 'No — stale'. A fresh
+    snapshot is the control. (CompareView reads the gated feed; the feed path is covered by test_feed.)"""
+    c, db = client
+    # far-past fetched_at → age >> STALE_AFTER_SECONDS → the gate downgrades the actionable 'Yes'
+    store.write_snapshot("2020-01-01 12:00:00 UTC", [op("a", tradable_now="Yes")],
+                         frames=[{"sport": "tennis", "frame_type": "contracts", "schema_version": 1, "rows": []}],
+                         db_path=db)
+    assert api._opps(db)[0]["tradable_now"] == data.STALE_TRADABILITY      # /opportunities path gated
+    r = c.post("/api/terminal/export", json={"opportunity_ids": ["a"], "snapshot_id": None})
+    assert r.status_code == 200
+    rows = list(csv.DictReader(io.StringIO(
+        zipfile.ZipFile(io.BytesIO(r.content)).read("opportunities.csv").decode("utf-8"))))
+    assert rows[0]["tradable_now"] == data.STALE_TRADABILITY               # export path gated identically
+
+
+def test_staleness_gate_fresh_snapshot_keeps_yes(client):
+    """Control for the N3 proof: a fresh snapshot keeps tradable_now='Yes' through the export."""
+    c, db = client
+    import datetime as _dt
+    fresh = _dt.datetime.now(_dt.timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+    store.write_snapshot(fresh, [op("a", tradable_now="Yes")],
+                         frames=[{"sport": "tennis", "frame_type": "contracts", "schema_version": 1, "rows": []}],
+                         db_path=db)
+    assert api._opps(db)[0]["tradable_now"] == "Yes"
+    r = c.post("/api/terminal/export", json={"opportunity_ids": ["a"], "snapshot_id": None})
+    rows = list(csv.DictReader(io.StringIO(
+        zipfile.ZipFile(io.BytesIO(r.content)).read("opportunities.csv").decode("utf-8"))))
+    assert rows[0]["tradable_now"] == "Yes"
     # missing param entirely → FastAPI validation 422
     assert c.get("/api/terminal/detail", params={"sport": "tennis", "player_key": "p1"}).status_code == 422
 

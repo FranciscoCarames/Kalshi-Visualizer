@@ -5,7 +5,7 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState, type R
 import { loadFeed, rowsFor, SUBTABS, type Feed, type FeedRow, type FeedMeta } from "./feed";
 import { subscribeFeed } from "./stream";
 import { COLS, colKeyOf } from "./columns";
-import { applyLens, LENSES } from "./lens";
+import { applyLens, LENSES, lensValid } from "./lens";
 import { downloadCsv } from "./csv";
 import { encodeUrl, decodeUrl } from "./url";
 import { CompareView, OverlapView, LaddersView } from "./panels";
@@ -13,12 +13,14 @@ import { postScan, getScanStatus } from "./scan";
 import { diffSnapshot, edgeMap, type Change } from "./diff";
 import { type FilterState, type BandState, emptyFilters, defaultBand, isDefaultBand, applyBand, passAll, passMembership, hiddenByFee, tournamentOptions } from "./filters";
 import { loadPrefs, savePrefs, PREFS_VERSION, THEMES, LAYOUT_PRESETS, SPLITS, type Prefs } from "./prefs";
-import { cleanLayout, presetSnapshot, type LayoutSnapshot } from "./layout";
+import { cleanLayout, presetSnapshot, TEXT_SIZES, type LayoutSnapshot, type TextSize } from "./layout";
 import { apiFetch } from "./http";
 
 export interface ExtraPanel { title: string; body: ReactNode; }
-export const TEXT_SIZES = ["compact", "normal", "large", "xlarge"] as const;
-export type TextSize = (typeof TEXT_SIZES)[number];
+// Re-exported from the pure layout module (single source) so existing `import { TEXT_SIZES } from "./context"`
+// callers keep working.
+export { TEXT_SIZES };
+export type { TextSize };
 export interface Settings { longShort: boolean; showIds: boolean; resolutionCriteria: boolean; hideNetNegExec: boolean; textSize: TextSize; tz: string; autoRefresh: string; }
 const AUTO_MS: Record<string, number> = { "10s": 10000, "30s": 30000, off: 0 };
 
@@ -38,6 +40,8 @@ interface TerminalState {
   zoneCount: (zone: string) => number;                      // sum of the zone's section counts (band-aware)
   hiddenByFeeCount: number;                                 // exec rows hidden by the fee filter (honest chip)
   inScope: (zone: string, section: string) => number;       // membership-only count (thresholds not applied)
+  countBeforeBand: (zone: string, section: string) => number; // membership+thresholds+fee, BEFORE the SecBar band
+  countLabel: (zone: string, section: string) => string;      // count, or "0 (filtered)" when a band hides all in-scope rows
   runScan: (force: boolean) => void;
   setSetting: <K extends keyof Settings>(k: K, v: Settings[K]) => void;
   setBand: (patch: Partial<BandState>) => void;
@@ -170,6 +174,9 @@ export function TerminalProvider({ children, embedded }: { children: ReactNode; 
   // Text size rides the same <html data-*> mechanism as the theme; tokens.css maps it to --fs and every
   // font-size derives from --fs, so the whole UI scales (not just the Inspector).
   useEffect(() => { if (embeddedMode) return; document.documentElement.dataset.textsize = settings.textSize; }, [settings.textSize]);
+  // L2: a lens that's invalid for the current (zone, section) — e.g. RIPENESS carried into cheap-NO — must not
+  // leak. Reset to engine order when the active lens isn't offered here (mirrors the section-scoped lens bar).
+  useEffect(() => { if (lens && !lensValid(lens, zone, section)) setLens(""); }, [zone, section, lens]);
 
   // Track mount + tear down a running scan poll on unmount (logout / session expiry unmounts the provider
   // mid-scan): without this the status setInterval keeps firing and would setState on a dead component.
@@ -362,6 +369,16 @@ export function TerminalProvider({ children, embedded }: { children: ReactNode; 
       ? applyBand(base, s, bands[s] ?? defaultBand(s, meta?.defaults)).length
       : base.length;
   };
+  // M3: the same membership+thresholds+fee set as `count`, but BEFORE the per-section SecBar band. When
+  // `count` is 0 yet this is > 0, the section's default band (e.g. 5¢ max-loss) is hiding everything → the UI
+  // shows "0 (filtered)" / a band-specific empty state instead of a bare 0 that reads as "nothing here".
+  const countBeforeBand = (z: string, s: string) =>
+    rowsFor(opps, z, s).filter((o) => passAll(o, filters) && !hiddenByFee(o, z, settings.hideNetNegExec)).length;
+  const countLabel = (z: string, s: string): string => {
+    const c = count(z, s);
+    if (c > 0) return c.toLocaleString();
+    return countBeforeBand(z, s) > 0 ? "0 (filtered)" : "0";   // band hid all in-scope rows vs genuinely none
+  };
   // How many exec rows the fee filter is hiding right now (membership-passing) — drives the honest
   // "N hidden by fee filter" chip so a dropped ACTIONABLE count never implies "no opportunities".
   const hiddenByFeeCount = useMemo(() =>
@@ -383,7 +400,7 @@ export function TerminalProvider({ children, embedded }: { children: ReactNode; 
     _feed: feed,
     meta, opps, err, sports, zone, section, lens, filters, part: filters.part, tourOptions,
     sel, colKey, visible, rows, theme, paletteOpen, multi, surface, showNet, itab,
-    extra, panelsMenuOpen, scanText, settings, band, bandIsDefault, split, count, zoneCount, hiddenByFeeCount, inScope, runScan, setSetting,
+    extra, panelsMenuOpen, scanText, settings, band, bandIsDefault, split, count, zoneCount, hiddenByFeeCount, inScope, countBeforeBand, countLabel, runScan, setSetting,
     changeOf: (id) => change.get(id) ?? null, flashIds, hasBaseline: baselineReady,
     setBand, resetBand, setSplit,
     goSection: (z, s) => { setZone(z); setSectionRaw(s); },

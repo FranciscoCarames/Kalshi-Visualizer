@@ -531,6 +531,19 @@ def test_backlog_interval_opens_advances_and_peaks(tmp_path):
     assert r["worst_case_profit_c"] == -1.0      # least-negative (max) over the interval
 
 
+def test_backlog_intervals_limit_caps_rows_newest_first(tmp_path):
+    """H1: `limit` bounds the row count (newest-first) regardless of the time window, so GET /backlog/events
+    can't return an unbounded multi-MB payload off a large store. limit<=0 / None means no cap (parity)."""
+    db = _db(tmp_path)
+    store.write_snapshot(1000, [_bopp(f"o{i}") for i in range(12)], db_path=db)   # 12 open intervals
+    full = store.backlog_intervals(db_path=db)
+    assert len(full) == 12
+    capped = store.backlog_intervals(limit=5, db_path=db)
+    assert len(capped) == 5                                                        # capped
+    assert [r["opportunity_id"] for r in capped] == [r["opportunity_id"] for r in full[:5]]   # newest kept, order intact
+    assert store.backlog_intervals(limit=0, db_path=db) == full                    # limit<=0 → no cap
+
+
 def test_backlog_interval_closes_on_dropout(tmp_path):
     db = _db(tmp_path)
     store.write_snapshot(1000, [_bopp("a")], db_path=db)
