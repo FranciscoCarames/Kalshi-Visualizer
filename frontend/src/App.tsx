@@ -313,9 +313,9 @@ function Shell() {
           <button className="tbtn" onClick={() => t.setPaletteOpen(true)}>＋ ADD ▾</button>
           <button className="tbtn" onClick={() => t.setPanelsMenuOpen(true)}>▦ ELEMENTS ▾</button>
           <button className="tbtn" title="Reset the workspace to the selected layout preset" onClick={() => t.resetLayout()}>⟲ RESET</button>
-          {lensesFor(t.zone).length ? (<>
+          {lensesFor(t.zone, t.section).length ? (<>
             <span className="dim" style={{ fontSize: 9 }}>LENS</span>
-            <div className="lens">{lensesFor(t.zone).map(([l, lbl, tip]) => (
+            <div className="lens">{lensesFor(t.zone, t.section).map(([l, lbl, tip]) => (
               <button key={l} className={t.lens === l ? "on" : ""} title={tip} onClick={() => t.toggleLens(l)}>{lbl}</button>
             ))}</div>
           </>) : null}

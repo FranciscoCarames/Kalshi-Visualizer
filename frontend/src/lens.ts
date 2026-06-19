@@ -23,9 +23,18 @@ const _LENSES_BY_ZONE: Record<string, Set<string>> = {
   spec: new Set(["blended", "edge", "spread", "ratio", "ev", "ripeness", "quality"]),
   diag: new Set(),
 };
-export function lensesFor(zone: string): [string, string, string][] {
+// RIPENESS / SETUP QUALITY rank on containment-only fields (parent_over_maxloss, conditional chance) that only
+// the bounded-loss section carries. On other spec sections (cheap-NO, near-miss, qualifier) they'd sort on
+// absent fields → no-ops/misleading, so gate them to `bounded`. (Undefined section keeps all — no regression.)
+const _CONTAINMENT_ONLY = new Set(["ripeness", "quality"]);
+export function lensesFor(zone: string, section?: string): [string, string, string][] {
   const allow = _LENSES_BY_ZONE[zone] ?? _LENSES_BY_ZONE.spec;
-  return LENSES.filter(([k]) => allow.has(k));
+  const keepContainment = section == null || section === "bounded";
+  return LENSES.filter(([k]) => allow.has(k) && (keepContainment || !_CONTAINMENT_ONLY.has(k)));
+}
+/** True when `lens` is valid for the given (zone, section) — used to reset a leaked lens on section change. */
+export function lensValid(lens: string, zone: string, section?: string): boolean {
+  return !lens || lensesFor(zone, section).some(([k]) => k === lens);
 }
 
 const n = (v: unknown) => (typeof v === "number" && !isNaN(v) ? v : 0);

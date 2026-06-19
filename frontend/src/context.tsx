@@ -5,7 +5,7 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState, type R
 import { loadFeed, rowsFor, SUBTABS, type Feed, type FeedRow, type FeedMeta } from "./feed";
 import { subscribeFeed } from "./stream";
 import { COLS, colKeyOf } from "./columns";
-import { applyLens, LENSES } from "./lens";
+import { applyLens, LENSES, lensValid } from "./lens";
 import { downloadCsv } from "./csv";
 import { encodeUrl, decodeUrl } from "./url";
 import { CompareView, OverlapView, LaddersView } from "./panels";
@@ -172,6 +172,9 @@ export function TerminalProvider({ children, embedded }: { children: ReactNode; 
   // Text size rides the same <html data-*> mechanism as the theme; tokens.css maps it to --fs and every
   // font-size derives from --fs, so the whole UI scales (not just the Inspector).
   useEffect(() => { if (embeddedMode) return; document.documentElement.dataset.textsize = settings.textSize; }, [settings.textSize]);
+  // L2: a lens that's invalid for the current (zone, section) — e.g. RIPENESS carried into cheap-NO — must not
+  // leak. Reset to engine order when the active lens isn't offered here (mirrors the section-scoped lens bar).
+  useEffect(() => { if (lens && !lensValid(lens, zone, section)) setLens(""); }, [zone, section, lens]);
 
   // Track mount + tear down a running scan poll on unmount (logout / session expiry unmounts the provider
   // mid-scan): without this the status setInterval keeps firing and would setState on a dead component.
