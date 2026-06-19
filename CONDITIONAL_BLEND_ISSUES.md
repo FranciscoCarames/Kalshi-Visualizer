@@ -1,0 +1,55 @@
+# Conditional-blend detector — issues log
+
+Every issue discovered while implementing `.claude/plans/warm-coalescing-eclipse.md` (the
+opponent-resolution dynamic detector). Branch `feat/conditional-blend-detector`. Severity:
+**H** = correctness/economic-viability, **M** = soundness/robustness, **L** = minor, **Info** = finding.
+Status: **Resolved** / **Fixed (commit)** / **Open** / **Inherent** / **Not-a-bug**.
+
+## A. Design & math issues (surfaced by the critical pre-build audit)
+
+| ID | Sev | Status | Issue → resolution |
+|----|-----|--------|--------------------|
+| A1 | H | Resolved | **Blend was overgeneralized to earlier rounds** — `A_fair = ΣP·P(A beats)` with target "win tournament" silently drops A's remaining-path probability past the next match. → Owner's reframing: target = **"win the NEXT round"** (a single immediate match), which makes the conditional ratio clean at the decided stage; the detector is anchored to the final-decider and self-gates elsewhere. |
+| A2 | M | Resolved | **"Market-implied = no model" was misleading** — it IS a model (assumes prices≈probabilities, vig cancels, legs fresh, convergence occurs). → Honest labels throughout: `market_implied_blend_*` (never "fair"), `model_gap_to_ask_*` (never "edge"), status `MODEL_BLEND_CANDIDATE`; every row carries a "not fair value / not arbitrage / can lose money" note. |
+| A3 | H | Resolved | **Raw point conditional ratios are unsafe** (spread, stale quotes, one-sided books, thin size). → Conservative **bid/ask interval** is the firing gate; the midpoint is diagnostic-only. |
+| A4 | M | Resolved | **`pB_ask + pC_ask ≈ 100` sanity check was wrong** — within a 2-way book two asks sum to 100 + spread (double-counts vig). → Normalized **mid** weights remove the double-count; explicit quote-side semantics; complementarity tolerance on mids. |
+| A5 | M | Resolved | **Fee multiplier wrongly called "UI-tainted"** — it is per-series market metadata (`fetch_contracts` `fee_rates`). → `roundtrip_cost.effective_coeffs` resolves the real `fee_type`/`fee_multiplier`; `fee_known=False` (unknown/assumed) **blocks** the cost gate instead of defaulting to a base coefficient. |
+| A6 | L | Resolved | **Single round-trip cost too coarse** (hold vs convergence-exit vs maker differ). → Three logged cost paths: `cost_hold_c`, `cost_roundtrip_taker_c`, `cost_maker_entry_taker_exit_c`. |
+| A7 | M | Resolved | **Validation gate was vague** (post-hoc overfitting risk). → **Predeclared** go/no-go thresholds written before data collection (`CONDITIONAL_BLEND_VALIDATION.md`). |
+| A8 | M | Resolved | **Persistence join keys fragile** (B/C order flips, missing event_ticker). → Canonical `candidate_id = sha1(sport, tournament, deeper, broader, A, sorted(B,C))`; `schema_version` stamped. |
+| A9 | L | Resolved | **Field-underround row conceptually muddled** ("closer to arb" but not exhaustiveness-proven). → Single `FIELD_UNDERROUND_DIAGNOSTIC`, logging-only, no arb language. |
+| A10 | H | Partially resolved / **Open** | **Adjacency** — proving the B/C winner actually becomes A's opponent — is NOT removed by the next-round reframing. → Provable from prices at the **final-decider** (closed-pair guard); **earlier rounds need bracket-slot metadata that Kalshi does not expose** (confirmed, see C7). Detector fails closed off the final. |
+
+## B. Code bugs
+
+| ID | Sev | Status | Issue → resolution |
+|----|-----|--------|--------------------|
+| B1 | H | **Fixed (f3e472a)** | **Fired on a one-sided (ask-only) A target** — buyable but no bid to sell into, so a convergence exit is impossible. → Stamp `exit_liquidity`; block `gate_pass` unless A's "win next round" market has a firm bid (still surfaced as a real mispricing). Found by live adversarial testing. |
+| B2 | L | Fixed (47002ed) | ruff `F841` unused `a_br`. → Removed. |
+
+## C. Live-data findings & inherent strategy limitations (2026-06-19 live probe)
+
+| ID | Sev | Status | Finding |
+|----|-----|--------|---------|
+| C1 | Info/H | **Open** | **No fire-able setup exists in any live market right now** — WC is in the group stage (0 teams locked into any knockout rung), tennis is early-round, WNBA mid-season; basketball/hockey/baseball have 0 live rows. Detector fired **0 candidates on 1400+ real rows, 0 false positives**. Live FIRE-path validation must wait for a knockout window (WC SF ~July, or a tennis SF). |
+| C2 | M | Inherent | **The setup is rare/episodic** — it only exists when one finalist is locked AND the other semifinal is live. Weigh against build cost. |
+| C3 | M | Mitigated | **Sub-penny ratios at early stages** — group-stage reach-final is 1–2¢ for most teams, so `win/reach = 0/1` is noise. The lock gate restricts firing to high-reach-final favorites near the final. |
+| C4 | H | **Open / Inherent** | **Thin edges die on fees** — a realistic 6¢ MID gap shrank to a +1¢ CONSERVATIVE gap, below the 4¢ round-trip cost → no gate pass. The strategy needs FAT gaps; most apparent edges are untradeable. |
+| C5 | H | **Open** | **Convergence is the entire thesis and is unproven** — payoffs check out, but whether A's lagging price actually re-converges (vs. drifts/reverses) can only be measured by the live forward-test. The Phase-0B analyzer is built to measure it. |
+| C6 | — | Resolved (validated) | **The lock requirement is essential** — `win/reach_final` is P(team beats a *generic* finalist) (France 19/32 = 0.59), NOT P(beats A), until A is the locked unique other finalist. The lock gate enforces this; live prices confirm why it's needed. |
+| C7 | M | Open | **No bracket/group membership in the contract rows** to localize earlier-round fields (a group with 1 clinched + 2 fighting for 2nd is the structure, but it's invisible to a global price proof; and group "deciding" is 3-way, not head-to-head, so the ratio wouldn't be valid anyway). Confirms A10. |
+| C8 | — | Resolved (validated) | **Closed-pair guard defeats the no-bracket false positive** — two coincidentally-complementary teams in *different* semis are correctly SKIPPED (their other semifinalists show as extra live contenders → >2 live). Adversarially confirmed. |
+
+## D. Process / tooling
+
+| ID | Sev | Status | Note |
+|----|-----|--------|------|
+| D1 | L | Resolved | **Original plan file was lost** (lived under gitignored `.claude/`, never tracked, deleted from disk). → Reconstructed from the memory pointer + predecessor strategy docs. |
+| D2 | L | Fixed | **Windows console (cp1252) can't print Unicode** (`·`, `→`, `≥`) → `UnicodeEncodeError`. Surfaced first in diagnostics, then in *shipped* code: the Phase-0B analyzer's report used `≥` and crashed under a default Windows console/pipe. → Analyzer report made ASCII-only (`>=`); diagnostics use `PYTHONIOENCODING=utf-8`. cp1252 console smoke now passes. |
+| D4 | L | Resolved | **Phase-0B analyzer added** (`conditional_blend_analysis.py` + `scripts/analyze_conditional_blend.py` + tests): scores the sampler CSV against the predeclared gate (persistence / half-life / convergence / gate-pass / blend-vs-complement → PASS/FAIL/INSUFFICIENT SAMPLE). Completes the validation harness so the go/no-go is mechanical the moment a live knockout produces candidates. |
+| D3 | — | Not-a-bug | **Tournament-key split** ('World Cup · 26' vs a 96-row 'World Cup') investigated → the second group is `KXWCGROUPORDER` exact-order markets (`ladder_node=None`) that never enter the blend; the main group holds both reach-final and win. No fix needed. |
+
+---
+_Open items that gate Phase 1: A10/C7 (earlier-round adjacency needs bracket data), C1/C5 (fire-path +
+convergence unvalidated until a live knockout), C4 (economic viability under fees). Resolve via the live
+forward-test + the Phase-0B analyzer before any SPA wiring._

@@ -34,8 +34,15 @@ python scripts/validate_conditional_blend.py --sport soccer --out conditional_bl
 # loop every 60s through a live knockout match (needs network — Bash sandbox disabled):
 python scripts/validate_conditional_blend.py --sport soccer --interval 60
 ```
-The CSV is the validation substrate (gitignored as a throwaway). Persistence / half-life / re-convergence
-are computed offline by joining snapshots on `candidate_id` (stable under B/C ordering).
+The CSV is the validation substrate (gitignored as a throwaway). Then score it against the predeclared
+gate (Phase 0B):
+```bash
+python scripts/analyze_conditional_blend.py conditional_blend_samples.csv          # report + VERDICT
+python scripts/analyze_conditional_blend.py conditional_blend_samples.csv --json   # machine-readable
+```
+The analyzer (pure `conditional_blend_analysis.py`, unit-tested) joins snapshots on `candidate_id` (stable
+under B/C ordering) and computes persistence / signal half-life / realized convergence / gate-pass rate /
+blend-vs-complement, then prints **PASS / FAIL / INSUFFICIENT SAMPLE** against the gate below.
 
 ## Adjacency audit (Phase-0 task #1) — current finding
 The blend math is clean at every round (next-round target), but it still requires proof that **the B/C
