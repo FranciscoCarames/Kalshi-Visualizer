@@ -122,6 +122,22 @@ def test_inactive_leg_skips():
     assert _cands(rows) == []
 
 
+def test_field_sport_node_does_not_fire():
+    # golf "Top 5" is a 5-survivor field rung, not a head-to-head slot — the blend is meaningless there.
+    gser = "KXPGATOP10"
+    def g(node, key, bid, ask):
+        return {"series": gser, "event_ticker": f"{gser}-{key}", "market_ticker": f"{gser}-{key}-M",
+                "player": key.upper(), "player_key": key, "kind": "advance", "market_family": "advance",
+                "ladder_node": node, "stage": "", "tour": "", "yes_bid_c": bid, "yes_ask_c": ask,
+                "no_ask_c": (100 - bid), "display_c": ask, "yes_bid_size": 50, "yes_ask_size": 50,
+                "quote_quality": "Tight", "status": "active", "tournament": "Masters 2026",
+                "kalshi_url": "x", "time_value": "t", "rules_primary": "w"}
+    rows = [g("Top 5", "a", 99, 100), g("Win Tournament", "a", 40, 44),
+            g("Top 5", "b", 58, 62), g("Win Tournament", "b", 16, 20),
+            g("Top 5", "c", 38, 42), g("Win Tournament", "c", 6, 10)]
+    assert _cands(rows) == []                                  # survivors_of('Top 5')=5 ≠ 2 → skip
+
+
 def test_one_sided_a_target_blocks_gate_no_exit_liquidity():
     # A's win market has an ask but NO bid (one-sided) → buyable but no bid to exit a convergence trade.
     rows = _final_scene(a_win_ask=50)

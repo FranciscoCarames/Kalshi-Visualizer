@@ -26,6 +26,7 @@ Status: **Resolved** / **Fixed (commit)** / **Open** / **Inherent** / **Not-a-bu
 |----|-----|--------|--------------------|
 | B1 | H | **Fixed (f3e472a)** | **Fired on a one-sided (ask-only) A target** — buyable but no bid to sell into, so a convergence exit is impossible. → Stamp `exit_liquidity`; block `gate_pass` unless A's "win next round" market has a firm bid (still surfaced as a real mispricing). Found by live adversarial testing. |
 | B2 | L | Fixed (47002ed) | ruff `F841` unused `a_br`. → Removed. |
+| B3 | H | **Fixed** | **Field-sport false positive** — the detector fired a garbage candidate on golf's "Top 5" rung (`survivors_of=5`), where there is no head-to-head "this round" decider and the blend `P(A beats B)` is meaningless. The original price-only closed-pair proof did not exclude field rungs. → Require `cfg.survivors_of(broader) == 2` (a genuine 2-survivor head-to-head slot); excludes golf/motorsport/field rungs and earlier non-2-way bracket rungs while admitting every bracket sport's final pair. Found by the round-2 cross-sport probe; regression test added. |
 
 ## C. Live-data findings & inherent strategy limitations (2026-06-19 live probe)
 
@@ -39,6 +40,7 @@ Status: **Resolved** / **Fixed (commit)** / **Open** / **Inherent** / **Not-a-bu
 | C6 | — | Resolved (validated) | **The lock requirement is essential** — `win/reach_final` is P(team beats a *generic* finalist) (France 19/32 = 0.59), NOT P(beats A), until A is the locked unique other finalist. The lock gate enforces this; live prices confirm why it's needed. |
 | C7 | M | Open | **No bracket/group membership in the contract rows** to localize earlier-round fields (a group with 1 clinched + 2 fighting for 2nd is the structure, but it's invisible to a global price proof; and group "deciding" is 3-way, not head-to-head, so the ratio wouldn't be valid anyway). Confirms A10. |
 | C8 | — | Resolved (validated) | **Closed-pair guard defeats the no-bracket false positive** — two coincidentally-complementary teams in *different* semis are correctly SKIPPED (their other semifinalists show as extra live contenders → >2 live). Adversarially confirmed. |
+| C9 | — | Resolved (validated) | **Round-2 hardening (2026-06-19):** all-10-sport live sweep = **3760 rows, 0 candidates, 0 crashes** (golf no longer fires after B3); a biased fuzz fired **5,951 candidates with 0 invariant violations** (exec_gap_c always None, blend & probs in range, blend_lower ≤ blend_mid, gate_pass ⇒ fee_known + exit bid + conservative gap > cost); detector is **order-independent/deterministic** (identical candidate_ids across shuffles); analyzer survives malformed/hostile CSV rows without crashing. |
 
 ## D. Process / tooling
 

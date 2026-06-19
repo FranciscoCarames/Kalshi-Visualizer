@@ -147,6 +147,13 @@ def find_conditional_blends(records: list[dict[str, Any]], *, snapshot_ts: str |
         for deeper, broader in pairs:
             if broader not in order or deeper not in order:
                 continue                                      # side-branch leaf (e.g. "Win group") — skip
+            # the broader rung must be a genuine 2-survivor HEAD-TO-HEAD slot: exactly two reach it, so
+            # "win this round" is a head-to-head whose winner becomes A's opponent. Field rungs (golf
+            # "Top 5"=5, motorsport, etc.) have no such decider — the blend P(A beats B) is meaningless
+            # there — and an earlier bracket rung (survivors 4/8/…) can't be a clean 2-way pair.
+            if cfg.survivors_of(broader, spec) != 2:
+                _record(diag, tournament, broader, "broader rung is not a 2-survivor head-to-head slot")
+                continue
 
             # classify every player at the `broader` rung: locked / live / eliminated / unpriced
             locked, live, names = [], [], {}
