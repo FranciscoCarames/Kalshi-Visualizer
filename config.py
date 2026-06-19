@@ -400,6 +400,15 @@ AUTO_SCAN_DEFAULT_SECONDS = 60                        # server-safe default (was
                                                       # ~3-4s of rate-limited GETs, so ticks never overlap;
                                                       # the budget/cooldown guards stay as the safety floor.
 AUTO_SCAN_DEFAULT_ENABLED = True                      # auto-refresh on by default
+
+# Conditional-blend opponent-resolution detector (conditional_blend.py) — DEFAULT-OFF. A model-based,
+# market-implied speculative detector that is dark-validation-gated: it must NOT surface in the scan/SPA
+# until the live forward-test clears the predeclared gate (CONDITIONAL_BLEND_VALIDATION.md). When True (or
+# env CONDITIONAL_BLEND_ENABLED=1, read at the scanner boundary), the scan emits display-only
+# `speculative_model` rows that are NEVER ranked/Actionable (exec_gap_c=None). Flipping this on is the
+# Phase-1 enablement step and requires a green validation report first.
+CONDITIONAL_BLEND_DEFAULT_ENABLED = False
+
 # Presence gate (P4): pause the background auto-scan while NO viewer is connected, resuming on the next
 # tick after someone opens the dashboard — so the app stops hitting Kalshi when nobody's watching. The
 # manual "Scan now" button is NOT gated. Trade-off: a headless REST-only consumer (no browser → 0 viewers)

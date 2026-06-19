@@ -77,6 +77,21 @@ A green report unlocks Phase 1 (SPA surfacing, feature-flagged, never Actionable
 suite). It also changes a checked-in `CLAUDE.md` invariant (cond-prob enters the SPA) — call that out in
 the Phase-1 PR.
 
+## Phase 1 enablement (backend wiring built DEFAULT-OFF — do not flip until the gate is green)
+The detector is now wired into `scanner.unified_opportunities` behind a flag, fully isolation-tested, but
+**off by default** so production is unchanged:
+- Flag: `config.CONDITIONAL_BLEND_DEFAULT_ENABLED = False`, or env `CONDITIONAL_BLEND_ENABLED=1` (read at
+  the scanner boundary). When on, the scan emits `bucket="speculative_model"`, `status=MODEL_BLEND_CANDIDATE`,
+  `exec_gap_c=None`, `tradable_now="Speculative — model validation only"` rows — display-only, **never
+  ranked/Actionable** (routed via `consistency.bucket_of` → `speculative_model`, `STATUS_GROUP` →
+  "Speculative model").
+- Isolation suite (`tests/test_conditional_blend_wiring.py`): flag-off emits nothing; **enabling the
+  detector leaves every executable row byte-identical**; blend rows never outrank an actionable edge; the
+  `set(BUCKET_PRIORITY)==set(DASHBOARD_BUCKETS)` invariant holds.
+- **Remaining for full Phase 1:** the React SPA section/Inspector that renders the `speculative_model`
+  bucket (frontend), and the `CLAUDE.md` scope-guard update. Both gated on a green report before the flag
+  is flipped on in production.
+
 ## Live test findings — 2026-06-19 (static structure probe; fire-path not yet live)
 Ran the detector against live Kalshi data across sports and stress-tested payoffs/edge cases.
 
