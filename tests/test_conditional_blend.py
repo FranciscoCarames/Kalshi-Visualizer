@@ -122,6 +122,16 @@ def test_inactive_leg_skips():
     assert _cands(rows) == []
 
 
+def test_one_sided_a_target_blocks_gate_no_exit_liquidity():
+    # A's win market has an ask but NO bid (one-sided) → buyable but no bid to exit a convergence trade.
+    rows = _final_scene(a_win_ask=50)
+    rows[1] = _row(_WIN, key="a", bid_c=None, ask_c=50)        # ask-only book
+    out = _cands(rows, fee_rates=_FEES)
+    assert len(out) == 1                                       # still surfaced (a real mispricing)
+    assert out[0]["exit_liquidity"] == "one_sided_no_exit_bid"
+    assert out[0]["gate_pass"] is False                        # but never gate-passes without an exit bid
+
+
 def test_field_underround_emitted_separately_without_arb_language():
     # A 30 + B 20 + C 10 win-asks = 60 < 100 → underround diagnostic
     rows = _final_scene(a_win_ask=30)

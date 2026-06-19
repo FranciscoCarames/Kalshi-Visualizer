@@ -178,6 +178,7 @@ def find_conditional_blends(records: list[dict[str, Any]], *, snapshot_ts: str |
 
             # all legs must be active with firm quotes; A needs a firm target ask; B/C need broader+deeper
             a_target = _firm_ask_c(a_dp)
+            a_exit_bid = _bid_c(a_dp)            # a convergence exit needs a bid to SELL into
             b_bm, b_dm = _mid_c(b_br), _mid_c(b_dp)
             c_bm, c_dm = _mid_c(c_br), _mid_c(c_dp)
             if a_target is None or None in (b_bm, b_dm, c_bm, c_dm):
@@ -225,9 +226,13 @@ def find_conditional_blends(records: list[dict[str, Any]], *, snapshot_ts: str |
             # cost paths from the A target leg's series fee metadata
             a_series = str((a_dp or {}).get("series") or "").upper()
             costs = roundtrip_cost.cost_paths(a_target, fee_rates.get(a_series))
+            # exit liquidity: a convergence thesis is only tradable if A's target has a BID to sell into.
+            # A one-sided (ask-only) book lets you buy but never exit at the blend — block the gate.
+            exit_liquidity = "two_sided" if a_exit_bid is not None else "one_sided_no_exit_bid"
             gate_pass = bool(
                 gap_lower_c is not None and gap_lower_c > 0
                 and costs["fee_known"] and gap_lower_c > costs["cost_roundtrip_taker_c"]
+                and a_exit_bid is not None
             )
 
             adjacency = "closed_pair_final" if deeper == win_node else "closed_pair_earlier"
@@ -240,7 +245,8 @@ def find_conditional_blends(records: list[dict[str, Any]], *, snapshot_ts: str |
                 "A_key": a_key, "A_name": names.get(a_key, a_key),
                 "B_key": b_key, "B_name": names.get(b_key, b_key),
                 "C_key": c_key, "C_name": names.get(c_key, c_key),
-                "A_winNext_ask_c": a_target,
+                "A_winNext_ask_c": a_target, "A_winNext_bid_c": a_exit_bid,
+                "exit_liquidity": exit_liquidity,
                 "B_winThis_mid_c": round(b_bm, 1), "C_winThis_mid_c": round(c_bm, 1),
                 "B_winNext_mid_c": round(b_dm, 1), "C_winNext_mid_c": round(c_dm, 1),
                 "A_beats_B_mid": round(q_b_mid, 4), "A_beats_C_mid": round(q_c_mid, 4),
