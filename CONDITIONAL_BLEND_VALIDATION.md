@@ -70,6 +70,42 @@ A green report unlocks Phase 1 (SPA surfacing, feature-flagged, never Actionable
 suite). It also changes a checked-in `CLAUDE.md` invariant (cond-prob enters the SPA) — call that out in
 the Phase-1 PR.
 
-## Validation report (fill in after the live run)
-_Candidates observed: … · gate-pass %: … · median persistence: … · convergence: … · blend-vs-complement:
-… · adjacency finding: … · verdict: ship Phase 1 / iterate / drop._
+## Live test findings — 2026-06-19 (static structure probe; fire-path not yet live)
+Ran the detector against live Kalshi data across sports and stress-tested payoffs/edge cases.
+
+1. **No fire-able setup exists in ANY live competition right now.** World Cup is in the GROUP STAGE
+   (0 teams locked into any knockout rung; 10–48 live contenders per rung); tennis is in early rounds
+   (0 locked finalists); WNBA mid-season; basketball/hockey/baseball have 0 live rows. The detector
+   correctly fired **0 candidates on 1400+ real rows, with 0 false positives.** → the live FIRE-path
+   validation must wait for a knockout window (WC semifinals ~July, or a tennis SF).
+2. **The setup is episodic/rare** — it only exists when one finalist is locked AND the other semifinal
+   is live. Worth weighing against build cost: how often does the window even open?
+3. **The lock requirement is essential (validated on real prices).** `win ÷ reach_final` is
+   P(team beats a *generic* finalist), NOT P(beats A) — e.g. France 19/32 = 0.59 = "France beats
+   whoever." It only becomes "beats A" once A is the locked, unique other finalist. The detector's
+   lock gate enforces exactly this; without it the ratio is opponent-averaged and wrong for the blend.
+4. **Sub-penny ratios at early stages:** most teams' reach-final is 1–2¢ in group stage → `win/reach`
+   = 0/1 is noise. The ratio is only meaningful for high-reach-final favorites near the final →
+   reinforces final-anchoring.
+5. **Real winner fields are OVERROUND** (Σ 48 win-asks = 106¢) → `FIELD_UNDERROUND_DIAGNOSTIC` won't
+   spam; underround is a transient-mispricing-only event.
+6. **The closed-pair proof defeats the no-bracket-data false positives** (adversarially confirmed): two
+   coincidentally-complementary teams in *different* semis are rejected because the other semifinalists
+   show as extra live reach-final contenders (>2 live → SKIP). This is the key correctness result —
+   the price-only proof is sound at the final.
+7. **Real ladders are monotonic** (0 inversions in the top 10) and quotes are Tight — good data quality.
+8. **Thin edges die on fees (sobering):** a realistic 6¢ MID gap shrank to a +1¢ CONSERVATIVE gap,
+   below the 4¢ round-trip cost → `gate_pass=False`. The strategy needs FAT gaps (a big live lag) to
+   clear; most apparent edges will not be tradable.
+9. **BUG FOUND & FIXED** (commit f3e472a): the detector fired on a one-sided (ask-only) A target —
+   buyable but no bid to exit a convergence trade. Now stamps `exit_liquidity` and blocks the gate
+   without a firm A bid.
+10. **Payoff branches verified** (buy A "win next" @ ask, 1 contract): {B advances, A beats B}=+,
+    {B advances, B beats A}=−full, {C advances, A beats C}=+, {C advances, C beats A}=−full.
+    EV(hold)=+gap gross but with full 0↔100 variance; convergence-exit captures ~gap − 2 fees, ONLY if
+    it converges and an exit bid exists. **Convergence is the entire thesis and is unproven until the
+    live forward-test measures it.**
+
+## Validation report (fill in after the live KNOCKOUT run)
+_Candidates observed: … · gate-pass %: … · median persistence: … · convergence realized: … ·
+blend-vs-complement: … · adjacency finding: … · verdict: ship Phase 1 / iterate / drop._
