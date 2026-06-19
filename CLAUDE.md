@@ -22,7 +22,13 @@ engine — the SPA reads it solely through `GET /api/terminal/feed` (+ thin `/ap
 - **Scope guard — do NOT add unless explicitly asked:** trading, order placement,
   conditional-probability/de-vig models, net-of-fees math. **Exception (owner‑approved 2026‑06‑16):** the
   field‑implied **de‑vig conditional‑probability panel exists in the legacy NiceGUI `/dashboard/`** (merged
-  from `origin/main`); the React **SPA stays display‑only / no de‑vig**. Adding a **new sport** is in scope
+  from `origin/main`); the React **SPA stays display‑only / no de‑vig**. **Exception (owner‑approved
+  2026‑06‑19):** the **conditional‑blend opponent‑resolution detector** (`conditional_blend.py`) computes a
+  market‑implied blend (a conditional‑probability transform) and may surface a **display‑only `speculative_model`
+  section in the React SPA** — but it is **DEFAULT‑OFF** (`config.CONDITIONAL_BLEND_DEFAULT_ENABLED` / env
+  `CONDITIONAL_BLEND_ENABLED`) and must NOT be flipped on until its live forward‑test clears the predeclared
+  gate (`CONDITIONAL_BLEND_VALIDATION.md`); it is `exec_gap_c=None`, never ranked/Actionable, and never net‑of‑fees.
+  Adding a **new sport** is in scope
   via a `SportConfig` drop-in; non-sport-config work is not. **Per-user authentication is now IN SCOPE**
   (owner-requested 2026-06) — app-level login over the read-only surface, gated behind `AUTH_ENABLED`;
   see `docs/AUTH.md` (`auth_store.py`/`auth.py`/`manage_users.py`). It must NOT alter engine logic.

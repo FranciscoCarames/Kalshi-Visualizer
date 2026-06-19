@@ -122,6 +122,14 @@ export default function Inspector({ row, lens, snapshotId, showNet, longShort }:
           <b>Diagnostic row — not a tradable opportunity.</b> This row is surfaced for review/data-quality
           only, so it has no buy-only plan or economics. See the evidence and Participant Detail below.
         </div>
+      ) : row.section === "specmodel" ? (
+        <div className="note" style={{ marginTop: 6 }}>
+          <b>Speculative model — market-implied, NOT fair value, NOT arbitrage.</b> A locked participant looks
+          mispriced to win the next round versus the live match deciding their opponent. This is a convergence
+          candidate that <b>can lose money</b> (they can still lose the round); the blend is built from gross,
+          top-of-book prices with fees only partially modeled. Display-only — never ranked or Actionable.
+          The blend summary is in the row detail; see Participant Detail below.
+        </div>
       ) : (<>
       <div className="sect">BUY-ONLY PLAN — {row.nlegs ?? legs.length} LEG{(row.nlegs ?? legs.length) === 1 ? "" : "S"}</div>
       {(() => {

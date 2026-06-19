@@ -88,9 +88,14 @@ The detector is now wired into `scanner.unified_opportunities` behind a flag, fu
 - Isolation suite (`tests/test_conditional_blend_wiring.py`): flag-off emits nothing; **enabling the
   detector leaves every executable row byte-identical**; blend rows never outrank an actionable edge; the
   `set(BUCKET_PRIORITY)==set(DASHBOARD_BUCKETS)` invariant holds.
-- **Remaining for full Phase 1:** the React SPA section/Inspector that renders the `speculative_model`
-  bucket (frontend), and the `CLAUDE.md` scope-guard update. Both gated on a green report before the flag
-  is flipped on in production.
+- **Phase 1 frontend DONE (behind the flag):** the SPA renders a `SPEC-MODEL` section under the
+  SPECULATIVE zone — `webui/feed.py` maps `speculative_model → (spec, specmodel)`; `frontend/feed.ts`
+  registers the section/tile; `Inspector.tsx` shows a "market-implied, NOT fair value / NOT arbitrage /
+  can lose money" caveat. Verified: backend `_build_row` routes to `spec/specmodel`; 113 vitest +
+  `npm run build` pass; live wired scan (flag ON) = 3769 rows, 0 crashes, 0 blend rows (WC group stage).
+  `CLAUDE.md` scope guard updated (owner-approved, flag-gated exception).
+- **The flag stays OFF in production** until a green report. Nothing renders until then (no rows). Flip
+  `config.CONDITIONAL_BLEND_DEFAULT_ENABLED=True` (or env) only after this report passes.
 
 ## Live test findings — 2026-06-19 (static structure probe; fire-path not yet live)
 Ran the detector against live Kalshi data across sports and stress-tested payoffs/edge cases.
