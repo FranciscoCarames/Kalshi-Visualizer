@@ -42,6 +42,7 @@ _SEC: dict[str, tuple[str, str]] = {
     "actionable": ("exec", "act"), "review_signal": ("exec", "rev"), "blocked": ("exec", "blk"),
     "risk_budget": ("spec", "bounded"), "near_miss": ("spec", "nearmiss"),
     "qualifier_setup": ("spec", "qual"), "no_structure": ("spec", "cheapno"),
+    "speculative_model": ("spec", "specmodel"),   # conditional-blend convergence candidates (display-only)
     "data_quality": ("diag", "diag"), "display_signal": ("diag", "diag"),
     "wide_signal": ("diag", "diag"), "near_edge": ("diag", "diag"), "clean": ("diag", "diag"),
 }

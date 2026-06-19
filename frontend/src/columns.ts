@@ -56,7 +56,7 @@ export const COLS: Record<string, Col[]> = {
     C("cost", "Top-two bundle cost ¢", "c"), C("premium", "Cheaper vs qualifier ¢", "c"),
     C("if_top2", "If top two ¢", "c"), C("if_not_top2", "If not top two ¢", "c"), C("max_units", "Max units", "num"),
     C("worst_leg_quote_label", "Worst leg quote", "text"), C("comparator_quote_label", "Comparator quote", "text"),
-    C("legs", "Legs", "num"), C("review_status", "Review status", "text"), C("caveat", "Caveat", "text"),
+    C("legs", "Legs", "num"), C("review_status", "Review status", "text"), C("caveat", "Caveat", "text", true),
     C("support", "Support score ¢", "c", true), C("highest_leg", "Highest leg ask ¢", "c", true),
     C("median_leg", "Median leg ¢", "c", true), C("tournament_key", "Tournament key", "text", true)],
   diag: [C("sport", "Sport", "text"), NAME, C("status", "Status", "text"), C("edge", "Gross edge ¢", "c"),

@@ -85,7 +85,8 @@ export const ZONES: [string, string, string][] = [
 export const SUBTABS: Record<string, [string, string, string][]> = {
   exec: [["act", "ACTIONABLE", "actionable"], ["rev", "REVIEW", "review_signal"], ["blk", "BLOCKED", "blocked"]],
   spec: [["bounded", "BOUNDED-LOSS", "risk_budget"], ["cheapno", "CHEAP-NO", "no_structure"],
-         ["qual", "QUALIFIER", "qualifier_setup"], ["nearmiss", "NEAR-MISS", "near_miss"]],
+         ["qual", "QUALIFIER", "qualifier_setup"], ["nearmiss", "NEAR-MISS", "near_miss"],
+         ["specmodel", "SPEC-MODEL", "speculative_model"]],
   diag: [["diag", "DIAGNOSTIC", "data_quality"]],
 };
 
@@ -93,12 +94,14 @@ export const SUBTABS: Record<string, [string, string, string][]> = {
 export const TILES: [string, string, string, string][] = [
   ["ACTIONABLE", "exec", "act", "green"], ["REVIEW", "exec", "rev", "amber"], ["BLOCKED", "exec", "blk", "red"],
   ["BOUNDED-LOSS", "spec", "bounded", "amber"], ["CHEAP-NO", "spec", "cheapno", ""],
-  ["QUALIFIER", "spec", "qual", ""], ["NEAR-MISS", "spec", "nearmiss", ""], ["DATA-QUALITY", "diag", "diag", "cyan"],
+  ["QUALIFIER", "spec", "qual", ""], ["NEAR-MISS", "spec", "nearmiss", ""],
+  ["SPEC-MODEL", "spec", "specmodel", ""], ["DATA-QUALITY", "diag", "diag", "cyan"],
 ];
 
 export const SECTION_BUCKET: Record<string, string> = {
   act: "actionable", rev: "review_signal", blk: "blocked", bounded: "risk_budget",
   nearmiss: "near_miss", qual: "qualifier_setup", cheapno: "no_structure",
+  specmodel: "speculative_model",
 };
 export const DIAG_BUCKETS = ["data_quality", "display_signal", "wide_signal", "near_edge", "clean"];
 

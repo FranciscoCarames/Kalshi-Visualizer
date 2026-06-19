@@ -16,12 +16,14 @@ this module only adds `sport` and the unified projection, then ranks.
 """
 from __future__ import annotations
 
+import os
 import time
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Callable
 
 import pandas as pd
 
+import conditional_blend
 import config
 import consistency
 import dutchbook
@@ -44,6 +46,7 @@ BUCKET_PRIORITY = {
     "near_miss": 4,       # dutch-book near-miss: flat-payout watchlist (opt-in)
     "qualifier_setup": 5,  # World Cup qualifier setups (opt-in; review-only / diagnostic — never Actionable)
     "no_structure": 6,    # cheap bounded-loss NO fades (opt-in; speculative — never Actionable)
+    "speculative_model": 6,  # conditional-blend convergence candidates (opt-in, model-based — never Actionable)
     "near_edge": 7,
     "display_signal": 8,
     "wide_signal": 9,
@@ -556,6 +559,59 @@ def _to_unified_no_structure(r: dict[str, Any], cfg) -> dict[str, Any]:
     return _finalize_unified(d, payout_floor_c=(100 if is_band else None))
 
 
+def _to_unified_conditional_blend(r: dict[str, Any], cfg) -> dict[str, Any]:
+    """Map a conditional-blend opponent-resolution finding onto the unified schema. MODEL-BASED /
+    market-implied SPECULATIVE: self-assigns ``bucket="speculative_model"`` + ``exec_gap_c=None`` so it
+    NEVER enters _rank_key / Actionable. Single Buy-YES leg (buy A to win the next round); the B/C decider
+    + the model blend ride display-only fields. Surfaced only when config.CONDITIONAL_BLEND_ENABLED."""
+    a_name = r.get("A_name") or ""
+    deeper = r.get("round_deeper") or ""
+    a_leg = r.get("legs", [{}])[0] if isinstance(r.get("legs"), list) and r.get("legs") else {}
+    buy_text = f"Buy YES {a_name} to win {deeper}".strip()
+    blend, ask = _num(r.get("market_implied_blend_mid_c")), _num(r.get("A_winNext_ask_c"))
+    gap = _num(r.get("model_gap_to_ask_mid_c"))
+    detail = (f"{r.get('B_name')} vs {r.get('C_name')} decides {a_name}'s opponent · "
+              f"model blend {blend}c vs ask {ask}c (gap {gap}c)"
+              + (" · gate-pass" if r.get("gate_pass") else ""))
+    d = {
+        "sport": cfg.sport_id, "sport_label": cfg.label, "source": "conditional_blend",
+        "name": a_name,
+        "detail": detail,
+        "tournament": r.get("tournament") or "", "tour": "",
+        "action_1_text": buy_text, "action_2_text": "",
+        "action_1_price_c": _num(r.get("A_winNext_ask_c")), "action_2_price_c": None,
+        "action_1_side": "yes", "action_2_side": "",
+        "action_1_contract": f"{a_name} — win {deeper}", "action_2_contract": "",
+        "action_1_size": _num(r.get("A_target_ask_size")),
+        "cost_c": _num(r.get("A_winNext_ask_c")),
+        # NEVER an executable edge — exec_gap_c=None floors it within its own opt-in section.
+        "exec_gap_c": None, "exec_min_size": _num(r.get("A_target_ask_size")), "exec_max_profit_dollars": None,
+        "bucket": "speculative_model", "status": r.get("status") or "MODEL_BLEND_CANDIDATE",
+        "tradable_now": "Speculative — model validation only", "blocked_reason": "",
+        "market_status": "active", "rule_flag": "",
+        "settlement_caveat": r.get("settlement_note") or "",
+        "participant_key": r.get("A_key") or "",
+        "relationship_type": "conditional_blend",
+        "resolution_mode": "calendar",
+        "opportunity_id": r.get("candidate_id") or "",
+        "ticker_1": (a_leg.get("ticker") or ""), "ticker_2": "",
+        "url": (a_leg.get("url") or ""), "url_2": "",
+        "legs": None, "n_legs": None,                  # synthesized into the single Buy-YES leg by _finalize
+        "edge_class": "",
+    }
+    d["participant_keys"], d["participant_labels"] = _participants([
+        (r.get("A_key"), r.get("A_name")), (r.get("B_key"), r.get("B_name")), (r.get("C_key"), r.get("C_name"))])
+    return _finalize_unified(d, payout_floor_c=None)
+
+
+def _conditional_blend_enabled() -> bool:
+    """Phase-1 gate (DEFAULT-OFF): the conditional-blend detector surfaces ONLY when explicitly enabled —
+    `config.CONDITIONAL_BLEND_DEFAULT_ENABLED` or env `CONDITIONAL_BLEND_ENABLED` truthy (read here at the
+    scanner boundary, since config.py stays env-free). Until a green validation report, this stays off."""
+    return bool(config.CONDITIONAL_BLEND_DEFAULT_ENABLED) or \
+        os.getenv("CONDITIONAL_BLEND_ENABLED", "").strip().lower() in ("1", "true", "yes", "on")
+
+
 def _rank_key(row: dict[str, Any]) -> tuple:
     """Actionable first, then largest gross edge (¢), then a stable id tiebreak."""
     bp = BUCKET_PRIORITY.get(row.get("bucket"), 99)
@@ -613,6 +669,9 @@ def unified_opportunities(
             stage_books = stage_elim.find_stage_elim_books(records)
             stage_synths = stage_elim.find_stage_elim_synthetics(records)
             no_structs = no_structures.find_no_structures(records)
+            # Phase-1 (DEFAULT-OFF): model-based opponent-resolution convergence candidates. Display-only /
+            # never Actionable; gated until the live validation report is green (see config flag).
+            blends = conditional_blend.find_conditional_blends(records) if _conditional_blend_enabled() else []
         except Exception as exc:
             errors.append({"sport": cfg.sport_id, "error": str(exc)})
             continue
@@ -625,6 +684,10 @@ def unified_opportunities(
         rows.extend(_to_unified_stage_elim_book(r, cfg) for r in stage_books)
         rows.extend(_to_unified_stage_elim_synth(r, cfg) for r in stage_synths)
         rows.extend(_to_unified_no_structure(r, cfg) for r in no_structs)
+        # Only the headline candidate surfaces in the SPA; FIELD_UNDERROUND_DIAGNOSTIC is a dark-CSV-only
+        # artifact (logging) and must not leak into the feed as a sparse row.
+        rows.extend(_to_unified_conditional_blend(r, cfg) for r in blends
+                    if r.get("status") == conditional_blend.MODEL_BLEND_CANDIDATE)
         if frames_out is not None:
             for frame_type, frame_rows in (("contracts", records), ("checks", checks_records),
                                            ("dutchbook", books), ("group_basket", baskets)):

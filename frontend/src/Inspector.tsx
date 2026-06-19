@@ -122,6 +122,14 @@ export default function Inspector({ row, lens, snapshotId, showNet, longShort }:
           <b>Diagnostic row — not a tradable opportunity.</b> This row is surfaced for review/data-quality
           only, so it has no buy-only plan or economics. See the evidence and Participant Detail below.
         </div>
+      ) : row.section === "specmodel" ? (
+        <div className="note" style={{ marginTop: 6 }}>
+          <b>Speculative model — market-implied, NOT fair value, NOT arbitrage.</b> A locked participant looks
+          mispriced to win the next round versus the live match deciding their opponent. This is a convergence
+          candidate that <b>can lose money</b> (they can still lose the round); the blend is built from gross,
+          top-of-book prices with fees only partially modeled. Display-only — never ranked or Actionable.
+          The blend summary is in the row detail; see Participant Detail below.
+        </div>
       ) : (<>
       <div className="sect">BUY-ONLY PLAN — {row.nlegs ?? legs.length} LEG{(row.nlegs ?? legs.length) === 1 ? "" : "S"}</div>
       {(() => {
@@ -422,6 +430,44 @@ export function Detail({ row, showIds, showRules = true }: { row: FeedRow | null
                   <div className="note" key={i}>{gv(ind, "label")} {gv(ind, "comparator")} {gv(ind, "value_pct")}{ind.value_pct != null ? "%" : ""} <span className="dim">(bound, not a traded market)</span></div>
                 ))}
                 <div className="note" style={{ marginTop: 4 }}>{CONDITIONAL_DISCLAIMER}</div>
+              </>
+            );
+          })() : null}
+
+          {hasLadder && (bundle.conditional_probabilities?.length ?? 0) > 0 ? (() => {
+            const rows = bundle.conditional_probabilities ?? [];
+            const num = (v: unknown) => (typeof v === "number" ? n1(v) + "%" : "—");
+            // only show the panel when at least one rung has a real ratio (else it's a table of all "—")
+            const hasData = rows.some((r) => r.win_cond_raw != null || r.win_cond_dv != null
+              || r.next_cond_raw != null || r.next_cond_dv != null);
+            if (!hasData) return null;
+            const anyPartial = rows.some((r) => Boolean(r.partial));
+            const anyInv = rows.some((r) => Boolean(r.ladder_inverted));
+            return (
+              <><div className="sect">FIELD-IMPLIED CONDITIONAL <span className="uncal">DE-VIG · UNCALIBRATED · DISPLAY-ONLY · NOT FAIR VALUE</span></div>
+                <div className="note" style={{ marginBottom: 4 }}>
+                  The same conditional, <b>de-vigged across the whole field</b> at each stage (a proportional
+                  normalisation of displayed prices) — shown beside the raw price ratio. A field-implied
+                  estimate, <b>not</b> calibrated fair value; never feeds ranking.
+                </div>
+                <table className="condtbl"><tbody>
+                  <tr><th>Parent stage</th><th>Stage %</th><th>Win│stage raw</th><th>Win│stage de-vig</th>
+                    <th>Next rung</th><th>Next│stage raw</th><th>Next│stage de-vig</th><th></th></tr>
+                  {rows.map((r, i) => (
+                    <tr key={i}>
+                      <td>{String(r.parent ?? "")}</td>
+                      <td>{num(r.parent_pct)}</td>
+                      <td>{num(r.win_cond_raw)}</td>
+                      <td className="violet">{num(r.win_cond_dv)}</td>
+                      <td>{String(r.next_node ?? "")}</td>
+                      <td>{num(r.next_cond_raw)}</td>
+                      <td className="violet">{num(r.next_cond_dv)}</td>
+                      <td className="dim">{r.ladder_inverted ? "⚠ inverted" : r.partial ? "· field = floor" : ""}</td>
+                    </tr>
+                  ))}
+                </tbody></table>
+                {anyInv ? <div className="note" style={{ marginTop: 4 }}>⚠ Ladder inverted on a rung (deeper priced above broader) — that ratio is suppressed, never shown above 100%.</div> : null}
+                {anyPartial ? <div className="note" style={{ marginTop: 4 }}>⚠ Partial field — the field-implied (de-vig) estimate is a <b>floor</b> (fewer priced survivors than the stage holds), not a full distribution.</div> : null}
               </>
             );
           })() : null}

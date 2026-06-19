@@ -130,10 +130,11 @@ export default function Blotter() {
   // Section-note banner: collapse a boilerplate field to ONE banner line only when its value is identical
   // across EVERY visible row (and non-empty). A field that varies stays a per-row column — so a row-specific
   // caveat (or differing note) is never hidden. Near-miss collapses its shared "note"; qualifier collapses
-  // its shared setup / legs / review-status / caveat.
+  // its shared setup / legs / review-status. (Qualifier's settlement caveat is intentionally NOT banner-ed —
+  // the compact caveat badges carry it per-row; the full prose lives in the hidden "Caveat" column.)
   const BANNER_FIELDS: Record<string, string[]> = {
     nearmiss: ["note"],
-    qual: ["setup", "legs", "review_status", "caveat"],
+    qual: ["setup", "legs", "review_status"],
   };
   // Compare + display the FORMATTED value (via the column's formatter), not the raw field — so a field whose
   // value is an object/array (e.g. `legs` holds the leg array, a "num" column that renders "—") is skipped

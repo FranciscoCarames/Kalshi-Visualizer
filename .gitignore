@@ -37,6 +37,8 @@ auth.db
 # Session scratch: boot logs + screenshots produced while verifying (never tracked)
 serve_*.log
 *.err.log
+# Conditional-blend dark validator output — throwaway forward-test CSV, never tracked
+conditional_blend_samples.csv
 
 # Local kss planning shell (topics, milestones, codebase snapshots) — keep out of the repo
 .kss/

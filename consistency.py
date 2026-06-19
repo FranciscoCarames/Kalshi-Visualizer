@@ -100,6 +100,10 @@ STATUS_GROUP = {
     "MISSING_LAYER": "Missing data",
     "QUOTE_SIZE_MISSING": "Missing data",
     "UNKNOWN_RELATIONSHIP": "Unknown relationship",
+    # Conditional-blend opponent-resolution detector (sibling `conditional_blend` module; literal kept here
+    # to avoid a circular import). A MODEL-BASED, market-implied convergence candidate — display-only, never
+    # Actionable, gated behind config.CONDITIONAL_BLEND_ENABLED — so its own "Speculative model" group.
+    "MODEL_BLEND_CANDIDATE": "Speculative model",
 }
 
 
@@ -1080,7 +1084,7 @@ def scenario_payoffs(check_row: dict[str, Any], units: Any = None) -> dict[str, 
 # belongs in — reads only fields already produced by build_checks; no math, no side effects.
 DASHBOARD_BUCKETS = (
     "actionable", "review_signal", "blocked", "risk_budget", "near_miss", "qualifier_setup", "no_structure",
-    "near_edge", "display_signal", "wide_signal", "data_quality", "clean",
+    "speculative_model", "near_edge", "display_signal", "wide_signal", "data_quality", "clean",
 )
 
 
@@ -1124,6 +1128,11 @@ def bucket_of(check_row: dict[str, Any]) -> str:
         # Its own section, like the qualifier setups. The detector also self-assigns this bucket; this keeps
         # the router complete + the isolation guard honest.
         return "no_structure"
+    if status == "MODEL_BLEND_CANDIDATE":
+        # Conditional-blend opponent-resolution candidate (sibling `conditional_blend`; literal to avoid an
+        # import). MODEL-BASED / market-implied — display-only, NEVER Actionable. Its own opt-in section; the
+        # detector also self-assigns this bucket, so this keeps the router complete + the guard test honest.
+        return "speculative_model"
     if status in ("EXACT_ORDER_DIAGNOSTIC", "SPECULATIVE_TOP2_RELATIVE_VALUE", "GAME_SUPPORT_SIGNAL"):
         # World Cup Qualifier Setups: heuristic / review-only, NEVER Actionable. Their own opt-in section
         # (the detectors also self-assign this bucket; this keeps the router complete + the guard test

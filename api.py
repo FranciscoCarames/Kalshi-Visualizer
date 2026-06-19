@@ -514,6 +514,10 @@ class TerminalDetail(BaseModel):
     link_audit: list[dict[str, Any]] = []
     duplicates: list[dict[str, Any]] = []
     rules: list[dict[str, Any]] = []
+    # Field-implied conditional probability (de-vig) per parent stage — DISPLAY-ONLY, market-implied,
+    # uncalibrated; never feeds classification/ranking. Mirrors the legacy NiceGUI conditional-probability
+    # panel (raw market-price ratio + field-de-vig estimate + inverted/partial flags).
+    conditional_probabilities: list[dict[str, Any]] = []
 
 
 class TerminalPayoff(BaseModel):
@@ -624,16 +628,20 @@ def get_terminal_detail(sport: str, player_key: str, tournament: str,
     tournament merge → a false ladder). Honest-empty when the participant has no stored contracts."""
     if not (sport and player_key and tournament):
         raise HTTPException(status_code=400, detail="sport, player_key and tournament are all required")
+    from webui import engine
     from webui import viewmodel as vm
     prows = _participant_rows(sport, player_key, tournament, db_path)
     chain = vm.detail_chain(prows, sport)
+    # All participants' rows for this tournament → the field the de-vig normalizes over (display-only).
+    field_rows = engine.tournament_field(sport, tournament, db_path=db_path)
     rules = [{"contract": r.get("contract") or r.get("market_ticker") or "—",
               "text": str(r.get("rules_primary"))} for r in prows if r.get("rules_primary")]
     return TerminalDetail(
         chain=chain, indicators=vm.derived_indicators(chain, sport),
         spreads=vm.detail_spreads(prows), expected=vm.detail_expected(prows),
         contracts=vm.detail_contracts(prows), raw_fields=vm.raw_fields_rows(prows),
-        link_audit=vm.link_audit_rows(prows), duplicates=vm.duplicate_rows(prows), rules=rules)
+        link_audit=vm.link_audit_rows(prows), duplicates=vm.duplicate_rows(prows), rules=rules,
+        conditional_probabilities=vm.conditional_probabilities(prows, field_rows, sport))
 
 
 @app.get("/api/terminal/payoff", response_model=TerminalPayoff)
