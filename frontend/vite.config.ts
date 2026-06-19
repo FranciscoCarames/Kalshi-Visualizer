@@ -1,20 +1,17 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
-import { execSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 
-// App version string injected at build time: git short SHA (+ "-dirty" if the tree has uncommitted
-// changes) and the build date. Surfaced via `__APP_VERSION__` and shown in the footer so the running
-// version is always visible. Fails open to "unknown" if git isn't available.
+// App version string injected at build time from package.json (`"version"`), surfaced via
+// `__APP_VERSION__` and shown in the footer as e.g. "v1.0.0". package.json is the single source of
+// truth — bump it there on a release. Fails open to "v0" if the field is somehow missing.
 function appVersion(): string {
-  let v = "unknown";
   try {
-    const sha = execSync("git rev-parse --short HEAD", { stdio: ["ignore", "pipe", "ignore"] }).toString().trim();
-    // Only TRACKED uncommitted changes count as "dirty" (git describe --dirty convention) — untracked
-    // scratch (dist, logs) must not flip a clean committed build to "-dirty".
-    const dirty = execSync("git status --porcelain --untracked-files=no", { stdio: ["ignore", "pipe", "ignore"] }).toString().trim() ? "-dirty" : "";
-    v = sha + dirty;
-  } catch { /* no git → keep "unknown" */ }
-  return `${v} · ${new Date().toISOString().slice(0, 10)}`;
+    const pkg = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf8"));
+    return `v${pkg.version}`;
+  } catch {
+    return "v0";
+  }
 }
 
 // The SPA is served at /terminal in production (FastAPI StaticFiles), so the built asset base is
