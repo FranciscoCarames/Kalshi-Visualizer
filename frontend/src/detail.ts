@@ -36,7 +36,7 @@ async function getJson<T>(url: string, signal?: AbortSignal): Promise<T> {
 /** Live resting order book for one market (the SPA depth ladder). yes/no are [price_c, size] ascending
  * (best bid last). DISPLAY-ONLY depth — gross/top-of-book limits still apply; not net executable capacity. */
 export interface OrderbookData {
-  ticker: string; yes: number[][]; no: number[][]; ok: boolean; error: string | null; age_s: number;
+  ticker: string; yes: number[][]; no: number[][]; ok: boolean; not_found?: boolean; error: string | null; age_s: number;
 }
 export const loadOrderbook = (ticker: string, signal?: AbortSignal) =>
   getJson<OrderbookData>(`/api/terminal/orderbook?ticker=${encodeURIComponent(ticker)}`, signal);

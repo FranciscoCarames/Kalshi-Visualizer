@@ -156,6 +156,7 @@ export default function Ladder({ row }: { row: FeedRow | null }) {
           : ob && !ob.ok ? <div className="empty">{/rate.?limit/i.test(ob.error || "")
               ? "rate-limited — retrying shortly" : (ob.error || "order book unavailable")}</div>
           : !ob && loading ? <div className="empty">loading live order book…</div>
+          : ob && ob.not_found ? <div className="empty">unknown market — no such ticker in the latest snapshot (check the ticker; it may have expired)</div>
           : !hasBook ? <div className="empty">no resting orders (empty or closed book)</div>
           : (
             <table className="ladtbl" title="Kalshi books hold YES & NO bids. A YES ask = a NO bid inverted (100 − no). To Buy NO, take a YES bid at NO price = 100 − bid."><thead><tr><th>YES bid</th><th>Px¢</th><th>YES ask</th></tr></thead>

@@ -295,7 +295,9 @@ function Shell() {
         <span className="s">Checks <b>{(m?.checks ?? 0).toLocaleString()}</b></span>
         <span className="s">Requests <b>{m?.requests ?? 0}</b></span>
         <span className="s">Sports <b>{t.sports.length}</b></span>
-        <span className="s"><b className={m?.failed ? "amber" : "green"}>●</b> Failed <b>{m?.failed ?? 0}</b></span>
+        <span className="s" title={`${m?.scanned ?? 0} series scanned, ${m?.failed ?? 0} failed (rate-limited) this scan. This is coverage of the series the scan ATTEMPTED — not all Kalshi markets. See OPS for the failure list.`}>
+          <b className={m?.failed ? "amber" : "green"}>●</b> Scan <b>{m?.scanned ?? 0}</b>{(m?.failed ?? 0) > 0 ? <> · <b className="amber">{m?.failed}</b> failed</> : null}
+        </span>
         <span className={"s" + (alrt ? " blink" : "")}><b className="red">●</b> ALRT <b>{alrt}</b></span>
         <span className="s discl">GROSS · TOP-OF-BOOK · $1 BASIS · READ-ONLY · NO ORDER ENTRY · NOT RISKLESS · fees est. only</span>
       </div>
