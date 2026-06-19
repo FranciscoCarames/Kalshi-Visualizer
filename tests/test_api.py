@@ -62,6 +62,48 @@ def client(tmp_path):
     os.environ.pop("SCAN_TOKEN", None)
 
 
+def _tennis_field_rows():
+    """Four tennis players, each with the 3-node ladder priced (Reach Semifinal/Final/Win), so the
+    field-de-vig conditional has a real distribution to normalise over (survivors 4/2/1)."""
+    rows = []
+    for pk, name, sf, fin, win in (("p1", "Alpha", 80, 55, 30), ("p2", "Bravo", 70, 40, 18),
+                                   ("p3", "Charlie", 60, 30, 10), ("p4", "Delta", 50, 25, 8)):
+        for node, pct in (("Reach Semifinal", sf), ("Reach Final", fin), ("Win Tournament", win)):
+            rows.append({"series": "KXATPADVANCE", "player_key": pk, "player": name,
+                         "tournament": "Wimbledon 2026", "ladder_node": node, "kind": "advance",
+                         "market_family": "advance", "display_pct": pct, "display_c": pct,
+                         "yes_bid_c": pct - 1, "yes_ask_c": pct + 1, "quote_quality": "Tight",
+                         "status": "active", "market_ticker": f"KXATPADVANCE-{pk}-{node[:3]}"})
+    return rows
+
+
+def test_terminal_detail_includes_field_devig_conditional(client):
+    c, db = client
+    store.write_snapshot("2026-06-03 12:00:00 UTC", [op("a")],
+                         frames=[{"sport": "tennis", "frame_type": "contracts",
+                                  "schema_version": 1, "rows": _tennis_field_rows()}], db_path=db)
+    r = c.get("/api/terminal/detail",
+              params={"sport": "tennis", "player_key": "p1", "tournament": "Wimbledon 2026"})
+    assert r.status_code == 200
+    cps = r.json()["conditional_probabilities"]
+    assert cps, "expected conditional-probability rows for a 3-node ladder"
+    sf = next(x for x in cps if x["parent"] == "Reach Semifinal")
+    # both the raw price ratio AND the field-implied de-vig estimate are present (display-only)
+    assert sf["win_cond_raw"] is not None and sf["win_cond_dv"] is not None
+    assert sf["next_node"] == "Reach Final" and "partial" in sf and "ladder_inverted" in sf
+
+
+def test_terminal_detail_devig_blank_without_field(client):
+    c, db = client
+    store.write_snapshot("2026-06-03 12:00:00 UTC", [op("a")], db_path=db)   # no contracts frame
+    r = c.get("/api/terminal/detail",
+              params={"sport": "tennis", "player_key": "nobody", "tournament": "T"})
+    assert r.status_code == 200
+    cps = r.json()["conditional_probabilities"]
+    # ladder-shaped placeholder rows are emitted, but with NO real probabilities (the SPA hides the panel)
+    assert all(x["win_cond_raw"] is None and x["win_cond_dv"] is None for x in cps)
+
+
 def test_healthz_and_docs(client):
     c, _ = client
     assert c.get("/healthz").json() == {"status": "ok"}
