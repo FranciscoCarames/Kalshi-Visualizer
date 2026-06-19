@@ -785,14 +785,18 @@ def get_backlog(window_s: float = config.BACKLOG_WINDOWS["1 hour"],
 
 
 @app.get("/backlog/events", response_model=list[BacklogInterval])
-def get_backlog_events(days: float = 7.0, category: str | None = None, include_open: bool = True,
-                       db_path: str | None = Depends(db_path_dep)):
+def get_backlog_events(response: Response, days: float = 7.0, category: str | None = None,
+                       include_open: bool = True, db_path: str | None = Depends(db_path_dep)):
     """The DURABLE 7-day interval backlog (v4) — distinct from `/backlog` above (the short live
     `recently_actionable` view, unchanged). Each row is one open/closed lifecycle of an opportunity in a
     tracked category. `days` windows by activity (capped at the retention window); `category` narrows to
     one of `actionable` / `bounded_loss` (`statistical_arbitrage` reserved — no detector yet);
-    `include_open=false` returns only closed intervals."""
-    rows = store.backlog_intervals(category=category, include_open=include_open, days=days, db_path=db_path)
+    `include_open=false` returns only closed intervals. Hard-capped at `BACKLOG_EVENTS_MAX_ROWS` rows
+    (newest first) so the payload stays bounded on a large store; a hit sets `X-Backlog-Truncated: 1`."""
+    rows = store.backlog_intervals(category=category, include_open=include_open, days=days,
+                                   limit=config.BACKLOG_EVENTS_MAX_ROWS, db_path=db_path)
+    if len(rows) >= config.BACKLOG_EVENTS_MAX_ROWS:
+        response.headers["X-Backlog-Truncated"] = "1"
     return [BacklogInterval(**r) for r in rows]
 
 
