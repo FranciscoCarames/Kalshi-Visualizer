@@ -13,6 +13,10 @@ export interface DetailBundle {
   link_audit: Record<string, unknown>[];
   duplicates: Record<string, unknown>[];
   rules: { contract: string; text: string }[];
+  /* Field-implied conditional probability (de-vig) per parent stage — DISPLAY-ONLY, uncalibrated.
+   * Each: { parent, parent_pct, win_node, win_cond_raw, win_cond_dv, next_node, next_cond_raw,
+   *         next_cond_dv, ladder_inverted, partial }. Empty for sports with no >=2-node ladder. */
+  conditional_probabilities?: Record<string, unknown>[];
 }
 export interface PayoffData { scenarios: { scenario: string; payout_c: number | null; profit_c: number | null; role: string }[]; cost_c: number | null; }
 export interface LadderData { layers: { layer: string; display_pct: number | null; rank: number; inverted: boolean }[]; }
