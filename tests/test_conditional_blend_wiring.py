@@ -99,6 +99,18 @@ def test_enabled_blend_rows_never_rank_above_actionable(monkeypatch):
     assert max(actionable_idx) < min(spec_idx)                    # every actionable row ranks above every blend row
 
 
+def test_field_underround_diagnostic_does_not_surface(monkeypatch):
+    # the logging-only FIELD_UNDERROUND_DIAGNOSTIC must NOT leak into the feed as a sparse row;
+    # only MODEL_BLEND_CANDIDATE rows surface. (Cheap A so the underround diagnostic also fires.)
+    monkeypatch.setattr(config, "CONDITIONAL_BLEND_DEFAULT_ENABLED", True)
+    rows = _blend_rows()
+    rows[1] = {**rows[1], "yes_bid_c": 28, "yes_ask_c": 30}     # A win 30 + B 20 + C 10 = 60 < 100 → underround
+    out = _scan(rows)
+    spec = out[out["bucket"] == "speculative_model"]
+    assert (spec["status"] == "MODEL_BLEND_CANDIDATE").all()    # no FIELD_UNDERROUND_DIAGNOSTIC row
+    assert len(spec) == 1
+
+
 def test_env_var_enables_detector(monkeypatch):
     monkeypatch.setattr(config, "CONDITIONAL_BLEND_DEFAULT_ENABLED", False)
     monkeypatch.setenv("CONDITIONAL_BLEND_ENABLED", "1")

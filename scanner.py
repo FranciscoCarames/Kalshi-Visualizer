@@ -684,7 +684,10 @@ def unified_opportunities(
         rows.extend(_to_unified_stage_elim_book(r, cfg) for r in stage_books)
         rows.extend(_to_unified_stage_elim_synth(r, cfg) for r in stage_synths)
         rows.extend(_to_unified_no_structure(r, cfg) for r in no_structs)
-        rows.extend(_to_unified_conditional_blend(r, cfg) for r in blends)
+        # Only the headline candidate surfaces in the SPA; FIELD_UNDERROUND_DIAGNOSTIC is a dark-CSV-only
+        # artifact (logging) and must not leak into the feed as a sparse row.
+        rows.extend(_to_unified_conditional_blend(r, cfg) for r in blends
+                    if r.get("status") == conditional_blend.MODEL_BLEND_CANDIDATE)
         if frames_out is not None:
             for frame_type, frame_rows in (("contracts", records), ("checks", checks_records),
                                            ("dutchbook", books), ("group_basket", baskets)):
