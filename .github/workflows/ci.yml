@@ -51,3 +51,17 @@ jobs:
         run: npm test
       # Note: `tsc --noEmit` is intentionally NOT a gate — `vite build` doesn't type-check, and the SPA
       # currently has latent type errors (App.tsx, stream.test.ts). Fix those, then add a type-check step.
+
+  secrets:
+    name: Secret scan (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Scan the working tree for committed secrets
+        run: |
+          ver=$(curl -sSfL https://api.github.com/repos/gitleaks/gitleaks/releases/latest \
+                | grep -oP '"tag_name":\s*"v\K[^"]+')
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${ver}/gitleaks_${ver}_linux_x64.tar.gz" \
+                | tar -xz gitleaks
+          # Scan the CURRENT tree (--no-git) so a clean history isn't re-litigated; fail the job on any hit.
+          ./gitleaks detect --no-git --source . --redact --verbose --exit-code 1

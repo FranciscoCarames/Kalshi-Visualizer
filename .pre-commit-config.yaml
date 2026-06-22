@@ -1,0 +1,20 @@
+# Fast local hygiene gate. One-time per clone:  pip install pre-commit  &&  pre-commit install
+# Pure-Python hooks only (no Go/Docker), so it runs everywhere incl. Windows. Heavyweight SECRET scanning
+# (gitleaks) runs in CI instead — see .github/workflows/ci.yml (no local toolchain needed, covers all machines).
+# Run on demand against everything:  pre-commit run --all-files
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.18
+    hooks:
+      - id: ruff-check      # lint using the project's pyproject.toml config (E,F,W,I; .claude excluded)
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: detect-private-key        # block committing an RSA/PEM private key (mechanizes the *.pem rule)
+      - id: check-added-large-files   # block the 1.8 GB-backup class from ever being staged
+        args: [--maxkb=2000]
+      - id: check-merge-conflict      # block leftover <<<<<<< conflict markers
+      - id: check-case-conflict       # names that collide on case-insensitive (Windows/macOS) filesystems
+      - id: check-yaml
+      - id: check-json
