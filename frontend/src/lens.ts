@@ -13,14 +13,18 @@ export const LENSES: [string, string, string][] = [
   ["ev", "IMPLIED EV", "Display-spread minus overpay — a ranking aid, NOT a real edge."],
   ["ripeness", "RIPENESS", "Parent ÷ max loss — in-the-money chance per ¢ at risk (bounded-loss). Higher = riper."],
   ["quality", "SETUP QUALITY", "Uncalibrated diagnostic: ripeness × conditional chance P(deeper│reached). Insufficient-data rows sort last."],
+  // Liquidity lenses (display-only, opt-in). TOP-OF-BOOK ONLY — these rank on the engine's top quote size
+  // (min across legs), NOT the fill-simulator depth curve, and never imply executable/fillable capacity.
+  ["units", "TOP QUOTE SIZE", "Top-of-book quoted units (min across legs) — deepest top quote first. Top-of-book only, NOT the depth curve; opt-in, never the default."],
+  ["notional", "TOP-BOOK GROSS $", "Gross edge × top quote units — favours size AND edge so thin big-edge and deep small-edge rows rank fairly. Gross / top-of-book."],
 ];
 
 /* Which lenses make sense per zone (the rest sort on fields a zone's rows don't carry, so they'd be
  * no-ops or misleading). Executable rows only have a gross edge → edge/blended; the speculative bucket has
  * the full payoff-geometry set; diagnostic rows are review-only and get NO lens bar (engine order only). */
 const _LENSES_BY_ZONE: Record<string, Set<string>> = {
-  exec: new Set(["blended", "edge"]),
-  spec: new Set(["blended", "edge", "spread", "ratio", "ev", "ripeness", "quality"]),
+  exec: new Set(["blended", "edge", "units", "notional"]),
+  spec: new Set(["blended", "edge", "spread", "ratio", "ev", "ripeness", "quality", "units", "notional"]),
   diag: new Set(),
 };
 // RIPENESS / SETUP QUALITY rank on containment-only fields (parent_over_maxloss, conditional chance) that only
@@ -48,6 +52,8 @@ export function rankKey(o: FeedRow, lens: string): number {
   if (lens === "ev") return n(o.ev);
   if (lens === "ripeness") return o.parent_over_maxloss == null ? -1e9 : n(o.parent_over_maxloss);
   if (lens === "quality") { const q = qualityOf(o); return q.score == null ? -1e9 : q.score; }   // insufficient data sorts last
+  if (lens === "units") return o.units == null ? -1e9 : n(o.units);                               // top quote size; no-size sorts last
+  if (lens === "notional") return (o.units == null || o.edge == null) ? -1e9 : n(o.edge) * n(o.units);   // gross edge × top quote units
   return e * 0.35 + r * 0.45 + (sp || best) * 0.2;     // blended
 }
 

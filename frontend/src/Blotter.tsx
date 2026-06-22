@@ -54,6 +54,18 @@ const Cell = memo(function Cell({ row, col, chg }: { row: FeedRow; col: Col; chg
     const cls = q.tier === "High" ? "green" : q.tier === "Med" ? "amber" : "dim";
     return <td><span className={cls} title={`uncalibrated: ripeness × P(deeper│reached); score ${q.score!.toFixed(2)}`}>{q.label}</span></td>;
   }
+  // Trust = uncalibrated DISPLAY heuristic. NEUTRAL chip (borders, currentColor — never green=buy/red=avoid,
+  // per the read-only stance): a glanceable grade; the two-axis breakdown is in the Inspector.
+  if (col.f === "trust") {
+    const grade = String(row.trust_grade ?? "—");
+    const incomplete = row.trust_basis === "incomplete" || grade === "—";
+    const tip = incomplete
+      ? "basis incomplete — too few factors to score (display-only heuristic; never an edge/rank)"
+      : `uncalibrated heuristic (display-only) — quality ${row.trust_quality} · confidence ${row.trust_confidence} · score ${row.trust_score}. Breakdown in the Inspector; never an edge/rank/recommendation.`;
+    return <td>{incomplete
+      ? <span className="dim" title={tip}>—</span>
+      : <span title={tip} style={{ border: "1px solid currentColor", borderRadius: 3, padding: "0 4px", opacity: 0.85, fontWeight: 600 }}>{grade}</span>}</td>;
+  }
   if (col.fmt === "qh") return <td className={qhClass(v)}>{fmtVal(v, col.fmt)}</td>;
   if (col.fmt === "trad") {
     const t = String(v || "").toLowerCase();

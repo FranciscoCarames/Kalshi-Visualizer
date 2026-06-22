@@ -35,7 +35,7 @@ function InspectorBody() {
       <div className="pbody">
         {t.itab === "detail" ? <Detail row={t.sel} showIds={t.settings.showIds} showRules={t.settings.resolutionCriteria} />
           : t.itab === "formula" ? <Formulas row={t.sel} />
-          : <Inspector row={t.sel} lens={t.lens} snapshotId={t.meta?.snapshot_id ?? null} showNet={t.showNet} longShort={t.settings.longShort} />}
+          : <Inspector row={t.sel} lens={t.lens} snapshotId={t.meta?.snapshot_id ?? null} showNet={t.showNet} longShort={t.settings.longShort} capturedAt={t.meta?.fetched_at ?? null} />}
       </div>
     </>
   );

@@ -158,6 +158,80 @@ def _ripeness(o: dict[str, Any]) -> float | None:
     return round(parent / max_loss, 3)
 
 
+# Quote-quality → confidence points (substring match; check the longer label first). Anything unknown/empty
+# contributes nothing (the factor is simply absent), never a misleading high score.
+_QUOTE_CONF = [("Very wide", 20), ("One-sided", 15), ("No quote", 0), ("Crossed", 0),
+               ("Tight", 100), ("OK", 70), ("Wide", 40)]
+
+
+def _grade(score: float) -> str:
+    for cut, g in ((90, "A"), (85, "A-"), (77, "B+"), (73, "B"), (70, "B-"),
+                   (65, "C+"), (60, "C"), (55, "C-"), (45, "D")):
+        if score >= cut:
+            return g
+    return "F"
+
+
+def _trust(o: dict[str, Any], row: dict[str, Any]) -> dict[str, Any]:
+    """DISPLAY-ONLY trust heuristic (#3) — computed in this adapter ONLY, never in the engine and never read
+    by bucket/rank/tradable. An UNCALIBRATED glanceable summary on two axes, NOT a recommendation, edge, or
+    probability: QUALITY (edge / ROI / ripeness — how attractive) and CONFIDENCE (top quote size / quote
+    health / a COARSE rule basis — how trustworthy the read is; deliberately NOT clause-level rule analysis,
+    which is the separate #9). Factors are normalized 0–100 over whatever is PRESENT on the row (coverage is
+    uneven); absent factors are dropped, never imputed. Fails closed: too few factors → grade "—" / basis
+    "incomplete", never a misleading number. `trust_why_now` is reserved (lifecycle-derived facts are a
+    follow-on); it is never decorative narrative."""
+    def clamppct(x: float, full: float) -> float:
+        return max(0.0, min(x, full)) / full * 100.0
+
+    factors: list[dict[str, Any]] = []
+    q: list[float] = []
+    c: list[float] = []
+
+    def add(axis_list: list[float], key: str, label: str, axis: str, value: float) -> None:
+        axis_list.append(value)
+        factors.append({"key": key, "label": label, "axis": axis, "value": round(value)})
+
+    edge, roi, ripe = _num(o.get("exec_gap_c")), _num(o.get("roi_pct")), _ripeness(o)
+    units = _num(row.get("units")) if _num(row.get("units")) is not None else _num(o.get("exec_min_size"))
+    quote = row.get("quote_health") or o.get("comp_quote_quality")
+
+    if edge is not None:
+        add(q, "edge", f"edge {round(edge)}¢", "quality", clamppct(edge, 10))
+    if roi is not None:
+        add(q, "roi", f"ROI {roi:.1f}%", "quality", clamppct(roi, 10))
+    if ripe is not None:
+        add(q, "ripeness", f"ripe {ripe:.1f}", "quality", clamppct(ripe, 5))
+    if units is not None:
+        add(c, "size", f"{int(units)} units", "confidence", clamppct(units, 100))
+    if quote:
+        qv = next((pts for sub, pts in _QUOTE_CONF if sub in str(quote)), None)
+        if qv is not None:
+            add(c, "quote", str(quote), "confidence", float(qv))
+    # COARSE rule basis from existing flags only (NOT #9's clause diff): strict vs settlement-caveated vs rule-check.
+    if o.get("rule_flag"):
+        rb, lab = 40.0, "rule-check"
+    elif o.get("settlement_caveat"):
+        rb, lab = 60.0, "settlement-caveated"
+    else:
+        rb, lab = 100.0, "strict"
+    add(c, "rule_basis", lab, "confidence", rb)
+
+    quality = round(sum(q) / len(q)) if q else None
+    confidence = round(sum(c) / len(c)) if c else None
+    # Fail closed: need at least one quality factor AND a real confidence read (size or quote, beyond the
+    # always-present rule basis) — else the score would be misleadingly precise.
+    has_conf_signal = any(f["key"] in ("size", "quote") for f in factors)
+    if quality is None or confidence is None or not has_conf_signal:
+        return {"trust_score": None, "trust_grade": "—", "trust_quality": quality,
+                "trust_confidence": confidence, "trust_basis": "incomplete",
+                "trust_factors": factors, "trust_why_now": ""}
+    score = round(0.5 * quality + 0.5 * confidence)
+    return {"trust_score": score, "trust_grade": _grade(score), "trust_quality": quality,
+            "trust_confidence": confidence, "trust_basis": "ok", "trust_factors": factors,
+            "trust_why_now": ""}   # reserved: deterministic lifecycle facts (newly-actionable / edge change) are a follow-on
+
+
 # --- Per-leg fee resolution (DISPLAY-ONLY) -------------------------------------------
 # Resolve each leg's effective fee from its market ticker: event override (GET /events/fee_changes) ->
 # series fee (the /series object) -> general fallback. series/event are derived from the ticker the way
@@ -289,6 +363,7 @@ def _build_row(o: dict[str, Any], fee_rates: dict[str, Any] | None = None,
         "ladder_bottom_c": _num(o.get("ladder_bottom_c")),
         "ladder_step_ratio": _num(o.get("ladder_step_ratio")),
     })
+    base.update(_trust(o, base))                   # DISPLAY-ONLY trust heuristic (never rank/bucket/tradable)
     if isinstance(base.get("flags"), list):        # normalize the flags list -> a short string
         base["flags"] = " ".join(
             (f.get("label") if isinstance(f, dict) else str(f)) for f in base["flags"]) if base["flags"] else ""

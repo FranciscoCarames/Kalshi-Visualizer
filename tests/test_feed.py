@@ -103,6 +103,51 @@ def test_display_only_derived_fields():
     assert a["cond_child"] is None and a["cond_child_firm"] is None and a["parent_over_maxloss"] is None
 
 
+def test_trust_chip_two_axis_breakdown():
+    by = {r["id"]: r for r in feed.feed_from_snapshot(_snapshot())["opps"]}
+    a = by["a"]                                   # actionable dutch book: edge + roi + size + rule basis
+    assert a["trust_basis"] == "ok"
+    assert isinstance(a["trust_score"], int) and a["trust_grade"]
+    assert a["trust_quality"] is not None and a["trust_confidence"] is not None
+    axes = {f["axis"] for f in a["trust_factors"]}
+    assert axes == {"quality", "confidence"}
+    keys = {f["key"] for f in a["trust_factors"]}
+    assert {"edge", "roi", "size", "rule_basis"} <= keys
+    # the bounded-loss row carries a ripeness QUALITY factor (uneven coverage handled)
+    assert any(f["key"] == "ripeness" for f in by["k"]["trust_factors"])
+
+
+def test_trust_coarse_rule_basis_lowers_confidence_not_clause_level():
+    """The synthetic-bundle review row (rule_flag set) gets the COARSE 'rule-check' confidence factor —
+    NOT clause-level rule analysis (that's the deferred #9)."""
+    r = next(x for x in feed.feed_from_snapshot(_snapshot())["opps"] if x["id"] == "r")
+    rb = next(f for f in r["trust_factors"] if f["key"] == "rule_basis")
+    assert rb["label"] == "rule-check" and rb["value"] == 40
+
+
+def test_trust_fails_closed_when_no_confidence_signal():
+    """Too few factors (no size, no quote) → grade '—' / basis 'incomplete', never a misleading number."""
+    snap = {"snapshot_id": 5, "fetched_at": "2026-06-03 12:00:00 UTC", "meta": {},
+            "opportunities": [_opp("thin", extra={"exec_min_size": None, "comp_quote_quality": None})]}
+    row = feed.feed_from_snapshot(snap)["opps"][0]
+    assert row["trust_basis"] == "incomplete" and row["trust_grade"] == "—" and row["trust_score"] is None
+
+
+def test_trust_is_display_only_and_does_not_mutate_or_reorder():
+    """Isolation: trust adds only `trust_*` keys; it never mutates the engine opp nor changes
+    bucket/status/tradable/edge/order."""
+    snap = _snapshot()
+    before_ids = [o["opportunity_id"] for o in snap["opportunities"]]
+    f = feed.feed_from_snapshot(snap)
+    # the engine opps are untouched (no trust_* leaked back onto the source dicts)
+    assert all(not any(k.startswith("trust_") for k in o) for o in snap["opportunities"])
+    a_opp = next(o for o in snap["opportunities"] if o["opportunity_id"] == "a")
+    a_row = next(r for r in f["opps"] if r["id"] == "a")
+    assert a_row["bucket"] == a_opp["bucket"] and a_row["status"] == a_opp["status"]
+    assert a_row["tradable"] == a_opp["tradable_now"]
+    assert [r["id"] for r in f["opps"]] == before_ids          # order preserved (no trust re-sort)
+
+
 def test_display_conditional_is_viewmodel_value_verbatim():
     """Parity (audit point 4): the feed's DISPLAY conditional is the viewmodel value verbatim, not a
     re-derivation — so the SPA's '(display)' columns can never silently drift from the old dashboard."""

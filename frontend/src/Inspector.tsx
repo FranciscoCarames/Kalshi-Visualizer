@@ -7,6 +7,7 @@ import { rankWhy } from "./lens";
 import { centsToDollars, qualityOf } from "./columns";
 import { detailKey, loadDetail, loadLadder, loadPayoff, type DetailBundle, type LadderData, type PayoffData } from "./detail";
 import { PayoffChart, LadderChart } from "./Charts";
+import { buildReference, copyReference } from "./clipboard";
 
 const ZB: Record<string, [string, string]> = {
   exec: ["bk-exec", "EXECUTABLE"], spec: ["bk-spec", "SPECULATIVE"], diag: ["bk-diag", "DIAGNOSTIC"],
@@ -86,10 +87,16 @@ function FeeScenarios({ row }: { row: FeedRow }) {
   );
 }
 
-export default function Inspector({ row, lens, snapshotId, showNet, longShort }:
-  { row: FeedRow | null; lens: string; snapshotId: number | null; showNet: boolean; longShort?: boolean }) {
+export default function Inspector({ row, lens, snapshotId, showNet, longShort, capturedAt }:
+  { row: FeedRow | null; lens: string; snapshotId: number | null; showNet: boolean; longShort?: boolean; capturedAt?: string | null }) {
   const [basis, setBasis] = useState(1);
+  const [copied, setCopied] = useState(false);
   if (!row) return <div className="empty">Click a scanner row to load the trade card — legs · economics · evidence.</div>;
+  const onCopyReference = async () => {
+    const ok = await copyReference(buildReference(row, { basis, longShort, snapshotId, capturedAt: capturedAt ?? null }));
+    setCopied(ok);
+    setTimeout(() => setCopied(false), 2000);
+  };
   const cv = (c: unknown) => { const n = num(c); return n == null ? "—" : basis === 100 ? "$" + (n / 100).toFixed(2) : Math.round(n) + "¢"; };
   const z = ZB[row.zone] ?? ZB.diag;
   const isSpec = row.zone === "spec";
@@ -113,6 +120,9 @@ export default function Inspector({ row, lens, snapshotId, showNet, longShort }:
         <div className="basis">
           <button className={basis === 1 ? "on" : ""} onClick={() => setBasis(1)}>$1</button>
           <button className={basis === 100 ? "on" : ""} onClick={() => setBasis(100)}>$100</button>
+          <button onClick={onCopyReference}
+            title="Copy a READ-ONLY plain-text reference (legs, prices, caveats, snapshot) to the clipboard — not an order.">
+            {copied ? "✓ copied (reference)" : "⧉ COPY REFERENCE"}</button>
         </div>
       </div>
       <div className="sub">{[row.sub || row.detail, row.sport, row.resolution_mode, row.scope].filter(Boolean).join(" · ")}</div>
@@ -229,6 +239,27 @@ export default function Inspector({ row, lens, snapshotId, showNet, longShort }:
           {" "}<span className="uncal">needs a price on both legs</span>
         </div>
       ) : null}
+
+      {Array.isArray(row.trust_factors) && row.trust_factors.length ? (() => {
+        const facts = row.trust_factors as { key: string; label: string; axis: string; value: number }[];
+        const q = facts.filter((f) => f.axis === "quality"), c = facts.filter((f) => f.axis === "confidence");
+        const incomplete = row.trust_basis === "incomplete";
+        const axis = (n: number | null | undefined, fs: typeof facts) =>
+          <>{n ?? "––"}{fs.length ? <span className="dim"> · {fs.map((f) => f.label).join(" · ")}</span> : <span className="dim"> · ––</span>}</>;
+        return (<>
+          <div className="sect">TRUST <span className="uncal">UNCALIBRATED HEURISTIC · DISPLAY-ONLY · NOT AN EDGE / RANK / ADVICE</span></div>
+          <div className="kv">
+            <span className="l">Score</span>
+            <span className="v">{incomplete ? <span className="dim">basis incomplete (too few factors)</span> : `${row.trust_grade} (${row.trust_score})`}</span>
+            <span className="l">Quality</span><span className="v">{axis(row.trust_quality, q)}</span>
+            <span className="l">Confidence</span><span className="v">{axis(row.trust_confidence, c)}</span>
+          </div>
+          <div className="note dim" style={{ marginTop: 4 }}>
+            Quality = edge · ROI · ripeness; Confidence = top quote size · quote health · coarse rule basis
+            (where present; absent factors shown “––”). Uncalibrated, display-only — never an edge, a rank, or advice.
+          </div>
+        </>);
+      })() : null}
 
       <div className="sect">WHY RANKED HERE · {(lens || "ENGINE ORDER").toUpperCase()}</div>
       <div className="why"><b>Promotes:</b><span className="green">{w.up}</span></div>

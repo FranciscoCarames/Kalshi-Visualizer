@@ -46,6 +46,12 @@ export interface FeedRow {
   cond_reason?: string; cond_reason_firm?: string;
   ev?: number | null; breakeven?: number | null; midpoint_only?: boolean; wide_basis?: boolean;
   parent_over_maxloss?: number | null; ratio?: number;
+  // DISPLAY-ONLY trust heuristic (computed in the adapter; uncalibrated · never an edge/rank/recommendation).
+  // Two axes: trust_quality (edge/ROI/ripeness) + trust_confidence (top quote size/quote health/coarse rule
+  // basis). trust_basis "incomplete" (grade "—", score null) when too few factors are present (fails closed).
+  trust_score?: number | null; trust_grade?: string; trust_quality?: number | null;
+  trust_confidence?: number | null; trust_basis?: "ok" | "incomplete"; trust_why_now?: string;
+  trust_factors?: { key: string; label: string; axis: "quality" | "confidence"; value: number }[];
   pnode?: string; cnode?: string;
   pbid?: number | null; cask?: number | null; pdisp?: number | null; cdisp?: number | null;
   legs?: FeedLeg[]; nlegs?: number; url?: string;
