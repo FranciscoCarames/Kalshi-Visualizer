@@ -31,6 +31,7 @@ import config
 import data
 import events
 import fetch
+import fillability
 import kalshi_client
 import lifecycle
 import presence
@@ -556,6 +557,29 @@ class TerminalOrderbook(BaseModel):
     age_s: float = 0.0
 
 
+class TerminalFill(BaseModel):
+    """Visible-depth gross-edge curve for one opportunity (the fill simulator). DISPLAY-ONLY: gross,
+    top-of-book-walk only — fees / collateral / position limits / legging risk are NOT modelled, and it
+    never feeds ranking / bucketing / ``tradable_now``. ``book_supports_scanned_edge`` is False when the
+    CURRENT live top-of-book edge has fallen below the edge captured at the last scan."""
+    opportunity_id: str
+    ok: bool = True
+    reason: str = ""
+    snapshot_id: int | None = None
+    scanned_edge_c: float | None = None             # exec_gap_c from the snapshot row (stale)
+    book_supports_scanned_edge: bool | None = None  # live top edge still ≥ scanned? (None when unknown)
+    max_book_skew_ms: int = 0                        # spread of per-leg book ages (time-coherency honesty)
+    depth_requested: int = 0
+    curve: list[dict[str, Any]] = []
+    summary: dict[str, Any] = {}
+    leg_summaries: list[dict[str, Any]] = []
+    warnings: list[str] = []
+    truncation_reason: str = ""
+    rule_flag: str | None = None                     # passthrough: review-only / settlement-caveated wording
+    settlement_caveat: str | None = None
+    tradable_now: str | None = None
+
+
 class TerminalTelemetry(BaseModel):
     """Snapshot-context market telemetry (DISPLAY-ONLY — NOT an opportunity signal): most-liquid sports +
     contracts, tightest books, most-traded, and a one-line 'most volatile now' message."""
@@ -578,6 +602,7 @@ _TELEMETRY_VOLATILITY_WINDOW_S = 3600.0
 # sliding window caps total orderbook fetches/sec. Depth is clamped 1..100. All process-local.
 _ORDERBOOK_DEFAULT_DEPTH = 10
 _ORDERBOOK_MAX_DEPTH = 100
+_FILL_MAX_LEGS = 24                 # cap live fill-simulator fan-out (one orderbook fetch per distinct leg)
 _ORDERBOOK_CACHE_TTL_S = 2.0
 _orderbook_cache: dict[str, tuple[float, dict[str, Any]]] = {}      # ticker -> (fetched_monotonic, parsed)
 _orderbook_cache_lock = threading.Lock()
@@ -710,6 +735,29 @@ def get_terminal_telemetry(db_path: str | None = Depends(db_path_dep)) -> Termin
         return out
 
 
+def _orderbook_cached(tk: str, depth: int) -> dict[str, Any]:
+    """Fetch one market's book through the shared TTL cache + sliding-window limiter — the SAME upstream
+    path the SPA depth ladder uses (so the fill simulator adds no new fetch path and shares coalescing).
+    Returns ``{"ok", "yes", "no", "age_s", "error"}`` and NEVER raises: a limiter denial or network/4xx
+    failure degrades to ``ok=False`` with an error. ``age_s`` is how stale the served (possibly cached)
+    book is — the caller derives cross-leg time-skew from it."""
+    now = time.monotonic()
+    with _orderbook_cache_lock:                                  # serve a fresh cache hit (coalesce polls)
+        hit = _orderbook_cache.get(tk)
+        if hit and (now - hit[0]) < _ORDERBOOK_CACHE_TTL_S:
+            ob = hit[1]
+            return {"ok": True, "yes": ob["yes"], "no": ob["no"], "age_s": round(now - hit[0], 2), "error": None}
+    if not _orderbook_limiter.allow(time.time()):
+        return {"ok": False, "yes": [], "no": [], "age_s": 0.0, "error": "rate limited — try again shortly"}
+    try:
+        ob = kalshi_client.get_orderbook(tk, depth=depth)
+    except Exception as exc:                                     # network/4xx/5xx/closed → honest degrade
+        return {"ok": False, "yes": [], "no": [], "age_s": 0.0, "error": f"order book unavailable: {exc}"}
+    with _orderbook_cache_lock:
+        _orderbook_cache[tk] = (now, ob)
+    return {"ok": True, "yes": ob["yes"], "no": ob["no"], "age_s": 0.0, "error": None}
+
+
 @app.get("/api/terminal/orderbook", response_model=TerminalOrderbook)
 def get_terminal_orderbook(ticker: str, depth: int = _ORDERBOOK_DEFAULT_DEPTH,
                            db_path: str | None = Depends(db_path_dep)) -> TerminalOrderbook:
@@ -723,25 +771,70 @@ def get_terminal_orderbook(ticker: str, depth: int = _ORDERBOOK_DEFAULT_DEPTH,
     if not (3 <= len(tk) <= 64) or not all(c.isalnum() or c in "-_." for c in tk):
         raise HTTPException(status_code=400, detail="invalid ticker")
     depth = max(1, min(_ORDERBOOK_MAX_DEPTH, int(depth)))
+    res = _orderbook_cached(tk, depth)
+    if not res["ok"]:
+        return TerminalOrderbook(ticker=tk, ok=False, error=res["error"])
+    nf = (not res["yes"] and not res["no"]) and tk not in _known_market_tickers(db_path)
+    return TerminalOrderbook(ticker=tk, yes=res["yes"], no=res["no"], not_found=nf, age_s=res["age_s"])
 
-    now = time.monotonic()
-    with _orderbook_cache_lock:                                  # serve a fresh cache hit (coalesce polls)
-        hit = _orderbook_cache.get(tk)
-        if hit and (now - hit[0]) < _ORDERBOOK_CACHE_TTL_S:
-            ob = hit[1]
-            nf = (not ob["yes"] and not ob["no"]) and tk not in _known_market_tickers(db_path)
-            return TerminalOrderbook(ticker=tk, yes=ob["yes"], no=ob["no"], not_found=nf, age_s=round(now - hit[0], 2))
 
-    if not _orderbook_limiter.allow(time.time()):
-        return TerminalOrderbook(ticker=tk, ok=False, error="rate limited — try again shortly")
-    try:
-        ob = kalshi_client.get_orderbook(tk, depth=depth)
-    except Exception as exc:                                     # network/4xx/5xx/closed → honest degrade
-        return TerminalOrderbook(ticker=tk, ok=False, error=f"order book unavailable: {exc}")
-    with _orderbook_cache_lock:
-        _orderbook_cache[tk] = (now, ob)
-    nf = (not ob["yes"] and not ob["no"]) and tk not in _known_market_tickers(db_path)
-    return TerminalOrderbook(ticker=tk, yes=ob["yes"], no=ob["no"], not_found=nf, age_s=0.0)
+@app.get("/api/terminal/fill", response_model=TerminalFill)
+def get_terminal_fill(opportunity_id: str, depth: int = _ORDERBOOK_MAX_DEPTH,
+                      db_path: str | None = Depends(db_path_dep)) -> TerminalFill:
+    """VISIBLE-DEPTH gross-edge curve for one opportunity (the fill simulator's backend, Feature #1).
+    Resolves the opportunity_id to its legs server-side (NEVER accepts arbitrary tickers — this is not an
+    orderbook proxy), fetches each distinct leg's book at full depth through the SHARED orderbook cache +
+    limiter, and runs the pure ``fillability.fill_curve`` against the opportunity's STRUCTURAL
+    ``payout_floor_c``. Display-only — gross, top-of-book-walk only (fees/collateral/legging-risk NOT
+    modelled); never feeds ranking/bucketing/``tradable_now``. Degrades HONESTLY (``ok=False`` + reason)
+    when the shape has no guaranteed floor, a leg book is unavailable/empty, or there are too many legs."""
+    opp = next((r for r in _opps(db_path) if r.get("opportunity_id") == opportunity_id), None)
+    if opp is None:
+        raise HTTPException(status_code=404, detail=f"opportunity '{opportunity_id}' not in the latest snapshot")
+    depth = max(1, min(_ORDERBOOK_MAX_DEPTH, int(depth)))
+    scanned_edge = _num(opp.get("exec_gap_c"))
+    base = dict(opportunity_id=opportunity_id, snapshot_id=_num(opp.get("snapshot_id")),
+                scanned_edge_c=scanned_edge, depth_requested=depth,
+                rule_flag=(opp.get("rule_flag") or None),
+                settlement_caveat=(opp.get("settlement_caveat") or None),
+                tradable_now=(opp.get("tradable_now") or None))
+
+    legs = scanner.legs_of(opp)
+    norm_legs, tickers = [], []
+    for lg in legs:
+        tk = str(lg.get("ticker") or "").strip().upper()
+        norm_legs.append({**lg, "ticker": tk})
+        if tk and tk not in tickers:
+            tickers.append(tk)
+    if not tickers:
+        return TerminalFill(**base, ok=False, reason="opportunity has no priceable legs")
+    if len(tickers) > _FILL_MAX_LEGS:
+        return TerminalFill(**base, ok=False, truncation_reason="rate_limit",
+                            reason=f"too many legs ({len(tickers)}) to simulate live; cap is {_FILL_MAX_LEGS}")
+
+    books: dict[str, Any] = {}
+    ages: list[float] = []
+    for tk in tickers:
+        res = _orderbook_cached(tk, depth)
+        if not res["ok"]:
+            reason = res["error"] or f"order book unavailable for {tk}"
+            tr = "rate_limit" if "rate" in (res["error"] or "").lower() else "missing_book"
+            return TerminalFill(**base, ok=False, reason=reason, truncation_reason=tr)
+        books[tk] = {"yes": res["yes"], "no": res["no"], "ok": True}
+        ages.append(res["age_s"])
+
+    out = fillability.fill_curve(norm_legs, books, _num(opp.get("payout_floor_c")), depth_limit=depth)
+    skew_ms = int(round((max(ages) - min(ages)) * 1000)) if ages else 0
+    supports = None
+    cur = out["summary"].get("current_top_edge_c") if out["ok"] else None
+    if cur is not None and scanned_edge is not None:                # live book still ≥ the scanned edge?
+        supports = bool(cur > 0 and cur >= scanned_edge)
+    return TerminalFill(**base, ok=out["ok"], reason=out.get("reason", ""),
+                        book_supports_scanned_edge=supports, max_book_skew_ms=skew_ms,
+                        curve=out["curve"], summary=out["summary"], leg_summaries=out["leg_summaries"],
+                        warnings=out["warnings"],
+                        truncation_reason=(out["summary"].get("truncation_reason")
+                                           or out.get("truncation_reason", "")))
 
 
 @app.post("/api/terminal/export")

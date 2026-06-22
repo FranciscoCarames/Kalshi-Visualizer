@@ -71,6 +71,38 @@ export const loadLadder = (k: { sport: string; player_key: string; tournament: s
 export const loadPayoff = (opportunityId: string) =>
   getJson<PayoffData>(`/api/terminal/payoff?opportunity_id=${encodeURIComponent(opportunityId)}`);
 
+/** Visible-depth gross-edge curve for one opportunity (the fill simulator). DISPLAY-ONLY: gross,
+ * top-of-book-walk only — fees/collateral/legging-risk NOT modelled; never feeds bucket/rank/tradable.
+ * Resolved server-side from the opportunity_id (never arbitrary tickers). */
+export interface FillSegment {
+  from_units: number; to_units: number; bundle_cost_c: number;
+  marginal_edge_c: number; avg_edge_c: number; cumulative_profit_c: number;
+}
+export interface FillData {
+  opportunity_id: string;
+  ok: boolean;
+  reason: string;
+  scanned_edge_c: number | null;
+  book_supports_scanned_edge: boolean | null;
+  max_book_skew_ms: number;
+  depth_requested: number;
+  curve: FillSegment[];
+  summary: {
+    payout_floor_c?: number; current_top_edge_c?: number; positive_visible_units?: number;
+    last_positive_marginal_unit?: number; max_cumulative_profit_c?: number;
+    break_even_found?: boolean; truncated?: boolean; truncation_reason?: string;
+    weakest_leg?: string | null; weakest_leg_ticker?: string | null; n_legs?: number;
+  };
+  leg_summaries: { ticker: string; side: string; contract: string; visible_units: number; first_ask_c: number; worst_ask_c: number }[];
+  warnings: string[];
+  truncation_reason: string;
+  rule_flag: string | null;
+  settlement_caveat: string | null;
+  tradable_now: string | null;
+}
+export const loadFill = (opportunityId: string, signal?: AbortSignal) =>
+  getJson<FillData>(`/api/terminal/fill?opportunity_id=${encodeURIComponent(opportunityId)}`, signal);
+
 export interface Diagnostics {
   checks: Record<string, unknown>[]; contracts: Record<string, unknown>[];
   category: Record<string, unknown>; failures: Record<string, unknown>;

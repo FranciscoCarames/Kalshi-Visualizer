@@ -1,8 +1,31 @@
 import { describe, it, expect } from "vitest";
-import { condRungRows } from "./Inspector";
+import { condRungRows, fillRowCells } from "./Inspector";
+import type { FillSegment } from "./detail";
 
 const chain = (rows: { layer: string; display_pct: number | null; quote?: string }[]) =>
   rows as unknown as Record<string, unknown>[];
+
+const seg = (o: Partial<FillSegment>): FillSegment => ({
+  from_units: 0, to_units: 10, bundle_cost_c: 93, marginal_edge_c: 7, avg_edge_c: 7,
+  cumulative_profit_c: 70, ...o,
+});
+
+describe("fillRowCells — fill-simulator curve row mapping", () => {
+  it("gross-only view (no fee offset): marks the negative-marginal row, no net column", () => {
+    const pos = fillRowCells(seg({ from_units: 0, to_units: 10, marginal_edge_c: 7 }), null);
+    expect(pos).toMatchObject({ units: "0–10", marginal: 7, grossNegative: false, netMarginalC: null });
+    const neg = fillRowCells(seg({ from_units: 10, to_units: 20, marginal_edge_c: -3 }), null);
+    expect(neg.grossNegative).toBe(true);
+    expect(neg.netNegative).toBe(false);                 // no net column when feePerUnitC is null
+  });
+
+  it("taker-fee overlay shifts the gross marginal by the per-unit offset and flags net-negative", () => {
+    const cells = fillRowCells(seg({ marginal_edge_c: 5 }), 6);   // 6c fee > 5c gross marginal
+    expect(cells.netMarginalC).toBe(-1);
+    expect(cells.grossNegative).toBe(false);
+    expect(cells.netNegative).toBe(true);
+  });
+});
 
 describe("condRungRows — readable LADDER PROBABILITY table (absolute + conditional)", () => {
   it("broadest rung has no conditional; adjacent ratios compute as deeper/broader×100", () => {

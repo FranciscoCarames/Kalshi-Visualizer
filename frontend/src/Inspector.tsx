@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import type { FeedRow } from "./feed";
 import { rankWhy } from "./lens";
 import { centsToDollars, qualityOf } from "./columns";
-import { detailKey, loadDetail, loadLadder, loadPayoff, type DetailBundle, type LadderData, type PayoffData } from "./detail";
+import { detailKey, loadDetail, loadLadder, loadPayoff, loadFill, type DetailBundle, type LadderData, type PayoffData, type FillData } from "./detail";
 import { PayoffChart, LadderChart } from "./Charts";
 
 const ZB: Record<string, [string, string]> = {
@@ -295,7 +295,91 @@ export function condRungRows(chain: Record<string, unknown>[]): CondRow[] {
   return out;
 }
 
-export function Detail({ row, showIds, showRules = true }: { row: FeedRow | null; showIds?: boolean; showRules?: boolean }) {
+// Human text for a degraded / unsupported fill-simulator result. Single-sourced so every honest-empty
+// state reads clearly (the audit's "never leave a blank the user misreads" rule).
+const FILL_DEGRADE: Record<string, string> = {
+  missing_book: "Live order book unavailable for a leg — can't walk the depth right now.",
+  rate_limit: "Order-book fetch rate-limited — try again in a moment.",
+  no_liquidity: "A leg has no visible ask (empty opposite side) — nothing fillable to walk.",
+  crossed_book: "A leg's book looks crossed/stale — depth walk withheld.",
+};
+function fillDegradeMsg(fill: FillData): string {
+  return fill.reason || FILL_DEGRADE[fill.truncation_reason] || "Visible-depth curve unavailable for this opportunity.";
+}
+
+/** One curve segment → its display cells. PURE (no React) so it is unit-testable. `feePerUnitC` is the
+ * engine-derived constant taker-fee offset (gross_edge_c − net_edge$×100), or null for the gross-only view;
+ * `netMarginalC` shifts the gross marginal by that offset (a taker-fee overlay, NOT a recomputation). */
+export function fillRowCells(seg: FillSegment, feePerUnitC: number | null) {
+  const netMarginalC = feePerUnitC == null ? null : seg.marginal_edge_c - feePerUnitC;
+  return {
+    units: `${seg.from_units}–${seg.to_units}`,
+    bundleCost: seg.bundle_cost_c,
+    marginal: seg.marginal_edge_c,
+    cumulative: seg.cumulative_profit_c,
+    netMarginalC,
+    grossNegative: seg.marginal_edge_c <= 0,
+    netNegative: netMarginalC != null && netMarginalC <= 0,
+  };
+}
+type FillSegment = FillData["curve"][number];
+
+// FILL SIMULATOR — the thin display layer over /api/terminal/fill (Feature #2). Summary card first, then a
+// compact edge-vs-size curve. GROSS by default; an optional taker-fee overlay (showNet) shifts each gross
+// marginal by the engine's per-unit taker fee. Display-only — never an order, never feeds rank/bucket.
+function FillSim({ row, fill, showNet }: { row: FeedRow; fill: FillData | null; showNet: boolean }) {
+  const review = !!(fill?.rule_flag || fill?.settlement_caveat);
+  const head = review ? "FILL SIMULATOR — visible-depth review estimate" : "FILL SIMULATOR — visible-depth gross";
+  if (fill === null) return <><div className="sect">{head}</div><div className="note" style={{ marginTop: 4 }}>loading fill simulator…</div></>;
+  if (!fill.ok) {
+    return <><div className="sect">{head} <span className="uncal">DISPLAY-ONLY · GROSS</span></div>
+      <div className="note" style={{ marginTop: 4 }}>{fillDegradeMsg(fill)}</div></>;
+  }
+  const s = fill.summary;
+  // Per-unit taker fee, DERIVED from two engine numbers (never recomputed in TS): gross_edge_c − net_edge$×100.
+  const feePerUnitC = (showNet && typeof row.edge === "number" && typeof row.net_edge === "number" && row.taker_complete)
+    ? Math.max(0, Math.round(row.edge - row.net_edge * 100)) : null;
+  const decayed = fill.book_supports_scanned_edge === false;
+  const cur = num(s.current_top_edge_c);
+  const tail = s.break_even_found
+    ? `edge turns negative after ~${s.last_positive_marginal_unit ?? 0} bundle units`
+    : `edge stays positive through visible depth${s.truncated ? " (truncated — try greater depth)" : ""}`;
+  return (
+    <>
+      <div className="sect">{head} <span className="uncal">DISPLAY-ONLY · GROSS · TOP-OF-BOOK-WALK · FEES/COLLATERAL/LEGGING NOT MODELLED</span></div>
+      <div className="kv" style={{ marginTop: 4 }}>
+        <span className="l">Scanned edge</span><span className="v">{cents(fill.scanned_edge_c)}/unit</span>
+        <span className="l">Live top edge</span><span className={"v " + (cur != null && cur > 0 ? "green" : "red")}>{cents(cur)}/unit</span>
+        <span className="l">Positive depth</span><span className="v">{s.positive_visible_units ?? 0} bundle units</span>
+        <span className="l">Gross thru depth</span><span className="v">{centsToDollars(num(s.max_cumulative_profit_c) ?? 0)}</span>
+        <span className="l">Weakest leg</span><span className="v">{s.weakest_leg || "—"}</span>
+        <span className="l">Book age skew</span><span className="v">{fill.max_book_skew_ms} ms</span>
+      </div>
+      {decayed ? <div className="note red" style={{ marginTop: 4 }}>⚠ The current book no longer supports the scanned edge (live top {cents(cur)} &lt; scanned {cents(fill.scanned_edge_c)}).</div> : null}
+      <div className="note" style={{ marginTop: 4 }}>One <b>bundle unit</b> = one contract on every leg ({s.n_legs ?? fill.leg_summaries.length} legs). {tail}.</div>
+      <table className="condtbl"><tbody>
+        <tr><th>Bundle units</th><th>Bundle cost ¢</th><th>Gross marg ¢/unit</th>{feePerUnitC != null ? <th>Net marg ¢/unit*</th> : null}<th>Cum gross profit</th></tr>
+        {fill.curve.map((seg, i) => {
+          const c = fillRowCells(seg, feePerUnitC);
+          return (
+            <tr key={i}>
+              <td>{c.units}</td>
+              <td>{c.bundleCost}</td>
+              <td className={c.grossNegative ? "red" : "green"}>{c.marginal}</td>
+              {feePerUnitC != null ? <td className={c.netNegative ? "red" : ""}>{c.netMarginalC}</td> : null}
+              <td>{centsToDollars(c.cumulative)}</td>
+            </tr>
+          );
+        })}
+      </tbody></table>
+      {feePerUnitC != null ? <div className="note" style={{ marginTop: 4 }}>*Net marg = gross − a constant per-unit taker-fee offset ({feePerUnitC}¢, from the fee panel); approximate (Kalshi's fee is price-dependent). Gross cost above is <b>not</b> adjusted for collateral/position limits.</div> : null}
+      {fill.warnings.map((w, i) => <div className="note" key={i} style={{ marginTop: 4 }}>⚠ {w}</div>)}
+      {review ? <div className="note" style={{ marginTop: 4 }}>Settlement-caveated: {fill.settlement_caveat || fill.rule_flag} — a visible-depth <b>review</b> estimate, never an executable/locked edge.</div> : null}
+    </>
+  );
+}
+
+export function Detail({ row, showIds, showRules = true, showNet = false }: { row: FeedRow | null; showIds?: boolean; showRules?: boolean; showNet?: boolean }) {
   const baseKey = detailKey(row);   // the row's own single-participant anchor (sport+player_key+tournament)
   // Distinct per-leg participants (field / multi-participant rows like a 2-way game or a winner field) →
   // a participant chooser. Skips book-only legs and legs without a participant UUID.
@@ -321,6 +405,7 @@ export function Detail({ row, showIds, showRules = true }: { row: FeedRow | null
   const [bundle, setBundle] = useState<DetailBundle | null>(null);
   const [ladder, setLadder] = useState<LadderData | null>(null);
   const [payoff, setPayoff] = useState<PayoffData | null>(null);
+  const [fill, setFill] = useState<FillData | null>(null);
   const [err, setErr] = useState<string | null>(null);
   useEffect(() => { setPickPk(null); }, [row?.id]);   // reset the chosen side when the row changes
   useEffect(() => {
@@ -335,6 +420,18 @@ export function Detail({ row, showIds, showRules = true }: { row: FeedRow | null
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [row?.id, keyStr]);
+
+  // The fill simulator is per-OPPORTUNITY (not per picked participant), and works for shapes with no
+  // participant anchor (dutch-book games) — so fetch it on row change only, aborting on the next change.
+  useEffect(() => {
+    setFill(null);
+    if (!row) return;
+    const ctrl = new AbortController();
+    loadFill(row.id, ctrl.signal)
+      .then((f) => setFill(f))
+      .catch((e) => { if (!ctrl.signal.aborted) setFill({ ok: false, reason: String(e) } as FillData); });
+    return () => ctrl.abort();
+  }, [row?.id]);
 
   if (!row) return <div className="empty">Click a scanner row.</div>;
   const z = ZB[row.zone] ?? ZB.diag;
@@ -358,6 +455,8 @@ export function Detail({ row, showIds, showRules = true }: { row: FeedRow | null
           {" "}<span className="uncal">pick a side to view its ladder</span>
         </div>
       ) : null}
+
+      <FillSim row={row} fill={fill} showNet={showNet} />
 
       {hasCond ? (
         <>

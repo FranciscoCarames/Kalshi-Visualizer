@@ -111,6 +111,99 @@ def test_healthz_and_docs(client):
     assert c.get("/openapi.json").status_code == 200
 
 
+# --- /api/terminal/fill (visible-depth gross-edge curve) ---------------------------
+
+def _fill_opp(oid="f1", *, payout_floor_c=100, exec_gap_c=7, legs=None):
+    """A 2-leg buy-YES underround opp with a structural floor + explicit legs/tickers."""
+    o = op(oid, source="dutch_book")
+    o["payout_floor_c"] = payout_floor_c
+    o["exec_gap_c"] = exec_gap_c
+    o["legs"] = legs if legs is not None else [
+        {"side": "buy_yes", "ticker": "TKA", "contract": "A"},
+        {"side": "buy_yes", "ticker": "TKB", "contract": "B"}]
+    return o
+
+
+def _reset_orderbook_state():
+    api._orderbook_cache.clear()
+    api._orderbook_limiter.reset()
+
+
+def _stub_books(mapping):
+    """Return a get_orderbook stub serving {ticker: {"yes": [...], "no": [...]}} (cents, like the client)."""
+    def _gb(ticker, depth=10):
+        b = mapping.get(ticker.upper(), {})
+        return {"ticker": ticker, "yes": b.get("yes", []), "no": b.get("no", [])}
+    return _gb
+
+
+def test_fill_curve_basic_and_supports_scanned_edge(client, monkeypatch):
+    c, db = client
+    _reset_orderbook_state()
+    store.write_snapshot("2026-06-03 12:00:00 UTC", [_fill_opp("f1")], db_path=db)
+    # buy_yes consumes NO bids: NO bid 55 -> yes ask 45; NO bid 52 -> yes ask 48; sum 93 < 100 -> edge 7.
+    monkeypatch.setattr(api.kalshi_client, "get_orderbook",
+                        _stub_books({"TKA": {"no": [[55, 100]]}, "TKB": {"no": [[52, 100]]}}))
+    r = c.get("/api/terminal/fill", params={"opportunity_id": "f1"})
+    assert r.status_code == 200
+    j = r.json()
+    assert j["ok"] is True
+    assert j["summary"]["current_top_edge_c"] == 7
+    assert j["scanned_edge_c"] == 7
+    assert j["book_supports_scanned_edge"] is True
+    assert j["curve"][0]["marginal_edge_c"] == 7
+
+
+def test_fill_curve_flags_decayed_book(client, monkeypatch):
+    c, db = client
+    _reset_orderbook_state()
+    store.write_snapshot("2026-06-03 12:00:00 UTC", [_fill_opp("f2", exec_gap_c=7)], db_path=db)
+    # live book worse than scan: yes asks 47 + 49 = 96 -> live edge 4 < scanned 7.
+    monkeypatch.setattr(api.kalshi_client, "get_orderbook",
+                        _stub_books({"TKA": {"no": [[53, 100]]}, "TKB": {"no": [[51, 100]]}}))
+    j = c.get("/api/terminal/fill", params={"opportunity_id": "f2"}).json()
+    assert j["summary"]["current_top_edge_c"] == 4
+    assert j["book_supports_scanned_edge"] is False
+
+
+def test_fill_unknown_opportunity_is_404(client):
+    c, _ = client
+    assert c.get("/api/terminal/fill", params={"opportunity_id": "nope"}).status_code == 404
+
+
+def test_fill_floorless_shape_degrades(client, monkeypatch):
+    c, db = client
+    _reset_orderbook_state()
+    store.write_snapshot("2026-06-03 12:00:00 UTC", [_fill_opp("f3", payout_floor_c=None)], db_path=db)
+    monkeypatch.setattr(api.kalshi_client, "get_orderbook",
+                        _stub_books({"TKA": {"no": [[55, 100]]}, "TKB": {"no": [[52, 100]]}}))
+    j = c.get("/api/terminal/fill", params={"opportunity_id": "f3"}).json()
+    assert j["ok"] is False and "floor" in j["reason"]
+
+
+def test_fill_empty_book_degrades_cleanly(client, monkeypatch):
+    c, db = client
+    _reset_orderbook_state()
+    store.write_snapshot("2026-06-03 12:00:00 UTC", [_fill_opp("f4")], db_path=db)
+    monkeypatch.setattr(api.kalshi_client, "get_orderbook",
+                        _stub_books({"TKA": {"no": [[55, 100]]}, "TKB": {}}))   # TKB has no NO bids
+    j = c.get("/api/terminal/fill", params={"opportunity_id": "f4"}).json()
+    assert j["ok"] is False and "no visible ask" in j["reason"]
+
+
+def test_fill_does_not_alter_feed_row(client, monkeypatch):
+    """The fill endpoint is display-only: a feed row must be byte-identical before and after calling it."""
+    c, db = client
+    _reset_orderbook_state()
+    store.write_snapshot("2026-06-03 12:00:00 UTC", [_fill_opp("f5")], db_path=db)
+    monkeypatch.setattr(api.kalshi_client, "get_orderbook",
+                        _stub_books({"TKA": {"no": [[55, 100]]}, "TKB": {"no": [[52, 100]]}}))
+    before = c.get("/api/terminal/feed").json()
+    c.get("/api/terminal/fill", params={"opportunity_id": "f5"})
+    after = c.get("/api/terminal/feed").json()
+    assert before == after
+
+
 def test_opportunities_and_filters(client):
     c, db = client
     store.write_snapshot("2026-06-03 12:00:00 UTC", [
