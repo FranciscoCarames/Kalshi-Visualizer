@@ -27,8 +27,11 @@ auth.db
 .vscode/
 .idea/
 
-# Local Claude Code session settings
-.claude/
+# Claude Code: share project config across machines (settings.json, rules/, memory/, hooks).
+# Keep ONLY the machine-local pieces out of git:
+.claude/settings.local.json
+# Auto-memory lock artifacts (the *.md memory notes ARE tracked and shared on purpose)
+.claude/memory/.*.lock
 
 # Scratch / temp working dirs (audits, throwaway docs) — never tracked
 .codex_tmp/

@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:kalshi.com)",
+      "WebFetch(domain:docs.kalshi.com)"
+    ]
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python .claude/hooks/check_doc_size.py"
+          }
+        ]
+      }
+    ]
+  }
+}
