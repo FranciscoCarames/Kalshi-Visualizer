@@ -7,6 +7,7 @@ import { TILES } from "./feed";
 import { lensesFor } from "./lens";
 import { loadDiagnostics, loadBacklog, loadBacklogEvents, loadTelemetry, type Diagnostics, type BacklogItem, type BacklogInterval, type Telemetry } from "./detail";
 import Workspace from "./Workspace";
+import type { TextSize } from "./layout";
 
 function MarketTelemetry() {
   const [d, setD] = useState<Telemetry | null>(null);
@@ -153,7 +154,7 @@ function SettingsMenu({ close }: { close: () => void }) {
       <label><input type="checkbox" checked={t.showNet} onChange={(e) => t.setShowNet(e.target.checked)} />Show net of fees (est.)</label>
       <label><input type="checkbox" checked={s.hideNetNegExec} onChange={(e) => t.setSetting("hideNetNegExec", e.target.checked)} />Hide fee-negative (taker est.)</label>
       <div className="mi">Text size
-        <select value={s.textSize} onChange={(e) => t.setSetting("textSize", e.target.value)}>
+        <select value={s.textSize} onChange={(e) => t.setSetting("textSize", e.target.value as TextSize)}>
           <option value="compact">Compact</option><option value="normal">Normal</option>
           <option value="large">Large</option><option value="xlarge">X-Large</option>
         </select></div>

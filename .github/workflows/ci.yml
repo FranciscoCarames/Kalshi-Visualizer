@@ -49,8 +49,8 @@ jobs:
         run: npm run build
       - name: Unit tests (vitest)
         run: npm test
-      # Note: `tsc --noEmit` is intentionally NOT a gate — `vite build` doesn't type-check, and the SPA
-      # currently has latent type errors (App.tsx, stream.test.ts). Fix those, then add a type-check step.
+      - name: Type check (tsc --noEmit — vite build does NOT type-check)
+        run: npm run typecheck
 
   secrets:
     name: Secret scan (gitleaks)
