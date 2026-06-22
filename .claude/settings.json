@@ -1,0 +1,36 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:kalshi.com)",
+      "WebFetch(domain:docs.kalshi.com)"
+    ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "cd \"${CLAUDE_PROJECT_DIR:-.}\" && python .claude/statusline.py",
+    "padding": 0
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"${CLAUDE_PROJECT_DIR:-.}\" && python .claude/hooks/block-dangerous-git.py"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"${CLAUDE_PROJECT_DIR:-.}\" && python .claude/hooks/check_doc_size.py"
+          }
+        ]
+      }
+    ]
+  }
+}

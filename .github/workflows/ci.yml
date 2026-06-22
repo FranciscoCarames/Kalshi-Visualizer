@@ -1,0 +1,68 @@
+name: CI
+
+# Runs the project's verification gate automatically on every push and PR, so it no longer has to be
+# run by hand each commit (see docs/AGENT_WORKFLOW.md §0). Mirrors the local gate: ruff + pytest + import
+# smoke (Python) and build + vitest + tsc (frontend). Live-Kalshi checks are intentionally excluded —
+# they need network + real market data; the test suite uses synthetic fixtures by design.
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python:
+    name: Python — ruff · pytest · import smoke
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - run: pip install -r requirements-dev.txt
+      - name: Lint (ruff)
+        run: ruff check .
+      - name: Tests (pytest, full suite incl. headless NiceGUI smoke)
+        run: pytest -q
+      - name: Import smoke (pure modules import; no UI leak)
+        run: python -c "import serve, api, webui.dashboard"
+
+  frontend:
+    name: Frontend — build · vitest · types
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - name: Build the SPA
+        run: npm run build
+      - name: Unit tests (vitest)
+        run: npm test
+      - name: Type check (tsc --noEmit — vite build does NOT type-check)
+        run: npm run typecheck
+
+  secrets:
+    name: Secret scan (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Scan the working tree for committed secrets
+        run: |
+          ver=$(curl -sSfL https://api.github.com/repos/gitleaks/gitleaks/releases/latest \
+                | grep -oP '"tag_name":\s*"v\K[^"]+')
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${ver}/gitleaks_${ver}_linux_x64.tar.gz" \
+                | tar -xz gitleaks
+          # Scan the CURRENT tree (--no-git) so a clean history isn't re-litigated; fail the job on any hit.
+          # .gitleaks.toml extends the default ruleset and allowlists known test fixtures.
+          ./gitleaks detect --no-git --source . --config .gitleaks.toml --redact --verbose --exit-code 1
