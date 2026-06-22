@@ -64,4 +64,5 @@ jobs:
           curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${ver}/gitleaks_${ver}_linux_x64.tar.gz" \
                 | tar -xz gitleaks
           # Scan the CURRENT tree (--no-git) so a clean history isn't re-litigated; fail the job on any hit.
-          ./gitleaks detect --no-git --source . --redact --verbose --exit-code 1
+          # .gitleaks.toml extends the default ruleset and allowlists known test fixtures.
+          ./gitleaks detect --no-git --source . --config .gitleaks.toml --redact --verbose --exit-code 1
