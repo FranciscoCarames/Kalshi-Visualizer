@@ -76,6 +76,7 @@ Per-module invariants live in `.claude/rules/`. Each loads automatically when yo
 | `rules/dutchbook.md` | `dutchbook.py`, `scanner.py` | MECE dutch-book detector (2-way / n-way / winner field) |
 | `rules/synthetic-bundle.md` | `synthetic_bundle.py`, `scanner.py` | N-leg exact-score synthetic bundle vs 2 hedges |
 | `rules/ui.md` | `webui/**` | NiceGUI dashboard layout, the critical filter split, status labels |
+| `rules/frontend.md` | `frontend/**`, `webui/feed.py` | React SPA (default UI): PRIME INVARIANT (view not engine), `/api/terminal/*` boundary, build/verify |
 | `rules/serve-ops.md` | `serve.py`, `api.py`, `scan_manager.py`, `scan_scheduler.py` | LAN hosting / bind safety, non-blocking scan, auto-refresh |
 
 ## Run & verify

@@ -87,18 +87,22 @@ Treat a blocker as anything that ships a falsehood or unsafe action. Examples:
 - **Plan freshness:** a plan can drift; verify the diff still matches reality, but **don't demand plan
   perfection before implementation** and don't re-litigate accepted scope unless a **new correctness,
   safety, UX, or maintenance risk** appears.
-- **Branch hygiene (branch-only delivery — owner 2026-06-09, supersedes "one PR per change"):** never
-  commit/push/merge to `main`; implement the full scope in feature branch(es), verify, then the owner tests
-  manually and merges when satisfied (`main` frozen; no per-step PRs). Branch off the latest `main`, or off
-  the unmerged branch a feature depends on. (See CLAUDE.md "Git workflow" + docs/AGENT_WORKFLOW.md §0.)
+- **Branch hygiene (owner-confirmed 2026-06-16 — supersedes the earlier "`main` frozen / no per-step PRs"
+  rule):** never commit/push/merge to `origin/main`; deliver each feature on its own branch pushed to origin,
+  verify, then the owner reviews/merges via PR. `origin/main` is the single source of truth — base off it by
+  default (or off the newest relevant unmerged branch when the work builds on it, kept current with
+  `origin/main`); never start from a stale local `main`. (See CLAUDE.md "Git workflow" + docs/AGENT_WORKFLOW.md §0.)
 - **Risk classification:** open by labeling the change **low / medium / high** risk (blast radius ×
   reversibility × how much it touches money-like signals) and scale review depth to that.
 
 ### Scope guard (out of scope unless explicitly requested)
 
-Trading, authentication, order placement, conditional-probability / de-vig models, net-of-fees
-actionability math, live WebSocket feeds, and any non-read-only behavior. Adding a **new sport** via a
-`SportConfig` drop-in is the in-scope exception. Flag anything outside this as a blocker.
+Trading, order placement, conditional-probability / de-vig models **in the React SPA** (it stays
+display-only), net-of-fees actionability math, live WebSocket feeds, and any non-read-only engine
+behavior. **In-scope exceptions (owner-approved — see CLAUDE.md "Scope guard" for the authoritative list):**
+adding a **new sport** via a `SportConfig` drop-in; **per-user authentication** gated behind `AUTH_ENABLED`
+(must NOT alter engine logic); the **default-OFF conditional-blend detector** (`conditional_blend.py`)
+surfacing a display-only `speculative_model` section. Flag anything outside this as a blocker.
 
 ## Codex-specific notes
 
