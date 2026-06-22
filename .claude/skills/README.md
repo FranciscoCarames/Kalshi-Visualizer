@@ -18,9 +18,16 @@ Skills load on demand (by description match or `/name`). These are committed, so
 | `grill-me` / `grilling` | Relentless one-question-at-a-time interview to stress-test a plan before building. (`grill-me` calls `grilling`; keep both.) | `/grill-me` (user-invoked) |
 | `git-guardrails-claude-code` | **Setup** skill: wires a PreToolUse hook that blocks dangerous git. **Inert until you run it.** ⚠️ As shipped it blocks **all** `git push`, which would break this repo's feature-branch delivery — customize the blocked list (block `origin/main` pushes / `--force` / `reset --hard` / `clean -f` / `branch -D`, but **allow** feature-branch pushes) before activating. Its script also needs `jq`. | `/git-guardrails-claude-code` |
 
+## Vendored from [`anthropics/skills`](https://github.com/anthropics/skills) (Apache-2.0 — `LICENSE.txt` in each folder)
+
+| Skill | What it does | Runtime dep |
+|---|---|---|
+| `skill-creator` | Official skill-authoring + iterative-eval/benchmark loop (draft → test → review → improve → optimize description). Use it to write/improve skills like `add-a-sport`. Its `scripts/` call the local `claude -p` CLI (session auth, no extra key). | `claude` CLI (present); subagents for the full eval loop |
+| `webapp-testing` | Local web-app testing with Playwright — drive the React SPA, capture screenshots, read console logs. `scripts/with_server.py` boots your dev server + waits on the port. | `pip install playwright && playwright install chromium` (only when used) |
+
+> You also have the `claude-in-chrome` MCP for browser work; `webapp-testing` is the scripted-Playwright alternative.
+
 ## Notes
 - `tdd` softly references a `/codebase-design` skill that isn't installed — harmless; that step is optional.
-- To add an official Anthropic skill later (Apache-2.0, [`anthropics/skills`](https://github.com/anthropics/skills)),
-  copy the skill's folder here and vendor its `LICENSE.txt`. Candidates that fit this repo: `skill-creator`,
-  `webapp-testing`.
 - Vet any third-party `SKILL.md` (and its `scripts/`) before installing — a skill is instructions Claude will follow.
+  All skills here were read end-to-end (incl. scripts) before install: no network exfil, destructive ops, or secrets.
