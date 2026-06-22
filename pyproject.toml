@@ -1,6 +1,9 @@
 [tool.ruff]
 line-length = 120
 target-version = "py313"
+# Vendored skills + Claude Code tooling (hooks, statusline, skill scripts) live under .claude/ — they are
+# third-party / tooling code, not project source, so they are not linted by the project's ruff config.
+extend-exclude = [".claude"]
 
 [tool.ruff.lint]
 # E/W: pycodestyle errors/warnings  F: pyflakes  I: isort
