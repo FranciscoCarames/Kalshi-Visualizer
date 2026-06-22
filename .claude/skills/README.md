@@ -16,7 +16,7 @@ Skills load on demand (by description match or `/name`). These are committed, so
 | `tdd` | Red-green-refactor, one vertical slice at a time; behavior-through-public-interface tests. Fits this repo's "no behavior change without a test" rule. | model- or user-invoked |
 | `diagnosing-bugs` | Structured reproduce → minimize → hypothesize → instrument → fix loop (+ a human-in-the-loop reproduction template). | model- or user-invoked |
 | `grill-me` / `grilling` | Relentless one-question-at-a-time interview to stress-test a plan before building. (`grill-me` calls `grilling`; keep both.) | `/grill-me` (user-invoked) |
-| `git-guardrails-claude-code` | **Setup** skill: wires a PreToolUse hook that blocks dangerous git. **Inert until you run it.** ⚠️ As shipped it blocks **all** `git push`, which would break this repo's feature-branch delivery — customize the blocked list (block `origin/main` pushes / `--force` / `reset --hard` / `clean -f` / `branch -D`, but **allow** feature-branch pushes) before activating. Its script also needs `jq`. | `/git-guardrails-claude-code` |
+| `git-guardrails-claude-code` | Reference for the git-guardrails pattern. **Its bundled bash script is NOT the active guard** — a customized Python version is wired instead (see below), because the bundled one blocks *all* `git push` and would break feature-branch delivery. | `/git-guardrails-claude-code` |
 
 ## Vendored from [`anthropics/skills`](https://github.com/anthropics/skills) (Apache-2.0 — `LICENSE.txt` in each folder)
 

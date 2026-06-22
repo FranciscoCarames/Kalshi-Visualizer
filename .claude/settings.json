@@ -11,6 +11,17 @@
     "padding": 0
   },
   "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python .claude/hooks/block-dangerous-git.py"
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "hooks": [

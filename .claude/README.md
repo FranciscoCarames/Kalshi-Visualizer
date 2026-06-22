@@ -12,6 +12,7 @@ Only machine-local files are gitignored.
 | `memory/*.md` | Auto-memory notes (preferences, project direction). `MEMORY.md` is the index |
 | `skills/*/SKILL.md` | Installed skills (load on demand). `add-a-sport` is project-authored; others vendored from `mattpocock/skills` (MIT). See `skills/README.md` |
 | `hooks/check_doc_size.py` | Stop hook that warns (once per turn, non-blocking) when `CLAUDE.md`/a rule file exceeds its line budget |
+| `hooks/block-dangerous-git.py` | PreToolUse hook (Bash/PowerShell) that blocks destructive git per the workflow: push to `main`, force-push, `push --all/--mirror`, `reset --hard`, `clean -f`, `branch -D`, `checkout/restore .`. Feature-branch pushes, commits, fetch, merges pass. Customized from the `git-guardrails` skill |
 | `statusline.py` | Status-line script (wired via `settings.json` `statusLine`): coloured context-window gauge that warns "⚠ WRAP UP" past 85% usage, so you know when to `/compact` or start a fresh session |
 
 ## What stays local (gitignored)
