@@ -5,6 +5,11 @@
       "WebFetch(domain:docs.kalshi.com)"
     ]
   },
+  "statusLine": {
+    "type": "command",
+    "command": "python .claude/statusline.py",
+    "padding": 0
+  },
   "hooks": {
     "Stop": [
       {

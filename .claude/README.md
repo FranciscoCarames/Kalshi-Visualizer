@@ -11,6 +11,7 @@ Only machine-local files are gitignored.
 | `rules/*.md` | Path-scoped "do not regress" invariants — auto-load when you open a matching file (see `CLAUDE.md` → "Rules map") |
 | `memory/*.md` | Auto-memory notes (preferences, project direction). `MEMORY.md` is the index |
 | `hooks/check_doc_size.py` | Stop hook that warns (once per turn, non-blocking) when `CLAUDE.md`/a rule file exceeds its line budget |
+| `statusline.py` | Status-line script (wired via `settings.json` `statusLine`): coloured context-window gauge that warns "⚠ WRAP UP" past 85% usage, so you know when to `/compact` or start a fresh session |
 
 ## What stays local (gitignored)
 
