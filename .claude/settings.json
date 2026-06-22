@@ -7,7 +7,7 @@
   },
   "statusLine": {
     "type": "command",
-    "command": "python .claude/statusline.py",
+    "command": "cd \"${CLAUDE_PROJECT_DIR:-.}\" && python .claude/statusline.py",
     "padding": 0
   },
   "hooks": {
@@ -17,7 +17,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python .claude/hooks/block-dangerous-git.py"
+            "command": "cd \"${CLAUDE_PROJECT_DIR:-.}\" && python .claude/hooks/block-dangerous-git.py"
           }
         ]
       }
@@ -27,7 +27,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python .claude/hooks/check_doc_size.py"
+            "command": "cd \"${CLAUDE_PROJECT_DIR:-.}\" && python .claude/hooks/check_doc_size.py"
           }
         ]
       }
