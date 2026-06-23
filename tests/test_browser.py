@@ -84,14 +84,19 @@ async def test_empty_state_no_opportunities(user: User, seeded_db) -> None:
     await user.should_see("no opportunities right now")
 
 
-# --- P2: the 1s poll surfaces a snapshot written AFTER the page opened (no re-open / manual refresh) ----
+# --- P2: the poll surfaces a snapshot written AFTER the page opened (no re-open / manual refresh) ----
 @pytest.mark.nicegui_main_file(MAIN)
-async def test_new_snapshot_surfaces_via_poll(user: User, seeded_db) -> None:
+async def test_new_snapshot_surfaces_via_poll(user: User, seeded_db, monkeypatch) -> None:
+    # Deterministic, not a wall-clock gamble: `should_see` waits only ~0.3s (3 retries x 0.1s), but the
+    # dashboard poll fires every config.UI_POLL_SECONDS (default 1s), so the default wait races the timer
+    # and flakes. Shrink the interval BEFORE open (the ui.timer is created during open) and give should_see
+    # a window comfortably longer than the interval.
+    monkeypatch.setattr(config, "UI_POLL_SECONDS", 0.1)
     await user.open("/")
     await user.should_see("No scan yet")                    # empty store at open
     store.write_snapshot("2026-06-05 12:00:00 UTC", [_actionable_opp()],
                          meta={"scanned": 3, "loaded": 3, "failed": 0}, db_path=seeded_db)
-    await user.should_see("3 series")                       # poll -> reload_data -> freshness shows coverage
+    await user.should_see("3 series", retries=40)           # ~4s window >> 0.1s poll -> no race
 
 
 # --- detail + diagnostics sections render (PR 24/25b) ---------------------------------
