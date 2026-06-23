@@ -20,14 +20,16 @@ import webui.feed as feed
 
 
 def ge_row(event, floor, *, yes_ask_c, no_ask_c=None, yes_bid_c=None, size=100, series="KXATPGTOTAL",
-           quote_quality="OK", status="active"):
-    """A live-shaped 'Over N games' market row carrying both the numeric strike AND firm pricing, so
-    numeric_ladder parses it and dutchbook's firm-ask helpers can price the legs."""
+           quote_quality="OK", status="active", player_key="", confidence="low"):
+    """A live-shaped 'Over N' market row carrying the numeric strike, firm pricing, AND participant identity
+    (player_key + mapping_confidence) so the scalar-identity guard can be exercised. Defaults model a
+    whole-event TOTAL (shared empty key, low confidence); pass distinct high-confidence keys for SPREADS."""
     return {
         "series_ticker": series, "series": series, "event_ticker": event,
         "strike_type": "greater", "floor_strike": floor, "cap_strike": None, "market_type": "binary",
-        "kind": "other", "player_key": "", "stage": "", "tour": "ATP", "tournament": "Test Open",
-        "yes_sub_title": f"Over {floor} games", "contract": f"Over {floor}", "event_title": "ATP total games",
+        "kind": "other", "player_key": player_key, "mapping_confidence": confidence,
+        "stage": "", "tour": "ATP", "tournament": "Test Open",
+        "yes_sub_title": f"Over {floor}", "contract": f"Over {floor}", "event_title": "ATP numeric",
         "yes_ask_c": yes_ask_c, "no_ask_c": no_ask_c, "yes_bid_c": yes_bid_c,
         "yes_ask_size": size, "yes_bid_size": size, "quote_quality": quote_quality, "status": status,
         "market_ticker": f"{event}-{floor}", "kalshi_url": f"http://k/{event}/{floor}",
@@ -85,6 +87,32 @@ def test_three_rungs_yield_two_adjacent_corridors():
             ge_row("E1", 29.5, yes_ask_c=20, no_ask_c=40)]
     out = nba.find_payoff_boxes(rows)
     assert len(out) == 2     # adjacent pairs only: (19.5,24.5) and (24.5,29.5)
+
+
+def test_skips_cross_participant_spread_pairing():
+    # Scalar-identity guard (confirmed live on KXATPGSPREAD): two DIFFERENT real (high-confidence)
+    # participants' spread lines share series+event but are NOT one scalar — must never form a corridor.
+    rows = [ge_row("E1", -1.5, yes_ask_c=37, no_ask_c=63, series="KXATPGSPREAD",
+                   player_key="uuid-struff", confidence="high"),
+            ge_row("E1", -2.5, yes_ask_c=44, no_ask_c=56, series="KXATPGSPREAD",
+                   player_key="uuid-borges", confidence="high")]
+    assert nba.find_payoff_boxes(rows) == []
+
+
+def test_same_participant_spread_ladder_still_pairs():
+    # One participant's two spread strikes ARE a legit monotone ladder of one scalar → still produced.
+    rows = [ge_row("E1", -1.5, yes_ask_c=37, series="KXATPGSPREAD", player_key="uuid-struff", confidence="high"),
+            ge_row("E1", -2.5, yes_ask_c=20, no_ask_c=47, series="KXATPGSPREAD",
+                   player_key="uuid-struff", confidence="high")]
+    assert len(nba.find_payoff_boxes(rows)) == 1
+
+
+def test_totals_low_confidence_keys_still_pair():
+    # A whole-event total has a low-confidence fallback identity; even if the two rungs' fallback keys
+    # differ, the guard (which requires a HIGH-confidence competitor) must NOT suppress the corridor.
+    rows = [ge_row("E1", 19.5, yes_ask_c=46, player_key="over195", confidence="low"),
+            ge_row("E1", 29.5, yes_ask_c=20, no_ask_c=47, player_key="over295", confidence="low")]
+    assert len(nba.find_payoff_boxes(rows)) == 1
 
 
 def test_no_cross_event_pairing():

@@ -64,6 +64,17 @@ def _box_finding(ladder: numeric_ladder.NumericLadder, broad: tuple[float, dict[
     if broad_strike == deep_strike:          # defensive — build_numeric_ladders already dedups strikes
         return None
 
+    # SCALAR-IDENTITY GUARD (no false numeric findings — confirmed live on KXATPGSPREAD): numeric_ladder's
+    # default group key is (series, event), which is correct for a single-scalar whole-event TOTAL but WRONG
+    # for per-participant SPREADS — it would merge e.g. "Struff −1.5" with "Borges −2.5", two DIFFERENT
+    # participants' margins, into a bogus "ladder" that fabricates a structural floor. A whole-event total
+    # carries a LOW-confidence fallback identity (no competitor resolved), so two distinct HIGH-confidence
+    # competitor keys prove this is a per-participant family the demo can't safely pair → skip. (The real
+    # #21 adapter must instead pass a participant-aware group_key_fn; the demo just refuses the unsafe pair.)
+    if broad_row.get("player_key") != deep_row.get("player_key") and \
+            "high" in (broad_row.get("mapping_confidence"), deep_row.get("mapping_confidence")):
+        return None
+
     # Buy-only legs (single-sourced pricing + canonical leg shape from dutchbook).
     leg_yes = dutchbook._leg("buy_yes", broad_row, dutchbook._firm_yes_ask_c(broad_row))
     leg_no = dutchbook._leg("buy_no", deep_row, dutchbook._firm_no_ask_c(deep_row))
