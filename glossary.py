@@ -88,6 +88,13 @@ SPECULATIVE_ZONE_BASIS = ("Speculative — NOT actionable and CAN LOSE MONEY. Bo
                           "full depth, and outcome calibration are not modeled). These metrics are "
                           "display-only and never change the strict executable findings.")
 
+# Generic payoff-state engine demonstrator (payoff_engine.py + numeric_box_adapter.py) — single-sourced
+# basis. A gross structural classification of a buy-only payoff matrix over a proven MECE state set; it is
+# a DIAGNOSTIC surface, never executable. Conservative wording: never "riskless" / "locked" / "arbitrage".
+PAYOFF_ENGINE_BASIS = ("gross payoff-state classification over a proven mutually-exclusive, exhaustive set "
+                       "of world-states (buy-only legs), top-of-book, fees / full depth / collateral not "
+                       "modeled — a DIAGNOSTIC structural verdict, NOT arbitrage and never executable")
+
 # --- Glossary terms (term -> {short, long}) ------------------------------------------
 GLOSSARY: dict[str, dict[str, str]] = {
     "Tradable now": {

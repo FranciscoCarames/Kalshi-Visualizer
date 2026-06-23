@@ -210,6 +210,14 @@ class Opportunity(BaseModel):
     worst_bundle_quote_quality: str | None = None
     wide_bundle_leg_count: float | None = None
     comparator_quote_quality: str | None = None
+    # Generic payoff-state engine demonstrator (numeric_box_adapter, DEFAULT-OFF). payoff_scenarios is the
+    # per-state payoff table (states × legs) the F25 card renders; payoff_classification is the engine's
+    # structural verdict; floor_authoritative says whether the worst-case was computed from a proven,
+    # fully-priced state space. Must be DECLARED — extra="ignore" would drop them from the feed. None on
+    # every non-payoff-state row.
+    payoff_scenarios: list[dict[str, Any]] | None = None
+    payoff_classification: str | None = None
+    floor_authoritative: bool | None = None
 
 
 class Coverage(BaseModel):

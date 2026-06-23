@@ -409,6 +409,18 @@ AUTO_SCAN_DEFAULT_ENABLED = True                      # auto-refresh on by defau
 # Phase-1 enablement step and requires a green validation report first.
 CONDITIONAL_BLEND_DEFAULT_ENABLED = False
 
+# Generic payoff-state engine demonstrator (payoff_engine.py + numeric_box_adapter.py) — DEFAULT-OFF. The
+# engine is a pure foundation for the range/band/box strategies (#19/#20/#21/#22/#26); the numeric-box
+# adapter proves it end-to-end on live data WITHOUT a ranked/Actionable surface. When True (or env
+# PAYOFF_ENGINE_DEMO_ENABLED=1, read at the scanner boundary), the scan emits diagnostic-only
+# `payoff_state` rows (status PAYOFF_STATE_DIAGNOSTIC, exec_gap_c=None, tradable_now="No — diagnostic
+# only") that are NEVER ranked/Actionable. OFF ⇒ the scan/feed are unchanged.
+PAYOFF_ENGINE_DEMO_ENABLED = False
+# Soft size caps for the payoff engine: an oversized states × legs matrix degrades to `diagnostic` +
+# `scenarios_truncated` (the per-state scenarios table is omitted) so it never bloats a SQLite/JSON payload.
+MAX_PAYOFF_LEGS = 24
+MAX_PAYOFF_STATES = 64
+
 # Presence gate (P4): pause the background auto-scan while NO viewer is connected, resuming on the next
 # tick after someone opens the dashboard — so the app stops hitting Kalshi when nobody's watching. The
 # manual "Scan now" button is NOT gated. Trade-off: a headless REST-only consumer (no browser → 0 viewers)

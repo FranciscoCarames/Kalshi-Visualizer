@@ -104,6 +104,10 @@ STATUS_GROUP = {
     # to avoid a circular import). A MODEL-BASED, market-implied convergence candidate — display-only, never
     # Actionable, gated behind config.CONDITIONAL_BLEND_ENABLED — so its own "Speculative model" group.
     "MODEL_BLEND_CANDIDATE": "Speculative model",
+    # Generic payoff-state engine demonstrator (sibling `numeric_box_adapter` module; literal kept here to
+    # avoid an import). A diagnostic structural classification (gross, never executable), gated behind
+    # config.PAYOFF_ENGINE_DEMO_ENABLED — its own "Diagnostic" group, NEVER Actionable.
+    "PAYOFF_STATE_DIAGNOSTIC": "Diagnostic",
 }
 
 
@@ -1084,7 +1088,7 @@ def scenario_payoffs(check_row: dict[str, Any], units: Any = None) -> dict[str, 
 # belongs in — reads only fields already produced by build_checks; no math, no side effects.
 DASHBOARD_BUCKETS = (
     "actionable", "review_signal", "blocked", "risk_budget", "near_miss", "qualifier_setup", "no_structure",
-    "speculative_model", "near_edge", "display_signal", "wide_signal", "data_quality", "clean",
+    "speculative_model", "payoff_state", "near_edge", "display_signal", "wide_signal", "data_quality", "clean",
 )
 
 
@@ -1133,6 +1137,12 @@ def bucket_of(check_row: dict[str, Any]) -> str:
         # import). MODEL-BASED / market-implied — display-only, NEVER Actionable. Its own opt-in section; the
         # detector also self-assigns this bucket, so this keeps the router complete + the guard test honest.
         return "speculative_model"
+    if status == "PAYOFF_STATE_DIAGNOSTIC":
+        # Generic payoff-state engine demonstrator (sibling `numeric_box_adapter`; literal to avoid an
+        # import). A gross structural classification — diagnostic-only, NEVER Actionable. Its own opt-in
+        # section; the adapter also self-assigns this bucket, so this keeps the router complete + the guard
+        # test honest.
+        return "payoff_state"
     if status in ("EXACT_ORDER_DIAGNOSTIC", "SPECULATIVE_TOP2_RELATIVE_VALUE", "GAME_SUPPORT_SIGNAL"):
         # World Cup Qualifier Setups: heuristic / review-only, NEVER Actionable. Their own opt-in section
         # (the detectors also self-assign this bucket; this keeps the router complete + the guard test

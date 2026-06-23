@@ -30,6 +30,7 @@ import dutchbook
 import exact_order
 import game_support
 import no_structures
+import numeric_box_adapter
 import sports
 import stage_elim
 import synthetic_bundle
@@ -47,6 +48,7 @@ BUCKET_PRIORITY = {
     "qualifier_setup": 5,  # World Cup qualifier setups (opt-in; review-only / diagnostic — never Actionable)
     "no_structure": 6,    # cheap bounded-loss NO fades (opt-in; speculative — never Actionable)
     "speculative_model": 6,  # conditional-blend convergence candidates (opt-in, model-based — never Actionable)
+    "payoff_state": 6,    # generic payoff-state engine demo (opt-in, diagnostic — never Actionable)
     "near_edge": 7,
     "display_signal": 8,
     "wide_signal": 9,
@@ -115,6 +117,11 @@ UNIFIED_COLUMNS = [
     # quality is the direct qualifier (a comparator, not a leg). All None on every non-bundle row.
     "opportunity_class", "top2_net_if_top2_c", "top2_loss_if_not_top2_c", "top2_max_units",
     "worst_bundle_quote_quality", "wide_bundle_leg_count", "comparator_quote_quality",
+    # Generic payoff-state engine demo (numeric_box_adapter, DEFAULT-OFF): the per-state payoff table
+    # (states × legs) for the F25 card + the engine's structural classification. Display-only; None on
+    # every non-payoff-state row. MUST be in UNIFIED_COLUMNS or pd.DataFrame(columns=…) drops it before
+    # store/feed; it also rides the api.Opportunity model so /api/terminal/feed can carry it.
+    "payoff_scenarios", "payoff_classification", "floor_authoritative",
 ]
 
 # World Cup Qualifier Setups — the soccer containment leaf that IS setup #1 (qualifier-not-winner). Tagged
@@ -604,6 +611,57 @@ def _to_unified_conditional_blend(r: dict[str, Any], cfg) -> dict[str, Any]:
     return _finalize_unified(d, payout_floor_c=None)
 
 
+def _to_unified_payoff_demo(r: dict[str, Any], cfg) -> dict[str, Any]:
+    """Map a generic payoff-state engine demo finding (numeric_box_adapter) onto the unified schema.
+    DIAGNOSTIC / opt-in: self-assigns ``bucket="payoff_state"`` + ``exec_gap_c=None`` + ``tradable_now="No
+    — diagnostic only"`` so it NEVER enters _rank_key / Actionable. Carries the engine's structural
+    `classification` + `floor_authoritative` + the per-state `payoff_scenarios` table (display-only; the
+    F25 card renders it). The N-leg buy-only plan rides the verbatim ``legs`` list."""
+    legs = r.get("legs") if isinstance(r.get("legs"), list) else None
+    d = {
+        "sport": cfg.sport_id, "sport_label": cfg.label, "source": "payoff_state",
+        "name": r.get("name") or "",
+        "detail": r.get("detail") or "",
+        "tournament": r.get("tournament") or "", "tour": r.get("tour") or "",
+        "action_1_text": (legs[0].get("text") if legs else "") or "",
+        "action_2_text": (legs[1].get("text") if legs and len(legs) > 1 else "") or "",
+        "action_1_price_c": _num(legs[0].get("price_c")) if legs else None,
+        "action_2_price_c": _num(legs[1].get("price_c")) if legs and len(legs) > 1 else None,
+        "cost_c": _num(r.get("cost_c")),
+        # NEVER an executable edge — exec_gap_c=None floors it within its own opt-in diagnostic section.
+        "exec_gap_c": None, "exec_min_size": _num(r.get("min_bundle_size")), "exec_max_profit_dollars": None,
+        "bucket": "payoff_state", "status": r.get("status") or numeric_box_adapter.PAYOFF_STATE_DIAGNOSTIC,
+        "tradable_now": "No — diagnostic only", "blocked_reason": "",
+        "market_status": "active", "rule_flag": "",
+        "settlement_caveat": r.get("settlement_note") or "",
+        "participant_key": "",
+        "relationship_type": "payoff_state_box",
+        "resolution_mode": "calendar",
+        "opportunity_id": r.get("opportunity_id") or "",
+        "ticker_1": r.get("ticker_1") or "", "ticker_2": r.get("ticker_2") or "",
+        "url": r.get("url") or "", "url_2": r.get("url_2") or "",
+        "legs": legs, "n_legs": _num(r.get("n_legs")),
+        "edge_class": "",
+        "worst_case_profit_c": _num(r.get("worst_case_profit_c")),
+        "best_case_profit_c": _num(r.get("best_case_profit_c")),
+        # The engine outputs (display-only; never read by bucket_of / _rank_key / filters).
+        "payoff_scenarios": r.get("payoff_scenarios"),
+        "payoff_classification": r.get("classification") or "",
+        "floor_authoritative": bool(r.get("floor_authoritative")),
+    }
+    # A numeric box has no participant identity (whole-event totals) -> empty parallel lists, not None.
+    d["participant_keys"], d["participant_labels"] = _participants([])
+    return _finalize_unified(d, payout_floor_c=_num(r.get("payout_floor_c")))
+
+
+def _payoff_engine_demo_enabled() -> bool:
+    """DEFAULT-OFF gate for the generic payoff-state engine demonstrator: surfaces ONLY when
+    `config.PAYOFF_ENGINE_DEMO_ENABLED` or env `PAYOFF_ENGINE_DEMO_ENABLED` truthy (read here at the
+    scanner boundary, since config.py stays env-free). OFF ⇒ the scan/feed are unchanged."""
+    return bool(config.PAYOFF_ENGINE_DEMO_ENABLED) or \
+        os.getenv("PAYOFF_ENGINE_DEMO_ENABLED", "").strip().lower() in ("1", "true", "yes", "on")
+
+
 def _conditional_blend_enabled() -> bool:
     """Phase-1 gate (DEFAULT-OFF): the conditional-blend detector surfaces ONLY when explicitly enabled —
     `config.CONDITIONAL_BLEND_DEFAULT_ENABLED` or env `CONDITIONAL_BLEND_ENABLED` truthy (read here at the
@@ -672,6 +730,11 @@ def unified_opportunities(
             # Phase-1 (DEFAULT-OFF): model-based opponent-resolution convergence candidates. Display-only /
             # never Actionable; gated until the live validation report is green (see config flag).
             blends = conditional_blend.find_conditional_blends(records) if _conditional_blend_enabled() else []
+            # Generic payoff-state engine demonstrator (DEFAULT-OFF): diagnostic-only numeric-box corridors
+            # proving the engine end-to-end. Never Actionable; gated behind the config flag.
+            payoff_boxes = (numeric_box_adapter.find_payoff_boxes(
+                records, max_legs=config.MAX_PAYOFF_LEGS, max_states=config.MAX_PAYOFF_STATES)
+                if _payoff_engine_demo_enabled() else [])
         except Exception as exc:
             errors.append({"sport": cfg.sport_id, "error": str(exc)})
             continue
@@ -688,6 +751,7 @@ def unified_opportunities(
         # artifact (logging) and must not leak into the feed as a sparse row.
         rows.extend(_to_unified_conditional_blend(r, cfg) for r in blends
                     if r.get("status") == conditional_blend.MODEL_BLEND_CANDIDATE)
+        rows.extend(_to_unified_payoff_demo(r, cfg) for r in payoff_boxes)
         if frames_out is not None:
             for frame_type, frame_rows in (("contracts", records), ("checks", checks_records),
                                            ("dutchbook", books), ("group_basket", baskets)):

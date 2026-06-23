@@ -288,6 +288,11 @@ def _build_row(o: dict[str, Any], fee_rates: dict[str, Any] | None = None,
         "ladder_steps": _num(o.get("ladder_steps")),
         "ladder_bottom_c": _num(o.get("ladder_bottom_c")),
         "ladder_step_ratio": _num(o.get("ladder_step_ratio")),
+        # Generic payoff-state engine demo (DEFAULT-OFF; `payoff_state` bucket → the "diag" section). The
+        # per-state payoff table + structural verdict for the F25 card. Display-only; None on other rows.
+        "payoff_scenarios": o.get("payoff_scenarios"),
+        "payoff_classification": o.get("payoff_classification"),
+        "floor_authoritative": o.get("floor_authoritative"),
     })
     if isinstance(base.get("flags"), list):        # normalize the flags list -> a short string
         base["flags"] = " ".join(
