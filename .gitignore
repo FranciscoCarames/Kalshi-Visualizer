@@ -27,8 +27,11 @@ auth.db
 .vscode/
 .idea/
 
-# Local Claude Code session settings
-.claude/
+# Claude Code: share project config across machines (settings.json, rules/, memory/, hooks).
+# Keep ONLY the machine-local pieces out of git:
+.claude/settings.local.json
+# Auto-memory lock artifacts (the *.md memory notes ARE tracked and shared on purpose)
+.claude/memory/.*.lock
 
 # Scratch / temp working dirs (audits, throwaway docs) — never tracked
 .codex_tmp/
@@ -42,3 +45,18 @@ conditional_blend_samples.csv
 
 # Local kss planning shell (topics, milestones, codebase snapshots) — keep out of the repo
 .kss/
+
+# Scratch / throwaway — put disposable working files in scratch/ (gitignored) instead of the repo root,
+# so the working tree stays clean and explicit `git add <paths>` is safe (mechanizes the old
+# "never git add -A" habit). See scratch/README.md.
+/scratch/*
+!/scratch/README.md
+# Stale compaction backups + one-off diagnostic/audit dumps produced during verification
+*.pre-compact-backup
+/diag*.json
+/feed_qa*.json
+/backlog_out.json
+# Root-level screenshots/mockups (real frontend assets live under frontend/, never the repo root)
+/*.png
+/*.jpeg
+/*.jpg

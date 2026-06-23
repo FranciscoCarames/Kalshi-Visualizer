@@ -1,0 +1,15 @@
+# gitleaks config — extend the default ruleset, allowlist intentional NON-secret test fixtures.
+#
+# `scripts/verify_e2e.py` is a LOCAL end-to-end auth test: it registers throwaway users (alice/bob) with
+# obviously-fake passwords like "alice-strong-pw-1", which gitleaks flags as `generic-api-key`. These are
+# not real secrets — real credentials live only in .env (gitignored) and are never committed. Verified
+# 2026-06-22 (all 6 findings were these test fixtures). Keep this allowlist tight: add a path here only for
+# a file proven to contain just test fixtures, never to silence a finding you haven't inspected.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Intentional dummy credentials in the local E2E auth test"
+paths = [
+  '''scripts/verify_e2e\.py''',
+]

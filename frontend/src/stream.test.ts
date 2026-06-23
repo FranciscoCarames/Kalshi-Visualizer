@@ -3,7 +3,7 @@ import { subscribeFeed } from "./stream";
 import type { Feed } from "./feed";
 
 // loadFeed is the polling-fallback path; mock it so no network is touched.
-const loadFeed = vi.fn<[], Promise<Feed>>();
+const loadFeed = vi.fn<() => Promise<Feed>>();
 vi.mock("./feed", () => ({ loadFeed: () => loadFeed() }));
 
 const FEED = (id: number): Feed => ({ meta: { snapshot_id: id } as Feed["meta"], opps: [] });

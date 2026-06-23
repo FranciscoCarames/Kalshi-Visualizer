@@ -19,6 +19,18 @@ unmerged branch, keep it current with `origin/main` so it can't drift far (that 
 SPA‑vs‑NiceGUI reconciliation in June 2026). Verify before handoff (`pytest -q`, `ruff`, `vitest`+`build`
 for frontend, `serve.py` boot, browser check); note the base branch.
 
+## 0a. Verification: CI runs the gate (do not hand-run it as the gate of record)
+
+`.github/workflows/ci.yml` runs the gate on **every push and PR**: `ruff` + `pytest -q` + import smoke
+(Python) and `npm run build` + `vitest` + `tsc --noEmit` (frontend). Treat the green ✅ on the branch/PR
+as the gate of record — don't re-run the whole suite by hand just to "confirm" before handoff. Run tests
+locally for **fast feedback while iterating**, but the merge decision rides on CI. Enable **branch
+protection on `origin/main`** (require the CI checks) so "owner merges via PR after the gate passes" is
+enforced by GitHub, not by memory. Live-Kalshi checks stay manual/local (CI has no market network).
+
+**Commit subjects ≤ 72 chars** (push detail to the body) so `git log --oneline` / GitHub don't truncate;
+keep the `Co-Authored-By` trailer.
+
 ## 1. Default workflow
 
 1. **Triage the idea** — what's the actual change and is it ready to implement soon?
@@ -41,9 +53,13 @@ for frontend, `serve.py` boot, browser check); note the base branch.
 
 ## 3. Parallel terminal / worktree rules
 
+- **One worktree per concurrent session** — the fix for the "DRIFT" incidents where two sessions sharing
+  one checkout switched branches under each other. Use Claude Code's `--worktree` (or `git worktree add`)
+  so each session gets its own checkout and branch; never run two sessions on the same working tree.
 - One terminal / worktree per branch.
-- Branch off **current `main`**.
-- No stacking on unmerged branches.
+- Branch off the latest **`origin/main`** (per §0), or the newest relevant unmerged branch when the work
+  builds on it — kept current with `origin/main`. (Stacking on an unmerged branch is allowed when the goal
+  needs it; the rule is to keep it current so it can't drift — see §0.)
 - Never let two terminals edit the same **high-risk core file** at the same time.
 - **High-risk core files:** `sports.py`, `data.py`, `consistency.py`, `dutchbook.py`,
   `synthetic_bundle.py`, `scanner.py`, `api.py`, `webui/viewmodel.py`, `webui/dashboard.py`, `store.py`,

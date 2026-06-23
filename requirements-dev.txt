@@ -8,3 +8,6 @@ httpx>=0.27   # FastAPI/Starlette TestClient (test_api.py)
 # analysis. See docs/AUTH.md. `pip-audit` needs network; `bandit` runs offline.
 pip-audit>=2.7
 bandit>=1.7
+# Local hygiene gate (ruff + private-key/large-file/conflict checks). One-time: `pre-commit install`.
+# Config in .pre-commit-config.yaml; secret scanning (gitleaks) runs in CI, not here.
+pre-commit>=3.7

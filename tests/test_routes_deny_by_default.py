@@ -37,8 +37,26 @@ MUST_BE_GATED = {
 FORBIDDEN_IDENTITY_PARAMS = {"user_id", "uid", "username", "user", "account", "owner"}
 
 
+def _iter_routes(routes=None, prefix: str = ""):
+    """Yield ``(path, route)`` for every concrete route, recursing through Mounts and FastAPI 0.137+
+    ``_IncludedRouter`` proxies. ``include_router()`` no longer flattens routes into ``app.routes`` — it
+    appends a lazy proxy (``path is None``) whose real routes live on ``.original_router`` and resolve at
+    request time; older FastAPI flattened them. A plain flat scan of ``app.routes`` therefore silently
+    misses the included ``/auth/*`` handlers on current FastAPI, which is what broke this guard."""
+    if routes is None:
+        routes = api.app.routes
+    for r in routes:
+        included = getattr(r, "original_router", None)
+        if included is not None:                       # _IncludedRouter proxy (paths already absolute)
+            yield from _iter_routes(included.routes, prefix)
+        elif getattr(r, "routes", None):               # Mount / sub-application
+            yield from _iter_routes(r.routes, prefix + (getattr(r, "path", "") or ""))
+        elif getattr(r, "path", None) is not None:
+            yield prefix + r.path, r
+
+
 def _route_paths() -> set[str]:
-    return {r.path for r in api.app.routes if getattr(r, "path", None)}
+    return {path for path, _ in _iter_routes()}
 
 
 def test_every_route_is_classified_public_or_gated():
@@ -68,8 +86,7 @@ def test_no_endpoint_accepts_a_client_supplied_user_id():
     identity is session-derived. A FastAPI route param named user_id/username/... would be client-settable
     (path/query/body), which would break cross-user isolation."""
     offenders = []
-    for route in api.app.routes:
-        path = getattr(route, "path", "") or ""
+    for path, route in _iter_routes():
         handler = getattr(route, "endpoint", None)
         if handler is None or not (path.startswith("/auth/") or path.startswith("/api/")):
             continue
