@@ -30,7 +30,7 @@ interface TerminalState {
   zone: string; section: string; lens: string; filters: FilterState; part: string; tourOptions: string[];
   sel: FeedRow | null; colKey: string; visible: string[]; rows: FeedRow[];
   theme: "amber" | "hc"; paletteOpen: boolean; multi: FeedRow[];
-  surface: "opp" | "res" | "ops" | "alrt"; showNet: boolean; itab: "card" | "detail" | "formula";
+  surface: "opp" | "res" | "ops" | "alrt" | "paper"; showNet: boolean; itab: "card" | "detail" | "formula";
   extra: ExtraPanel | null; panelsMenuOpen: boolean; scanText: string | null; settings: Settings;
   band: BandState; bandIsDefault: boolean; split: string;
   changeOf: (id: string) => "new" | "up" | "down" | "returned" | null;   // change-signal vs the prev snapshot
@@ -76,7 +76,7 @@ interface TerminalState {
   exportSelected: () => void;
   exportView: () => void;
   exportZip: () => void;
-  setSurface: (s: "opp" | "res" | "ops" | "alrt") => void;
+  setSurface: (s: "opp" | "res" | "ops" | "alrt" | "paper") => void;
   setShowNet: (v: boolean) => void;
   setItab: (t: "card" | "detail" | "formula") => void;
 }
@@ -106,7 +106,7 @@ export function TerminalProvider({ children, embedded }: { children: ReactNode; 
   const [theme, setTheme] = useState<"amber" | "hc">("amber");
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [multi, setMulti] = useState<FeedRow[]>([]);
-  const [surface, setSurface] = useState<"opp" | "res" | "ops" | "alrt">("opp");
+  const [surface, setSurface] = useState<"opp" | "res" | "ops" | "alrt" | "paper">("opp");
   // Net-of-fees ESTIMATE columns are shown by DEFAULT (labels carry "Est."; display-only, never rank) so a
   // thin gross edge isn't read as net profit. A returning user's saved showNet preference still wins.
   const [showNet, setShowNet] = useState(true);
@@ -328,7 +328,7 @@ export function TerminalProvider({ children, embedded }: { children: ReactNode; 
     const validTours = new Set(tournamentOptions(opps, sports));
     const tours = new Set((d.tours ?? []).filter((tv) => validTours.has(tv)));
     setFilters((f) => ({ ...f, sports, tours, part: d.part ?? f.part }));
-    if (d.surface && ["opp", "res", "ops", "alrt"].includes(d.surface)) setSurface(d.surface as "opp" | "res" | "ops" | "alrt");
+    if (d.surface && ["opp", "res", "ops", "alrt", "paper"].includes(d.surface)) setSurface(d.surface as "opp" | "res" | "ops" | "alrt" | "paper");
     if (d.lens && LENSES.some(([l]) => l === d.lens)) setLens(d.lens);
     if (d.section) {
       const z = d.zone && SUBTABS[d.zone] ? d.zone : Object.keys(SUBTABS).find((k) => SUBTABS[k].some(([s]) => s === d.section));

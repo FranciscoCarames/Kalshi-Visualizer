@@ -268,6 +268,19 @@ def get_orderbook(ticker: str, depth: int = 10) -> dict[str, Any]:
     }
 
 
+def get_market(ticker: str) -> dict[str, Any]:
+    """Fetch one market's full record (read-only market data; no auth required, like /events).
+
+    Endpoint: ``GET /markets/{ticker}`` → ``{"market": {...}}``. Returns the raw ``market`` dict, which
+    after determination/settlement carries the settlement fields the forward-test harness scores from:
+    ``status`` (``active``/``closed``/``determined``/``finalized``/``settled``/…), ``result`` (``"yes"``/
+    ``"no"`` for a settled binary market, ``""`` while still active), and — when finalized —
+    ``settlement_value_dollars`` / ``settlement_ts``. Used ONLY to read settlement outcomes (no trading).
+    An absent ``market`` yields ``{}``. Network/4xx/5xx surface as ``KalshiError`` (the caller degrades)."""
+    payload = _get(f"/markets/{ticker}", {})
+    return (payload or {}).get("market") or {}
+
+
 def discover_series_for_sport(cfg: sports.SportConfig) -> list[str]:
     """Return the tickers of all series worth scanning for one sport.
 

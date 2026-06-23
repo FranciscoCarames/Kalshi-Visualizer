@@ -33,6 +33,8 @@ import events
 import fetch
 import kalshi_client
 import lifecycle
+import paper_recorder
+import paper_store
 import presence
 import ratelimit
 import scan_manager
@@ -434,6 +436,31 @@ def get_terminal_feed(db_path: str | None = Depends(db_path_dep)) -> dict[str, A
     presence too, so an SPA on either transport keeps the scanner alive."""
     presence.touch()
     return feed.build_feed(db_path=db_path)
+
+
+@app.get("/api/terminal/paper")
+def get_terminal_paper(db_path: str | None = Depends(db_path_dep)) -> dict[str, Any]:
+    """Forward-test report: realized net-of-fees P&L + win rate for the SIMULATED paper positions recorded
+    from past scans, sliced by opportunity_class / bucket / sport. Read-only; no orders are ever placed.
+
+    DEFAULT-OFF: when the paper flag is disabled, returns ``{"enabled": false}`` (+ an empty report) so the
+    SPA panel degrades cleanly. Figures are under conservative paper-fill assumptions (top-of-book,
+    size-capped, no queue/slippage) — the SPA surfaces that caveat alongside them."""
+    presence.touch()
+    enabled = paper_recorder.paper_enabled()
+    out: dict[str, Any] = {"enabled": enabled, "fill_model": config.PAPER_FILL_MODEL}
+    out.update(paper_store.report(db_path=db_path))
+    return out
+
+
+@app.get("/api/terminal/paper/positions")
+def get_terminal_paper_positions(status: str | None = None,
+                                 db_path: str | None = Depends(db_path_dep)) -> dict[str, Any]:
+    """Recent simulated paper positions (newest first), optionally filtered by ``status`` (open /
+    determined_pending / settled / unscorable), with their legs — for the SPA positions table."""
+    presence.touch()
+    return {"enabled": paper_recorder.paper_enabled(),
+            "positions": paper_store.list_positions(db_path=db_path, status=status)}
 
 
 def _sse_pack(payload: str) -> str:
@@ -883,7 +910,15 @@ def _scan_run_fn(fetch_fn: Callable[[str], tuple]) -> Callable[[str], tuple]:
 
 
 def _scan_write_fn(fetched_at: str, unified, coverage, frames, db_path: str | None):
-    return store.write_snapshot(fetched_at, unified, meta=coverage, frames=frames, db_path=db_path)
+    sid = store.write_snapshot(fetched_at, unified, meta=coverage, frames=frames, db_path=db_path)
+    # Forward-test harness (DEFAULT-OFF): record simulated paper positions from this scan's flagged
+    # opportunities. Flag-guarded + best-effort — a recorder error must NEVER break a scan write.
+    if paper_recorder.paper_enabled():
+        try:
+            paper_recorder.record_from_unified(unified, sid, opened_ts=time.time(), db_path=db_path)
+        except Exception:  # noqa: BLE001 - paper recording is non-critical to the scan
+            logger.exception("paper-position recording failed")
+    return sid
 
 
 @app.post("/scan", response_model=ScanStatus, status_code=202, dependencies=[Depends(require_scan_token)])

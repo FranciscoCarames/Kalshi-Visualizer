@@ -7,6 +7,7 @@ import { TILES } from "./feed";
 import { lensesFor } from "./lens";
 import { loadDiagnostics, loadBacklog, loadBacklogEvents, loadTelemetry, type Diagnostics, type BacklogItem, type BacklogInterval, type Telemetry } from "./detail";
 import Workspace from "./Workspace";
+import { loadPaperReport, loadPaperPositions, dollars, type PaperReport, type PaperPosition, type PaperAgg } from "./paper";
 import type { TextSize } from "./layout";
 
 function MarketTelemetry() {
@@ -267,6 +268,75 @@ function SecBar() {
   return <div className="secbar" />;
 }
 
+// Forward-test / paper harness surface. DISPLAY-ONLY: it renders the server's net-of-fees forward-test
+// report (GET /api/terminal/paper(+/positions)) — the SPA never scores positions or places orders.
+function PaperAggTable({ title, rows }: { title: string; rows: [string, PaperAgg][] }) {
+  return (
+    <div className="rp"><div className="h">{title}</div><div className="c">
+      {rows.length === 0 ? <div className="note dim">none</div> :
+        <table><thead><tr><th>{title.split(" ").pop()}</th><th className="r">Settled</th><th className="r">Win rate</th>
+          <th className="r">Net P&amp;L</th><th className="r">Open</th></tr></thead>
+          <tbody>{rows.map(([k, a]) => (
+            <tr key={k}><td className="nm">{k}</td><td className="r white">{a.settled}</td>
+              <td className="r">{a.win_rate == null ? "—" : (a.win_rate * 100).toFixed(0) + "%"}</td>
+              <td className={"r " + (a.net_c >= 0 ? "green" : "red")}>{dollars(a.net_c)}</td>
+              <td className="r dim">{a.open + a.determined_pending}</td></tr>
+          ))}</tbody></table>}
+    </div></div>
+  );
+}
+
+function PaperSurface() {
+  const t = useTerminal();
+  const tz = t.settings.tz;
+  const [rep, setRep] = useState<PaperReport | null>(null);
+  const [pos, setPos] = useState<PaperPosition[] | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  useEffect(() => {
+    let a = true;
+    loadPaperReport().then((x) => a && setRep(x)).catch((e) => a && setErr(String(e)));
+    loadPaperPositions().then((x) => a && setPos(x)).catch(() => {});
+    return () => { a = false; };
+  }, []);
+  if (err) return <div className="view on"><div className="gridfill"><div className="rp"><div className="h">PAPER P&amp;L</div><div className="c"><div className="note red">{err}</div></div></div></div></div>;
+  if (!rep) return <div className="view on"><div className="gridfill"><div className="rp"><div className="h">PAPER P&amp;L</div><div className="c"><div className="note">loading…</div></div></div></div></div>;
+  if (!rep.enabled) return (
+    <div className="view on"><div className="gridfill"><div className="rp"><div className="h">PAPER P&amp;L — FORWARD TEST<span className="resb">OFF</span></div><div className="c">
+      <div className="note">The forward-test harness is <b>disabled</b>. Start the server with <b>PAPER_TRADING_ENABLED=1</b> to record simulated paper positions from flagged opportunities and track them to settlement.</div>
+      <div className="note dim" style={{ marginTop: 4 }}>It records simulated positions only — it never places, previews, or routes exchange orders.</div>
+    </div></div></div></div>
+  );
+  const o = rep.overall;
+  return (
+    <div className="view on"><div className="gridfill">
+      <div className="rp"><div className="h">FORWARD-TEST P&amp;L — realized, net of fees<span className="resb">SIMULATED · NO ORDERS</span></div><div className="c">
+        <table className="kv-tbl"><tbody>
+          <tr><td className="dim">Realized net P&amp;L (settled)</td><td className={"r " + (o.net_c >= 0 ? "green" : "red")}><b>{dollars(o.net_c)}</b></td></tr>
+          <tr><td className="dim">Win rate</td><td className="r white">{o.win_rate == null ? "—" : (o.win_rate * 100).toFixed(1) + "% (" + o.wins + "/" + o.settled + ")"}</td></tr>
+          <tr><td className="dim">Settled · open · pending</td><td className="r white">{o.settled} · {o.open} · {o.determined_pending}</td></tr>
+          <tr><td className="dim">Unscorable (excluded)</td><td className="r dim">{rep.unscorable}</td></tr>
+        </tbody></table>
+        <div className="note dim" style={{ marginTop: 6 }}><b>Paper-fill assumptions:</b> {rep.fill_model_note}</div>
+      </div></div>
+      <PaperAggTable title="BY OPPORTUNITY CLASS" rows={Object.entries(rep.by_class)} />
+      <PaperAggTable title="BY SPORT" rows={Object.entries(rep.by_sport)} />
+      <div className="rp"><div className="h">PAPER POSITIONS<span className="resb">{pos ? pos.length : "…"}</span></div>
+        <div className="c" style={{ maxHeight: 360, overflow: "auto" }}>
+          {!pos ? <div className="note">loading…</div> : pos.length === 0 ? <div className="note">no positions recorded yet</div> :
+            <table><thead><tr><th>Opened</th><th>Sport</th><th>Class</th><th>Bucket</th><th className="r">Legs</th>
+              <th className="r">Cost</th><th>Status</th><th className="r">Net P&amp;L</th></tr></thead>
+              <tbody>{pos.map((p) => (
+                <tr key={p.entry_key}><td className="r dim">{fmtTs(p.opened_ts ?? undefined, tz)}</td><td>{p.sport}</td>
+                  <td>{p.opportunity_class}</td><td className="dim">{p.source_bucket}</td><td className="r">{p.legs.length}</td>
+                  <td className="r">{dollars(p.cost_c)}</td>
+                  <td className={p.status === "settled" ? (p.won ? "green" : "red") : "dim"}>{p.status}</td>
+                  <td className={"r " + (p.net_c == null ? "dim" : p.net_c >= 0 ? "green" : "red")}>{dollars(p.net_c)}</td></tr>
+              ))}</tbody></table>}
+        </div></div>
+    </div></div>
+  );
+}
+
 function Shell() {
   const t = useTerminal();
   const m = t.meta;
@@ -307,6 +377,7 @@ function Shell() {
         <div className={"stab" + (t.surface === "opp" ? " on" : "")} onClick={() => t.setSurface("opp")}><span className="c">1)</span>OPP</div>
         <div className={"stab" + (t.surface === "res" ? " on" : "")} onClick={() => t.setSurface("res")}><span className="c">2)</span>RES</div>
         <div className={"stab" + (t.surface === "ops" ? " on" : "")} onClick={() => t.setSurface("ops")}><span className="c">3)</span>OPS</div>
+        <div className={"stab" + (t.surface === "paper" ? " on" : "")} onClick={() => t.setSurface("paper")} title="Forward-test paper P&L (simulated; no orders)"><span className="c">4)</span>PAPER</div>
         <div className="right">
           <span className="dim" style={{ fontSize: 9 }}>LAYOUT</span>
           <select className="in" defaultValue="default" onChange={(e) => t.applyLayout(e.target.value)}>
@@ -371,6 +442,7 @@ function Shell() {
       {t.surface === "res" ? <Surface id="res" /> : null}
       {t.surface === "ops" ? <Surface id="ops" /> : null}
       {t.surface === "alrt" ? <BacklogSurface /> : null}
+      {t.surface === "paper" ? <PaperSurface /> : null}
 
       <div className="foot">
         <div><b className="amber">KALSHI STRUCTURED SCANNER</b> <span className="dim" title="application version">· {__APP_VERSION__}</span></div>

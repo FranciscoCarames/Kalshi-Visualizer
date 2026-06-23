@@ -409,6 +409,25 @@ AUTO_SCAN_DEFAULT_ENABLED = True                      # auto-refresh on by defau
 # Phase-1 enablement step and requires a green validation report first.
 CONDITIONAL_BLEND_DEFAULT_ENABLED = False
 
+# Paper / forward-test harness (paper_engine.py / paper_store.py / paper_recorder.py /
+# paper_settler.py) — DEFAULT-OFF. A display-only forward-test subsystem that records SIMULATED paper
+# positions from each scan's flagged opportunities, tracks them to Kalshi settlement, and reports
+# realized net-of-fees P&L. It NEVER creates/submits/cancels/previews/signs/routes exchange orders, uses
+# no portfolio credentials, and calls no order endpoints — it is a forward-test + calibration view only.
+# When True (or env PAPER_TRADING_ENABLED truthy, read at the recorder/settler boundary, since config.py
+# stays env-free), a flag-guarded hook after store.write_snapshot records open paper positions and a
+# low-frequency background settler closes them. Engine logic + scanner ranking are untouched either way.
+PAPER_TRADING_ENABLED = False
+# Fill-model version stamped on every paper entry. "top_of_book_v1" = entry at the firm ask captured at
+# flag time, size-capped at the snapshotted top-of-book depth (no queue position, no slippage, no partial
+# fill beyond visible size). Bump this string when the fill methodology changes so old + new entries never
+# silently mix (it is part of the entry's identity key).
+PAPER_FILL_MODEL = "top_of_book_v1"
+# Background settler cadence + per-run request cap (keeps settlement polling off the scanner's rate budget:
+# settlements are slow events, so a low cadence and a small per-tick request cap are plenty).
+PAPER_SETTLE_INTERVAL_SECONDS = 300
+PAPER_SETTLE_MAX_REQUESTS_PER_RUN = 40
+
 # Presence gate (P4): pause the background auto-scan while NO viewer is connected, resuming on the next
 # tick after someone opens the dashboard — so the app stops hitting Kalshi when nobody's watching. The
 # manual "Scan now" button is NOT gated. Trade-off: a headless REST-only consumer (no browser → 0 viewers)

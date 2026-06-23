@@ -30,6 +30,8 @@ from nicegui import ui
 
 import api
 import config
+import paper_recorder
+import paper_settler
 import presence
 import scan_scheduler
 import webui.dashboard  # noqa: F401  — importing registers the @ui.page('/') dashboard
@@ -291,4 +293,10 @@ if __name__ == "__main__":
           + ("ON (paused while no viewer connected; terminal feed poll counts as a viewer)" if _pause_when_idle
              else "OFF (headless - scanning 24/7 regardless of viewers)"))
     scan_scheduler.scheduler.start(lambda: engine.run_scan_now(force=False), gate=_gate)
+    # Forward-test harness (DEFAULT-OFF): a low-frequency settler closes simulated paper positions once
+    # their markets settle. Armed only when the paper flag is on; it shares the same viewer gate so it
+    # idles when nobody's watching, and it polls read-only (`get_market`) under the process-wide throttle.
+    if paper_recorder.paper_enabled():
+        paper_settler.settler.start(gate=_gate)
+        print("Forward-test paper harness: ON (recording simulated positions + background settler)")
     uvicorn.run(api.app, host=_host, port=_port)
