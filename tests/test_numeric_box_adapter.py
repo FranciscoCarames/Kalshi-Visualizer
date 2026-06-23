@@ -11,6 +11,7 @@ import pandas as pd
 import api
 import config
 import consistency
+import data
 import numeric_box_adapter as nba
 import scanner
 import sports
@@ -31,6 +32,34 @@ def ge_row(event, floor, *, yes_ask_c, no_ask_c=None, yes_bid_c=None, size=100, 
         "yes_ask_size": size, "yes_bid_size": size, "quote_quality": quote_quality, "status": status,
         "market_ticker": f"{event}-{floor}", "kalshi_url": f"http://k/{event}/{floor}",
     }
+
+
+# --- the demonstrator now sees LIVE data (Phase 1a: floor_strike/cap_strike plumbed) ------------------
+def _numeric_total_event():
+    def market(floor, bid, ask):
+        return {
+            "ticker": f"KXATPGTOTAL-26JUN17MEDHUM-T{str(floor).replace('.', '')}",
+            "yes_sub_title": f"Over {floor} games", "custom_strike": {},
+            "market_type": "binary", "strike_type": "greater", "floor_strike": floor, "cap_strike": None,
+            "yes_bid_dollars": bid, "yes_ask_dollars": ask, "last_price_dollars": ask,
+            "yes_bid_size_fp": "100", "yes_ask_size_fp": "100", "status": "active",
+            "title": f"ATP total games over {floor}?",
+        }
+    # Realistic monotone (non-crossed) book: Over 29.5 is less likely than Over 19.5, so both sides are lower.
+    return {"event_ticker": "KXATPGTOTAL-26JUN17MEDHUM", "title": "Medvedev vs Humbert total games",
+            "markets": [market(19.5, "0.44", "0.46"), market(29.5, "0.18", "0.20")]}
+
+
+def test_demonstrator_produces_a_box_from_build_contracts_output():
+    # Before Phase 1a this returned [] on live rows (floor_strike was dropped by build_contracts). Now the
+    # demonstrator builds its corridor straight from build_contracts output — the live-validation enabler.
+    rows = data.build_contracts("KXATPGTOTAL", [_numeric_total_event()])
+    out = nba.find_payoff_boxes(rows)
+    assert len(out) == 1
+    f = out[0]
+    assert f["status"] == nba.PAYOFF_STATE_DIAGNOSTIC and f["n_legs"] == 2
+    assert f["classification"] in ("structural_floor", "bounded_loss")   # priced from real bid/ask fallback
+    assert f["payoff_scenarios"] and len(f["payoff_scenarios"]) == 3
 
 
 # --- adapter unit tests --------------------------------------------------------------
