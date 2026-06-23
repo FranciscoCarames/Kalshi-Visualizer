@@ -20,12 +20,21 @@ import paper_store
 logger = logging.getLogger(__name__)
 
 
-def _num(x: Any) -> Any:
+def _to_epoch(x: Any) -> float | None:
+    """Epoch seconds from a Kalshi timestamp. Kalshi returns ``settlement_ts`` as an ISO-8601 STRING
+    (e.g. ``"2026-05-01T01:57:36.708679Z"``), confirmed live — NOT a number; also accept a numeric epoch
+    defensively. None for missing/unparseable."""
+    if x is None or x == "":
+        return None
     try:
-        v = float(x)
+        return float(x)                                   # already an epoch number
+    except (TypeError, ValueError):
+        pass
+    try:
+        from datetime import datetime
+        return datetime.fromisoformat(str(x).replace("Z", "+00:00")).timestamp()
     except (TypeError, ValueError):
         return None
-    return None if v != v else v
 
 
 def _parse_settlement(market: dict[str, Any]) -> dict[str, Any] | None:
@@ -42,7 +51,7 @@ def _parse_settlement(market: dict[str, Any]) -> dict[str, Any] | None:
         "result": market.get("result") or "",
         "status_raw": str(market.get("status") or "").strip().lower(),
         "settlement_value_c": None if sv_c is None else int(sv_c),
-        "settled_ts": _num(market.get("settlement_ts")),
+        "settled_ts": _to_epoch(market.get("settlement_ts")),
     }
 
 

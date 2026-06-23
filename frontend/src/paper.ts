@@ -46,9 +46,15 @@ export async function loadPaperPositions(status?: string): Promise<PaperPosition
   return (await r.json()).positions ?? [];
 }
 
-/** Dollars from integer cents, signed, 2dp (null/undefined → "—"). */
+/** Dollars from integer cents, SIGNED, 2dp (for P&L; null/undefined → "—"). */
 export function dollars(c: number | null | undefined): string {
   if (c == null) return "—";
   const v = c / 100;
   return (v >= 0 ? "+$" : "-$") + Math.abs(v).toFixed(2);
+}
+
+/** Dollars from integer cents, UNSIGNED, 2dp (for a cost/outlay; null/undefined → "—"). */
+export function money(c: number | null | undefined): string {
+  if (c == null) return "—";
+  return "$" + (c / 100).toFixed(2);
 }

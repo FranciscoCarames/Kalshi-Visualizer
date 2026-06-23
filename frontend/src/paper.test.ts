@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dollars } from "./paper";
+import { dollars, money } from "./paper";
 
 describe("paper.dollars", () => {
   it("formats positive cents as a signed dollar string", () => {
@@ -14,5 +14,16 @@ describe("paper.dollars", () => {
   it("renders null/undefined as an em dash", () => {
     expect(dollars(null)).toBe("—");
     expect(dollars(undefined)).toBe("—");
+  });
+});
+
+describe("paper.money (unsigned cost)", () => {
+  it("formats cents as an unsigned dollar string", () => {
+    expect(money(95)).toBe("$0.95");
+    expect(money(0)).toBe("$0.00");
+  });
+  it("renders null/undefined as an em dash", () => {
+    expect(money(null)).toBe("—");
+    expect(money(undefined)).toBe("—");
   });
 });

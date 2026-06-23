@@ -7,7 +7,7 @@ import { TILES } from "./feed";
 import { lensesFor } from "./lens";
 import { loadDiagnostics, loadBacklog, loadBacklogEvents, loadTelemetry, type Diagnostics, type BacklogItem, type BacklogInterval, type Telemetry } from "./detail";
 import Workspace from "./Workspace";
-import { loadPaperReport, loadPaperPositions, dollars, type PaperReport, type PaperPosition, type PaperAgg } from "./paper";
+import { loadPaperReport, loadPaperPositions, dollars, money, type PaperReport, type PaperPosition, type PaperAgg } from "./paper";
 import type { TextSize } from "./layout";
 
 function MarketTelemetry() {
@@ -328,7 +328,7 @@ function PaperSurface() {
               <tbody>{pos.map((p) => (
                 <tr key={p.entry_key}><td className="r dim">{fmtTs(p.opened_ts ?? undefined, tz)}</td><td>{p.sport}</td>
                   <td>{p.opportunity_class}</td><td className="dim">{p.source_bucket}</td><td className="r">{p.legs.length}</td>
-                  <td className="r">{dollars(p.cost_c)}</td>
+                  <td className="r">{money(p.cost_c)}</td>
                   <td className={p.status === "settled" ? (p.won ? "green" : "red") : "dim"}>{p.status}</td>
                   <td className={"r " + (p.net_c == null ? "dim" : p.net_c >= 0 ? "green" : "red")}>{dollars(p.net_c)}</td></tr>
               ))}</tbody></table>}
