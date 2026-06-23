@@ -853,6 +853,13 @@ def build_contracts(
                     "score_state": score_state(market.get("custom_strike")),
                     "market_type": market.get("market_type", ""),
                     "strike_type": market.get("strike_type", ""),
+                    # Machine-readable numeric strike bounds (additive). `numeric_ladder.parse_numeric_strike`
+                    # reads these to build monotone Over/Under ladders; without them on the row the ladder
+                    # builder (and the payoff-state numeric-box adapter) silently find nothing on LIVE data —
+                    # they had only ever run on synthetic fixtures. `greater*` carries floor_strike,
+                    # `less*` carries cap_strike, `between` carries both. Raw passthrough; None when absent.
+                    "floor_strike": market.get("floor_strike"),
+                    "cap_strike": market.get("cap_strike"),
                     "fractional_trading_enabled": bool(market.get("fractional_trading_enabled", False)),
                     "price_ranges": market.get("price_ranges"),
                     "rules_secondary": market.get("rules_secondary", ""),

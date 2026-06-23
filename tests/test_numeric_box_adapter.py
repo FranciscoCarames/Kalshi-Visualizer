@@ -11,6 +11,7 @@ import pandas as pd
 import api
 import config
 import consistency
+import data
 import numeric_box_adapter as nba
 import scanner
 import sports
@@ -19,18 +20,48 @@ import webui.feed as feed
 
 
 def ge_row(event, floor, *, yes_ask_c, no_ask_c=None, yes_bid_c=None, size=100, series="KXATPGTOTAL",
-           quote_quality="OK", status="active"):
-    """A live-shaped 'Over N games' market row carrying both the numeric strike AND firm pricing, so
-    numeric_ladder parses it and dutchbook's firm-ask helpers can price the legs."""
+           quote_quality="OK", status="active", player_key="", confidence="low"):
+    """A live-shaped 'Over N' market row carrying the numeric strike, firm pricing, AND participant identity
+    (player_key + mapping_confidence) so the scalar-identity guard can be exercised. Defaults model a
+    whole-event TOTAL (shared empty key, low confidence); pass distinct high-confidence keys for SPREADS."""
     return {
         "series_ticker": series, "series": series, "event_ticker": event,
         "strike_type": "greater", "floor_strike": floor, "cap_strike": None, "market_type": "binary",
-        "kind": "other", "player_key": "", "stage": "", "tour": "ATP", "tournament": "Test Open",
-        "yes_sub_title": f"Over {floor} games", "contract": f"Over {floor}", "event_title": "ATP total games",
+        "kind": "other", "player_key": player_key, "mapping_confidence": confidence,
+        "stage": "", "tour": "ATP", "tournament": "Test Open",
+        "yes_sub_title": f"Over {floor}", "contract": f"Over {floor}", "event_title": "ATP numeric",
         "yes_ask_c": yes_ask_c, "no_ask_c": no_ask_c, "yes_bid_c": yes_bid_c,
         "yes_ask_size": size, "yes_bid_size": size, "quote_quality": quote_quality, "status": status,
         "market_ticker": f"{event}-{floor}", "kalshi_url": f"http://k/{event}/{floor}",
     }
+
+
+# --- the demonstrator now sees LIVE data (Phase 1a: floor_strike/cap_strike plumbed) ------------------
+def _numeric_total_event():
+    def market(floor, bid, ask):
+        return {
+            "ticker": f"KXATPGTOTAL-26JUN17MEDHUM-T{str(floor).replace('.', '')}",
+            "yes_sub_title": f"Over {floor} games", "custom_strike": {},
+            "market_type": "binary", "strike_type": "greater", "floor_strike": floor, "cap_strike": None,
+            "yes_bid_dollars": bid, "yes_ask_dollars": ask, "last_price_dollars": ask,
+            "yes_bid_size_fp": "100", "yes_ask_size_fp": "100", "status": "active",
+            "title": f"ATP total games over {floor}?",
+        }
+    # Realistic monotone (non-crossed) book: Over 29.5 is less likely than Over 19.5, so both sides are lower.
+    return {"event_ticker": "KXATPGTOTAL-26JUN17MEDHUM", "title": "Medvedev vs Humbert total games",
+            "markets": [market(19.5, "0.44", "0.46"), market(29.5, "0.18", "0.20")]}
+
+
+def test_demonstrator_produces_a_box_from_build_contracts_output():
+    # Before Phase 1a this returned [] on live rows (floor_strike was dropped by build_contracts). Now the
+    # demonstrator builds its corridor straight from build_contracts output — the live-validation enabler.
+    rows = data.build_contracts("KXATPGTOTAL", [_numeric_total_event()])
+    out = nba.find_payoff_boxes(rows)
+    assert len(out) == 1
+    f = out[0]
+    assert f["status"] == nba.PAYOFF_STATE_DIAGNOSTIC and f["n_legs"] == 2
+    assert f["classification"] in ("structural_floor", "bounded_loss")   # priced from real bid/ask fallback
+    assert f["payoff_scenarios"] and len(f["payoff_scenarios"]) == 3
 
 
 # --- adapter unit tests --------------------------------------------------------------
@@ -56,6 +87,32 @@ def test_three_rungs_yield_two_adjacent_corridors():
             ge_row("E1", 29.5, yes_ask_c=20, no_ask_c=40)]
     out = nba.find_payoff_boxes(rows)
     assert len(out) == 2     # adjacent pairs only: (19.5,24.5) and (24.5,29.5)
+
+
+def test_skips_cross_participant_spread_pairing():
+    # Scalar-identity guard (confirmed live on KXATPGSPREAD): two DIFFERENT real (high-confidence)
+    # participants' spread lines share series+event but are NOT one scalar — must never form a corridor.
+    rows = [ge_row("E1", -1.5, yes_ask_c=37, no_ask_c=63, series="KXATPGSPREAD",
+                   player_key="uuid-struff", confidence="high"),
+            ge_row("E1", -2.5, yes_ask_c=44, no_ask_c=56, series="KXATPGSPREAD",
+                   player_key="uuid-borges", confidence="high")]
+    assert nba.find_payoff_boxes(rows) == []
+
+
+def test_same_participant_spread_ladder_still_pairs():
+    # One participant's two spread strikes ARE a legit monotone ladder of one scalar → still produced.
+    rows = [ge_row("E1", -1.5, yes_ask_c=37, series="KXATPGSPREAD", player_key="uuid-struff", confidence="high"),
+            ge_row("E1", -2.5, yes_ask_c=20, no_ask_c=47, series="KXATPGSPREAD",
+                   player_key="uuid-struff", confidence="high")]
+    assert len(nba.find_payoff_boxes(rows)) == 1
+
+
+def test_totals_low_confidence_keys_still_pair():
+    # A whole-event total has a low-confidence fallback identity; even if the two rungs' fallback keys
+    # differ, the guard (which requires a HIGH-confidence competitor) must NOT suppress the corridor.
+    rows = [ge_row("E1", 19.5, yes_ask_c=46, player_key="over195", confidence="low"),
+            ge_row("E1", 29.5, yes_ask_c=20, no_ask_c=47, player_key="over295", confidence="low")]
+    assert len(nba.find_payoff_boxes(rows)) == 1
 
 
 def test_no_cross_event_pairing():

@@ -6,6 +6,7 @@ import pytest
 import config
 import data
 import kalshi_client
+import numeric_ladder
 
 
 # --- AUDIT-007: pagination cap surfaces truncation instead of silent partial data -----
@@ -452,6 +453,45 @@ def test_exact_score_rows_key_on_uuid_not_scoreline():
     # synthetic detector groups them correctly and is never split by the scoreline display text.
     rows = data.build_contracts("KXATPEXACTMATCH", [_exact_score_event()])
     assert {r["player_key"] for r in rows} == {"uuid-men"}
+
+
+# --- numeric strike bounds reach the row + drive the ladder builder (Phase 1a regression) -------------
+def _numeric_total_event():
+    """A live-shaped ATP total-games event: two monotone 'Over N games' markets carrying machine-readable
+    numeric strikes (strike_type=greater + floor_strike), as KXATPGTOTAL markets do (live 2026-06-17)."""
+    def market(floor, ask):
+        return {
+            "ticker": f"KXATPGTOTAL-26JUN17MEDHUM-T{str(floor).replace('.', '')}",
+            "yes_sub_title": f"Over {floor} games", "custom_strike": {},
+            "market_type": "binary", "strike_type": "greater", "floor_strike": floor, "cap_strike": None,
+            "yes_bid_dollars": "0.40", "yes_ask_dollars": ask, "last_price_dollars": ask,
+            "yes_bid_size_fp": "100", "yes_ask_size_fp": "100", "status": "active",
+            "title": f"ATP total games over {floor}?",
+        }
+    return {
+        "event_ticker": "KXATPGTOTAL-26JUN17MEDHUM", "title": "Medvedev vs Humbert total games",
+        "markets": [market(19.5, "0.46"), market(29.5, "0.20")],
+    }
+
+
+def test_build_contracts_surfaces_numeric_strike_bounds():
+    # Regression: build_contracts previously dropped floor_strike/cap_strike, so numeric_ladder (which reads
+    # them) found nothing on LIVE rows. They must now ride the contract row as raw passthrough.
+    rows = data.build_contracts("KXATPGTOTAL", [_numeric_total_event()])
+    assert len(rows) == 2
+    assert sorted(r["floor_strike"] for r in rows) == [19.5, 29.5]
+    assert all(r["cap_strike"] is None for r in rows)
+
+
+def test_numeric_ladder_builds_from_build_contracts_output():
+    # The REAL path (not a hand-built fixture): numeric_ladder must build a monotone ladder straight from
+    # build_contracts output — proves the Phase 1a plumbing actually enables the payoff-state demo on live data.
+    rows = data.build_contracts("KXATPGTOTAL", [_numeric_total_event()])
+    ladders = numeric_ladder.build_numeric_ladders(rows)
+    assert len(ladders) == 1
+    lad = ladders[0]
+    assert lad.direction == "ge"
+    assert [s for s, _ in lad.rungs] == [19.5, 29.5]      # broad -> deep (ascending ge strikes)
 
 
 def test_score_state_helper_normalizes_and_blank_for_non_exact_score():
